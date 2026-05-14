@@ -1,4 +1,4 @@
--- Create database
+﻿-- Create database
 CREATE DATABASE LearningPath_Base;
 GO
 
@@ -27,8 +27,25 @@ GO
 INSERT INTO Users (StudentId, FullName)
 VALUES ('HE194923', 'Nguyen Tan Dung');
 GO
-INSERT INTO Courses (Title, Description, Hashtag)
-VALUES 
-(N'L? tr�nh React Th?c chi?n', N'L�m ch? Frontend v?i React v� Vite', '#React'),
-(N'Node.js & Express API', N'X�y d?ng Backend t?c ?? cao', '#NodeJS');
+
+USE LearningPath_Base;
 GO
+
+-- 1. Xóa dữ liệu cũ của ông đi để nạp lại cho sạch (nếu muốn thay đổi)
+DELETE FROM Users WHERE StudentId = 'HE194923';
+
+-- 2. Chèn lại User với tiền tố N để không lỗi font
+INSERT INTO Users (StudentId, FullName)
+VALUES ('HE194923', N'Nguyễn Tấn Dũng'); 
+GO
+
+-- 3. Chèn lại Courses (Lưu ý: Bảng của ông ở trên khai báo là CourseName, Description)
+-- Nếu ông muốn dùng Title và Hashtag thì phải ALTER TABLE, còn không thì dùng đúng cột cũ:
+INSERT INTO Courses (CourseName, Description)
+VALUES 
+(N'Lộ trình React Thực chiến', N'Làm chủ Frontend với React và Vite'),
+(N'Node.js & Express API', N'Xây dựng Backend tốc độ cao');
+GO
+
+SELECT * FROM Users;
+SELECT * FROM Courses;

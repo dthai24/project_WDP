@@ -24,15 +24,15 @@ function App() {
       <div className="card">
         <h2>System Status</h2>
         {dbStatus.loading && <p>Connecting to backend...</p>}
-        {dbStatus.error && <p style={{color: 'red'}}>Connection Error: {dbStatus.error}</p>}
+        {dbStatus.error && <p style={{ color: 'red' }}>Connection Error: {dbStatus.error}</p>}
         {dbStatus.data && (
           <div>
-            <p style={{color: 'green'}}>Backend Connection: Successful</p>
-            {dbStatus.data.user ? (
+            <p style={{ color: 'green' }}>Backend Connection: Successful</p>
+            {dbStatus.data.data && dbStatus.data.data.length > 0 ? (
               <div>
                 <h3>Sample User Data</h3>
-                <p><strong>Student ID:</strong> {dbStatus.data.user.StudentId}</p>
-                <p><strong>Full Name:</strong> {dbStatus.data.user.FullName}</p>
+                <p><strong>Student ID:</strong> {dbStatus.data.data[0].StudentId}</p>
+                <p><strong>Full Name:</strong> {dbStatus.data.data[0].FullName}</p>
               </div>
             ) : (
               <p>No sample user found in database.</p>
