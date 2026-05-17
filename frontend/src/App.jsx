@@ -1,47 +1,48 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage    from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import OtpPage      from './pages/OtpPage';
+import HomePage     from './pages/HomePage';
+import SurveyPage   from './pages/SurveyPage';
 
-function App() {
-  const [dbStatus, setDbStatus] = useState({ loading: true, data: null, error: null })
-
-  useEffect(() => {
-    fetch('http://localhost:5000/api/test')
-      .then(res => {
-        if (!res.ok) throw new Error('Network response was not ok')
-        return res.json()
-      })
-      .then(data => {
-        setDbStatus({ loading: false, data, error: null })
-      })
-      .catch(error => {
-        setDbStatus({ loading: false, data: null, error: error.message })
-      })
-  }, [])
-
-  return (
-    <>
-      <h1>S.T.A.R Learning Path</h1>
-      <div className="card">
-        <h2>System Status</h2>
-        {dbStatus.loading && <p>Connecting to backend...</p>}
-        {dbStatus.error && <p style={{ color: 'red' }}>Connection Error: {dbStatus.error}</p>}
-        {dbStatus.data && (
-          <div>
-            <p style={{ color: 'green' }}>Backend Connection: Successful</p>
-            {dbStatus.data.data && dbStatus.data.data.length > 0 ? (
-              <div>
-                <h3>Sample User Data</h3>
-                <p><strong>Student ID:</strong> {dbStatus.data.data[0].StudentId}</p>
-                <p><strong>Full Name:</strong> {dbStatus.data.data[0].FullName}</p>
-              </div>
-            ) : (
-              <p>No sample user found in database.</p>
-            )}
-          </div>
-        )}
-      </div>
-    </>
-  )
+/** Guard: redirect về /login nếu chưa đăng nhập */
+function ProtectedRoute({ children }) {
+  const user = sessionStorage.getItem('user');
+  return user ? children : <Navigate to="/login" replace />;
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Auth routes — public */}
+        <Route path="/login"      element={<LoginPage />} />
+        <Route path="/register"   element={<RegisterPage />} />
+        <Route path="/verify-otp" element={<OtpPage />} />
+
+        {/* Onboarding survey — cần đăng nhập */}
+        <Route
+          path="/survey"
+          element={
+            <ProtectedRoute>
+              <SurveyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Home / Newsfeed — cần đăng nhập */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
