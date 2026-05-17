@@ -1,31 +1,27 @@
 const express = require('express');
-const cors = require('cors');
-const { connectDB, sql } = require('./config/db');
+const cors    = require('cors');
 require('dotenv').config();
 
-const app = express();
+const { connectDB } = require('./config/db');
+const authRoutes    = require('./routes/authRoutes');
+
+const app  = express();
+const PORT = process.env.PORT || 5000;
+
+// ---- Middlewares ----
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 5000;
-
-// Kết nối Database
+// ---- Database ----
 connectDB();
 
-// API Test bốc dữ liệu từ SQL Server
-app.get('/api/test', async (req, res) => {
-  try {
-    const request = new sql.Request();
-    const result = await request.query('SELECT * FROM Users');
-    res.json({
-      status: "success",
-      data: result.recordset
-    });
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
+// ---- Routes ----
+app.use('/api/auth', authRoutes);
 
+// ---- Health-check ----
+app.get('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running 🚀' }));
+
+// ---- Start ----
 app.listen(PORT, () => {
-  console.log(`Server đang chạy tại: http://localhost:${PORT}`);
+  console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);
 });
