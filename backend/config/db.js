@@ -2,28 +2,25 @@ const sql = require('mssql');
 require('dotenv').config();
 
 const dbConfig = {
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_NAME || 'LearningPath_Base',
-
-  user: 'sa',
-  password: 'Tandung1906@',
+  server:   process.env.DB_SERVER   || 'localhost',
+  database: process.env.DB_NAME     || 'LearningPath_Base',
+  user:     process.env.DB_USER     || 'sa',
+  password: process.env.DB_PASSWORD || 'sa123',
+  port:     parseInt(process.env.DB_PORT || '1433', 10),
   options: {
-    encrypt: false,
+    encrypt:                false,
     trustServerCertificate: true,
-    // Dòng này cực kỳ quan trọng để lách lỗi Login failed for user ''
-    integratedSecurity: true
   },
-  port: 1433
 };
 
 const connectDB = async () => {
   try {
-    console.log(`Đang thử kết nối tới Server: ${dbConfig.server} bằng Windows Auth...`);
+    console.log(`Đang kết nối tới ${dbConfig.server}:${dbConfig.port}/${dbConfig.database} (user: ${dbConfig.user})...`);
     await sql.connect(dbConfig);
-    console.log(' Kết nối SQL Server thành công!');
+    console.log('✅ Kết nối SQL Server thành công!');
   } catch (err) {
-    console.error('Lỗi kết nối Database:', err.message);
-    console.log(' Mẹo: Kiểm tra xem SQL Server đã bật TCP/IP ở Port 1433 chưa.');
+    console.error('❌ Lỗi kết nối Database:', err.message);
+    console.log('Mẹo: Kiểm tra SQL Server đã bật Mixed Mode Authentication và TCP/IP Port 1433 chưa.');
   }
 };
 
