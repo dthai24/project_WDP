@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTagsApi, savePreferencesApi } from '../services/authService';
 import Logo from '../components/common/Logo';
+import { toast } from '../components/common/Toast';
 
 // MUI Icons
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
@@ -66,8 +67,8 @@ export default function SurveyPage() {
   const [tags, setTags] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [loadState, setLoadState] = useState('loading'); // 'loading' | 'ready' | 'error'
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const fetchTags = useCallback(async () => {
     setLoadState('loading');
@@ -78,9 +79,11 @@ export default function SurveyPage() {
         setLoadState('ready');
       } else {
         setLoadState('error');
+        toast.error(data.message || 'Không thể tải danh sách chủ đề.');
       }
     } catch {
       setLoadState('error');
+      toast.error('Không thể kết nối server. Vui lòng kiểm tra lại.');
     }
   }, []);
 
@@ -97,27 +100,31 @@ export default function SurveyPage() {
       }
       return next;
     });
-    setSaveError('');
   };
 
   const handleSubmit = async () => {
-    if (selected.size < MIN_SELECT) return;
+    if (selected.size < MIN_SELECT || submittingRef.current) return;
 
-    setSaving(true);
-    setSaveError('');
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       const { ok, data } = await savePreferencesApi(user.userId, Array.from(selected));
       if (ok && data.success) {
         const updatedUser = { ...user, isFirstLogin: false };
         sessionStorage.setItem('user', JSON.stringify(updatedUser));
-        navigate('/');
+        toast.success(data.message || 'Đã lưu sở thích thành công!');
+        navigate('/home');
+        // Không reset — button vẫn disabled cho đến khi unmount
       } else {
-        setSaveError(data.message || 'Lưu sở thích thất bại. Vui lòng thử lại.');
+        toast.error(data.message || 'Lưu sở thích thất bại. Vui lòng thử lại.');
+        submittingRef.current = false;
+        setIsSubmitting(false);
       }
     } catch {
-      setSaveError('Không thể kết nối server. Vui lòng kiểm tra lại.');
-    } finally {
-      setSaving(false);
+      toast.error('Không thể kết nối server. Vui lòng kiểm tra lại.');
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -259,15 +266,14 @@ export default function SurveyPage() {
               Vui lòng chọn ít nhất {MIN_SELECT} chủ đề ({MIN_SELECT - count} còn lại)
             </p>
           )}
-          {saveError && <p className="survey-hint error">{saveError}</p>}
 
           <button
             id="btn-start-journey"
             className="survey-btn-submit"
-            disabled={!canSubmit || saving}
+            disabled={!canSubmit || isSubmitting}
             onClick={handleSubmit}
           >
-            {saving ? (
+            {isSubmitting ? (
               <><span className="spin" />Đang lưu...</>
             ) : (
               'Bắt đầu trải nghiệm'

@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import CircularProgress from '@mui/material/CircularProgress';
 import { loginApi } from '../services/authService';
 import Logo from '../components/common/Logo';
 import AuthPasswordField from '../components/common/AuthPasswordField';
+import { toast } from '../components/common/Toast';
 import '../styles/auth.css';
 
 const REMEMBER_KEY = 'star_remember_email';
@@ -16,11 +18,11 @@ const validateEmail = (email) => {
 export default function LoginPage() {
   const navigate = useNavigate();
 
-  const [form, setForm]       = useState({ email: '', password: '' });
-  const [errors, setErrors]   = useState({});
-  const [alert, setAlert]     = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [form, setForm]           = useState({ email: '', password: '' });
+  const [errors, setErrors]       = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [remember, setRemember]   = useState(false);
+  const submittingRef             = useRef(false); // sync guard — blocks before React re-renders
 
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBER_KEY);
@@ -32,50 +34,51 @@ export default function LoginPage() {
 
   const validate = () => {
     const errs = {};
-    if (!form.email.trim())           errs.email    = 'Email không được để trống.';
-    else if (!validateEmail(form.email)) errs.email = 'Email không hợp lệ (phải có @, dấu chấm, tên miền, không khoảng trắng).';
-    if (!form.password)               errs.password = 'Mật khẩu không được để trống.';
+    if (!form.email.trim())              errs.email    = 'Email không được để trống.';
+    else if (!validateEmail(form.email)) errs.email    = 'Email không hợp lệ (phải có @, dấu chấm, tên miền, không khoảng trắng).';
+    if (!form.password)                  errs.password = 'Mật khẩu không được để trống.';
     return errs;
   };
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setErrors(prev => ({ ...prev, [e.target.name]: '' }));
-    setAlert(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Chặn đồng bộ ngay — trước khi React kịp re-render
+    if (submittingRef.current) return;
+
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
-    setLoading(true);
-    setAlert(null);
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       const { ok, data } = await loginApi(form.email.trim(), form.password);
+
       if (ok && data.success) {
         if (remember) {
           localStorage.setItem(REMEMBER_KEY, form.email.trim());
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
-        setAlert({ type: 'success', message: data.message });
         sessionStorage.setItem('user', JSON.stringify(data.user));
-
-        setTimeout(() => {
-          if (data.user.isFirstLogin) {
-            navigate('/survey');
-          } else {
-            navigate('/home');
-          }
-        }, 800);
+        toast.success(data.message);
+        // Navigate ngay — không setTimeout, button vẫn disabled cho đến khi unmount
+        navigate(data.user.isFirstLogin ? '/survey' : '/home');
       } else {
-        setAlert({ type: 'error', message: data.message || 'Đăng nhập thất bại.' });
+        toast.error(data.message || 'Đăng nhập thất bại.');
+        submittingRef.current = false;
+        setIsSubmitting(false);
       }
     } catch {
-      setAlert({ type: 'error', message: 'Không thể kết nối server. Vui lòng kiểm tra backend.' });
-    } finally {
-      setLoading(false);
+      toast.error('Không thể kết nối server. Vui lòng kiểm tra backend.');
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -89,12 +92,6 @@ export default function LoginPage() {
         </div>
 
         <hr className="auth-divider" />
-
-        {alert && (
-          <div className={`form-alert ${alert.type}`} style={{ marginBottom: '16px' }}>
-            {alert.message}
-          </div>
-        )}
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <div className="form-group">
@@ -111,6 +108,7 @@ export default function LoginPage() {
                 placeholder="example@gmail.com"
                 value={form.email}
                 onChange={handleChange}
+                disabled={isSubmitting}
               />
             </div>
             {errors.email && <p className="field-error">{errors.email}</p>}
@@ -124,6 +122,7 @@ export default function LoginPage() {
             value={form.password}
             onChange={handleChange}
             error={errors.password}
+            disabled={isSubmitting}
             autoComplete="current-password"
           />
 
@@ -133,6 +132,7 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
+                disabled={isSubmitting}
               />
               Ghi nhớ đăng nhập
             </label>
@@ -141,9 +141,15 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button id="btn-login" type="submit" className="btn-primary" disabled={loading}>
-            {loading && <span className="btn-spinner" />}
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          <button
+            id="btn-login"
+            type="submit"
+            className="btn-primary"
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? <><CircularProgress size={16} thickness={5} sx={{ color: 'inherit', mr: 1 }} />Đang đăng nhập...</>
+              : 'Đăng nhập'}
           </button>
         </form>
 

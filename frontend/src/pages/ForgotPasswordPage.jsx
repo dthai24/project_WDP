@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import CircularProgress from '@mui/material/CircularProgress';
 import { forgotPasswordApi } from '../services/authService';
 import Logo from '../components/common/Logo';
+import { toast } from '../components/common/Toast';
 import '../styles/auth.css';
 
-const COOLDOWN_KEY = 'otpCooldownEnd'; // localStorage key
-const COOLDOWN_MS  = 300_000;          // 5 minutes in ms
+const COOLDOWN_KEY = 'otpCooldownEnd';
+const COOLDOWN_MS  = 300_000; // 5 phút
 
 const validateEmail = (email) => {
   if (!email || email.includes(' ')) return false;
@@ -16,7 +18,6 @@ const validateEmail = (email) => {
 const formatTime = (seconds) =>
   `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
-/** Reads localStorage and returns remaining cooldown seconds (0 if expired/absent). */
 const getRemainingCooldown = () => {
   const end = parseInt(localStorage.getItem(COOLDOWN_KEY) || '0', 10);
   if (!end) return 0;
@@ -27,27 +28,22 @@ const getRemainingCooldown = () => {
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
-  const [email,     setEmail]     = useState('');
-  const [error,     setError]     = useState('');
-  const [alert,     setAlert]     = useState(null);
-  const [loading,   setLoading]   = useState(false);
-  const [cooldown,  setCooldown]  = useState(0); // seconds remaining
-  const timerRef = useRef(null);
+  const [email,        setEmail]        = useState('');
+  const [error,        setError]        = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldown,     setCooldown]     = useState(0);
+  const timerRef      = useRef(null);
+  const submittingRef = useRef(false);
 
-  // ── On mount: resume cooldown from localStorage if still active ──
   useEffect(() => {
     const remaining = getRemainingCooldown();
     if (remaining > 0) startCountdown(remaining);
-
-    // Clear timer on unmount
     return () => clearInterval(timerRef.current);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Starts the visual countdown from `seconds`. Clears localStorage when done. */
   const startCountdown = (seconds) => {
     setCooldown(seconds);
     clearInterval(timerRef.current);
-
     timerRef.current = setInterval(() => {
       setCooldown((prev) => {
         if (prev <= 1) {
@@ -60,53 +56,44 @@ export default function ForgotPasswordPage() {
     }, 1000);
   };
 
-  // ── Form submit ─────────────────────────────────────────────
   const handleSubmit = async (e) => {
-    e.preventDefault(); // always prevent default first
-
-    // Guard: still in cooldown
-    if (cooldown > 0) return;
+    e.preventDefault();
+    if (cooldown > 0 || submittingRef.current) return;
 
     const trimmed = email.trim();
     if (!trimmed)                { setError('Email không được để trống.'); return; }
     if (!validateEmail(trimmed)) { setError('Email không hợp lệ.'); return; }
 
-    setLoading(true);
+    submittingRef.current = true;
+    setIsSubmitting(true);
     setError('');
-    setAlert(null);
 
     try {
-      // Only send { email } — no role info at all
       const { ok, data } = await forgotPasswordApi(trimmed.toLowerCase());
 
       if (ok && data.success) {
-        // ① Persist cooldown end timestamp to localStorage
         localStorage.setItem(COOLDOWN_KEY, String(Date.now() + COOLDOWN_MS));
-
-        // ② Start 5-minute visual countdown
         startCountdown(COOLDOWN_MS / 1000);
-
-        // ③ Save email for ResetPasswordPage
         sessionStorage.setItem('resetEmail', trimmed.toLowerCase());
-
-        setAlert({ type: 'success', message: data.message });
-        setTimeout(() => navigate('/reset-password'), 1500);
+        toast.success(data.message);
+        navigate('/reset-password');
       } else {
-        setAlert({ type: 'error', message: data.message || 'Không thể gửi OTP. Vui lòng thử lại.' });
+        toast.error(data.message || 'Không thể gửi OTP. Vui lòng thử lại.');
+        submittingRef.current = false;
+        setIsSubmitting(false);
       }
     } catch {
-      setAlert({ type: 'error', message: 'Không thể kết nối server. Vui lòng kiểm tra backend.' });
-    } finally {
-      setLoading(false);
+      toast.error('Không thể kết nối server. Vui lòng kiểm tra backend.');
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
-  const isBlocked = cooldown > 0 || loading;
+  const isBlocked = cooldown > 0 || isSubmitting;
 
   return (
     <div className="auth-page">
       <div className="auth-card">
-        {/* Brand */}
         <div className="auth-brand">
           <Logo height={56} link={false} className="brand-logo" />
           <h1>S.T.A.R Learning Path</h1>
@@ -114,13 +101,6 @@ export default function ForgotPasswordPage() {
         </div>
 
         <hr className="auth-divider" />
-
-        {/* Alert banner */}
-        {alert && (
-          <div className={`form-alert ${alert.type}`} style={{ marginBottom: '16px' }}>
-            {alert.message}
-          </div>
-        )}
 
         <p style={{
           color: 'var(--clr-text-dim)',
@@ -150,14 +130,12 @@ export default function ForgotPasswordPage() {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setError('');
-                  setAlert(null);
                 }}
               />
             </div>
             {error && <p className="field-error">{error}</p>}
           </div>
 
-          {/* Cooldown hint — shown while timer is active */}
           {cooldown > 0 && (
             <div className="otp-timer" style={{ marginTop: '4px' }}>
               <span className="time-display">{formatTime(cooldown)}</span>
@@ -172,9 +150,8 @@ export default function ForgotPasswordPage() {
             disabled={isBlocked}
             style={{ marginTop: '8px' }}
           >
-            {loading && <span className="btn-spinner" />}
-            {loading
-              ? 'Đang gửi OTP...'
+            {isSubmitting
+              ? <><CircularProgress size={16} thickness={5} sx={{ color: 'inherit', mr: 1 }} />Đang gửi OTP...</>
               : cooldown > 0
               ? `Gửi lại sau ${formatTime(cooldown)}`
               : 'Gửi mã OTP'}

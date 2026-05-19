@@ -23,6 +23,7 @@ import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import { useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
 import SearchBox from "../common/SearchBox";
+import { toast } from "../common/Toast";
 
 const MENU_CLOSE_DELAY = 200;
 const PROJECT_NAME = "S.T.A.R Learning Path";
@@ -78,6 +79,7 @@ export default function Header({
       onLogout();
     } else {
       sessionStorage.removeItem("user");
+      toast.info("Đã đăng xuất thành công.");
       navigate("/login", { replace: true });
     }
   };
