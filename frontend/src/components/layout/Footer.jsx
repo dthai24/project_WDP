@@ -1,4 +1,5 @@
 import { Box, Container, Typography, Link, alpha, useTheme } from "@mui/material";
+import Logo from "../common/Logo";
 
 const DEFAULT_LINKS = [
   { label: "Về chúng tôi", href: "#" },
@@ -34,9 +35,12 @@ export default function Footer({
             gap: 2,
           }}
         >
-          <Typography variant="body2" color="text.secondary" fontWeight={600}>
-            © {year} {brand}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Logo height={28} to="/" />
+            <Typography variant="body2" color="text.secondary" fontWeight={600}>
+              © {year} {brand}
+            </Typography>
+          </Box>
           <Box sx={{ display: "flex", gap: 3 }}>
             {links.map((item) => (
               <Link
