@@ -37,3 +37,11 @@ export const getTagsApi = () =>
 /** POST /api/auth/save-preferences — lưu sở thích */
 export const savePreferencesApi = (userId, tagIds) =>
   apiFetch('/save-preferences', { userId, tagIds });
+
+/** POST /api/auth/forgot-password — chỉ gửi email, không cần role */
+export const forgotPasswordApi = (email) =>
+  apiFetch('/forgot-password', { email });
+
+/** POST /api/auth/reset-password — xác nhận OTP + cập nhật mật khẩu */
+export const resetPasswordApi = (email, otp, newPassword) =>
+  apiFetch('/reset-password', { email, otp, newPassword });
