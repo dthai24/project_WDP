@@ -36,7 +36,7 @@ export default function Footer({
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Logo height={28} to="/" />
+            <Logo height={28} to="/home" />
             <Typography variant="body2" color="text.secondary" fontWeight={600}>
               © {year} {brand}
             </Typography>

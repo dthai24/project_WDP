@@ -66,7 +66,7 @@ export default function LoginPage() {
           if (data.user.isFirstLogin) {
             navigate('/survey');
           } else {
-            navigate('/');
+            navigate('/home');
           }
         }, 800);
       } else {

@@ -43,6 +43,14 @@ export default function SearchBox({
                 borderWidth: 1,
               },
             },
+            "& .MuiOutlinedInput-input": {
+              fontSize: 14,
+              "&::placeholder": {
+                fontSize: 12,
+                opacity: 1,
+                color: alpha(theme.palette.text.secondary, 0.65),
+              },
+            },
           },
         }}
         {...props}

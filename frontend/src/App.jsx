@@ -3,8 +3,10 @@ import LoginPage    from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OtpPage      from './pages/OtpPage';
 import HomePage     from './pages/HomePage';
+import ProfilePage  from './pages/ProfilePage';
 import SurveyPage   from './pages/SurveyPage';
 import TestPage     from './pages/Test';
+import MainLayout   from './components/layout/MainLayout';
 
 /** Guard: redirect về /login nếu chưa đăng nhập */
 function ProtectedRoute({ children }) {
@@ -34,15 +36,19 @@ export default function App() {
           }
         />
 
-        {/* Home / Newsfeed — cần đăng nhập */}
+        {/* Main app — Header + Footer */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <HomePage />
+              <MainLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="/home" replace />} />
+          <Route path="home" element={<HomePage />} />
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
