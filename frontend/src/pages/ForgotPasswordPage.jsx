@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import { forgotPasswordApi } from '../services/authService';
+import Logo from '../components/common/Logo';
 import '../styles/auth.css';
 
 const COOLDOWN_KEY = 'otpCooldownEnd'; // localStorage key
@@ -106,7 +108,7 @@ export default function ForgotPasswordPage() {
       <div className="auth-card">
         {/* Brand */}
         <div className="auth-brand">
-          <span className="brand-icon">🔑</span>
+          <Logo height={56} link={false} className="brand-logo" />
           <h1>S.T.A.R Learning Path</h1>
           <p>Khôi phục mật khẩu của bạn</p>
         </div>
@@ -134,7 +136,9 @@ export default function ForgotPasswordPage() {
           <div className="form-group">
             <label htmlFor="forgot-email">Email đã đăng ký</label>
             <div className="input-wrapper">
-              <span className="input-icon">✉️</span>
+              <span className="input-icon" aria-hidden="true">
+                <EmailOutlinedIcon />
+              </span>
               <input
                 id="forgot-email"
                 type="email"
@@ -172,8 +176,8 @@ export default function ForgotPasswordPage() {
             {loading
               ? 'Đang gửi OTP...'
               : cooldown > 0
-              ? `⏳ Gửi lại sau ${formatTime(cooldown)}`
-              : '📨 Gửi mã OTP'}
+              ? `Gửi lại sau ${formatTime(cooldown)}`
+              : 'Gửi mã OTP'}
           </button>
         </form>
 
