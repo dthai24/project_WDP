@@ -4,6 +4,7 @@ import RegisterPage from './pages/RegisterPage';
 import OtpPage      from './pages/OtpPage';
 import HomePage     from './pages/HomePage';
 import SurveyPage   from './pages/SurveyPage';
+import TestPage     from './pages/Test';
 
 /** Guard: redirect về /login nếu chưa đăng nhập */
 function ProtectedRoute({ children }) {
@@ -19,6 +20,9 @@ export default function App() {
         <Route path="/login"      element={<LoginPage />} />
         <Route path="/register"   element={<RegisterPage />} />
         <Route path="/verify-otp" element={<OtpPage />} />
+
+        {/* Demo UI components — public */}
+        <Route path="/test-component" element={<TestPage />} />
 
         {/* Onboarding survey — cần đăng nhập */}
         <Route
