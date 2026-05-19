@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { verifyOtpApi, registerApi } from '../services/authService';
+import CircularProgress from '@mui/material/CircularProgress';
+import { verifyOtpApi } from '../services/authService';
 import Logo from '../components/common/Logo';
+import { toast } from '../components/common/Toast';
 import '../styles/auth.css';
 
 const OTP_LENGTH  = 6;
@@ -11,12 +13,13 @@ export default function OtpPage() {
   const navigate = useNavigate();
   const email = sessionStorage.getItem('pendingEmail') || '';
 
-  const [digits, setDigits]   = useState(Array(OTP_LENGTH).fill(''));
-  const [timeLeft, setTimeLeft] = useState(OTP_SECONDS);
-  const [alert, setAlert]     = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
-  const inputRefs = useRef([]);
+  const [digits, setDigits]             = useState(Array(OTP_LENGTH).fill(''));
+  const [timeLeft, setTimeLeft]         = useState(OTP_SECONDS);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resending, setResending]       = useState(false);
+  const inputRefs    = useRef([]);
+  const submittingRef = useRef(false);
+  const resendingRef  = useRef(false);
 
   // Countdown timer
   useEffect(() => {
@@ -34,13 +37,10 @@ export default function OtpPage() {
   }, [email, navigate]);
 
   const handleDigitChange = (index, value) => {
-    // Chỉ nhận 1 chữ số
     const digit = value.replace(/\D/g, '').slice(-1);
     const next  = [...digits];
     next[index] = digit;
     setDigits(next);
-    setAlert(null);
-    // Auto-focus ô tiếp theo
     if (digit && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -50,7 +50,6 @@ export default function OtpPage() {
     if (e.key === 'Backspace' && !digits[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
-    // Paste handler
     if (e.key === 'Enter') handleVerify();
   };
 
@@ -64,43 +63,49 @@ export default function OtpPage() {
   };
 
   const handleVerify = async () => {
+    if (submittingRef.current) return;
+
     const otpCode = digits.join('');
     if (otpCode.length < OTP_LENGTH) {
-      setAlert({ type: 'error', message: 'Vui lòng nhập đủ 6 chữ số OTP.' });
+      toast.error('Vui lòng nhập đủ 6 chữ số OTP.');
       return;
     }
     if (timeLeft <= 0) {
-      setAlert({ type: 'error', message: 'Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.' });
+      toast.error('Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
       return;
     }
 
-    setLoading(true);
-    setAlert(null);
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       const { ok, data } = await verifyOtpApi(email, otpCode);
       if (ok && data.success) {
-        setAlert({ type: 'success', message: data.message });
         sessionStorage.removeItem('pendingEmail');
-        setTimeout(() => navigate('/login'), 2000);
+        toast.success(data.message);
+        navigate('/login');
       } else {
-        setAlert({ type: 'error', message: data.message || 'Xác thực thất bại.' });
+        toast.error(data.message || 'Xác thực thất bại.');
+        submittingRef.current = false;
+        setIsSubmitting(false);
       }
     } catch {
-      setAlert({ type: 'error', message: 'Không thể kết nối server.' });
-    } finally {
-      setLoading(false);
+      toast.error('Không thể kết nối server.');
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
-  // Gửi lại OTP — gọi lại API register với data đã cache (không lưu pass, chỉ trigger resend)
   const handleResend = async () => {
+    if (resendingRef.current) return;
+    resendingRef.current = true;
     setResending(true);
-    setAlert(null);
-    // Thực tế production nên có endpoint riêng /resend-otp
-    // Đây ta re-call register với dữ liệu từ pendingEmail, nhưng ta chưa lưu data → báo user quay lại register
-    setAlert({ type: 'error', message: 'Vui lòng quay lại trang Đăng ký để gửi lại OTP.' });
+    toast.error('Vui lòng quay lại trang Đăng ký để gửi lại OTP.');
+    resendingRef.current = false;
     setResending(false);
   };
+
+  const isDisabled = isSubmitting || timeLeft <= 0;
 
   return (
     <div className="auth-page">
@@ -112,12 +117,6 @@ export default function OtpPage() {
         </div>
 
         <hr className="auth-divider" />
-
-        {alert && (
-          <div className={`form-alert ${alert.type}`} style={{ marginBottom: '16px' }}>
-            {alert.message}
-          </div>
-        )}
 
         <p className="otp-email-hint">
           Mã OTP 6 chữ số đã được gửi đến <span>{email}</span>
@@ -137,7 +136,7 @@ export default function OtpPage() {
               value={d}
               onChange={e => handleDigitChange(i, e.target.value)}
               onKeyDown={e => handleKeyDown(i, e)}
-              disabled={loading || timeLeft <= 0}
+              disabled={isDisabled}
             />
           ))}
         </div>
@@ -158,11 +157,12 @@ export default function OtpPage() {
             id="btn-verify-otp"
             type="button"
             className="btn-primary"
-            disabled={loading || timeLeft <= 0 || digits.join('').length < OTP_LENGTH}
+            disabled={isDisabled || digits.join('').length < OTP_LENGTH}
             onClick={handleVerify}
           >
-            {loading && <span className="btn-spinner" />}
-            {loading ? 'Đang xác thực...' : '✅ Xác nhận OTP'}
+            {isSubmitting
+              ? <><CircularProgress size={16} thickness={5} sx={{ color: 'inherit', mr: 1 }} />Đang xác thực...</>
+              : 'Xác nhận OTP'}
           </button>
 
           <button
@@ -171,7 +171,7 @@ export default function OtpPage() {
             disabled={resending || timeLeft > 0}
             onClick={handleResend}
           >
-            {resending ? 'Đang gửi...' : '🔄 Gửi lại mã OTP'}
+            {resending ? 'Đang gửi...' : 'Gửi lại mã OTP'}
           </button>
         </div>
 
