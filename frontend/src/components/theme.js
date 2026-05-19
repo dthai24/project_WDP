@@ -1,8 +1,19 @@
 import { createTheme, alpha } from "@mui/material/styles";
 
+/** Bo góc surface — khớp CourseCard (MuiCard) */
+export const SURFACE_RADIUS = 8;
+
 /** iOS 18 — minimal modern, ocean palette (flat, no gradient) */
 export const ios18 = {
-  radius: { sm: 8, md: 12, lg: 16, xl: 22, pill: 9999 },
+  radius: {
+    xs: 4,
+    sm: 6,
+    md: SURFACE_RADIUS,
+    lg: 10,
+    xl: 12,
+    pill: 9999,
+    card: SURFACE_RADIUS,
+  },
   blur: 24,
   glass: {
     background: "rgba(255, 255, 255, 0.82)",
@@ -43,7 +54,7 @@ const theme = createTheme({
     body2: { lineHeight: 1.5 },
     button: { textTransform: "none", fontWeight: 600, letterSpacing: "0" },
   },
-  shape: { borderRadius: ios18.radius.md },
+  shape: { borderRadius: SURFACE_RADIUS },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
@@ -68,7 +79,7 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: ios18.radius.lg,
+          borderRadius: SURFACE_RADIUS,
           boxShadow: ios18.shadow.sm,
           border: `1px solid ${alpha(OCEAN, 0.08)}`,
           backgroundImage: "none",
@@ -78,15 +89,35 @@ const theme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: ios18.radius.xl,
+          borderRadius: SURFACE_RADIUS,
           boxShadow: ios18.shadow.lg,
           border: `1px solid ${alpha(OCEAN, 0.08)}`,
         },
       },
     },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: SURFACE_RADIUS,
+          backgroundImage: "none",
+        },
+      },
+    },
+    MuiMenuList: {
+      styleOverrides: {
+        root: { paddingTop: 4, paddingBottom: 4 },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          minHeight: 40,
+        },
+      },
+    },
     MuiChip: {
       styleOverrides: {
-        root: { fontWeight: 500 },
+        root: { fontWeight: 500, borderRadius: ios18.radius.xs },
       },
     },
     MuiTextField: {
@@ -96,5 +127,11 @@ const theme = createTheme({
 });
 
 theme.ios18 = ios18;
+
+/** Viền + bóng khớp Card trên HomePage */
+export const surfaceCardSx = (theme) => ({
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+  boxShadow: theme.ios18.shadow.sm,
+});
 
 export default theme;

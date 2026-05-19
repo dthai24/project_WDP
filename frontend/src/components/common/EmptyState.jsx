@@ -6,6 +6,7 @@ export default function EmptyState({
   description,
   actionLabel,
   onAction,
+  embedded = false,
 }) {
   const theme = useTheme();
 
@@ -13,18 +14,26 @@ export default function EmptyState({
     <Box
       sx={{
         textAlign: "center",
-        py: 5,
-        px: 3,
-        borderRadius: theme.ios18?.radius?.lg ?? 16,
-        backgroundColor: alpha(theme.palette.primary.main, 0.03),
-        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+        py: embedded ? 4 : 5,
+        px: embedded ? 2 : 3,
+        ...(embedded
+          ? {
+              borderRadius: 0,
+              border: "none",
+              backgroundColor: "transparent",
+            }
+          : {
+              borderRadius: theme.shape.borderRadius,
+              backgroundColor: alpha(theme.palette.primary.main, 0.03),
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            }),
       }}
     >
       <Box
         sx={{
           width: 40,
           height: 3,
-          borderRadius: 2,
+          borderRadius: 1,
           bgcolor: "primary.main",
           mx: "auto",
           mb: 2,

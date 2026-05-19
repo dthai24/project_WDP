@@ -1,111 +1,133 @@
-import { Link, useNavigate } from 'react-router-dom';
-import '../styles/auth.css';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Chip,
+  alpha,
+  useTheme,
+} from '@mui/material';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
+import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
+import PageTitle from '../components/common/PageTitle';
+import EmptyState from '../components/common/EmptyState';
+import { surfaceCardSx } from '../components/theme';
+
+function getUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem('user')) || {};
+  } catch {
+    return {};
+  }
+}
+
+const PLACEHOLDER_STATS = [
+  { label: 'Khóa đang học', value: '—', icon: SchoolOutlinedIcon },
+  { label: 'Lộ trình', value: '—', icon: RouteOutlinedIcon },
+  { label: 'Tiến độ tuần', value: '—', icon: TrendingUpOutlinedIcon },
+];
+
+const cardSx = (theme) => ({
+  height: '100%',
+  ...surfaceCardSx(theme),
+});
 
 export default function HomePage() {
-  const navigate  = useNavigate();
-  const userRaw   = sessionStorage.getItem('user');
-  const user      = userRaw ? JSON.parse(userRaw) : {};
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('user');
-    navigate('/login', { replace: true });
-  };
+  const theme = useTheme();
+  const user = getUser();
+  const displayName = user.fullName || 'Học viên';
+  const innerRadius = theme.ios18?.radius?.xs ?? 4;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#0a0918',
-      fontFamily: "'Inter', sans-serif",
-      color: '#e2e0f0',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* Background blobs */}
-      <div style={{
-        position: 'fixed', borderRadius: '50%', filter: 'blur(80px)',
-        opacity: 0.3, pointerEvents: 'none',
-        width: 500, height: 500,
-        background: 'radial-gradient(circle, #6c63ff, #a78bfa)',
-        top: -150, left: -150, zIndex: 0,
-      }} />
-      <div style={{
-        position: 'fixed', borderRadius: '50%', filter: 'blur(80px)',
-        opacity: 0.2, pointerEvents: 'none',
-        width: 400, height: 400,
-        background: 'radial-gradient(circle, #a78bfa, #6c63ff)',
-        bottom: -130, right: -100, zIndex: 0,
-      }} />
+    <Box>
+      <PageTitle
+        title={`Xin chào, ${displayName}`}
+        subtitle="Trang chủ S.T.A.R Learning Path — nội dung học tập sẽ hiển thị tại đây."
+      />
 
-      <div style={{
-        position: 'relative', zIndex: 1,
-        background: 'rgba(255,255,255,0.04)',
-        backdropFilter: 'blur(24px)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '24px',
-        padding: '48px 40px',
-        maxWidth: '560px',
-        width: '100%',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-        textAlign: 'center',
-        animation: 'cardIn 0.5s cubic-bezier(0.34,1.3,0.64,1) both',
-      }}>
-        <div style={{ fontSize: 52, marginBottom: 16 }}>🌟</div>
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        {PLACEHOLDER_STATS.map(({ label, value, icon: Icon }) => (
+          <Grid key={label} size={{ xs: 12, sm: 4 }}>
+            <Card elevation={0} sx={cardSx(theme)}>
+              <CardContent
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  py: 2.5,
+                  '&:last-child': { pb: 2.5 },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: innerRadius,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    color: 'primary.main',
+                  }}
+                >
+                  <Icon fontSize="small" />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {label}
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700}>
+                    {value}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
-        <h1 style={{
-          fontSize: '28px', fontWeight: 900, margin: '0 0 8px',
-          background: 'linear-gradient(135deg, #fff 30%, #a78bfa)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}>
-          Chào mừng trở lại!
-        </h1>
-        <p style={{ color: '#a78bfa', fontSize: 18, fontWeight: 600, margin: '0 0 4px' }}>
-          {user.fullName || 'Học viên'}
-        </p>
-        <p style={{ color: '#8885a0', fontSize: 13, margin: '0 0 32px' }}>
-          {user.email}
-        </p>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Card elevation={0} sx={{ ...cardSx(theme), minHeight: 280 }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Typography variant="h6" fontWeight={600}>
+                  Bảng tin học tập
+                </Typography>
+                <Chip label="Sắp ra mắt" size="small" color="primary" variant="outlined" />
+              </Box>
+              <EmptyState
+                embedded
+                title="Chưa có hoạt động"
+                description="Newsfeed và bài học gợi ý sẽ được cập nhật khi kết nối backend."
+              />
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <div style={{
-          background: 'rgba(108,99,255,0.1)',
-          border: '1px solid rgba(108,99,255,0.2)',
-          borderRadius: 14,
-          padding: '20px 24px',
-          marginBottom: 32,
-          textAlign: 'left',
-        }}>
-          <p style={{ color: '#8885a0', fontSize: 13, margin: '0 0 6px' }}>📬 Newsfeed</p>
-          <p style={{ color: '#e2e0f0', fontSize: 15 }}>
-            Trang chủ S.T.A.R Learning Path đang được xây dựng. 
-            Hãy chờ đợi những tính năng thú vị sắp tới! 🚀
-          </p>
-        </div>
-
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: '12px 32px',
-            background: 'rgba(255,107,107,0.15)',
-            border: '1px solid rgba(255,107,107,0.35)',
-            borderRadius: 12,
-            color: '#ff6b6b',
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => e.target.style.background = 'rgba(255,107,107,0.25)'}
-          onMouseLeave={e => e.target.style.background = 'rgba(255,107,107,0.15)'}
-        >
-          🚪 Đăng xuất
-        </button>
-      </div>
-    </div>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card elevation={0} sx={cardSx(theme)}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+                Gợi ý nhanh
+              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary' }}>
+                <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+                  Hoàn thành khảo sát sở thích nếu chưa làm
+                </Typography>
+                <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+                  Khám phá lộ trình theo mục tiêu của bạn
+                </Typography>
+                <Typography component="li" variant="body2">
+                  Theo dõi tiến độ từng khóa học
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }

@@ -2,28 +2,35 @@ import { Box, Container } from "@mui/material";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
+import Sidebar from "./Sidebar";
 
-const DEFAULT_NAV = [
-  { label: "Trang chủ", to: "/" },
-  { label: "Test UI", to: "/test-component" },
-];
-
-export default function MainLayout({ navLinks = DEFAULT_NAV, children }) {
+export default function MainLayout({ children }) {
   return (
     <Box
       sx={{
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "background.default",
+        bgcolor: "#F8FAFC",
       }}
     >
-      <Header navLinks={navLinks} />
-      <Box component="main" sx={{ flex: 1, py: { xs: 2, md: 4 } }}>
-        <Container maxWidth="lg">
-          {children ?? <Outlet />}
-        </Container>
+      <Header />
+
+      <Box sx={{ display: "flex", flex: 1, alignItems: "stretch" }}>
+        <Sidebar />
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            py: { xs: 2, md: 4 },
+            bgcolor: "#F8FAFC",
+          }}
+        >
+          <Container maxWidth="lg">{children ?? <Outlet />}</Container>
+        </Box>
       </Box>
+
       <Footer />
     </Box>
   );
