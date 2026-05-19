@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTagsApi, savePreferencesApi } from '../services/authService';
+import Logo from '../components/common/Logo';
 import '../styles/SurveyPage.css';
 
 // Emoji map theo TagName slug
@@ -100,8 +101,7 @@ export default function SurveyPage() {
         <div className="survey-container">
           <div className="survey-header">
             <div className="survey-logo">
-              <span className="survey-logo-star">⭐</span>
-              <span className="survey-logo-text">S.T.A.R Learning Path</span>
+              <Logo height={48} link={false} />
             </div>
             <p style={{ color: '#8885a0', fontSize: '14px' }}>Đang tải danh sách chủ đề...</p>
           </div>
@@ -139,8 +139,7 @@ export default function SurveyPage() {
         {/* Header */}
         <div className="survey-header">
           <div className="survey-logo">
-            <span className="survey-logo-star">⭐</span>
-            <span className="survey-logo-text">S.T.A.R Learning Path</span>
+            <Logo height={48} link={false} />
           </div>
           <div className="survey-step-badge">🎯 Bước Cá Nhân Hoá</div>
           <h1 className="survey-title">

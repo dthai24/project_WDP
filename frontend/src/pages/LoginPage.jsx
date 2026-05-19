@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import { loginApi } from '../services/authService';
+import Logo from '../components/common/Logo';
+import AuthPasswordField from '../components/common/AuthPasswordField';
 import '../styles/auth.css';
+
+const REMEMBER_KEY = 'star_remember_email';
 
 const validateEmail = (email) => {
   if (!email || email.includes(' ')) return false;
@@ -13,8 +18,17 @@ export default function LoginPage() {
 
   const [form, setForm]       = useState({ email: '', password: '' });
   const [errors, setErrors]   = useState({});
-  const [alert, setAlert]     = useState(null); // { type: 'error'|'success', message }
+  const [alert, setAlert]     = useState(null);
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBER_KEY);
+    if (saved) {
+      setForm((prev) => ({ ...prev, email: saved }));
+      setRemember(true);
+    }
+  }, []);
 
   const validate = () => {
     const errs = {};
@@ -40,15 +54,19 @@ export default function LoginPage() {
     try {
       const { ok, data } = await loginApi(form.email.trim(), form.password);
       if (ok && data.success) {
+        if (remember) {
+          localStorage.setItem(REMEMBER_KEY, form.email.trim());
+        } else {
+          localStorage.removeItem(REMEMBER_KEY);
+        }
         setAlert({ type: 'success', message: data.message });
         sessionStorage.setItem('user', JSON.stringify(data.user));
 
-        // Routing theo isFirstLogin
         setTimeout(() => {
           if (data.user.isFirstLogin) {
-            navigate('/survey'); // Lần đầu → Khảo sát sở thích
+            navigate('/survey');
           } else {
-            navigate('/');       // Đã làm rồi → Thẳng Newsfeed
+            navigate('/');
           }
         }, 800);
       } else {
@@ -65,7 +83,7 @@ export default function LoginPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-icon">⭐</span>
+          <Logo height={56} link={false} className="brand-logo" />
           <h1>S.T.A.R Learning Path</h1>
           <p>Đăng nhập để tiếp tục hành trình học tập</p>
         </div>
@@ -82,7 +100,9 @@ export default function LoginPage() {
           <div className="form-group">
             <label htmlFor="login-email">Email</label>
             <div className="input-wrapper">
-              <span className="input-icon">✉️</span>
+              <span className="input-icon" aria-hidden="true">
+                <EmailOutlinedIcon />
+              </span>
               <input
                 id="login-email"
                 type="email"
@@ -96,25 +116,29 @@ export default function LoginPage() {
             {errors.email && <p className="field-error">{errors.email}</p>}
           </div>
 
-          <div className="form-group">
-            <label htmlFor="login-password">Mật khẩu</label>
-            <div className="input-wrapper">
-              <span className="input-icon">🔒</span>
-              <input
-                id="login-password"
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                placeholder="Nhập mật khẩu"
-                value={form.password}
-                onChange={handleChange}
-              />
-            </div>
-            {errors.password && <p className="field-error">{errors.password}</p>}
-          </div>
+          <AuthPasswordField
+            id="login-password"
+            name="password"
+            label="Mật khẩu"
+            placeholder="Nhập mật khẩu"
+            value={form.password}
+            onChange={handleChange}
+            error={errors.password}
+            autoComplete="current-password"
+          />
 
-          <div className="forgot-link">
-            <Link to="/forgot-password">Quên mật khẩu?</Link>
+          <div className="auth-form-options">
+            <label className="auth-remember">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              Ghi nhớ đăng nhập
+            </label>
+            <div className="forgot-link">
+              <Link to="/forgot-password">Quên mật khẩu?</Link>
+            </div>
           </div>
 
           <button id="btn-login" type="submit" className="btn-primary" disabled={loading}>

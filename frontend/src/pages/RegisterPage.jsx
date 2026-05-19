@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
 import { registerApi } from '../services/authService';
+import Logo from '../components/common/Logo';
+import AuthPasswordField from '../components/common/AuthPasswordField';
 import '../styles/auth.css';
 
 const validateEmail = (email) => {
@@ -55,7 +62,6 @@ export default function RegisterPage() {
         password:    form.password,
       });
       if (ok && data.success) {
-        // Lưu email tạm để OTP page dùng
         sessionStorage.setItem('pendingEmail', form.email.trim().toLowerCase());
         setAlert({ type: 'success', message: data.message });
         setTimeout(() => navigate('/verify-otp'), 1500);
@@ -73,9 +79,9 @@ export default function RegisterPage() {
     <div className="auth-page">
       <div className="auth-card" style={{ maxWidth: '520px' }}>
         <div className="auth-brand">
-          <span className="brand-icon">⭐</span>
+          <Logo height={56} link={false} className="brand-logo" />
           <h1>S.T.A.R Learning Path</h1>
-          <p>Tạo tài khoản mới — Bắt đầu hành trình</p>
+          <p>Tạo tài khoản mới - Bắt đầu hành trình</p>
         </div>
 
         <hr className="auth-divider" />
@@ -87,75 +93,80 @@ export default function RegisterPage() {
         )}
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          {/* Full Name */}
           <div className="form-group">
             <label htmlFor="reg-fullName">Họ và tên</label>
             <div className="input-wrapper">
-              <span className="input-icon">👤</span>
+              <span className="input-icon" aria-hidden="true">
+                <PersonOutlineOutlinedIcon />
+              </span>
               <input id="reg-fullName" type="text" name="fullName"
                 placeholder="Nguyễn Văn A" value={form.fullName} onChange={handleChange} />
             </div>
             {errors.fullName && <p className="field-error">{errors.fullName}</p>}
           </div>
 
-          {/* Date of Birth */}
           <div className="form-group">
             <label htmlFor="reg-dob">Ngày sinh</label>
             <div className="input-wrapper">
-              <span className="input-icon">🎂</span>
+              <span className="input-icon" aria-hidden="true">
+                <CakeOutlinedIcon />
+              </span>
               <input id="reg-dob" type="date" name="dateOfBirth"
                 value={form.dateOfBirth} onChange={handleChange} />
             </div>
             {errors.dateOfBirth && <p className="field-error">{errors.dateOfBirth}</p>}
           </div>
 
-          {/* Phone */}
           <div className="form-group">
             <label htmlFor="reg-phone">Số điện thoại</label>
             <div className="input-wrapper">
-              <span className="input-icon">📱</span>
+              <span className="input-icon" aria-hidden="true">
+                <PhoneOutlinedIcon />
+              </span>
               <input id="reg-phone" type="tel" name="phone"
                 placeholder="0901234567" value={form.phone} onChange={handleChange} />
             </div>
             {errors.phone && <p className="field-error">{errors.phone}</p>}
           </div>
 
-          {/* Email */}
           <div className="form-group">
             <label htmlFor="reg-email">Email</label>
             <div className="input-wrapper">
-              <span className="input-icon">✉️</span>
+              <span className="input-icon" aria-hidden="true">
+                <EmailOutlinedIcon />
+              </span>
               <input id="reg-email" type="email" name="email" autoComplete="email"
                 placeholder="example@gmail.com" value={form.email} onChange={handleChange} />
             </div>
             {errors.email && <p className="field-error">{errors.email}</p>}
           </div>
 
-          {/* Password */}
-          <div className="form-group">
-            <label htmlFor="reg-password">Mật khẩu</label>
-            <div className="input-wrapper">
-              <span className="input-icon">🔒</span>
-              <input id="reg-password" type="password" name="password"
-                placeholder="Tối thiểu 6 ký tự" value={form.password} onChange={handleChange} />
-            </div>
-            {errors.password && <p className="field-error">{errors.password}</p>}
-          </div>
+          <AuthPasswordField
+            id="reg-password"
+            name="password"
+            label="Mật khẩu"
+            placeholder="Tối thiểu 6 ký tự"
+            value={form.password}
+            onChange={handleChange}
+            error={errors.password}
+            autoComplete="new-password"
+          />
 
-          {/* Confirm Password */}
-          <div className="form-group">
-            <label htmlFor="reg-confirm">Xác nhận mật khẩu</label>
-            <div className="input-wrapper">
-              <span className="input-icon">🔑</span>
-              <input id="reg-confirm" type="password" name="confirmPassword"
-                placeholder="Nhập lại mật khẩu" value={form.confirmPassword} onChange={handleChange} />
-            </div>
-            {errors.confirmPassword && <p className="field-error">{errors.confirmPassword}</p>}
-          </div>
+          <AuthPasswordField
+            id="reg-confirm"
+            name="confirmPassword"
+            label="Xác nhận mật khẩu"
+            placeholder="Nhập lại mật khẩu"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            error={errors.confirmPassword}
+            autoComplete="new-password"
+            Icon={VpnKeyOutlinedIcon}
+          />
 
           <button id="btn-register" type="submit" className="btn-primary" disabled={loading}>
             {loading && <span className="btn-spinner" />}
-            {loading ? 'Đang gửi OTP...' : '🚀 Đăng ký & Nhận OTP'}
+            {loading ? 'Đang gửi OTP...' : 'Đăng ký & Nhận OTP'}
           </button>
         </form>
 

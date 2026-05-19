@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { verifyOtpApi, registerApi } from '../services/authService';
+import Logo from '../components/common/Logo';
 import '../styles/auth.css';
 
 const OTP_LENGTH  = 6;
@@ -105,7 +106,7 @@ export default function OtpPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-icon">⭐</span>
+          <Logo height={56} link={false} className="brand-logo" />
           <h1>S.T.A.R Learning Path</h1>
           <p>Xác thực tài khoản của bạn</p>
         </div>

@@ -9,12 +9,13 @@ import {
   useTheme,
 } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
+import Logo from "../common/Logo";
 
 export default function Header({
-  logo = "S.T.A.R",
   navLinks = [],
   showUser = true,
   onLogout,
+  logoHeight = 36,
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -35,27 +36,14 @@ export default function Header({
       position="sticky"
       elevation={0}
       sx={{
-        ...theme.ios18?.glass,
+        backgroundColor: "#FFFFFF",
         color: "text.primary",
+        borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
         boxShadow: theme.ios18?.shadow?.sm,
       }}
     >
       <Toolbar sx={{ gap: 2, minHeight: { xs: 56, sm: 60 } }}>
-        <Typography
-          component={RouterLink}
-          to="/"
-          variant="h6"
-          sx={{
-            fontWeight: 700,
-            textDecoration: "none",
-            color: "primary.main",
-            letterSpacing: "-0.02em",
-            flexShrink: 0,
-            fontSize: { xs: 16, sm: 18 },
-          }}
-        >
-          {logo}
-        </Typography>
+        <Logo height={logoHeight} to="/" />
 
         <Box sx={{ display: { xs: "none", md: "flex" }, gap: 0.5, flex: 1 }}>
           {navLinks.map((link) => (
@@ -73,8 +61,8 @@ export default function Header({
                 color: "text.secondary",
                 transition: `color 0.2s ${theme.ios18?.transition}, background-color 0.2s`,
                 "&:hover": {
-                  color: "primary.main",
-                  backgroundColor: alpha(theme.palette.primary.main, 0.06),
+                  color: "secondary.main",
+                  backgroundColor: alpha(theme.palette.secondary.main, 0.06),
                 },
               }}
             >
