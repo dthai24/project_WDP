@@ -3,7 +3,15 @@ import "@mui/material/styles";
 declare module "@mui/material/styles" {
   interface Theme {
     ios18: {
-      radius: { sm: number; md: number; lg: number; xl: number; pill: number };
+      radius: {
+        xs: number;
+        sm: number;
+        md: number;
+        lg: number;
+        xl: number;
+        pill: number;
+        card: number;
+      };
       blur: number;
       glass: Record<string, string>;
       shadow: { sm: string; md: string; lg: string };

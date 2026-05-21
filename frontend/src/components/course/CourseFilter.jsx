@@ -61,7 +61,7 @@ export default function CourseFilter({
     <Box
       sx={{
         p: 2.5,
-        borderRadius: theme.ios18?.radius?.lg,
+        borderRadius: theme.shape.borderRadius,
         backgroundColor: theme.palette.background.paper,
         border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
         boxShadow: theme.ios18?.shadow?.sm,

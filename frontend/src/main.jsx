@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App.jsx';
 import theme from './components/theme.js';
+import ToastProvider from './components/common/Toast.jsx';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -11,6 +12,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <App />
+      <ToastProvider />
     </ThemeProvider>
   </React.StrictMode>,
 );
