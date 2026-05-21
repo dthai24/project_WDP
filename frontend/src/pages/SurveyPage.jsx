@@ -1,22 +1,56 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTagsApi, savePreferencesApi } from '../services/authService';
+import Logo from '../components/common/Logo';
+import { toast } from '../components/common/Toast';
+
+// MUI Icons
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
+import ComputerIcon from '@mui/icons-material/Computer';
+import CheckroomIcon from '@mui/icons-material/Checkroom';
+import FlightIcon from '@mui/icons-material/Flight';
+import MovieIcon from '@mui/icons-material/Movie';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import SchoolIcon from '@mui/icons-material/School';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
 import '../styles/SurveyPage.css';
 
-// Emoji map theo TagName slug
-const TAG_EMOJI = {
-  'the-thao-esports':          '⚽',
-  'lap-trinh-cong-nghe':       '💻',
-  'thoi-trang-phong-cach':     '👗',
-  'du-lich-kham-pha':          '✈️',
-  'phim-anh-giai-tri':         '🎬',
-  'am-nhac-nghe-thuat':        '🎵',
-  'am-thuc-nau-an':            '🍜',
-  'sach-phat-trien-ban-than':  '📚',
-  'tieng-anh-hoc-thuat':       '🎓',
-  'kinh-doanh-khoi-nghiep':    '🚀',
-  'tro-choi-dien-tu':          '🎮',
-  'anime-manga':               '⛩️',
+// Accent color mapping for each topic (icon, border, hover, and selection backgrounds)
+const TAG_COLOR = {
+  'the-thao-esports': { color: '#16a34a', bg: '#f0fdf4' }, // Green
+  'lap-trinh-cong-nghe': { color: '#2563eb', bg: '#eff6ff' }, // Blue
+  'thoi-trang-phong-cach': { color: '#db2777', bg: '#fdf2f8' }, // Pink
+  'du-lich-kham-pha': { color: '#0891b2', bg: '#ecfeff' }, // Teal
+  'phim-anh-giai-tri': { color: '#7c3aed', bg: '#f5f3ff' }, // Purple/Violet
+  'am-nhac-nghe-thuat': { color: '#ea580c', bg: '#fff7ed' }, // Orange
+  'am-thuc-nau-an': { color: '#dc2626', bg: '#fef2f2' }, // Red
+  'sach-phat-trien-ban-than': { color: '#059669', bg: '#ecfdf5' }, // Emerald
+  'tieng-anh-hoc-thuat': { color: '#0284c7', bg: '#f0f9ff' }, // Ocean/Sky
+  'kinh-doanh-khoi-nghiep': { color: '#4f46e5', bg: '#eef2ff' }, // Indigo
+  'tro-choi-dien-tu': { color: '#0d9488', bg: '#f0fdfa' }, // Teal-Green
+  'anime-manga': { color: '#c026d3', bg: '#fdf4ff' }, // Fuchsia/Magenta
+};
+
+// MUI Icon map by slug
+const TAG_ICON = {
+  'the-thao-esports': <SportsSoccerIcon className="tag-icon-svg" />,
+  'lap-trinh-cong-nghe': <ComputerIcon className="tag-icon-svg" />,
+  'thoi-trang-phong-cach': <CheckroomIcon className="tag-icon-svg" />,
+  'du-lich-kham-pha': <FlightIcon className="tag-icon-svg" />,
+  'phim-anh-giai-tri': <MovieIcon className="tag-icon-svg" />,
+  'am-nhac-nghe-thuat': <MusicNoteIcon className="tag-icon-svg" />,
+  'am-thuc-nau-an': <RestaurantIcon className="tag-icon-svg" />,
+  'sach-phat-trien-ban-than': <MenuBookIcon className="tag-icon-svg" />,
+  'tieng-anh-hoc-thuat': <SchoolIcon className="tag-icon-svg" />,
+  'kinh-doanh-khoi-nghiep': <RocketLaunchIcon className="tag-icon-svg" />,
+  'tro-choi-dien-tu': <SportsEsportsIcon className="tag-icon-svg" />,
+  'anime-manga': <AutoAwesomeIcon className="tag-icon-svg" />,
 };
 
 const MIN_SELECT = 3;
@@ -30,11 +64,11 @@ export default function SurveyPage() {
     catch { return {}; }
   })();
 
-  const [tags, setTags]           = useState([]);
-  const [selected, setSelected]   = useState(new Set());
+  const [tags, setTags] = useState([]);
+  const [selected, setSelected] = useState(new Set());
   const [loadState, setLoadState] = useState('loading'); // 'loading' | 'ready' | 'error'
-  const [saving, setSaving]       = useState(false);
-  const [saveError, setSaveError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const fetchTags = useCallback(async () => {
     setLoadState('loading');
@@ -45,9 +79,11 @@ export default function SurveyPage() {
         setLoadState('ready');
       } else {
         setLoadState('error');
+        toast.error(data.message || 'Không thể tải danh sách chủ đề.');
       }
     } catch {
       setLoadState('error');
+      toast.error('Không thể kết nối server. Vui lòng kiểm tra lại.');
     }
   }, []);
 
@@ -64,48 +100,51 @@ export default function SurveyPage() {
       }
       return next;
     });
-    setSaveError('');
   };
 
   const handleSubmit = async () => {
-    if (selected.size < MIN_SELECT) return;
+    if (selected.size < MIN_SELECT || submittingRef.current) return;
 
-    setSaving(true);
-    setSaveError('');
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       const { ok, data } = await savePreferencesApi(user.userId, Array.from(selected));
       if (ok && data.success) {
         const updatedUser = { ...user, isFirstLogin: false };
         sessionStorage.setItem('user', JSON.stringify(updatedUser));
-        navigate('/');
+        toast.success(data.message || 'Đã lưu sở thích thành công!');
+        navigate('/home');
+        // Không reset — button vẫn disabled cho đến khi unmount
       } else {
-        setSaveError(data.message || 'Lưu sở thích thất bại. Vui lòng thử lại.');
+        toast.error(data.message || 'Lưu sở thích thất bại. Vui lòng thử lại.');
+        submittingRef.current = false;
+        setIsSubmitting(false);
       }
     } catch {
-      setSaveError('Không thể kết nối server. Vui lòng kiểm tra lại.');
-    } finally {
-      setSaving(false);
+      toast.error('Không thể kết nối server. Vui lòng kiểm tra lại.');
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
-  const count       = selected.size;
-  const isMaxed     = count >= MAX_SELECT;
-  const canSubmit   = count >= MIN_SELECT && count <= MAX_SELECT;
+  const count = selected.size;
+  const isMaxed = count >= MAX_SELECT;
+  const canSubmit = count >= MIN_SELECT && count <= MAX_SELECT;
   const progressPct = Math.min((count / MIN_SELECT) * 100, 100);
 
-  // ---- Loading skeleton ----
+  // ── Loading skeleton ──────────────────────────────────────
   if (loadState === 'loading') {
     return (
       <div className="survey-page">
         <div className="survey-container">
           <div className="survey-header">
             <div className="survey-logo">
-              <span className="survey-logo-star">⭐</span>
-              <span className="survey-logo-text">S.T.A.R Learning Path</span>
+              <Logo height={40} link={false} className="survey-logo-img" />
             </div>
-            <p style={{ color: '#8885a0', fontSize: '14px' }}>Đang tải danh sách chủ đề...</p>
+            <p className="survey-loading-text">Đang tải danh sách chủ đề...</p>
           </div>
-          <div className="survey-loading">
+          <div className="survey-grid">
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="skeleton-card" />
             ))}
@@ -115,7 +154,7 @@ export default function SurveyPage() {
     );
   }
 
-  // ---- Error state ----
+  // ── Error state ────────────────────────────────────────────
   if (loadState === 'error') {
     return (
       <div className="survey-page">
@@ -131,7 +170,7 @@ export default function SurveyPage() {
     );
   }
 
-  // ---- Main ----
+  // ── Main ───────────────────────────────────────────────────
   return (
     <div className="survey-page">
       <div className="survey-container">
@@ -139,12 +178,10 @@ export default function SurveyPage() {
         {/* Header */}
         <div className="survey-header">
           <div className="survey-logo">
-            <span className="survey-logo-star">⭐</span>
-            <span className="survey-logo-text">S.T.A.R Learning Path</span>
+            <Logo height={44} link={false} className="survey-logo-img" />
           </div>
-          <div className="survey-step-badge">🎯 Bước Cá Nhân Hoá</div>
           <h1 className="survey-title">
-            Bạn quan tâm đến<br />chủ đề nào nhất?
+            Bạn quan tâm đến chủ đề nào nhất?
           </h1>
           <p className="survey-subtitle">
             Chào mừng <strong>{user.fullName || 'bạn'}</strong>! Hãy chọn từ{' '}
@@ -156,16 +193,15 @@ export default function SurveyPage() {
         {/* Progress bar */}
         <div className="survey-progress-wrap">
           <span className="survey-progress-label">
-            Đã chọn: <span>{count}</span>
+            Đã chọn: <span>{count}</span>/{MAX_SELECT}
           </span>
           <div className="survey-progress-track">
             <div className="survey-progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
           <span className={`survey-progress-hint ${canSubmit ? 'ok' : ''}`}>
             {canSubmit
-              ? (isMaxed ? '✅ Tối đa 5' : '✅ Sẵn sàng!')
-              : `Tối thiểu ${MIN_SELECT}`
-            }
+              ? (isMaxed ? 'Tối đa 5' : 'Sẵn sàng!')
+              : `Tối thiểu ${MIN_SELECT}`}
           </span>
         </div>
 
@@ -173,15 +209,23 @@ export default function SurveyPage() {
         <div className="survey-grid">
           {tags.map((tag) => {
             const isSelected = selected.has(tag.TagId);
-            const isLocked   = isMaxed && !isSelected;
+            const isLocked = isMaxed && !isSelected;
+
+            // Get category-specific colors or fallback
+            const themeColors = TAG_COLOR[tag.TagName] || { color: '#0891b2', bg: '#ecfeff' };
+
             return (
               <div
                 key={tag.TagId}
                 className={[
                   'tag-card',
                   isSelected ? 'tag-card--selected' : '',
-                  isLocked   ? 'tag-card--locked'   : '',
+                  isLocked ? 'tag-card--locked' : '',
                 ].join(' ')}
+                style={{
+                  '--topic-color': themeColors.color,
+                  '--topic-bg': themeColors.bg,
+                }}
                 onClick={() => !isLocked && toggleTag(tag.TagId)}
                 role="checkbox"
                 aria-checked={isSelected}
@@ -194,12 +238,18 @@ export default function SurveyPage() {
                 }}
                 title={isLocked ? 'Chỉ được chọn tối đa 5 chủ đề' : tag.DisplayName}
               >
+                {/* Selected checkmark */}
                 {isSelected && (
-                  <div className="tag-card__check" aria-hidden="true">✓</div>
+                  <div className="tag-card__check" aria-hidden="true">
+                    <CheckCircleIcon sx={{ fontSize: 18 }} />
+                  </div>
                 )}
-                <span className="tag-card__emoji" aria-hidden="true">
-                  {TAG_EMOJI[tag.TagName] || '🌟'}
+
+                {/* MUI Icon */}
+                <span className="tag-card__icon" aria-hidden="true">
+                  {TAG_ICON[tag.TagName] || <AutoAwesomeIcon className="tag-icon-svg" />}
                 </span>
+
                 <span className="tag-card__name">{tag.DisplayName}</span>
               </div>
             );
@@ -209,25 +259,24 @@ export default function SurveyPage() {
         {/* Action bar */}
         <div className="survey-action">
           {isMaxed && (
-            <p className="survey-hint ok">🎯 Bạn đã chọn đủ 5 chủ đề — không thể chọn thêm</p>
+            <p className="survey-hint ok">Bạn đã chọn đủ 5 chủ đề — không thể chọn thêm</p>
           )}
           {!canSubmit && !isMaxed && (
             <p className="survey-hint">
-              ⚠️ Vui lòng chọn ít nhất {MIN_SELECT} chủ đề ({MIN_SELECT - count} còn lại)
+              Vui lòng chọn ít nhất {MIN_SELECT} chủ đề ({MIN_SELECT - count} còn lại)
             </p>
           )}
-          {saveError && <p className="survey-hint">{saveError}</p>}
 
           <button
             id="btn-start-journey"
             className="survey-btn-submit"
-            disabled={!canSubmit || saving}
+            disabled={!canSubmit || isSubmitting}
             onClick={handleSubmit}
           >
-            {saving ? (
+            {isSubmitting ? (
               <><span className="spin" />Đang lưu...</>
             ) : (
-              <>🚀 Bắt đầu trải nghiệm</>
+              'Bắt đầu trải nghiệm'
             )}
           </button>
         </div>

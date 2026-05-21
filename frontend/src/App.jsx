@@ -1,10 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage    from './pages/LoginPage';
+
+import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import OtpPage      from './pages/OtpPage';
-import HomePage     from './pages/HomePage';
-import SurveyPage   from './pages/SurveyPage';
-import TestPage     from './pages/Test';
+import OtpPage from './pages/OtpPage';
+import HomePage from './pages/HomePage';
+import ProfilePage from './pages/ProfilePage';
+import SurveyPage from './pages/SurveyPage';
+import TestPage from './pages/Test';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+
+import MainLayout from './components/layout/MainLayout';
 
 /** Guard: redirect về /login nếu chưa đăng nhập */
 function ProtectedRoute({ children }) {
@@ -17,9 +23,11 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Auth routes — public */}
-        <Route path="/login"      element={<LoginPage />} />
-        <Route path="/register"   element={<RegisterPage />} />
-        <Route path="/verify-otp" element={<OtpPage />} />
+        <Route path="/login"           element={<LoginPage />} />
+        <Route path="/register"        element={<RegisterPage />} />
+        <Route path="/verify-otp"      element={<OtpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
         {/* Demo UI components — public */}
         <Route path="/test-component" element={<TestPage />} />
@@ -34,15 +42,19 @@ export default function App() {
           }
         />
 
-        {/* Home / Newsfeed — cần đăng nhập */}
+        {/* Main app — Header + Footer */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <HomePage />
+              <MainLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="/home" replace />} />
+          <Route path="home" element={<HomePage />} />
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />

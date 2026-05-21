@@ -17,6 +17,7 @@ import Loading from "../components/common/Loading";
 import EmptyState from "../components/common/EmptyState";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import SearchBox from "../components/common/SearchBox";
+import { toast, TOAST_DURATION } from "../components/common/Toast";
 import CourseCard from "../components/course/CourseCard";
 import CourseList from "../components/course/CourseList";
 import CourseFilter from "../components/course/CourseFilter";
@@ -104,13 +105,38 @@ function ComponentShowcase() {
     <>
       <PageTitle
         title="Component Showcase"
-        subtitle="Theme cam + xanh dương — iOS 18 minimal"
+        subtitle="Theme ocean — iOS 18 minimal"
         action={
-          <AppButton variant="secondary" onClick={() => setConfirmOpen(true)}>
-            Mở ConfirmDialog
-          </AppButton>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            <AppButton variant="outlined" onClick={() => toast.info("Demo toast — tự đóng sau 5s")}>
+              Thử Toast
+            </AppButton>
+            <AppButton variant="outlined" onClick={() => setConfirmOpen(true)}>
+              ConfirmDialog
+            </AppButton>
+          </Box>
         }
       />
+
+      <Section title="Toast">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Bấm nút bên dưới — toast hiện góc trên phải, tự đóng sau {TOAST_DURATION / 1000}s.
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+          <AppButton variant="contained" onClick={() => toast.success("Thao tác thành công!")}>
+            Success
+          </AppButton>
+          <AppButton variant="accent" onClick={() => toast.error("Có lỗi xảy ra. Vui lòng thử lại.")}>
+            Error
+          </AppButton>
+          <AppButton variant="outlined" onClick={() => toast.info("Thông tin cập nhật mới.")}>
+            Info
+          </AppButton>
+          <AppButton variant="outlined" onClick={() => toast.warning("Vui lòng kiểm tra lại dữ liệu.")}>
+            Warning
+          </AppButton>
+        </Box>
+      </Section>
 
       <Section title="Bảng màu">
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
