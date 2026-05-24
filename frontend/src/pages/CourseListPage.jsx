@@ -400,25 +400,32 @@ function getUserId(user) {
   return user.userId ?? user.UserId ?? user.id ?? user.Id;
 }
 
-function getUserRole(user) {
-  return user.role ?? user.roles ?? user.Role ?? user.Roles;
+function getUserRoleName(user) {
+  const role =
+    user?.roleName ??
+    user?.RoleName ??
+    user?.role ??
+    user?.Role ??
+    user?.roles?.[0] ??
+    user?.Roles?.[0];
+
+  return String(role || "").toLowerCase();
 }
-async function fetchCourses(userId, role) {
-  const params = new URLSearchParams();
-
-  if (userId) {
-    params.set("userId", String(userId));
+async function fetchCourses(userId, roleName) {
+  if (roleName !== "student") {
+    return [];
   }
 
-  if (role) {
-    params.set("role", String(role).toLowerCase());
-  }
-
-  const queryString = params.toString();
-
-  const res = await fetch(
-    `http://localhost:5000/api/courses${queryString ? `?${queryString}` : ""}`
-  );
+  const res = await fetch("http://localhost:5000/api/courses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userId: Number(userId),
+      roleName,
+    }),
+  });
 
   if (!res.ok) {
     throw new Error("Cannot fetch courses");
@@ -453,9 +460,10 @@ export default function CourseListPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
+
   const user = useMemo(() => getSessionUser(), []);
   const userId = getUserId(user);
-  const role = getUserRole(user);
+  const roleName = getUserRoleName(user);
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -481,7 +489,14 @@ export default function CourseListPage() {
       try {
         setLoading(true);
 
-        const data = await fetchCourses(userId, role);
+        if (roleName !== "student") {
+          if (isMounted) {
+            setCourses([]);
+          }
+          return;
+        }
+
+        const data = await fetchCourses(userId, roleName);
 
         if (isMounted) {
           setCourses(Array.isArray(data) ? data : []);
@@ -504,7 +519,7 @@ export default function CourseListPage() {
     return () => {
       isMounted = false;
     };
-  }, [userId, role]);
+  }, [userId, roleName]);
 
   const filteredCourses = useMemo(() => {
     const keyword = filters.keyword.toLowerCase();

@@ -1,9 +1,15 @@
-const express = require('express');;
+const express = require('express');
 const courseRoutes = express.Router();
 
-const { getAllCourses, getMyCourses } = require('../controllers/course.controller');
-courseRoutes.get('/', getAllCourses);
+const {
+    getAllCourses,
+    getMyCourses,
+} = require('../controllers/course.controller');
 
-courseRoutes.get('/my-courses', getMyCourses);
+// POST /api/courses
+courseRoutes.post('/', getAllCourses);
+
+// POST /api/courses/my-courses
+courseRoutes.post('/my-courses', getMyCourses);
 
 module.exports = courseRoutes;

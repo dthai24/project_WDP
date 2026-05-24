@@ -1,9 +1,17 @@
 const { sql } = require('../config/db');
 
+const normalizeRole = (roleName) => {
+    if (Array.isArray(roleName)) {
+        return String(roleName[0] || "").toLowerCase();
+    }
+
+    return String(roleName || "").toLowerCase();
+};
+
 const getAllCourses = async (req, res) => {
     try {
-        const userId = Number(req.query.userId);
-        const role = String(req.query.role || "").toLowerCase();
+        const userId = Number(req.body.userId);
+        const role = normalizeRole(req.body.roleName);
 
         const request = new sql.Request();
 
@@ -45,30 +53,29 @@ const getAllCourses = async (req, res) => {
 
         const result = await request.query(query);
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             data: result.recordset,
         });
     } catch (error) {
         console.error("Get all courses error:", error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Lỗi khi lấy danh sách course",
         });
     }
 };
 
-
 const getMyCourses = async (req, res) => {
     try {
-        const userId = Number(req.query.userId);
-        const role = String(req.query.role || "").toLowerCase();
+        const userId = Number(req.body.userId);
+        const role = normalizeRole(req.body.roleName);
 
         if (!userId || !role) {
             return res.status(400).json({
                 success: false,
-                message: "Missing userId or role",
+                message: "Missing userId or roleName",
             });
         }
 
@@ -105,29 +112,43 @@ const getMyCourses = async (req, res) => {
         WHERE uc.[UserId] = @userId
         ORDER BY c.[CreatedAt] DESC
       `;
+        } else if (role === "admin") {
+            query = `
+        SELECT
+          [CourseId] AS courseId,
+          [CourseName] AS courseName,
+          [Description] AS description,
+          [CreatedAt] AS createdAt,
+          [CreateBy] AS createBy,
+          'admin-view' AS enrollmentStatus
+        FROM [LearningPath_Base].[dbo].[Courses]
+        ORDER BY [CreatedAt] DESC
+      `;
         } else {
             return res.status(400).json({
                 success: false,
-                message: "Invalid role",
+                message: "Invalid roleName",
             });
         }
 
         const result = await request.query(query);
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
+            roleName: role,
             data: result.recordset,
         });
     } catch (error) {
         console.error("Get my courses error:", error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Lỗi khi lấy khóa học của user",
         });
     }
 };
+
 module.exports = {
     getAllCourses,
-    getMyCourses
+    getMyCourses,
 };
