@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Grid, alpha, useTheme } from "@mui/material";
+import { Box, Breadcrumbs, Grid, Link as MuiLink, Typography, alpha, useTheme } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import EmptyState from "../components/common/EmptyState";
 import CourseCard from "../components/course/CourseCard";
@@ -528,6 +528,24 @@ export default function CourseListPage() {
 
   return (
     <Box sx={{ width: "100%", maxWidth: 1280, mx: "auto" }}>
+      {/* Breadcrumb */}
+      <Breadcrumbs
+        separator="/"
+        sx={{ mb: 2.5, "& .MuiBreadcrumbs-separator": { color: "#64748B", mx: 0.5 } }}
+      >
+        <MuiLink
+          component={Link}
+          to="/home"
+          underline="hover"
+          sx={{ fontSize: 13, color: "#64748B", fontWeight: 500 }}
+        >
+          Trang chủ
+        </MuiLink>
+        <Typography sx={{ fontSize: 13, color: "#0F172A", fontWeight: 600 }}>
+          Khóa học
+        </Typography>
+      </Breadcrumbs>
+
       <CourseCatalogToolbar
         categories={filters.categories}
         onCategoriesChange={handleCategoriesChange}
