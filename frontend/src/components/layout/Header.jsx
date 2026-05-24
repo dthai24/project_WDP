@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -6,27 +6,74 @@ import {
   Box,
   Avatar,
   IconButton,
+  Menu,
   MenuItem,
-  MenuList,
-  ListItemIcon,
-  ListItemText,
   Divider,
-  Card,
+  Tooltip,
   alpha,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import { surfaceCardSx } from "../theme";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
-import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
-import { useNavigate } from "react-router-dom";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../common/Logo";
 import SearchBox from "../common/SearchBox";
 import { toast } from "../common/Toast";
+import {
+  buildCourseListSearchParams,
+  parseCourseListParams,
+} from "../../utils/courseListParams";
 
 const MENU_CLOSE_DELAY = 200;
+const KEYWORD_DEBOUNCE_MS = 300;
 const PROJECT_NAME = "S.T.A.R Learning Path";
+const PRIMARY = "#0891B2";
+const ITEM_TEXT = "#334155";
+const MUTED = "#64748B";
+const ERROR = "#DC2626";
+
+const USER_MENU_ITEMS = [
+  { key: "profile", label: "Hồ sơ cá nhân", icon: PersonOutlineRoundedIcon, path: "/profile" },
+];
+
+function getUserInitials(user) {
+  const name = user?.fullName || user?.email || "?";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
+const menuItemSx = {
+  minHeight: 44,
+  borderRadius: "12px",
+  px: 1.25,
+  py: 0.75,
+  gap: 1.25,
+  color: ITEM_TEXT,
+  transition: "background-color 0.18s ease, color 0.18s ease",
+  "&:hover": {
+    bgcolor: "rgba(8,145,178,0.06)",
+    color: PRIMARY,
+    "& .user-menu-icon": { color: PRIMARY },
+  },
+};
+
+const logoutItemSx = {
+  ...menuItemSx,
+  color: ERROR,
+  "& .user-menu-icon": { color: ERROR },
+  "&:hover": {
+    bgcolor: "rgba(220,38,38,0.08)",
+    color: ERROR,
+    "& .user-menu-icon": { color: ERROR },
+  },
+};
 
 export default function Header({
   showUser = true,
@@ -35,11 +82,34 @@ export default function Header({
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const closeTimer = useRef(null);
+  const keywordDebounceRef = useRef(null);
+  const userZoneRef = useRef(null);
 
+  const isCoursePage = location.pathname === "/courses";
+  const isMyCoursesPage = location.pathname === "/my-courses";
+  const isCourseListSearchPage = isCoursePage || isMyCoursesPage;
   const [search, setSearch] = useState("");
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+  const userMenuOpen = Boolean(userMenuAnchor);
+
+  useEffect(() => {
+    if (isCourseListSearchPage) {
+      setSearch(searchParams.get("keyword") || "");
+    }
+  }, [isCourseListSearchPage, searchParams]);
+
+  useEffect(
+    () => () => {
+      if (keywordDebounceRef.current) {
+        clearTimeout(keywordDebounceRef.current);
+      }
+    },
+    []
+  );
 
   const userRaw = sessionStorage.getItem("user");
   const user = userRaw ? JSON.parse(userRaw) : null;
@@ -53,19 +123,40 @@ export default function Header({
 
   const openUserMenu = () => {
     clearCloseTimer();
-    setUserMenuOpen(true);
+    if (userZoneRef.current) setUserMenuAnchor(userZoneRef.current);
   };
 
   const scheduleCloseUserMenu = () => {
     clearCloseTimer();
     closeTimer.current = setTimeout(() => {
-      setUserMenuOpen(false);
+      setUserMenuAnchor(null);
     }, MENU_CLOSE_DELAY);
   };
 
   const closeUserMenu = () => {
     clearCloseTimer();
-    setUserMenuOpen(false);
+    setUserMenuAnchor(null);
+  };
+
+  const handleGoProfile = () => {
+    closeUserMenu();
+    navigate("/profile");
+  };
+
+  const handleProfileTriggerClick = (event) => {
+    event.stopPropagation();
+    if (isMobile) {
+      toggleUserMenu();
+      return;
+    }
+    handleGoProfile();
+  };
+
+  const handleUserZoneKeyDown = (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    if (isMobile) toggleUserMenu();
+    else handleGoProfile();
   };
 
   const toggleUserMenu = () => {
@@ -84,9 +175,58 @@ export default function Header({
     }
   };
 
-  const handleProfile = () => {
-    closeUserMenu();
-    navigate("/profile");
+  const handleMenuNavigate = (item) => {
+    if (item.disabled) return;
+    if (item.path === "/profile") handleGoProfile();
+    else {
+      closeUserMenu();
+      if (item.path) navigate(item.path);
+    }
+  };
+
+  const displayName = user?.fullName || "Phúc Nguyễn";
+  const displayEmail = user?.email || "";
+  const displayRole = user?.role || "Học viên";
+
+  const applyCourseKeyword = (value) => {
+    const current = parseCourseListParams(searchParams);
+    const next = buildCourseListSearchParams(
+      { ...current, keyword: value.trim(), page: 1 },
+      searchParams
+    );
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearch(value);
+
+    if (!isCourseListSearchPage) return;
+
+    if (keywordDebounceRef.current) {
+      clearTimeout(keywordDebounceRef.current);
+    }
+    keywordDebounceRef.current = setTimeout(() => {
+      applyCourseKeyword(value);
+    }, KEYWORD_DEBOUNCE_MS);
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key !== "Enter") return;
+
+    if (keywordDebounceRef.current) {
+      clearTimeout(keywordDebounceRef.current);
+    }
+
+    if (isCourseListSearchPage) {
+      applyCourseKeyword(search);
+      return;
+    }
+
+    const trimmed = search.trim();
+    if (trimmed) {
+      navigate(`/courses?keyword=${encodeURIComponent(trimmed)}`);
+    }
   };
 
   const userZoneHandlers = isMobile
@@ -144,15 +284,55 @@ export default function Header({
         >
           <SearchBox
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onClear={() => setSearch("")}
-            placeholder="Tìm kiếm khóa học, lộ trình..."
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
+            showClear={!isCourseListSearchPage}
+            placeholder={
+              isMyCoursesPage
+                ? "Tìm trong khóa học của tôi..."
+                : isCoursePage
+                  ? "Tìm khóa học..."
+                  : "Tìm kiếm khóa học, lộ trình..."
+            }
             sx={{ width: "100%", maxWidth: 480 }}
           />
         </Box>
 
         {showUser && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+            {user && (
+              <Tooltip title="Khóa học của tôi">
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => navigate("/my-courses")}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    py: 1,
+                    px: isMobile ? 1 : 1.75,
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    bgcolor: "rgba(8,145,178,0.08)",
+                    color: "#0891B2",
+                    borderRadius: "99px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    transition: "background-color 0.2s ease",
+                    "&:hover": {
+                      bgcolor: "rgba(8,145,178,0.14)",
+                    },
+                  }}
+                >
+                  <MenuBookOutlinedIcon sx={{ fontSize: 18 }} />
+                  {!isMobile && "Khóa học của tôi"}
+                </Box>
+              </Tooltip>
+            )}
+
             <IconButton
               aria-label="Thông báo"
               size="medium"
@@ -170,106 +350,173 @@ export default function Header({
 
             {user && (
               <Box {...userZoneHandlers} sx={{ position: "relative" }}>
-                <Box
-                  onClick={isMobile ? toggleUserMenu : undefined}
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={userMenuOpen}
-                  aria-haspopup="true"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      toggleUserMenu();
-                    }
-                  }}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    py: 0.5,
-                    px: 1,
-                    borderRadius: theme.ios18?.radius?.xs,
-                    cursor: "pointer",
-                    transition: `background-color 0.2s ${theme.ios18?.transition}`,
-                    "&:hover": {
-                      bgcolor: alpha(theme.palette.primary.main, 0.06),
+                <Tooltip
+                  title={isMobile ? "Menu tài khoản" : ""}
+                  disableHoverListener={!isMobile || userMenuOpen}
+                  disableFocusListener={!isMobile || userMenuOpen}
+                  disableTouchListener={!isMobile}
+                  enterDelay={400}
+                  leaveDelay={0}
+                >
+                  <Box
+                    ref={userZoneRef}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={userMenuOpen}
+                    aria-haspopup="true"
+                    aria-label={isMobile ? "Menu tài khoản" : "Xem hồ sơ cá nhân"}
+                    onKeyDown={handleUserZoneKeyDown}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      py: 0.5,
+                      px: 1,
+                      borderRadius: theme.ios18?.radius?.xs,
+                      transition: `background-color 0.2s ${theme.ios18?.transition}`,
+                      "&:hover": {
+                        bgcolor: alpha(theme.palette.primary.main, 0.06),
+                      },
+                    }}
+                  >
+                    <Avatar
+                      onClick={handleProfileTriggerClick}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        bgcolor: "primary.main",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {getUserInitials(user)}
+                    </Avatar>
+                    <Typography
+                      variant="body2"
+                      onClick={handleProfileTriggerClick}
+                      sx={{
+                        fontWeight: 600,
+                        maxWidth: { xs: 100, sm: 140 },
+                        display: { xs: "none", sm: "block" },
+                        cursor: "pointer",
+                      }}
+                      noWrap
+                    >
+                      {displayName}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+
+                <Menu
+                  anchorEl={userMenuAnchor}
+                  open={userMenuOpen}
+                  onClose={closeUserMenu}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
+                  marginThreshold={12}
+                  slotProps={{
+                    paper: {
+                      onMouseEnter: clearCloseTimer,
+                      onMouseLeave: scheduleCloseUserMenu,
+                      sx: {
+                        width: 240,
+                        mt: 0.75,
+                        borderRadius: "16px",
+                        bgcolor: "rgba(255,255,255,0.92)",
+                        backdropFilter: "blur(16px) saturate(140%)",
+                        WebkitBackdropFilter: "blur(16px) saturate(140%)",
+                        border: "1px solid rgba(8,145,178,0.08)",
+                        boxShadow: "0 12px 32px rgba(15,23,42,0.10)",
+                        overflow: "hidden",
+                      },
+                    },
+                    list: {
+                      sx: { py: 1, px: 1 },
                     },
                   }}
                 >
-                  <Avatar
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      bgcolor: "primary.main",
+                  <Box
+                    sx={{ px: 1.25, py: 1, mb: 0.5, cursor: "pointer" }}
+                    onClick={handleGoProfile}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleGoProfile();
+                      }
                     }}
                   >
-                    {(user.fullName || user.email || "?")[0].toUpperCase()}
-                  </Avatar>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 600,
-                      maxWidth: { xs: 100, sm: 140 },
-                      display: { xs: "none", sm: "block" },
-                    }}
-                    noWrap
-                  >
-                    {user.fullName || "Học viên"}
-                  </Typography>
-                </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+                      <Avatar
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          bgcolor: PRIMARY,
+                        }}
+                      >
+                        {getUserInitials(user)}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: "#0F172A",
+                            lineHeight: 1.3,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {displayName}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: MUTED,
+                            lineHeight: 1.3,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {displayEmail || displayRole}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
 
-                {userMenuOpen && (
-                  <Card
-                    elevation={0}
-                    onMouseEnter={clearCloseTimer}
-                    onMouseLeave={scheduleCloseUserMenu}
-                    sx={{
-                      position: "absolute",
-                      top: "100%",
-                      right: 0,
-                      mt: 0.25,
-                      minWidth: 200,
-                      zIndex: theme.zIndex.appBar + 2,
-                      overflow: "hidden",
-                      ...surfaceCardSx(theme),
-                    }}
-                  >
-                    <MenuList
-                      dense
-                      disablePadding
-                      autoFocusItem={false}
-                      sx={{
-                        py: 0.5,
-                        "& .MuiMenuItem-root": {
-                          borderRadius: theme.ios18.radius.xs,
-                          mx: 1,
-                          my: 0.25,
-                        },
-                      }}
-                    >
-                      <MenuItem onClick={handleProfile}>
-                        <ListItemIcon>
-                          <PersonOutlineOutlinedIcon fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText primaryTypographyProps={{ fontSize: 14 }}>
-                          Hồ sơ cá nhân
-                        </ListItemText>
+                  <Divider sx={{ my: 0.5, borderColor: "rgba(8,145,178,0.08)" }} />
+
+                  {USER_MENU_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <MenuItem
+                        key={item.key}
+                        disabled={item.disabled}
+                        onClick={() => handleMenuNavigate(item)}
+                        sx={{
+                          ...menuItemSx,
+                          ...(item.disabled && { opacity: 0.45 }),
+                        }}
+                      >
+                        <Icon className="user-menu-icon" sx={{ fontSize: 19, color: MUTED }} />
+                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{item.label}</Typography>
                       </MenuItem>
-                      <Divider sx={{ my: 0.5 }} />
-                      <MenuItem onClick={handleLogout} sx={{ color: "error.main" }}>
-                        <ListItemIcon>
-                          <LogoutOutlinedIcon fontSize="small" color="error" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Đăng xuất"
-                          primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }}
-                        />
-                      </MenuItem>
-                    </MenuList>
-                  </Card>
-                )}
+                    );
+                  })}
+
+                  <Divider sx={{ my: 0.75, borderColor: "rgba(8,145,178,0.08)" }} />
+
+                  <MenuItem onClick={handleLogout} sx={logoutItemSx}>
+                    <LogoutRoundedIcon className="user-menu-icon" sx={{ fontSize: 19 }} />
+                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Đăng xuất</Typography>
+                  </MenuItem>
+                </Menu>
               </Box>
             )}
           </Box>
