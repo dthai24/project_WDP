@@ -7,36 +7,44 @@ import {
   Breadcrumbs,
   Chip,
   Grid,
+  IconButton,
   LinearProgress,
   Link as MuiLink,
   Typography,
   alpha,
 } from "@mui/material";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
+import OpenInFullRoundedIcon from "@mui/icons-material/OpenInFullRounded";
+import CloseFullscreenRoundedIcon from "@mui/icons-material/CloseFullscreenRounded";
 import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
 import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
-import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import AppButton from "../components/common/AppButton";
 import CourseCard from "../components/course/CourseCard";
+import { buildCourseDetailPath, buildCourseListPath } from "../utils/courseListParams";
 
-/* ─── Màu sắc theme ─── */
 const PRIMARY = "#0891B2";
 const PRIMARY_DARK = "#0E7490";
 const ACCENT = "#EA580C";
 const TEXT = "#0F172A";
 const MUTED = "#64748B";
 const BORDER = "rgba(8,145,178,0.09)";
+const DIVIDER = "rgba(8,145,178,0.10)";
+const STICKY_TOP = 76;
 
-/* ─── Mock data chi tiết khóa học ─── */
+/* ─── Mock data ─── */
 const MOCK_COURSE_DETAILS = {
   1: {
     id: 1,
@@ -54,6 +62,13 @@ const MOCK_COURSE_DETAILS = {
     materialCount: 5,
     duration: "6 giờ",
     updatedAt: "22/05/2026",
+    rating: 4.9,
+    reviewCount: 544,
+    studentCount: 22072,
+    isFree: true,
+    prerequisites: [
+      { id: 5, title: "Ngữ pháp tiếng Anh nền tảng" },
+    ],
     outcomes: [
       "Nắm vững từ vựng thương mại thiết yếu",
       "Viết email, memo chuyên nghiệp đúng chuẩn",
@@ -63,7 +78,7 @@ const MOCK_COURSE_DETAILS = {
     modules: [
       {
         id: 1,
-        title: "Chặng 1: Nền tảng từ vựng thương mại",
+        title: "Nền tảng từ vựng thương mại",
         lessonCount: 4,
         materialCount: 3,
         lessons: [
@@ -75,7 +90,7 @@ const MOCK_COURSE_DETAILS = {
       },
       {
         id: 2,
-        title: "Chặng 2: Viết email & giao tiếp văn bản",
+        title: "Viết email & giao tiếp văn bản",
         lessonCount: 4,
         materialCount: 2,
         lessons: [
@@ -102,6 +117,14 @@ const MOCK_COURSE_DETAILS = {
     materialCount: 12,
     duration: "9 giờ",
     updatedAt: "24/05/2026",
+    rating: 4.8,
+    reviewCount: 312,
+    studentCount: 15430,
+    isFree: true,
+    prerequisites: [
+      { id: 8, title: "Giao tiếp đời sống hàng ngày" },
+      { id: 5, title: "Ngữ pháp tiếng Anh nền tảng" },
+    ],
     outcomes: [
       "Thiết kế slide trình bày rõ ràng, chuyên nghiệp",
       "Mở đầu bài thuyết trình thu hút người nghe",
@@ -111,7 +134,7 @@ const MOCK_COURSE_DETAILS = {
     modules: [
       {
         id: 1,
-        title: "Chặng 1: Chuẩn bị bài thuyết trình",
+        title: "Chuẩn bị bài thuyết trình",
         lessonCount: 3,
         materialCount: 3,
         lessons: [
@@ -122,7 +145,7 @@ const MOCK_COURSE_DETAILS = {
       },
       {
         id: 2,
-        title: "Chặng 2: Kỹ năng trình bày",
+        title: "Kỹ năng trình bày",
         lessonCount: 3,
         materialCount: 3,
         lessons: [
@@ -133,7 +156,7 @@ const MOCK_COURSE_DETAILS = {
       },
       {
         id: 3,
-        title: "Chặng 3: Phần Q&A",
+        title: "Phần Q&A",
         lessonCount: 3,
         materialCount: 3,
         lessons: [
@@ -144,7 +167,7 @@ const MOCK_COURSE_DETAILS = {
       },
       {
         id: 4,
-        title: "Chặng 4: Thực hành tổng hợp",
+        title: "Thực hành tổng hợp",
         lessonCount: 3,
         materialCount: 3,
         lessons: [
@@ -157,7 +180,6 @@ const MOCK_COURSE_DETAILS = {
   },
 };
 
-/* Fallback detail khi không tìm thấy theo id */
 function buildFallbackDetail(id) {
   return {
     id: Number(id),
@@ -173,12 +195,16 @@ function buildFallbackDetail(id) {
     materialCount: 0,
     duration: "—",
     updatedAt: "—",
+    rating: 4.5,
+    reviewCount: 0,
+    studentCount: 0,
+    isFree: true,
+    prerequisites: [],
     outcomes: [],
     modules: [],
   };
 }
 
-/* Khóa học liên quan mock */
 const RELATED_COURSES = [
   {
     courseId: 7,
@@ -220,7 +246,7 @@ const RELATED_COURSES = [
   },
 ];
 
-/* ─── Chip style helpers (đồng bộ với CourseCard) ─── */
+/* ─── Helpers ─── */
 
 function getStatusChip(isEnrolled, progress) {
   if (!isEnrolled) return { label: "Chưa đăng ký", sx: { bgcolor: "rgba(100,116,139,0.10)", color: MUTED, border: "1px solid rgba(100,116,139,0.18)" } };
@@ -240,357 +266,552 @@ function getLevelChipSx(level = "") {
 function getCategoryChipSx(category = "") {
   const map = {
     "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
-    "IELTS": { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    "TOEIC": { bgcolor: "rgba(14,116,144,0.10)", color: PRIMARY_DARK },
+    IELTS: { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
+    TOEIC: { bgcolor: "rgba(14,116,144,0.10)", color: PRIMARY_DARK },
     "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
     "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
   };
   return map[category] ?? { bgcolor: "#F1F5F9", color: MUTED };
 }
 
-function getProgressStyle(progress) {
-  if (progress >= 100) return { color: "#047857", trackColor: "rgba(4,120,87,0.14)", completed: true };
-  if (progress >= 70) return { color: "#16A34A", trackColor: "rgba(22,163,74,0.12)", completed: false };
-  if (progress >= 30) return { color: PRIMARY, trackColor: "rgba(8,145,178,0.12)", completed: false };
-  return { color: "#F59E0B", trackColor: "rgba(245,158,11,0.14)", completed: false };
+function getProgressGradient(progress) {
+  const value = Math.max(0, Math.min(progress, 100));
+
+  if (value === 0) {
+    return "#94A3B8";
+  }
+
+  if (value >= 100) {
+    return "linear-gradient(90deg, #22C55E 0%, #16A34A 100%)";
+  }
+
+  if (value >= 90) {
+    return "linear-gradient(90deg, #0891B2 0%, #F59E0B 100%)";
+  }
+
+  return "linear-gradient(90deg, #EA580C 0%, #F59E0B 45%, #0891B2 100%)";
+}
+
+function getProgressTextColor(progress) {
+  const value = Math.max(0, Math.min(progress, 100));
+
+  if (value === 0) return "#94A3B8";
+  if (value >= 100) return "#16A34A";
+  if (value >= 90) return "#F59E0B";
+  if (value >= 70) return "#0891B2";
+  if (value >= 30) return "#0891B2";
+  return "#EA580C";
+}
+
+function formatStudentCount(count) {
+  if (count >= 1000) return count.toLocaleString("vi-VN");
+  return String(count);
 }
 
 /* ─── Sub-components ─── */
 
-/** Placeholder thumbnail theo theme */
-function CourseThumbnailHero({ thumbnail }) {
-  return (
-    <Box
-      sx={{
-        width: "100%",
-        aspectRatio: "16 / 9",
-        borderRadius: "18px",
-        overflow: "hidden",
-        bgcolor: "rgba(8,145,178,0.06)",
-        backgroundImage: thumbnail ? `url(${thumbnail})` : "none",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      {!thumbnail && (
-        <Box
-          sx={{
-            width: 72,
-            height: 72,
-            borderRadius: "50%",
-            bgcolor: alpha(PRIMARY, 0.1),
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: PRIMARY,
-          }}
-        >
-          <MenuBookOutlinedIcon sx={{ fontSize: 36 }} />
-        </Box>
-      )}
-    </Box>
-  );
-}
-
-/** Icon + text hàng metadata */
-function MetaRow({ icon: Icon, label, value }) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <Icon sx={{ fontSize: 18, color: MUTED, flexShrink: 0 }} />
-      <Typography sx={{ fontSize: 14, color: MUTED, fontWeight: 500 }}>
-        {label}:&nbsp;<Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>{value}</Box>
-      </Typography>
-    </Box>
-  );
-}
-
-/** Card bọc section */
-function SectionCard({ children, sx }) {
-  return (
-    <Box
-      sx={{
-        bgcolor: "#fff",
-        border: `1px solid ${BORDER}`,
-        borderRadius: "18px",
-        boxShadow: "0 1px 6px rgba(8,145,178,0.06)",
-        p: { xs: 2.5, sm: 3 },
-        ...sx,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-/** Tiêu đề section */
-function SectionTitle({ children }) {
+function SectionTitle({ children, sx }) {
   return (
     <Typography
-      variant="h6"
-      sx={{ fontWeight: 700, color: TEXT, fontSize: { xs: 16, sm: 18 }, mb: 2.5 }}
+      sx={{
+        fontWeight: 700,
+        color: TEXT,
+        fontSize: { xs: 18, sm: 20 },
+        lineHeight: 1.3,
+        ...sx,
+      }}
     >
       {children}
     </Typography>
   );
 }
 
-/* ─── Sections ─── */
-
-/** Section 1: Hero */
-function HeroSection({ course, isEnrolled, onEnroll, onContinue }) {
-  const statusChip = getStatusChip(isEnrolled, course.progress);
-  const progressStyle = getProgressStyle(course.progress);
+/** Metadata inline underline */
+function CourseMetaRow({ course }) {
+  const items = [
+    { icon: MenuBookOutlinedIcon, label: "Bài học", value: `${course.lessonCount} bài` },
+    { icon: RouteOutlinedIcon, label: "Chặng", value: `${course.stageCount} chặng` },
+    { icon: ArticleOutlinedIcon, label: "Học liệu", value: `${course.materialCount} tài liệu` },
+    { icon: AccessTimeOutlinedIcon, label: "Thời lượng", value: course.duration || "—" },
+    { icon: CalendarTodayOutlinedIcon, label: "Cập nhật", value: course.updatedAt || "—" },
+  ];
 
   return (
-    <Grid container spacing={{ xs: 3, md: 5 }} alignItems="flex-start">
-      {/* Cột trái: thông tin */}
-      <Grid item xs={12} md={7}>
-        {/* Breadcrumb */}
-        <Breadcrumbs
-          separator="/"
-          sx={{ mb: 2, "& .MuiBreadcrumbs-separator": { color: MUTED, mx: 0.5 } }}
-        >
-          <MuiLink
-            component={Link}
-            to="/courses"
-            underline="hover"
-            sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
-          >
-            Khóa học
-          </MuiLink>
-          <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
-            {course.title}
-          </Typography>
-        </Breadcrumbs>
-
-        {/* Title */}
-        <Typography
-          variant="h4"
+    <Box
+      sx={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: { xs: 2, sm: 3 },
+        rowGap: 2,
+        pt: 0.5,
+      }}
+    >
+      {items.map(({ icon: Icon, label, value }) => (
+        <Box
+          key={label}
           sx={{
-            fontWeight: 700,
-            color: TEXT,
-            lineHeight: 1.25,
-            fontSize: { xs: 22, sm: 26, md: 30 },
-            mb: 1.5,
+            minWidth: 110,
+            flex: "1 1 120px",
+            maxWidth: 150,
+            pb: "6px",
+            borderBottom: "1px solid rgba(8,145,178,0.18)",
+            transition: "border-color 0.2s ease",
+            "&:hover": {
+              borderBottomColor: "rgba(8,145,178,0.45)",
+              "& .meta-icon": { color: PRIMARY },
+            },
           }}
         >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.4 }}>
+            <Icon className="meta-icon" sx={{ fontSize: 14, color: MUTED, transition: "color 0.2s ease" }} />
+            <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>{label}</Typography>
+          </Box>
+          <Typography sx={{ fontSize: 14, color: TEXT, fontWeight: 700 }}>{value}</Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function CourseProgressBlock({ progress, sx }) {
+  const value = Math.min(Math.max(progress, 0), 100);
+  const textColor = getProgressTextColor(value);
+  const completed = value >= 100;
+
+  return (
+    <Box sx={sx}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
+        <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 600 }}>Tiến độ học tập</Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          {completed && (
+            <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 15, color: textColor }} />
+          )}
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: textColor }}>
+            {value}%
+          </Typography>
+        </Box>
+      </Box>
+      <LinearProgress
+        variant="determinate"
+        value={value}
+        sx={{
+          height: 6,
+          borderRadius: 99,
+          bgcolor: "rgba(100,116,139,0.12)",
+          "& .MuiLinearProgress-bar": {
+            borderRadius: 99,
+            background: getProgressGradient(value),
+          },
+        }}
+      />
+    </Box>
+  );
+}
+
+/** Phần intro bên trái */
+function CourseIntro({ course, isEnrolled }) {
+  const [searchParams] = useSearchParams();
+  const coursesListPath = buildCourseListPath(searchParams);
+  const statusChip = getStatusChip(isEnrolled, course.progress);
+
+  return (
+    <Box>
+      <Breadcrumbs
+        separator="/"
+        sx={{ mb: 1.5, "& .MuiBreadcrumbs-separator": { color: MUTED, mx: 0.5 } }}
+      >
+        <MuiLink component={Link} to="/home" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+          Trang chủ
+        </MuiLink>
+        <MuiLink component={Link} to={coursesListPath} underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+          Khóa học
+        </MuiLink>
+        <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>
           {course.title}
         </Typography>
+      </Breadcrumbs>
 
-        {/* Short description */}
-        <Typography
-          sx={{ fontSize: 15, color: MUTED, lineHeight: 1.7, mb: 2.5 }}
-        >
-          {course.shortDescription}
-        </Typography>
+      <Typography
+        sx={{
+          fontWeight: 700,
+          color: TEXT,
+          lineHeight: 1.25,
+          fontSize: { xs: 24, sm: 28, md: 32 },
+          mb: 1.25,
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {course.title}
+      </Typography>
 
-        {/* Chip row */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5 }}>
-          <Chip
-            label={statusChip.label}
-            size="small"
-            sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }}
-          />
-          {course.level && (
-            <Chip
-              label={course.level}
-              size="small"
-              sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getLevelChipSx(course.level) }}
-            />
-          )}
-          {course.category && (
-            <Chip
-              label={course.category}
-              size="small"
-              sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getCategoryChipSx(course.category) }}
-            />
-          )}
+      <Typography sx={{ fontSize: 15, color: MUTED, lineHeight: 1.65, mb: 2 }}>
+        {course.shortDescription}
+      </Typography>
+
+      {/* Rating & học viên */}
+      <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2, mb: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <StarRoundedIcon sx={{ fontSize: 18, color: "#F59E0B" }} />
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{course.rating}</Typography>
+          <Typography sx={{ fontSize: 13, color: MUTED }}>
+            ({course.reviewCount.toLocaleString("vi-VN")} đánh giá)
+          </Typography>
         </Box>
-
-        {/* Metadata */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 1.5, sm: 2.5 }, mb: isEnrolled ? 3 : 0 }}>
-          <MetaRow icon={MenuBookOutlinedIcon} label="Bài học" value={`${course.lessonCount} bài`} />
-          <MetaRow icon={RouteOutlinedIcon} label="Chặng" value={`${course.stageCount} chặng`} />
-          <MetaRow icon={ArticleOutlinedIcon} label="Học liệu" value={`${course.materialCount} tài liệu`} />
-          {course.duration && (
-            <MetaRow icon={AccessTimeOutlinedIcon} label="Thời lượng" value={course.duration} />
-          )}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <PeopleOutlineRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
+          <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+            {formatStudentCount(course.studentCount)} học viên
+          </Typography>
         </Box>
+      </Box>
 
-        {/* Progress bar — chỉ khi đã đăng ký */}
-        {isEnrolled && (
-          <Box sx={{ mt: 0 }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 600 }}>
-                Tiến độ học tập
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                {progressStyle.completed && (
-                  <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 15, color: progressStyle.color }} />
-                )}
-                <Typography sx={{ fontSize: 13, fontWeight: 700, color: progressStyle.color }}>
-                  {course.progress}%
-                </Typography>
-              </Box>
-            </Box>
-            <LinearProgress
-              variant="determinate"
-              value={Math.min(Math.max(course.progress, 0), 100)}
-              sx={{
-                height: 8,
-                borderRadius: 99,
-                bgcolor: progressStyle.trackColor,
-                "& .MuiLinearProgress-bar": {
-                  borderRadius: 99,
-                  backgroundColor: progressStyle.color,
-                  ...(progressStyle.completed && {
-                    backgroundImage: "linear-gradient(90deg, #047857 0%, #059669 100%)",
-                  }),
-                },
-              }}
-            />
-          </Box>
+      {/* Chips */}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5 }}>
+        <Chip label={statusChip.label} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }} />
+        {course.level && (
+          <Chip label={course.level} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getLevelChipSx(course.level) }} />
         )}
-      </Grid>
+        {course.category && (
+          <Chip label={course.category} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getCategoryChipSx(course.category) }} />
+        )}
+      </Box>
 
-      {/* Cột phải: thumbnail + CTA */}
-      <Grid item xs={12} md={5}>
-        <Box sx={{ position: { md: "sticky" }, top: { md: 88 } }}>
-          <CourseThumbnailHero thumbnail={course.thumbnail} />
-
-          {/* CTA card */}
-          <SectionCard sx={{ mt: 2, p: 2.5 }}>
-            {course.progress >= 100 ? (
-              <>
-                <AppButton fullWidth variant="contained" onClick={onContinue} sx={{ borderRadius: "12px", py: 1.25, fontSize: 15, fontWeight: 700, mb: 1.25 }}>
-                  Ôn tập lại
-                </AppButton>
-                <Typography sx={{ fontSize: 12.5, color: MUTED, textAlign: "center", lineHeight: 1.5 }}>
-                  Bạn đã hoàn thành khóa học này. Tiếp tục ôn luyện để củng cố kiến thức.
-                </Typography>
-              </>
-            ) : isEnrolled ? (
-              <>
-                <AppButton fullWidth variant="contained" onClick={onContinue} sx={{ borderRadius: "12px", py: 1.25, fontSize: 15, fontWeight: 700, mb: 1.25 }}>
-                  Tiếp tục học
-                </AppButton>
-                <Typography sx={{ fontSize: 12.5, color: MUTED, textAlign: "center", lineHeight: 1.5 }}>
-                  Hãy tiếp tục lộ trình học của bạn ngay hôm nay.
-                </Typography>
-              </>
-            ) : (
-              <>
-                <AppButton fullWidth variant="accent" onClick={onEnroll} sx={{ borderRadius: "12px", py: 1.25, fontSize: 15, fontWeight: 700, mb: 1.25 }}>
-                  Đăng ký khóa học
-                </AppButton>
-                <Typography sx={{ fontSize: 12.5, color: MUTED, textAlign: "center", lineHeight: 1.5 }}>
-                  Bạn có thể bắt đầu học ngay sau khi đăng ký.
-                </Typography>
-              </>
-            )}
-          </SectionCard>
-        </Box>
-      </Grid>
-    </Grid>
+      <CourseMetaRow course={course} />
+    </Box>
   );
 }
 
-/** Section 2: Bạn sẽ học được gì */
+/** Một dòng thông tin trong CTA card */
+function CTAInfoRow({ icon: Icon, label, children, showDivider }) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 1.25,
+        py: 1.25,
+        borderTop: showDivider ? `1px solid ${DIVIDER}` : "none",
+      }}
+    >
+      <Icon sx={{ fontSize: 18, color: MUTED, mt: "2px", flexShrink: 0 }} />
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1.3, mb: children ? 0.5 : 0 }}>
+          {label}
+        </Typography>
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+/** Sticky CTA sidebar bên phải — style F8 */
+function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = true }) {
+  const [searchParams] = useSearchParams();
+  const prerequisites = course.prerequisites ?? [];
+
+  const getButtonProps = () => {
+    if (course.progress >= 100) {
+      return { label: "ÔN TẬP LẠI", variant: "contained", onClick: onContinue };
+    }
+    if (isEnrolled) {
+      return { label: "TIẾP TỤC HỌC", variant: "contained", onClick: onContinue };
+    }
+    return { label: "ĐĂNG KÝ HỌC", variant: "accent", onClick: onEnroll };
+  };
+
+  const btn = getButtonProps();
+
+  return (
+    <Box
+      sx={{
+        position: sticky ? { md: "sticky" } : "static",
+        top: sticky ? { md: STICKY_TOP } : "auto",
+        width: "100%",
+        flexShrink: 0,
+      }}
+    >
+      <Box
+        sx={{
+          bgcolor: "#fff",
+          border: `1px solid ${BORDER}`,
+          borderRadius: "20px",
+          boxShadow: "0 8px 32px rgba(8,145,178,0.10)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Thumbnail khóa học */}
+        <Box
+          sx={{
+            aspectRatio: "16 / 9",
+            bgcolor: alpha(PRIMARY, 0.06),
+            backgroundImage: course.thumbnail ? `url(${course.thumbnail})` : "none",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {!course.thumbnail && (
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                bgcolor: alpha(PRIMARY, 0.1),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: PRIMARY,
+              }}
+            >
+              <MenuBookOutlinedIcon sx={{ fontSize: 32 }} />
+            </Box>
+          )}
+        </Box>
+
+        {/* CTA body */}
+        <Box sx={{ p: 2.5 }}>
+          <Typography sx={{ fontSize: 22, fontWeight: 800, color: TEXT, mb: 2, letterSpacing: "-0.02em" }}>
+            {course.isFree !== false ? "Miễn phí" : "Liên hệ"}
+          </Typography>
+
+          <AppButton
+            fullWidth
+            variant={btn.variant}
+            onClick={btn.onClick}
+            sx={{
+              borderRadius: "12px",
+              py: 1.5,
+              fontSize: 15,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              mb: isEnrolled ? 2 : 2.5,
+            }}
+          >
+            {btn.label}
+          </AppButton>
+
+          {isEnrolled && (
+            <CourseProgressBlock progress={course.progress} sx={{ mb: 2.5 }} />
+          )}
+
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              pt: 2,
+              borderTop: `1px solid ${DIVIDER}`,
+            }}
+          >
+            <CTAInfoRow icon={PersonOutlineOutlinedIcon} label="Giảng viên">
+              <Typography sx={{ fontSize: 14, color: TEXT, fontWeight: 600, lineHeight: 1.45 }}>
+                {course.instructor || "S.T.A.R Mentor Team"}
+              </Typography>
+            </CTAInfoRow>
+
+            {prerequisites.length > 0 && (
+              <CTAInfoRow icon={AssignmentOutlinedIcon} label="Yêu cầu" showDivider>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                  {prerequisites.map((prereq) => (
+                    <MuiLink
+                      key={prereq.id}
+                      component={Link}
+                      to={buildCourseDetailPath(prereq.id, searchParams)}
+                      underline="hover"
+                      sx={{
+                        fontSize: 14,
+                        color: PRIMARY,
+                        fontWeight: 600,
+                        lineHeight: 1.45,
+                        display: "block",
+                        "&:hover": { color: PRIMARY_DARK },
+                      }}
+                    >
+                      {prereq.title}
+                    </MuiLink>
+                  ))}
+                </Box>
+              </CTAInfoRow>
+            )}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+/** Outcomes checklist 2 cột — không bọc card */
 function OutcomesSection({ outcomes }) {
   if (!outcomes?.length) return null;
+
   return (
-    <SectionCard>
-      <SectionTitle>Bạn sẽ học được gì</SectionTitle>
-      <Grid container spacing={1.5}>
+    <Box>
+      <SectionTitle sx={{ mb: 2 }}>Bạn sẽ học được gì</SectionTitle>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+          columnGap: 4,
+          rowGap: 1.75,
+        }}
+      >
         {outcomes.map((item, i) => (
-          <Grid item xs={12} sm={6} key={i}>
-            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.25 }}>
-              <Box
-                sx={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: "50%",
-                  bgcolor: alpha(PRIMARY, 0.1),
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  mt: "1px",
-                }}
-              >
-                <CheckRoundedIcon sx={{ fontSize: 13, color: PRIMARY }} />
-              </Box>
-              <Typography sx={{ fontSize: 14, color: TEXT, lineHeight: 1.6 }}>
-                {item}
-              </Typography>
+          <Box
+            key={i}
+            sx={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 1.25,
+              minHeight: 28,
+            }}
+          >
+            <Box
+              sx={{
+                width: 20,
+                height: 20,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mt: "1px",
+              }}
+            >
+              <CheckRoundedIcon sx={{ fontSize: 18, color: PRIMARY }} />
             </Box>
-          </Grid>
+            <Typography sx={{ fontSize: 14, color: TEXT, lineHeight: 1.55, fontWeight: 500, pt: "1px" }}>
+              {item}
+            </Typography>
+          </Box>
         ))}
-      </Grid>
-    </SectionCard>
+      </Box>
+    </Box>
   );
 }
 
-/** Icon bài học theo type */
 function LessonIcon({ type }) {
   const Icon = type === "video" ? PlayCircleOutlineOutlinedIcon : ArticleRoundedIcon;
-  return <Icon sx={{ fontSize: 17, color: MUTED, flexShrink: 0 }} />;
+  return <Icon sx={{ fontSize: 16, color: MUTED, flexShrink: 0 }} />;
 }
 
-/** Section 3: Nội dung khóa học (Accordion) */
-function CurriculumSection({ modules, isEnrolled }) {
-  const [expanded, setExpanded] = useState(modules[0]?.id ?? false);
-
-  const handleChange = (id) => (_, isOpen) => setExpanded(isOpen ? id : false);
+/** Curriculum accordion — style F8 */
+function CurriculumSection({ modules, isEnrolled, course }) {
+  const [expandedIds, setExpandedIds] = useState(() => new Set(modules[0]?.id ? [modules[0].id] : []));
 
   if (!modules?.length) return null;
 
+  const allExpanded = modules.every((m) => expandedIds.has(m.id));
+
+  const toggleModule = (id) => (_, isOpen) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (isOpen) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allExpanded) {
+      setExpandedIds(new Set());
+    } else {
+      setExpandedIds(new Set(modules.map((m) => m.id)));
+    }
+  };
+
   return (
-    <SectionCard sx={{ p: 0, overflow: "hidden" }}>
-      <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: { xs: 2.5, sm: 3 }, pb: 1 }}>
-        <SectionTitle>Nội dung khóa học</SectionTitle>
+    <Box>
+      {/* Header */}
+      <Box
+        sx={{
+          pb: 2,
+          mb: 0.5,
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 2,
+          borderBottom: `1px solid ${DIVIDER}`,
+        }}
+      >
+        <Box>
+          <SectionTitle sx={{ mb: 0.75 }}>Nội dung khóa học</SectionTitle>
+          <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+            {course.stageCount} chặng • {course.lessonCount} bài học • {course.duration}
+          </Typography>
+        </Box>
+        <IconButton
+          onClick={toggleAll}
+          aria-label={allExpanded ? "Thu gọn tất cả" : "Mở rộng tất cả"}
+          title={allExpanded ? "Thu gọn tất cả" : "Mở rộng tất cả"}
+          sx={{
+            flexShrink: 0,
+            mt: 0.25,
+            color: MUTED,
+            p: 0.5,
+            "&:hover": { bgcolor: "transparent", color: MUTED },
+          }}
+        >
+          {allExpanded ? (
+            <CloseFullscreenRoundedIcon sx={{ fontSize: 19 }} />
+          ) : (
+            <OpenInFullRoundedIcon sx={{ fontSize: 19 }} />
+          )}
+        </IconButton>
       </Box>
 
-      {modules.map((mod) => (
+      {modules.map((mod, index) => (
         <Accordion
           key={mod.id}
-          expanded={expanded === mod.id}
-          onChange={handleChange(mod.id)}
+          expanded={expandedIds.has(mod.id)}
+          onChange={toggleModule(mod.id)}
           disableGutters
           elevation={0}
           sx={{
+            bgcolor: "transparent",
             "&:before": { display: "none" },
-            borderTop: `1px solid ${BORDER}`,
+            borderBottom: `1px solid ${DIVIDER}`,
+            "&:last-of-type": { borderBottom: "none" },
           }}
         >
           <AccordionSummary
-            expandIcon={<ExpandMoreRoundedIcon sx={{ color: PRIMARY }} />}
+            expandIcon={<ExpandMoreRoundedIcon sx={{ color: MUTED, fontSize: 22 }} />}
             sx={{
-              px: { xs: 2.5, sm: 3 },
+              px: 0,
               py: 0,
-              minHeight: 56,
-              bgcolor: expanded === mod.id ? alpha(PRIMARY, 0.04) : "transparent",
-              transition: "background-color 0.18s ease",
-              "&:hover": { bgcolor: alpha(PRIMARY, 0.04) },
-              "& .MuiAccordionSummary-content": { my: 0, alignItems: "center", gap: 2 },
+              minHeight: "unset",
+              bgcolor: "transparent",
+              transition: "background-color 0.15s ease",
+              "&:hover": { bgcolor: alpha(PRIMARY, 0.03) },
+              "& .MuiAccordionSummary-content": {
+                my: 2.5,
+                alignItems: "center",
+                gap: 1.5,
+              },
             }}
           >
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: MUTED,
+                minWidth: 28,
+                flexShrink: 0,
+              }}
+            >
+              {String(index + 1).padStart(2, "0")}
+            </Typography>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 700, fontSize: 14, color: TEXT, lineHeight: 1.4 }}>
+              <Typography sx={{ fontWeight: 700, fontSize: 15, color: TEXT, lineHeight: 1.35 }}>
                 {mod.title}
               </Typography>
-              <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>
-                {mod.lessonCount} bài học · {mod.materialCount} tài liệu
+              <Typography sx={{ fontSize: 12.5, color: MUTED, mt: 0.35 }}>
+                {mod.lessonCount} bài học
               </Typography>
             </Box>
           </AccordionSummary>
 
-          <AccordionDetails sx={{ p: 0, pb: 1 }}>
-            {mod.lessons.map((lesson) => {
+          <AccordionDetails sx={{ p: 0, pb: 1.5 }}>
+            {mod.lessons.map((lesson, lessonIndex) => {
               const isLocked = !isEnrolled && !lesson.isPreview;
               return (
                 <Box
@@ -598,15 +819,18 @@ function CurriculumSection({ modules, isEnrolled }) {
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 1.5,
-                    px: { xs: 2.5, sm: 3 },
-                    py: 1.1,
-                    borderTop: `1px solid ${alpha(BORDER, 0.5)}`,
-                    opacity: isLocked ? 0.55 : 1,
+                    gap: 1.25,
+                    pl: 4.5,
+                    pr: 0,
+                    py: 1.5,
+                    borderTop: lessonIndex > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none",
+                    opacity: isLocked ? 0.5 : 1,
+                    transition: "background-color 0.15s ease",
+                    "&:hover": { bgcolor: isLocked ? "transparent" : alpha(PRIMARY, 0.03) },
                   }}
                 >
                   {isLocked ? (
-                    <LockOutlinedIcon sx={{ fontSize: 17, color: MUTED, flexShrink: 0 }} />
+                    <LockOutlinedIcon sx={{ fontSize: 16, color: MUTED, flexShrink: 0 }} />
                   ) : (
                     <LessonIcon type={lesson.type} />
                   )}
@@ -616,34 +840,33 @@ function CurriculumSection({ modules, isEnrolled }) {
                       flex: 1,
                       fontSize: 13.5,
                       color: isLocked ? MUTED : TEXT,
-                      fontWeight: lesson.isCompleted ? 600 : 500,
+                      fontWeight: lesson.isCompleted ? 600 : 400,
                       lineHeight: 1.4,
-                      textDecoration: lesson.isCompleted ? "none" : "none",
                     }}
                   >
                     {lesson.title}
                   </Typography>
 
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
                     {lesson.isPreview && !isEnrolled && (
                       <Chip
                         label="Xem thử"
                         size="small"
                         sx={{
                           height: 20,
-                          fontSize: 11,
-                          fontWeight: 600,
+                          fontSize: 10.5,
+                          fontWeight: 700,
                           borderRadius: "99px",
-                          bgcolor: alpha(PRIMARY, 0.1),
-                          color: PRIMARY,
+                          bgcolor: alpha(ACCENT, 0.1),
+                          color: ACCENT,
                         }}
                       />
                     )}
                     {lesson.isCompleted && (
-                      <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 16, color: "#047857" }} />
+                      <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 15, color: "#047857" }} />
                     )}
                     {lesson.duration && (
-                      <Typography sx={{ fontSize: 12, color: MUTED }}>
+                      <Typography sx={{ fontSize: 12, color: MUTED, minWidth: 52, textAlign: "right" }}>
                         {lesson.duration}
                       </Typography>
                     )}
@@ -654,70 +877,23 @@ function CurriculumSection({ modules, isEnrolled }) {
           </AccordionDetails>
         </Accordion>
       ))}
-    </SectionCard>
+    </Box>
   );
 }
 
-/** Section 4: Thông tin khóa học */
-function CourseInfoSection({ course }) {
-  const infos = [
-    { icon: SchoolOutlinedIcon, label: "Trình độ", value: course.level },
-    { icon: MenuBookOutlinedIcon, label: "Danh mục", value: course.category },
-    { icon: MenuBookOutlinedIcon, label: "Số bài học", value: `${course.lessonCount} bài` },
-    { icon: RouteOutlinedIcon, label: "Số chặng", value: `${course.stageCount} chặng` },
-    { icon: ArticleOutlinedIcon, label: "Học liệu", value: `${course.materialCount} tài liệu` },
-    { icon: AccessTimeOutlinedIcon, label: "Thời lượng", value: course.duration || "—" },
-    { icon: CalendarTodayOutlinedIcon, label: "Cập nhật", value: course.updatedAt || "—" },
-  ];
-
-  return (
-    <SectionCard>
-      <SectionTitle>Thông tin khóa học</SectionTitle>
-      <Grid container spacing={1.5}>
-        {infos.map(({ icon: Icon, label, value }) => (
-          <Grid item xs={12} sm={6} md={4} key={label}>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.25,
-                p: 1.5,
-                bgcolor: alpha(PRIMARY, 0.03),
-                borderRadius: "10px",
-                border: `1px solid ${BORDER}`,
-              }}
-            >
-              <Icon sx={{ fontSize: 18, color: PRIMARY, flexShrink: 0 }} />
-              <Box>
-                <Typography sx={{ fontSize: 11.5, color: MUTED, fontWeight: 500 }}>{label}</Typography>
-                <Typography sx={{ fontSize: 13.5, color: TEXT, fontWeight: 700 }}>{value}</Typography>
-              </Box>
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
-    </SectionCard>
-  );
-}
-
-/** Section 5: Khóa học liên quan */
 function RelatedCoursesSection() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   return (
     <Box>
-      <Typography
-        variant="h6"
-        sx={{ fontWeight: 700, color: TEXT, fontSize: { xs: 16, sm: 18 }, mb: 2.5 }}
-      >
-        Khóa học liên quan
-      </Typography>
+      <SectionTitle sx={{ mb: 2 }}>Khóa học liên quan</SectionTitle>
       <Grid container spacing={2.5}>
-        {RELATED_COURSES.map((course) => (
-          <Grid item xs={12} sm={6} md={4} key={course.courseId}>
+        {RELATED_COURSES.map((c) => (
+          <Grid item xs={12} sm={6} md={4} key={c.courseId}>
             <CourseCard
-              course={course}
-              onEnroll={() => navigate(`/courses/${course.courseId}`)}
-              onContinueLearning={() => navigate(`/courses/${course.courseId}`)}
+              course={c}
+              onEnroll={() => navigate(buildCourseDetailPath(c.courseId, searchParams))}
+              onContinueLearning={() => navigate(buildCourseDetailPath(c.courseId, searchParams))}
             />
           </Grid>
         ))}
@@ -733,11 +909,8 @@ export default function CourseDetailPage() {
   const navigate = useNavigate();
 
   const courseData = MOCK_COURSE_DETAILS[Number(id)] ?? buildFallbackDetail(id);
-
-  // Enrollment state — tạm dùng local state, sau này kết nối API
   const [isEnrolled, setIsEnrolled] = useState(courseData.isEnrolled);
   const [progress] = useState(courseData.progress);
-
   const course = { ...courseData, isEnrolled, progress };
 
   const handleEnroll = () => {
@@ -752,32 +925,54 @@ export default function CourseDetailPage() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1180, mx: "auto" }}>
-      {/* Hero */}
-      <HeroSection
-        course={course}
-        isEnrolled={isEnrolled}
-        onEnroll={handleEnroll}
-        onContinue={handleContinue}
-      />
+    <Box sx={{ maxWidth: 1280, mx: "auto" }}>
+      {/* Layout 2 cột F8: trái nội dung + phải sticky CTA */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", lg: "row" },
+          gap: { xs: 0, lg: 6 },
+          alignItems: "flex-start",
+        }}
+      >
+        {/* Cột trái — nội dung chính */}
+        <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+          <CourseIntro course={course} isEnrolled={isEnrolled} />
 
-      {/* Outcomes */}
-      <Box sx={{ mt: 4 }}>
-        <OutcomesSection outcomes={course.outcomes} />
+          {/* CTA trên mobile — ngay dưới intro */}
+          <Box sx={{ display: { xs: "block", lg: "none" }, mt: 3, mb: 1 }}>
+            <CourseStickyCTA
+              course={course}
+              isEnrolled={isEnrolled}
+              onEnroll={handleEnroll}
+              onContinue={handleContinue}
+              sticky={false}
+            />
+          </Box>
+
+          <Box sx={{ mt: 5 }}>
+            <OutcomesSection outcomes={course.outcomes} />
+          </Box>
+
+          <Box sx={{ mt: 5 }}>
+            <CurriculumSection modules={course.modules} isEnrolled={isEnrolled} course={course} />
+          </Box>
+        </Box>
+
+        {/* Cột phải — sticky CTA (desktop) */}
+        <Box sx={{ display: { xs: "none", lg: "block" }, width: 380, flexShrink: 0 }}>
+          <CourseStickyCTA
+            course={course}
+            isEnrolled={isEnrolled}
+            onEnroll={handleEnroll}
+            onContinue={handleContinue}
+            sticky
+          />
+        </Box>
       </Box>
 
-      {/* Curriculum */}
-      <Box sx={{ mt: 3 }}>
-        <CurriculumSection modules={course.modules} isEnrolled={isEnrolled} />
-      </Box>
-
-      {/* Course info */}
-      <Box sx={{ mt: 3 }}>
-        <CourseInfoSection course={course} />
-      </Box>
-
-      {/* Related courses */}
-      <Box sx={{ mt: 5 }}>
+      {/* Khóa học liên quan — full width */}
+      <Box sx={{ mt: { xs: 4, sm: 5 } }}>
         <RelatedCoursesSection />
       </Box>
     </Box>

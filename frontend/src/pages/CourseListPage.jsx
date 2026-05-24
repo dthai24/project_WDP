@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Breadcrumbs, Grid, Link as MuiLink, Typography, alpha, useTheme } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import EmptyState from "../components/common/EmptyState";
 import CourseCard from "../components/course/CourseCard";
@@ -12,6 +12,7 @@ import CourseListPagination, {
 import { toast } from "../components/common/Toast";
 import {
   buildActiveFilterChips,
+  buildCourseDetailPath,
   buildCourseListSearchParams,
   hasActiveCourseFilters,
   parseCourseListParams,
@@ -369,6 +370,7 @@ async function fetchCourses() {
 export default function CourseListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -476,7 +478,7 @@ export default function CourseListPage() {
 
   const handleContinueLearning = (course) => {
     // TODO: Replace with real learning route when available.
-    navigate(`/courses/${course.courseId}`);
+    navigate(buildCourseDetailPath(course.courseId, searchParams, `${location.pathname}${location.search}`));
   };
 
   const handleEnroll = (course) => {

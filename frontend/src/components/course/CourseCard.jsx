@@ -12,8 +12,9 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AppButton from "../common/AppButton";
+import { buildCourseDetailPath } from "../../utils/courseListParams";
 
 /* ─── helpers ─── */
 
@@ -100,37 +101,33 @@ function getCategoryChipStyle(category = "") {
   return map[category] ?? { bgcolor: "#F1F5F9", color: "#64748B" };
 }
 
-function getProgressStyle(progress) {
-  if (progress >= 100) {
-    return {
-      color: "#047857",
-      trackColor: "rgba(4,120,87,0.14)",
-      label: "Hoàn thành",
-      completed: true,
-    };
+function getProgressGradient(progress) {
+  const value = Math.max(0, Math.min(progress, 100));
+
+  if (value === 0) {
+    return "#94A3B8";
   }
-  if (progress >= 70) {
-    return {
-      color: "#16A34A",
-      trackColor: "rgba(22,163,74,0.12)",
-      label: "Tiến độ",
-      completed: false,
-    };
+
+  if (value >= 100) {
+    return "linear-gradient(90deg, #22C55E 0%, #16A34A 100%)";
   }
-  if (progress >= 30) {
-    return {
-      color: "#0891B2",
-      trackColor: "rgba(8,145,178,0.12)",
-      label: "Tiến độ",
-      completed: false,
-    };
+
+  if (value >= 90) {
+    return "linear-gradient(90deg, #0891B2 0%, #F59E0B 100%)";
   }
-  return {
-    color: "#F59E0B",
-    trackColor: "rgba(245,158,11,0.14)",
-    label: "Tiến độ",
-    completed: false,
-  };
+
+  return "linear-gradient(90deg, #EA580C 0%, #F59E0B 45%, #0891B2 100%)";
+}
+
+function getProgressTextColor(progress) {
+  const value = Math.max(0, Math.min(progress, 100));
+
+  if (value === 0) return "#94A3B8";
+  if (value >= 100) return "#16A34A";
+  if (value >= 90) return "#F59E0B";
+  if (value >= 70) return "#0891B2";
+  if (value >= 30) return "#0891B2";
+  return "#EA580C";
 }
 
 /* ─── sub-components ─── */
@@ -194,12 +191,18 @@ export default function CourseCard({
 }) {
   const theme   = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const data         = normalizeCourse(course);
   const statusChip   = getStatusChipStyle(data.isEnrolled, data.progressPercentage);
   const levelStyle   = getLevelChipStyle(data.level);
   const categoryStyle = getCategoryChipStyle(data.category);
-  const progressStyle = getProgressStyle(data.progressPercentage);
-  const detailPath = `/courses/${data.courseId}`;
+  const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
+  const progressTextColor = getProgressTextColor(progressValue);
+  const isCompleted = progressValue >= 100;
+  const listFromUrl =
+    location.pathname === "/courses" ? `${location.pathname}${location.search}` : undefined;
+  const detailPath = buildCourseDetailPath(data.courseId, searchParams, listFromUrl);
 
   return (
     <Card
@@ -295,30 +298,27 @@ export default function CourseCard({
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
               <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 600, fontSize: 11.5 }}>
-                {progressStyle.label}
+                {isCompleted ? "Hoàn thành" : "Tiến độ"}
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                {progressStyle.completed && (
-                  <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14, color: progressStyle.color }} />
+                {isCompleted && (
+                  <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14, color: progressTextColor }} />
                 )}
-                <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 11.5, color: progressStyle.color }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 11.5, color: progressTextColor }}>
                   {data.progressPercentage}%
                 </Typography>
               </Box>
             </Box>
             <LinearProgress
               variant="determinate"
-              value={Math.min(Math.max(data.progressPercentage, 0), 100)}
+              value={progressValue}
               sx={{
-                height: progressStyle.completed ? 7 : 6,
+                height: 6,
                 borderRadius: 99,
-                bgcolor: progressStyle.trackColor,
+                bgcolor: "rgba(100,116,139,0.12)",
                 "& .MuiLinearProgress-bar": {
                   borderRadius: 99,
-                  backgroundColor: progressStyle.color,
-                  ...(progressStyle.completed && {
-                    backgroundImage: "linear-gradient(90deg, #047857 0%, #059669 100%)",
-                  }),
+                  background: getProgressGradient(progressValue),
                 },
               }}
             />
@@ -347,7 +347,7 @@ export default function CourseCard({
                 if (onEnroll) {
                   onEnroll(course);
                 } else {
-                  navigate(`/courses/${data.courseId}`);
+                  navigate(buildCourseDetailPath(data.courseId, searchParams, listFromUrl));
                 }
               }}
             >
