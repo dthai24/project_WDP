@@ -29,6 +29,7 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
+import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppButton from "../components/common/AppButton";
 import AppProgressBar, { getProgressColor } from "../components/common/AppProgressBar";
@@ -310,6 +311,8 @@ export default function CourseLearningPage() {
     return (
       <Box sx={{ maxWidth: 1280, mx: "auto", py: 8 }}>
         <EmptyState
+          variant="error"
+          icon={SearchOffRoundedIcon}
           title="Không tìm thấy khóa học"
           description="Khóa học này chưa có nội dung học hoặc bạn chưa đăng ký."
           actionLabel="Về Khóa học của tôi"
