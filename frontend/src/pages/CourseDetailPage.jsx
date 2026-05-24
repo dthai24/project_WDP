@@ -33,6 +33,8 @@ import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import AppButton from "../components/common/AppButton";
 import CourseCard from "../components/course/CourseCard";
+import CourseBookmarkButton from "../components/course/CourseBookmarkButton";
+import useSavedCourses from "../hooks/useSavedCourses";
 import { buildCourseDetailPath, buildCourseListPath } from "../utils/courseListParams";
 
 const PRIMARY = "#0891B2";
@@ -412,7 +414,9 @@ function CourseProgressBlock({ progress, sx }) {
 function CourseIntro({ course, isEnrolled }) {
   const [searchParams] = useSearchParams();
   const coursesListPath = buildCourseListPath(searchParams);
+  const { isSaved, toggleSave } = useSavedCourses();
   const statusChip = getStatusChip(isEnrolled, course.progress);
+  const courseId = course.id ?? course.courseId;
 
   return (
     <Box>
@@ -431,18 +435,27 @@ function CourseIntro({ course, isEnrolled }) {
         </Typography>
       </Breadcrumbs>
 
-      <Typography
-        sx={{
-          fontWeight: 700,
-          color: TEXT,
-          lineHeight: 1.25,
-          fontSize: { xs: 24, sm: 28, md: 32 },
-          mb: 1.25,
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {course.title}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5, mb: 1.25 }}>
+        <Typography
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            fontWeight: 700,
+            color: TEXT,
+            lineHeight: 1.25,
+            fontSize: { xs: 24, sm: 28, md: 32 },
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {course.title}
+        </Typography>
+        <CourseBookmarkButton
+          isSaved={isSaved(courseId)}
+          onToggle={() => toggleSave(courseId)}
+          size="medium"
+          iconSize={26}
+        />
+      </Box>
 
       <Typography sx={{ fontSize: 15, color: MUTED, lineHeight: 1.65, mb: 2 }}>
         {course.shortDescription}
