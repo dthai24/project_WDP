@@ -39,6 +39,31 @@ const USER_MENU_ITEMS = [
   { key: "profile", label: "Hồ sơ cá nhân", icon: PersonOutlineRoundedIcon, path: "/profile" },
 ];
 
+function getUserId(user) {
+  return user?.userId ?? user?.UserId ?? user?.id ?? user?.Id;
+}
+
+function getUserRole(user) {
+  return user?.role ?? user?.roles ?? user?.Role ?? user?.Roles;
+}
+
+function buildMyCoursesUrl(user) {
+  const userId = getUserId(user);
+  const role = getUserRole(user);
+
+  if (!userId || !role) {
+    console.error("Missing userId or role in session user:", user);
+    return "/my-courses";
+  }
+
+  const params = new URLSearchParams({
+    userId: String(userId),
+    role: String(role).toLowerCase(),
+  });
+
+  return `/my-courses?${params.toString()}`;
+}
+
 function getUserInitials(user) {
   const name = user?.fullName || user?.email || "?";
   return name
@@ -187,7 +212,9 @@ export default function Header({
   const displayName = user?.fullName || "Phúc Nguyễn";
   const displayEmail = user?.email || "";
   const displayRole = user?.role || "Học viên";
-
+  const handleMyCourses = () => {
+    navigate(buildMyCoursesUrl(user));
+  };
   const applyCourseKeyword = (value) => {
     const current = parseCourseListParams(searchParams);
     const next = buildCourseListSearchParams(
@@ -232,9 +259,9 @@ export default function Header({
   const userZoneHandlers = isMobile
     ? {}
     : {
-        onMouseEnter: openUserMenu,
-        onMouseLeave: scheduleCloseUserMenu,
-      };
+      onMouseEnter: openUserMenu,
+      onMouseLeave: scheduleCloseUserMenu,
+    };
 
   return (
     <AppBar
@@ -305,7 +332,7 @@ export default function Header({
                 <Box
                   component="button"
                   type="button"
-                  onClick={() => navigate("/my-courses")}
+                  onClick={handleMyCourses}
                   sx={{
                     display: "inline-flex",
                     alignItems: "center",

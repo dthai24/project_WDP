@@ -269,27 +269,132 @@ function pickContinueCourse(courses) {
   return learning[0] ?? null;
 }
 
+function getSessionUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem("user") || "{}");
+  } catch (error) {
+    console.error("Parse session user error:", error);
+    return {};
+  }
+}
+
+function getUserId(user) {
+  return user?.userId ?? user?.UserId ?? user?.id ?? user?.Id;
+}
+
+function getUserRole(user) {
+  return user?.role ?? user?.roles ?? user?.Role ?? user?.Roles;
+}
+
+async function fetchMyCourses(userId, role) {
+  const params = new URLSearchParams({
+    userId: String(userId),
+    role: String(role).toLowerCase(),
+  });
+
+  const res = await fetch(
+    `http://localhost:5000/api/courses/my-courses?${params.toString()}`
+  );
+
+  if (!res.ok) {
+    throw new Error("Cannot fetch my courses");
+  }
+
+  const result = await res.json();
+  return result.data || [];
+}
+
+function normalizeCourse(course, isSaved) {
+  const courseId = course.courseId ?? course.CourseId;
+
+  return {
+    courseId,
+    courseName: course.courseName ?? course.CourseName ?? "Chưa có tên khóa học",
+    description: course.description ?? course.Description ?? "",
+    category: course.category ?? course.Category ?? "Giao tiếp",
+    level: course.level ?? course.Level ?? "Cơ bản",
+    instructor: course.instructor ?? course.Instructor ?? "Chưa cập nhật",
+    totalLessons: course.totalLessons ?? course.TotalLessons ?? 0,
+    totalNodes: course.totalNodes ?? course.TotalNodes ?? 0,
+    totalMaterials: course.totalMaterials ?? course.TotalMaterials ?? 0,
+    progressPercentage: course.progressPercentage ?? course.ProgressPercentage ?? 0,
+    enrollmentStatus:
+      course.enrollmentStatus ??
+      course.EnrollmentStatus ??
+      "learning",
+    currentStage: course.currentStage ?? course.CurrentStage,
+    currentLesson: course.currentLesson ?? course.CurrentLesson,
+    lastActivity: course.lastActivity ?? course.LastActivity ?? "",
+    lastActivityOrder: course.lastActivityOrder ?? course.LastActivityOrder ?? 99,
+    thumbnail: course.thumbnail ?? course.Thumbnail ?? "",
+    modules: course.modules ?? course.Modules ?? [],
+    currentLessonDetail:
+      course.currentLessonDetail ?? course.CurrentLessonDetail ?? null,
+    recentLessons: course.recentLessons ?? course.RecentLessons ?? [],
+    isSaved: isSaved(courseId),
+  };
+}
+
 export default function MyCoursesListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { savedIds, isSaved, unsave } = useSavedCourses();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const keyword = (searchParams.get("keyword") ?? "").trim();
 
+  const sessionUser = useMemo(() => getSessionUser(), []);
+  const userId = searchParams.get("userId") || getUserId(sessionUser);
+  const role = searchParams.get("role") || getUserRole(sessionUser);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadMyCourses() {
+      if (!userId || !role) {
+        if (isMounted) {
+          setCourses([]);
+          setError("Thiếu userId hoặc role. Hãy đăng nhập lại.");
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await fetchMyCourses(userId, role);
+
+        if (isMounted) {
+          setCourses(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error("Fetch my courses error:", error.message);
+
+        if (isMounted) {
+          setCourses([]);
+          setError("Không thể tải khóa học của tôi. Vui lòng thử lại.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadMyCourses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId, role]);
   const allCourses = useMemo(() => {
-    const enrolled = MOCK_ENROLLED_COURSES.map((course) => ({
-      ...course,
-      isSaved: isSaved(course.courseId),
-    }));
-
-    const savedOnly = MOCK_SAVED_CATALOG.filter(
-      (course) => savedIds.has(course.courseId) && !ENROLLED_IDS.has(course.courseId)
-    ).map((course) => ({ ...course, isSaved: true }));
-
-    return [...enrolled, ...savedOnly];
-  }, [savedIds, isSaved]);
-
+    return courses.map((course) => normalizeCourse(course, isSaved));
+  }, [courses, isSaved]);
   const showReset = hasActiveFilters(filters, keyword);
   const activeFilterChips = useMemo(
     () => buildActiveFilterChips({ ...filters, keyword, statuses: [] }),
