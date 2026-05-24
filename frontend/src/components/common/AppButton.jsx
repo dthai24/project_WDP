@@ -26,11 +26,13 @@ const VARIANT_STYLES = {
     color: theme.palette.primary.main,
     "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.95)" },
   }),
-  accent: (theme) => ({
-    backgroundColor: theme.palette.accent?.main ?? "#EA580C",
+  accent: () => ({
+    backgroundColor: "#EA580C",
     color: "#fff",
+    boxShadow: "none",
     "&:hover": {
-      backgroundColor: theme.palette.accent?.dark ?? "#C2410C",
+      backgroundColor: "#C2410C",
+      boxShadow: "none",
     },
   }),
 };

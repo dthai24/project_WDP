@@ -13,15 +13,7 @@ export default function Loading({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 2,
-        p: 4,
-        borderRadius: theme.ios18?.radius?.xl ?? 28,
-        ...(fullScreen
-          ? {}
-          : {
-              ...theme.ios18?.glass,
-              boxShadow: theme.ios18?.shadow?.md,
-            }),
+        gap: 1.5,
       }}
     >
       <CircularProgress

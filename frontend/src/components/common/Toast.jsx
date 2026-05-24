@@ -27,6 +27,7 @@ function ToastAlert({ message, severity, closeToast }) {
       <Alert
         severity={severity}
         variant="standard"
+        icon={false}
         onClose={closeToast}
         sx={{
           width: "100%",
@@ -41,14 +42,13 @@ function ToastAlert({ message, severity, closeToast }) {
           fontSize: 14,
           fontWeight: 600,
           alignItems: "center",
-          "& .MuiAlert-icon": { fontSize: 22, mr: 1.25 },
           "& .MuiAlert-message": {
-            padding: "3px 0",
+            padding: 0,
             fontSize: 14,
             fontWeight: 600,
             lineHeight: 1.45,
           },
-          "& .MuiAlert-action": { pt: 0, alignItems: "center" },
+          "& .MuiAlert-action": { pt: 0, alignItems: "center", ml: 1 },
         }}
       >
         {message}
