@@ -12,16 +12,23 @@ import {
   useTheme,
 } from "@mui/material";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
-import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
-import RadioButtonUncheckedOutlinedIcon from "@mui/icons-material/RadioButtonUncheckedOutlined";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import RadioButtonUncheckedRoundedIcon from "@mui/icons-material/RadioButtonUncheckedRounded";
+import PlayCircleRoundedIcon from "@mui/icons-material/PlayCircleRounded";
 import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
-import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
-import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
-import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
-import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
-import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
+import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
+import AssignmentRoundedIcon from "@mui/icons-material/AssignmentRounded";
+import RouteRoundedIcon from "@mui/icons-material/RouteRounded";
+import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
+import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppButton from "../components/common/AppButton";
 import AppProgressBar, { getProgressColor } from "../components/common/AppProgressBar";
@@ -207,12 +214,75 @@ function computeProgress(mods) {
 }
 
 const TYPE_ICON = {
-  video: PlayCircleOutlineOutlinedIcon,
-  reading: ArticleOutlinedIcon,
-  quiz: QuizOutlinedIcon,
+  video: PlayCircleRoundedIcon,
+  reading: ArticleRoundedIcon,
+  quiz: AssignmentRoundedIcon,
 };
 
 const TYPE_LABEL = { video: "Video", reading: "Bài đọc", quiz: "Bài tập" };
+
+const ICON_COLORS = {
+  route: "#7C3AED",
+  instructor: "#2563EB",
+  duration: "#D97706",
+  video: PRIMARY,
+  reading: "#0EA5E9",
+  quiz: "#EA580C",
+  objective: SUCCESS,
+  content: "#6366F1",
+  pdf: "#DC2626",
+  doc: "#1D4ED8",
+  file: "#64748B",
+  download: PRIMARY,
+};
+
+const TYPE_ICON_COLOR = {
+  video: ICON_COLORS.video,
+  reading: ICON_COLORS.reading,
+  quiz: ICON_COLORS.quiz,
+};
+
+const META_TEXT_SX = { fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1.2 };
+
+function getMaterialFileMeta(title = "") {
+  const lower = title.toLowerCase();
+  if (lower.endsWith(".pdf")) {
+    return { Icon: PictureAsPdfRoundedIcon, color: ICON_COLORS.pdf };
+  }
+  if (lower.endsWith(".doc") || lower.endsWith(".docx")) {
+    return { Icon: DescriptionRoundedIcon, color: ICON_COLORS.doc };
+  }
+  return { Icon: InsertDriveFileRoundedIcon, color: ICON_COLORS.file };
+}
+
+function HeaderMetaItem({ icon: Icon, iconColor = PRIMARY, children }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Icon sx={{ fontSize: 15, color: iconColor, flexShrink: 0 }} />
+      {children}
+    </Box>
+  );
+}
+
+function LessonChip({ icon: Icon, label, iconColor = MUTED, sx = {} }) {
+  return (
+    <Chip
+      icon={<Icon sx={{ fontSize: "14px !important", color: `${iconColor} !important` }} />}
+      label={label}
+      size="small"
+      sx={{
+        height: 26,
+        fontSize: 11,
+        fontWeight: 600,
+        borderRadius: "99px",
+        bgcolor: alpha(iconColor === MUTED ? PRIMARY : iconColor, 0.06),
+        border: `1px solid ${alpha(iconColor === MUTED ? PRIMARY : iconColor, 0.14)}`,
+        color: MUTED,
+        ...sx,
+      }}
+    />
+  );
+}
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 
@@ -273,7 +343,7 @@ export default function CourseLearningPage() {
       handleSelectLesson(allLessons[currentIndex + 1].id);
   };
 
-  const TypeIcon = TYPE_ICON[currentLesson?.type] ?? ArticleOutlinedIcon;
+  const TypeIcon = TYPE_ICON[currentLesson?.type] ?? ArticleRoundedIcon;
   const isCompleted = currentLesson?.status === "completed";
 
   return (
@@ -342,33 +412,53 @@ export default function CourseLearningPage() {
         }}
       >
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontSize: 12.5, color: MUTED, fontWeight: 500, mb: 0.5 }}>
+          <Typography sx={{ fontSize: 14, color: MUTED, fontWeight: 500, mb: 0.75 }}>
             {rawData.courseTitle}
           </Typography>
-          {rawData.instructor && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.75 }}>
-              <PersonOutlineOutlinedIcon sx={{ fontSize: 14, color: MUTED }} />
-              <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-                Giảng viên: {rawData.instructor}
-              </Typography>
-            </Box>
-          )}
           <Typography
             sx={{
-              fontWeight: 800,
+              fontWeight: 700,
               fontSize: { xs: 20, md: 26 },
               color: TEXT,
               lineHeight: 1.25,
               letterSpacing: "-0.02em",
-              mb: 0.75,
+              mb: 1.25,
             }}
           >
             {currentLesson?.title ?? "Chọn bài học"}
           </Typography>
-          {currentMod && (
-            <Typography sx={{ fontSize: 13.5, color: PRIMARY, fontWeight: 600 }}>
-              {currentMod.title}
-            </Typography>
+          {currentLesson && (
+            <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: { xs: 1.25, sm: 1.75 } }}>
+              {currentMod && (
+                <HeaderMetaItem icon={RouteRoundedIcon} iconColor={ICON_COLORS.route}>
+                  <Typography sx={META_TEXT_SX}>{currentMod.title}</Typography>
+                </HeaderMetaItem>
+              )}
+              {rawData.instructor && (
+                <HeaderMetaItem icon={PersonRoundedIcon} iconColor={ICON_COLORS.instructor}>
+                  <Typography sx={META_TEXT_SX}>
+                    <Box component="span" sx={{ color: TEXT, fontWeight: 600, fontSize: 12 }}>
+                      {rawData.instructor}
+                    </Box>
+                  </Typography>
+                </HeaderMetaItem>
+              )}
+              {currentLesson.type && (
+                <HeaderMetaItem
+                  icon={TYPE_ICON[currentLesson.type] ?? ArticleRoundedIcon}
+                  iconColor={TYPE_ICON_COLOR[currentLesson.type] ?? ICON_COLORS.reading}
+                >
+                  <Typography sx={META_TEXT_SX}>
+                    {TYPE_LABEL[currentLesson.type] ?? currentLesson.type}
+                  </Typography>
+                </HeaderMetaItem>
+              )}
+              {currentLesson.duration && (
+                <HeaderMetaItem icon={AccessTimeRoundedIcon} iconColor={ICON_COLORS.duration}>
+                  <Typography sx={META_TEXT_SX}>{currentLesson.duration}</Typography>
+                </HeaderMetaItem>
+              )}
+            </Box>
           )}
         </Box>
 
@@ -438,31 +528,24 @@ export default function CourseLearningPage() {
 
             {/* Type + module chips */}
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5 }}>
-              <Chip
-                icon={<TypeIcon sx={{ fontSize: "14px !important" }} />}
+              <LessonChip
+                icon={TypeIcon}
+                iconColor={TYPE_ICON_COLOR[currentLesson?.type] ?? ICON_COLORS.reading}
                 label={TYPE_LABEL[currentLesson?.type] ?? "Bài học"}
-                size="small"
-                sx={{ height: 24, fontSize: 11, fontWeight: 600, borderRadius: "99px" }}
+                sx={{ color: TYPE_ICON_COLOR[currentLesson?.type] ?? ICON_COLORS.reading, border: "none" }}
               />
               {currentMod && (
-                <Chip
+                <LessonChip
+                  icon={RouteRoundedIcon}
+                  iconColor={ICON_COLORS.route}
                   label={currentMod.title}
-                  size="small"
-                  sx={{
-                    height: 24,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    borderRadius: "99px",
-                    bgcolor: alpha(PRIMARY, 0.08),
-                    color: PRIMARY,
-                  }}
                 />
               )}
               {currentLesson?.duration && (
-                <Chip
+                <LessonChip
+                  icon={AccessTimeRoundedIcon}
+                  iconColor={ICON_COLORS.duration}
                   label={currentLesson.duration}
-                  size="small"
-                  sx={{ height: 24, fontSize: 11, color: MUTED, borderRadius: "99px" }}
                 />
               )}
             </Box>
@@ -473,15 +556,16 @@ export default function CourseLearningPage() {
                 <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT, mb: 1.25 }}>
                   Mục tiêu bài học
                 </Typography>
-                <Box component="ul" sx={{ m: 0, pl: 2.5, color: MUTED }}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                   {currentLesson.content.objectives.map((item, i) => (
-                    <Typography
-                      component="li"
-                      key={i}
-                      sx={{ fontSize: 14, lineHeight: 1.65, mb: 0.5 }}
-                    >
-                      {item}
-                    </Typography>
+                    <Box key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                      <CheckCircleRoundedIcon
+                        sx={{ fontSize: 18, color: ICON_COLORS.objective, mt: 0.15, flexShrink: 0 }}
+                      />
+                      <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>
+                        {item}
+                      </Typography>
+                    </Box>
                   ))}
                 </Box>
               </Box>
@@ -489,9 +573,12 @@ export default function CourseLearningPage() {
 
             {/* Lesson body */}
             <Box sx={{ mb: 3 }}>
-              <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT, mb: 1 }}>
-                Nội dung bài học
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
+                <MenuBookRoundedIcon sx={{ fontSize: 18, color: ICON_COLORS.content }} />
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
+                  Nội dung bài học
+                </Typography>
+              </Box>
               <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.8 }}>
                 {currentLesson?.content?.body ?? "Nội dung bài học sẽ được cập nhật."}
               </Typography>
@@ -504,25 +591,38 @@ export default function CourseLearningPage() {
                   Tài liệu kèm theo
                 </Typography>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-                  {currentLesson.materials.map((file) => (
-                    <Box
-                      key={file.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        py: 1,
-                        px: 1.5,
-                        borderRadius: "10px",
-                        border: `1px solid ${DIVIDER}`,
-                      }}
-                    >
-                      <AttachFileOutlinedIcon sx={{ fontSize: 16, color: MUTED }} />
-                      <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>
-                        {file.title}
-                      </Typography>
-                    </Box>
-                  ))}
+                  {currentLesson.materials.map((file) => {
+                    const { Icon: FileIcon, color: fileColor } = getMaterialFileMeta(file.title);
+                    return (
+                      <Box
+                        key={file.id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          py: 1,
+                          px: 1.5,
+                          borderRadius: "10px",
+                          border: `1px solid ${DIVIDER}`,
+                          transition: "border-color 0.2s ease, background-color 0.2s ease",
+                          "&:hover": {
+                            borderColor: "rgba(8,145,178,0.18)",
+                            bgcolor: "rgba(8,145,178,0.03)",
+                            "& .material-download": { color: ICON_COLORS.download, opacity: 1 },
+                          },
+                        }}
+                      >
+                        <FileIcon sx={{ fontSize: 18, color: fileColor, flexShrink: 0 }} />
+                        <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 500, flex: 1, minWidth: 0 }}>
+                          {file.title}
+                        </Typography>
+                        <DownloadRoundedIcon
+                          className="material-download"
+                          sx={{ fontSize: 16, color: MUTED, flexShrink: 0, opacity: 0.55, transition: "color 0.2s ease, opacity 0.2s ease" }}
+                        />
+                      </Box>
+                    );
+                  })}
                 </Box>
               </Box>
             )}
@@ -545,7 +645,7 @@ export default function CourseLearningPage() {
                 variant="outlined"
                 disabled={currentIndex <= 0}
                 onClick={handlePrev}
-                startIcon={<ChevronLeftRoundedIcon />}
+                startIcon={<ArrowBackRoundedIcon />}
                 sx={{ minWidth: 120 }}
               >
                 Bài trước
@@ -555,8 +655,36 @@ export default function CourseLearningPage() {
                 size="small"
                 variant={isCompleted ? "outlined" : "contained"}
                 onClick={handleToggleComplete}
-                startIcon={isCompleted ? <CheckRoundedIcon /> : undefined}
-                sx={{ minWidth: 190 }}
+                startIcon={
+                  isCompleted ? (
+                    <CheckCircleRoundedIcon sx={{ fontSize: "18px !important" }} />
+                  ) : (
+                    <CheckRoundedIcon sx={{ fontSize: "18px !important" }} />
+                  )
+                }
+                sx={{
+                  minWidth: 190,
+                  fontWeight: 600,
+                  ...(isCompleted
+                    ? {
+                        borderColor: alpha(SUCCESS, 0.5),
+                        color: SUCCESS,
+                        bgcolor: alpha(SUCCESS, 0.08),
+                        "&:hover": {
+                          borderColor: SUCCESS,
+                          bgcolor: alpha(SUCCESS, 0.14),
+                        },
+                      }
+                    : {
+                        bgcolor: SUCCESS,
+                        color: "#fff",
+                        boxShadow: `0 2px 8px ${alpha(SUCCESS, 0.28)}`,
+                        "&:hover": {
+                          bgcolor: "#15803D",
+                          boxShadow: `0 3px 10px ${alpha(SUCCESS, 0.34)}`,
+                        },
+                      }),
+                }}
               >
                 {isCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
               </AppButton>
@@ -566,7 +694,7 @@ export default function CourseLearningPage() {
                 variant="contained"
                 disabled={currentIndex >= allLessons.length - 1}
                 onClick={handleNext}
-                endIcon={<ChevronRightRoundedIcon />}
+                endIcon={<ArrowForwardRoundedIcon />}
                 sx={{ minWidth: 120 }}
               >
                 Bài tiếp theo
@@ -671,7 +799,7 @@ export default function CourseLearningPage() {
 
                         {mod.lessons.map((lesson) => {
                           const isActive = lesson.id === currentLessonId;
-                          const LIcon = TYPE_ICON[lesson.type] ?? ArticleOutlinedIcon;
+                          const LIcon = TYPE_ICON[lesson.type] ?? ArticleRoundedIcon;
 
                           return (
                             <Box
@@ -702,17 +830,11 @@ export default function CourseLearningPage() {
                             >
                               <Box sx={{ pt: 0.1, flexShrink: 0 }}>
                                 {lesson.status === "completed" ? (
-                                  <CheckCircleOutlineOutlinedIcon
-                                    sx={{ fontSize: 17, color: SUCCESS }}
-                                  />
+                                  <CheckCircleRoundedIcon sx={{ fontSize: 18, color: SUCCESS }} />
                                 ) : isActive ? (
-                                  <PlayCircleOutlineOutlinedIcon
-                                    sx={{ fontSize: 17, color: PRIMARY }}
-                                  />
+                                  <PlayCircleRoundedIcon sx={{ fontSize: 18, color: PRIMARY }} />
                                 ) : (
-                                  <RadioButtonUncheckedOutlinedIcon
-                                    sx={{ fontSize: 17, color: "#CBD5E1" }}
-                                  />
+                                  <RadioButtonUncheckedRoundedIcon sx={{ fontSize: 18, color: "#CBD5E1" }} />
                                 )}
                               </Box>
                               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -734,7 +856,7 @@ export default function CourseLearningPage() {
                                     mt: 0.25,
                                   }}
                                 >
-                                  <LIcon sx={{ fontSize: 11, color: MUTED }} />
+                                  <LIcon sx={{ fontSize: 11, color: TYPE_ICON_COLOR[lesson.type] ?? ICON_COLORS.reading }} />
                                   <Typography sx={{ fontSize: 11, color: MUTED }}>
                                     {lesson.duration}
                                   </Typography>
