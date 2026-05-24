@@ -16,6 +16,64 @@ export const COURSE_LIST_PARAM_KEYS = [
   "page",
 ];
 
+/** Query param lưu URL đầy đủ trang danh sách khóa học (pathname + search) */
+export const COURSE_FROM_PARAM = "from";
+
+function isCourseListPath(path) {
+  return path === "/courses";
+}
+
+function resolveFromUrl(searchParams) {
+  const from = searchParams.get(COURSE_FROM_PARAM);
+  if (!from || !from.startsWith("/courses")) return null;
+  const pathOnly = from.split("?")[0];
+  if (pathOnly !== "/courses") return null;
+  return from;
+}
+
+function appendListParamsToDetail(params, searchParams) {
+  const filters = parseCourseListParams(searchParams);
+  const listParams = buildCourseListSearchParams(filters, new URLSearchParams());
+  listParams.forEach((value, key) => {
+    params.append(key, value);
+  });
+}
+
+/** Đường dẫn /courses — ưu tiên param `from` nếu có */
+export function buildCourseListPath(searchParams) {
+  const from = resolveFromUrl(searchParams);
+  if (from) return from;
+
+  const filters = parseCourseListParams(searchParams);
+  const params = buildCourseListSearchParams(filters, new URLSearchParams());
+  const qs = params.toString();
+  return qs ? `/courses?${qs}` : "/courses";
+}
+
+/**
+ * Đường dẫn /courses/:id
+ * - Giữ bộ lọc list trong query
+ * - Thêm `from` = URL đầy đủ trang list nếu truyền fromUrl
+ */
+export function buildCourseDetailPath(courseId, searchParams, fromUrl) {
+  const params = new URLSearchParams();
+
+  appendListParamsToDetail(params, searchParams);
+
+  const resolvedFrom =
+    fromUrl && isCourseListPath(fromUrl.split("?")[0])
+      ? fromUrl
+      : resolveFromUrl(searchParams);
+
+  if (resolvedFrom) {
+    params.set(COURSE_FROM_PARAM, resolvedFrom);
+  }
+
+  const qs = params.toString();
+  const base = `/courses/${courseId}`;
+  return qs ? `${base}?${qs}` : base;
+}
+
 const VALID_CATEGORIES = new Set([
   "Giao tiếp",
   "IELTS",
