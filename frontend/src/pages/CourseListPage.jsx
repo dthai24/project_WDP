@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import Loading from "../components/common/Loading";
 import EmptyState from "../components/common/EmptyState";
 import CourseCard from "../components/course/CourseCard";
+import useSavedCourses from "../hooks/useSavedCourses";
 import CourseCatalogToolbar from "../components/course/CourseCatalogToolbar";
 import CourseListPagination, {
   COURSE_LIST_PAGE_SIZE,
@@ -374,6 +375,7 @@ export default function CourseListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { isSaved, toggleSave } = useSavedCourses();
 
   const filters = useMemo(
     () => parseCourseListParams(searchParams),
@@ -602,6 +604,8 @@ export default function CourseListPage() {
               <Grid key={course.courseId} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                 <CourseCard
                   course={course}
+                  isSaved={isSaved(course.courseId)}
+                  onToggleSave={() => toggleSave(course.courseId)}
                   onEnroll={handleEnroll}
                   onContinueLearning={handleContinueLearning}
                 />

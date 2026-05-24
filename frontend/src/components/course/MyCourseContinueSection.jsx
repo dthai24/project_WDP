@@ -1,0 +1,186 @@
+import { Box, LinearProgress, Typography, alpha, useTheme } from "@mui/material";
+import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
+import AppButton from "../common/AppButton";
+
+const MUTED = "#64748B";
+const TEXT = "#0F172A";
+const PRIMARY = "#0891B2";
+
+function getProgressGradient(progress) {
+  const value = Math.max(0, Math.min(progress, 100));
+  if (value === 0) return "#94A3B8";
+  if (value >= 100) return "linear-gradient(90deg, #22C55E 0%, #16A34A 100%)";
+  if (value >= 90) return "linear-gradient(90deg, #0891B2 0%, #F59E0B 100%)";
+  return "linear-gradient(90deg, #EA580C 0%, #F59E0B 45%, #0891B2 100%)";
+}
+
+function getProgressTextColor(progress) {
+  const value = Math.max(0, Math.min(progress, 100));
+  if (value === 0) return "#94A3B8";
+  if (value >= 100) return "#16A34A";
+  if (value >= 90) return "#F59E0B";
+  if (value >= 30) return PRIMARY;
+  return "#EA580C";
+}
+
+export default function MyCourseContinueSection({ course, onContinue }) {
+  const theme = useTheme();
+  if (!course) return null;
+
+  const progress = Math.min(Math.max(course.progressPercentage ?? 0, 0), 100);
+  const progressTextColor = getProgressTextColor(progress);
+  const currentLesson = course.currentLessonDetail;
+
+  return (
+    <Box
+      sx={{
+        position: "relative",
+        mb: 3,
+        p: { xs: 2.5, md: 3.5 },
+        pl: { xs: 2.5, md: 3.5 },
+        borderRadius: "20px",
+        overflow: "hidden",
+        bgcolor: "rgba(8,145,178,0.04)",
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+        boxShadow: "0 4px 24px rgba(8,145,178,0.06)",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          bgcolor: PRIMARY,
+          borderRadius: "20px 0 0 20px",
+        },
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { md: "stretch" },
+          gap: { xs: 2, md: 3 },
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0, pr: { md: course.thumbnail ? 0 : 0 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1.25 }}>
+            <PlayCircleOutlineOutlinedIcon sx={{ fontSize: 16, color: PRIMARY }} />
+            <Typography
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: PRIMARY,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              Tiếp tục học
+            </Typography>
+          </Box>
+
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: 20, sm: 24, md: 26 },
+              color: TEXT,
+              lineHeight: 1.25,
+              letterSpacing: "-0.02em",
+              mb: 1.5,
+              maxWidth: 720,
+            }}
+          >
+            {course.courseName}
+          </Typography>
+
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: currentLesson ? 1.25 : 2 }}>
+            {course.currentStage != null && course.currentLesson != null && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <PlaceOutlinedIcon sx={{ fontSize: 15, color: "#94A3B8" }} />
+                <Typography sx={{ fontSize: 14, color: MUTED, fontWeight: 500 }}>
+                  Đang ở: Chặng {course.currentStage} · Bài {course.currentLesson}
+                </Typography>
+              </Box>
+            )}
+            {course.lastActivity && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <AccessTimeOutlinedIcon sx={{ fontSize: 15, color: "#94A3B8" }} />
+                <Typography sx={{ fontSize: 14, color: MUTED, fontWeight: 500 }}>
+                  Học gần nhất: {course.lastActivity}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {currentLesson && (
+            <Typography sx={{ fontSize: 14, color: TEXT, fontWeight: 500, mb: 2 }}>
+              Bài hiện tại:{" "}
+              <Typography component="span" sx={{ color: PRIMARY, fontWeight: 600 }}>
+                {currentLesson.lesson} · {currentLesson.title}
+              </Typography>
+            </Typography>
+          )}
+
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { sm: "center" },
+              gap: 2,
+              maxWidth: 560,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, minWidth: 0 }}>
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{
+                  flex: 1,
+                  height: 8,
+                  borderRadius: 99,
+                  bgcolor: "rgba(100,116,139,0.12)",
+                  "& .MuiLinearProgress-bar": {
+                    borderRadius: 99,
+                    background: getProgressGradient(progress),
+                  },
+                }}
+              />
+              <Typography sx={{ fontSize: 14, fontWeight: 700, color: progressTextColor, minWidth: 42 }}>
+                {progress}%
+              </Typography>
+            </Box>
+            <AppButton
+              size="small"
+              variant="contained"
+              onClick={() => onContinue?.(course)}
+              sx={{ minWidth: { sm: 160 }, flexShrink: 0, py: 1 }}
+            >
+              Tiếp tục học
+            </AppButton>
+          </Box>
+        </Box>
+
+        {course.thumbnail && (
+          <Box
+            sx={{
+              display: { xs: "none", md: "block" },
+              width: 140,
+              flexShrink: 0,
+              alignSelf: "center",
+              borderRadius: "14px",
+              overflow: "hidden",
+              aspectRatio: "4 / 3",
+              opacity: 0.85,
+              boxShadow: "0 8px 24px rgba(8,145,178,0.12)",
+              backgroundImage: `url(${course.thumbnail})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        )}
+      </Box>
+    </Box>
+  );
+}

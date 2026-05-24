@@ -12,8 +12,10 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AppButton from "../common/AppButton";
+import CourseBookmarkButton from "./CourseBookmarkButton";
 import { buildCourseDetailPath } from "../../utils/courseListParams";
 
 /* ─── helpers ─── */
@@ -66,6 +68,37 @@ function getStatusChipStyle(isEnrolled, progress) {
       bgcolor: "rgba(22,163,74,0.12)",
       color: "#16A34A",
       border: "1px solid rgba(22,163,74,0.20)",
+    },
+  };
+}
+
+function getMyCoursesStatusChip(progress) {
+  if (progress >= 100) {
+    return {
+      label: "Hoàn thành",
+      sx: {
+        bgcolor: "rgba(4,120,87,0.12)",
+        color: "#047857",
+        border: "1px solid rgba(4,120,87,0.24)",
+      },
+    };
+  }
+  if (progress > 0) {
+    return {
+      label: "Đang học",
+      sx: {
+        bgcolor: "rgba(8,145,178,0.12)",
+        color: "#0891B2",
+        border: "1px solid rgba(8,145,178,0.20)",
+      },
+    };
+  }
+  return {
+    label: "Chưa bắt đầu",
+    sx: {
+      bgcolor: "rgba(100,116,139,0.10)",
+      color: "#64748B",
+      border: "1px solid rgba(100,116,139,0.18)",
     },
   };
 }
@@ -185,24 +218,38 @@ function MetaItem({ icon: Icon, label }) {
 
 export default function CourseCard({
   course,
+  variant = "catalog",
+  isSaved = false,
+  onToggleSave,
   onEnroll,
   onContinueLearning,
+  onStartLearning,
   onClick,
 }) {
   const theme   = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isCatalog = variant === "catalog";
+  const isMyCourses = variant === "myCourses";
   const data         = normalizeCourse(course);
-  const statusChip   = getStatusChipStyle(data.isEnrolled, data.progressPercentage);
+  const statusChip   = isMyCourses
+    ? getMyCoursesStatusChip(data.progressPercentage)
+    : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
   const levelStyle   = getLevelChipStyle(data.level);
   const categoryStyle = getCategoryChipStyle(data.category);
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const progressTextColor = getProgressTextColor(progressValue);
   const isCompleted = progressValue >= 100;
-  const listFromUrl =
-    location.pathname === "/courses" ? `${location.pathname}${location.search}` : undefined;
+  const isNotStarted = isMyCourses && progressValue === 0;
+  const listFromUrl = isMyCourses
+    ? "/my-courses"
+    : location.pathname === "/courses"
+      ? `${location.pathname}${location.search}`
+      : undefined;
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, listFromUrl);
+  const lastActivity = course.lastActivity;
+  const showProgress = isMyCourses || data.isEnrolled;
 
   return (
     <Card
@@ -236,6 +283,7 @@ export default function CourseCard({
       {/* ── Body ── */}
       <CardContent
         sx={{
+          position: "relative",
           flex: 1,
           display: "flex",
           flexDirection: "column",
@@ -244,6 +292,12 @@ export default function CourseCard({
           "&:last-child": { pb: 2 },
         }}
       >
+        {isCatalog && onToggleSave && (
+          <Box sx={{ position: "absolute", top: 10, right: 10, zIndex: 1 }}>
+            <CourseBookmarkButton isSaved={isSaved} onToggle={onToggleSave} />
+          </Box>
+        )}
+
         {/* Title link */}
         <Typography
           component={Link}
@@ -256,6 +310,7 @@ export default function CourseCard({
             color: "#0F172A",
             textDecoration: "none",
             cursor: "pointer",
+            pr: isCatalog && onToggleSave ? 4 : 0,
             transition: `color 0.18s ${theme.ios18?.transition}`,
             "&:hover": { color: "primary.main" },
           }}
@@ -293,8 +348,8 @@ export default function CourseCard({
           <MetaItem icon={ArticleOutlinedIcon}  label={`${data.totalMaterials} học liệu`} />
         </Box>
 
-        {/* Progress bar — only when enrolled */}
-        {data.isEnrolled && (
+        {/* Progress bar */}
+        {showProgress && (
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
               <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 600, fontSize: 11.5 }}>
@@ -325,9 +380,36 @@ export default function CourseCard({
           </Box>
         )}
 
-        {/* Action button — distinct colors by state */}
+        {isMyCourses && lastActivity && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: -0.25 }}>
+            <AccessTimeOutlinedIcon sx={{ fontSize: 12, color: "#94A3B8" }} />
+            <Typography variant="caption" sx={{ color: "#64748B", fontSize: 11.5, fontWeight: 500 }}>
+              Học gần nhất: {lastActivity}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Action button */}
         <Box sx={{ mt: "auto", pt: 0.75 }}>
-          {data.isEnrolled ? (
+          {isMyCourses ? (
+            <AppButton
+              fullWidth
+              size="small"
+              variant="contained"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isCompleted) {
+                  onContinueLearning?.(course);
+                } else if (isNotStarted) {
+                  onStartLearning?.(course) ?? onContinueLearning?.(course);
+                } else {
+                  onContinueLearning?.(course);
+                }
+              }}
+            >
+              {isCompleted ? "Ôn tập lại" : isNotStarted ? "Bắt đầu học" : "Tiếp tục học"}
+            </AppButton>
+          ) : data.isEnrolled ? (
             <AppButton
               fullWidth
               size="small"

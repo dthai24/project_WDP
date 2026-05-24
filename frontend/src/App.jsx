@@ -9,6 +9,7 @@ import SurveyPage from './pages/SurveyPage';
 import TestPage from './pages/Test';
 import CourseListPage from './pages/CourseListPage';
 import CourseDetailPage from './pages/CourseDetailPage';
+import MyCoursesListPage from './pages/MyCoursesListPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="home" element={<HomePage />} />
           <Route path="courses" element={<CourseListPage />} />
           <Route path="courses/:id" element={<CourseDetailPage />} />
+          <Route path="my-courses" element={<MyCoursesListPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

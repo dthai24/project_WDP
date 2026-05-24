@@ -12,12 +12,14 @@ import {
   ListItemText,
   Divider,
   Card,
+  Tooltip,
   alpha,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
 import { surfaceCardSx } from "../theme";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -221,6 +223,39 @@ export default function Header({
 
         {showUser && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+            {user && (
+              <Tooltip title="Khóa học của tôi">
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => navigate("/my-courses")}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    py: 1,
+                    px: isMobile ? 1 : 1.75,
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    bgcolor: "rgba(8,145,178,0.08)",
+                    color: "#0891B2",
+                    borderRadius: "99px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    transition: "background-color 0.2s ease",
+                    "&:hover": {
+                      bgcolor: "rgba(8,145,178,0.14)",
+                    },
+                  }}
+                >
+                  <MenuBookOutlinedIcon sx={{ fontSize: 18 }} />
+                  {!isMobile && "Khóa học của tôi"}
+                </Box>
+              </Tooltip>
+            )}
+
             <IconButton
               aria-label="Thông báo"
               size="medium"
