@@ -1,9 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { Box, Stack, Typography, Tooltip } from "@mui/material";
+import { Box, Stack, Typography, Tooltip, useTheme } from "@mui/material";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import NewspaperOutlinedIcon from "@mui/icons-material/NewspaperOutlined";
+import { getUser, isStudent } from "../../utils/authUtils";
+import { HEADER_HEIGHT } from "./MainLayout";
 
 export const SIDEBAR_WIDTH = 76;
 
@@ -13,33 +15,38 @@ const COLOR_INACTIVE = "#334155";
 const BG_ACTIVE = "rgba(8, 145, 178, 0.1)";
 const BG_HOVER = "rgba(8, 145, 178, 0.06)";
 
-const MENU_ITEMS = [
-  {
-    id: "home",
-    label: "Trang chủ",
-    to: "/home",
-    Icon: HomeOutlinedIcon,
-    disabled: false,
-  },
-  {
-    id: "courses",
-    label: "Khóa học",
-    Icon: MenuBookOutlinedIcon,
-    disabled: true,
-  },
-  {
-    id: "paths",
-    label: "Lộ trình",
-    Icon: RouteOutlinedIcon,
-    disabled: true,
-  },
-  {
-    id: "news",
-    label: "Tin tức",
-    Icon: NewspaperOutlinedIcon,
-    disabled: true,
-  },
-];
+function getMenuItems(user) {
+  const student = isStudent(user);
+  return [
+    {
+      id: "home",
+      label: "Trang chủ",
+      to: "/home",
+      Icon: HomeOutlinedIcon,
+      disabled: false,
+      end: true,
+    },
+    {
+      id: "courses",
+      label: "Khóa học",
+      to: "/courses",
+      Icon: MenuBookOutlinedIcon,
+      disabled: !student,
+    },
+    {
+      id: "paths",
+      label: "Lộ trình",
+      Icon: RouteOutlinedIcon,
+      disabled: true,
+    },
+    {
+      id: "news",
+      label: "Tin tức",
+      Icon: NewspaperOutlinedIcon,
+      disabled: true,
+    },
+  ];
+}
 
 function itemSx(active, disabled) {
   return {
@@ -62,9 +69,7 @@ function itemSx(active, disabled) {
       color: active ? COLOR_ACTIVE : COLOR_INACTIVE,
     },
     ...(!disabled && {
-      "&:hover": {
-        bgcolor: active ? BG_ACTIVE : BG_HOVER,
-      },
+      "&:hover": { bgcolor: active ? BG_ACTIVE : BG_HOVER },
     }),
   };
 }
@@ -91,8 +96,7 @@ function SidebarItemContent({ label, Icon, active, disabled }) {
 }
 
 function SidebarItem({ item }) {
-  const { label, to, Icon, disabled } = item;
-
+  const { label, to, Icon, disabled, end = false } = item;
   if (disabled) {
     return (
       <Tooltip title="Sắp ra mắt" placement="right" arrow>
@@ -102,9 +106,8 @@ function SidebarItem({ item }) {
       </Tooltip>
     );
   }
-
   return (
-    <NavLink to={to} end style={{ textDecoration: "none", width: "100%" }}>
+    <NavLink to={to} end={end} style={{ textDecoration: "none", width: "100%" }}>
       {({ isActive }) => (
         <SidebarItemContent label={label} Icon={Icon} active={isActive} disabled={false} />
       )}
@@ -113,24 +116,37 @@ function SidebarItem({ item }) {
 }
 
 export default function Sidebar() {
+  const theme = useTheme();
+  const menuItems = getMenuItems(getUser());
+
   return (
     <Box
       component="aside"
       aria-label="Điều hướng chính"
       sx={{
+        position: "fixed",
+        left: 0,
+        top: HEADER_HEIGHT,
+        bottom: 0,
         width: SIDEBAR_WIDTH,
-        flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         py: 2,
         px: 1,
         boxSizing: "border-box",
-        bgcolor: "background.default",
+        bgcolor: "rgba(255,255,255,0.90)",
+        backdropFilter: "blur(20px) saturate(140%)",
+        WebkitBackdropFilter: "blur(20px) saturate(140%)",
+        zIndex: theme.zIndex.appBar - 1,
+        overflowY: "auto",
+        overflowX: "hidden",
+        "&::-webkit-scrollbar": { display: "none" },
+        scrollbarWidth: "none",
       }}
     >
       <Stack spacing={0.75} sx={{ width: "100%" }}>
-        {MENU_ITEMS.map((item) => (
+        {menuItems.map((item) => (
           <SidebarItem key={item.id} item={item} />
         ))}
       </Stack>

@@ -99,7 +99,12 @@ const login = async (req, res) => {
     `);
 
     // Mảng tên roles, ví dụ: ['Admin'] | ['Student'] | ['Mentor']
-    const roles = roleResult.recordset.map((r) => r.RoleName);
+    let roles = roleResult.recordset.map((r) => r.RoleName);
+
+    // Tài khoản đăng ký qua OTP là Student; fallback nếu chưa có bản ghi User_Roles
+    if (roles.length === 0) {
+      roles = ['Student'];
+    }
 
     return res.json({
       success: true,
@@ -235,6 +240,22 @@ const verifyOtp = async (req, res) => {
       VALUES (@fullName, @email, @phone, @password, @dateOfBirth)
     `);
 
+    const userIdReq = new sql.Request();
+    userIdReq.input('email', sql.NVarChar(150), record.Email);
+    const userIdResult = await userIdReq.query(
+      'SELECT UserId FROM Users WHERE Email = @email'
+    );
+    const newUserId = userIdResult.recordset[0]?.UserId;
+
+    if (newUserId) {
+      const assignRoleReq = new sql.Request();
+      assignRoleReq.input('userId', sql.Int, newUserId);
+      await assignRoleReq.query(`
+        INSERT INTO User_Roles (UserId, RoleId)
+        SELECT @userId, RoleId FROM Roles WHERE RoleName = N'Student'
+      `);
+    }
+
     // Xoá bản ghi OTP
     const deleteReq = new sql.Request();
     deleteReq.input('email', sql.NVarChar(150), record.Email);
@@ -242,7 +263,7 @@ const verifyOtp = async (req, res) => {
 
     return res.json({
       success: true,
-      message: '🎉 Xác thực thành công! Tài khoản đã được tạo. Bạn có thể đăng nhập ngay.',
+      message: 'Xác thực thành công. Tài khoản đã được tạo. Bạn có thể đăng nhập ngay.',
     });
   } catch (err) {
     console.error('[VerifyOTP Error]', err.message);
@@ -303,7 +324,7 @@ const savePreferences = async (req, res) => {
 
     return res.json({
       success: true,
-      message: 'Đã lưu sở thích thành công! Chào mừng bạn đến với S.T.A.R Learning Path 🎉',
+      message: 'Đã lưu sở thích thành công. Chào mừng bạn đến với S.T.A.R Learning Path.',
     });
   } catch (err) {
     console.error('[SavePreferences Error]', err.message);
@@ -411,7 +432,7 @@ const resetPassword = async (req, res) => {
 
     return res.json({
       success: true,
-      message: '🎉 Mật khẩu đã được đặt lại thành công! Bạn có thể đăng nhập với mật khẩu mới.',
+      message: 'Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập với mật khẩu mới.',
     });
   } catch (err) {
     console.error('[ResetPassword Error]', err.message);

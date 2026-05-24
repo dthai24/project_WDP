@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import SurveyPage from './pages/SurveyPage';
 import TestPage from './pages/Test';
+import CourseListPage from './pages/CourseListPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
@@ -53,6 +54,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="home" element={<HomePage />} />
+          <Route path="courses" element={<CourseListPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 
