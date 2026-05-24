@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Breadcrumbs, Link as MuiLink, Stack, Typography, alpha, useTheme } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import MyCourseRow from "../components/course/MyCourseRow";
 import MyCoursesToolbar from "../components/course/MyCoursesToolbar";
 import MyCourseContinueSection from "../components/course/MyCourseContinueSection";
@@ -244,8 +244,22 @@ function matchesStatusTab(course, tab) {
   return true;
 }
 
-function hasActiveFilters(filters) {
-  return filters.categories.length > 0 || filters.levels.length > 0;
+function hasActiveFilters(filters, keyword = "") {
+  return (
+    Boolean(keyword) ||
+    filters.categories.length > 0 ||
+    filters.levels.length > 0
+  );
+}
+
+function matchesKeyword(course, keyword) {
+  if (!keyword) return true;
+  const kw = keyword.toLowerCase();
+  return (
+    course.courseName.toLowerCase().includes(kw) ||
+    course.category.toLowerCase().includes(kw) ||
+    (course.instructor?.toLowerCase().includes(kw) ?? false)
+  );
 }
 
 function pickContinueCourse(courses) {
@@ -258,8 +272,10 @@ function pickContinueCourse(courses) {
 export default function MyCoursesListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { savedIds, isSaved, unsave } = useSavedCourses();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const keyword = (searchParams.get("keyword") ?? "").trim();
 
   const allCourses = useMemo(() => {
     const enrolled = MOCK_ENROLLED_COURSES.map((course) => ({
@@ -274,15 +290,10 @@ export default function MyCoursesListPage() {
     return [...enrolled, ...savedOnly];
   }, [savedIds, isSaved]);
 
-  const continueCourse = useMemo(() => pickContinueCourse(allCourses), [allCourses]);
-  const showContinueSection =
-    continueCourse &&
-    (filters.statusTab === "all" || filters.statusTab === "learning");
-
-  const showReset = hasActiveFilters(filters);
+  const showReset = hasActiveFilters(filters, keyword);
   const activeFilterChips = useMemo(
-    () => buildActiveFilterChips({ ...filters, statuses: [] }),
-    [filters]
+    () => buildActiveFilterChips({ ...filters, keyword, statuses: [] }),
+    [filters, keyword]
   );
 
   const updateFilters = (patch) => {
@@ -292,6 +303,9 @@ export default function MyCoursesListPage() {
   const filteredCourses = useMemo(() => {
     let list = allCourses.filter((course) => matchesStatusTab(course, filters.statusTab));
 
+    if (keyword) {
+      list = list.filter((course) => matchesKeyword(course, keyword));
+    }
     if (filters.categories.length > 0) {
       list = list.filter((course) => filters.categories.includes(course.category));
     }
@@ -312,7 +326,12 @@ export default function MyCoursesListPage() {
     });
 
     return list;
-  }, [allCourses, filters]);
+  }, [allCourses, filters, keyword]);
+
+  const continueCourse = useMemo(() => pickContinueCourse(filteredCourses), [filteredCourses]);
+  const showContinueSection =
+    continueCourse &&
+    (filters.statusTab === "all" || filters.statusTab === "learning");
 
   const hasAnyCourse = allCourses.length > 0;
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
@@ -327,11 +346,27 @@ export default function MyCoursesListPage() {
   }, [filters.page, currentPage]);
 
   const handleRemoveFilterChip = (chip) => {
+    if (chip.type === "keyword") {
+      const next = new URLSearchParams(searchParams);
+      next.delete("keyword");
+      next.delete("page");
+      setSearchParams(next, { replace: true });
+      updateFilters({ page: 1 });
+      return;
+    }
     if (chip.type === "category") {
       updateFilters({ categories: filters.categories.filter((v) => v !== chip.value), page: 1 });
     } else if (chip.type === "level") {
       updateFilters({ levels: filters.levels.filter((v) => v !== chip.value), page: 1 });
     }
+  };
+
+  const handleResetFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("keyword");
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+    updateFilters({ categories: [], levels: [], page: 1 });
   };
 
   const handleLearningAction = (course) => {
@@ -362,11 +397,13 @@ export default function MyCoursesListPage() {
           title={hasAnyCourse ? "Không tìm thấy khóa học phù hợp" : "Bạn chưa đăng ký khóa học nào"}
           description={
             hasAnyCourse
-              ? "Thử chọn bộ lọc khác để xem thêm khóa học."
+              ? keyword
+                ? "Thử từ khóa khác hoặc xóa bộ lọc để xem thêm khóa học."
+                : "Thử chọn bộ lọc khác để xem thêm khóa học."
               : "Khám phá các khóa học phù hợp để bắt đầu lộ trình học."
           }
           actionLabel={hasAnyCourse ? "Xóa bộ lọc" : "Khám phá khóa học"}
-          onAction={() => (hasAnyCourse ? setFilters(DEFAULT_FILTERS) : navigate("/courses"))}
+          onAction={() => (hasAnyCourse ? handleResetFilters() : navigate("/courses"))}
         />
       </Box>
     );
@@ -402,7 +439,7 @@ export default function MyCoursesListPage() {
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
         showReset={showReset}
-        onReset={() => updateFilters({ categories: [], levels: [], page: 1 })}
+        onReset={handleResetFilters}
       />
 
       {showContinueSection && (
