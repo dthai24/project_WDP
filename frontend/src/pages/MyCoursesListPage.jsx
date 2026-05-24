@@ -283,18 +283,28 @@ function getUserId(user) {
 }
 
 function getUserRole(user) {
-  return user?.role ?? user?.roles ?? user?.Role ?? user?.Roles;
+  const role =
+    user?.roleName ??
+    user?.RoleName ??
+    user?.role ??
+    user?.Role ??
+    user?.roles?.[0] ??
+    user?.Roles?.[0];
+
+  return Array.isArray(role) ? role[0] : role;
 }
 
-async function fetchMyCourses(userId, role) {
-  const params = new URLSearchParams({
-    userId: String(userId),
-    role: String(role).toLowerCase(),
+async function fetchMyCourses(userId, roleName) {
+  const res = await fetch("http://localhost:5000/api/courses/my-courses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userId: Number(userId),
+      roleName: String(roleName),
+    }),
   });
-
-  const res = await fetch(
-    `http://localhost:5000/api/courses/my-courses?${params.toString()}`
-  );
 
   if (!res.ok) {
     throw new Error("Cannot fetch my courses");
@@ -303,7 +313,6 @@ async function fetchMyCourses(userId, role) {
   const result = await res.json();
   return result.data || [];
 }
-
 function normalizeCourse(course, isSaved) {
   const courseId = course.courseId ?? course.CourseId;
 
@@ -347,8 +356,8 @@ export default function MyCoursesListPage() {
   const keyword = (searchParams.get("keyword") ?? "").trim();
 
   const sessionUser = useMemo(() => getSessionUser(), []);
-  const userId = searchParams.get("userId") || getUserId(sessionUser);
-  const role = searchParams.get("role") || getUserRole(sessionUser);
+  const userId = getUserId(sessionUser);
+  const role = getUserRole(sessionUser);
 
   useEffect(() => {
     let isMounted = true;

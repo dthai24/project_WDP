@@ -1203,11 +1203,54 @@ export default function HomePage() {
       return;
     }
 
-    const params = new URLSearchParams({
-      userId: String(userId),
-      role: String(role).toLowerCase(),
-    });
+    const getUserId = () => {
+      return user.userId ?? user.UserId ?? user.id ?? user.Id;
+    };
 
+    const getRoleId = () => {
+      return user.roleId ?? user.RoleId ?? user.roleID ?? user.roleIds?.[0] ?? user.RoleIds?.[0];
+    };
+
+    const handleMyCourses = async () => {
+      const userId = getUserId();
+      const roleId = getRoleId();
+
+      if (!userId || !roleId) {
+        console.error("Missing userId or roleId in session:", user);
+        navigate("/login");
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/api/courses/my-courses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: Number(userId),
+            roleId: Number(roleId),
+          }),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok || !result.success) {
+          console.error("Get my courses failed:", result.message);
+          return;
+        }
+
+        navigate("/my-courses", {
+          state: {
+            courses: result.data,
+            userId: Number(userId),
+            roleId: Number(roleId),
+          },
+        });
+      } catch (error) {
+        console.error("Get my courses error:", error.message);
+      }
+    };
     navigate(`/my-courses?${params.toString()}`);
   };
 
