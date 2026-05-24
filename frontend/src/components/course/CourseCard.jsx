@@ -12,7 +12,7 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AppButton from "../common/AppButton";
 
 /* ─── helpers ─── */
@@ -193,6 +193,7 @@ export default function CourseCard({
   onClick,
 }) {
   const theme   = useTheme();
+  const navigate = useNavigate();
   const data         = normalizeCourse(course);
   const statusChip   = getStatusChipStyle(data.isEnrolled, data.progressPercentage);
   const levelStyle   = getLevelChipStyle(data.level);
@@ -336,11 +337,19 @@ export default function CourseCard({
               Tiếp tục học
             </AppButton>
           ) : (
+            // Đăng ký dẫn đến trang detail, không đăng ký trực tiếp ở list
             <AppButton
               fullWidth
               size="small"
               variant="accent"
-              onClick={(e) => { e.stopPropagation(); onEnroll?.(course); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEnroll) {
+                  onEnroll(course);
+                } else {
+                  navigate(`/courses/${data.courseId}`);
+                }
+              }}
             >
               Đăng ký
             </AppButton>
