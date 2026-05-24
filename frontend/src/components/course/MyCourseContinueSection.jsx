@@ -1,36 +1,20 @@
-import { Box, LinearProgress, Typography, alpha, useTheme } from "@mui/material";
+import { Box, Typography, alpha, useTheme } from "@mui/material";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
 import AppButton from "../common/AppButton";
+import AppProgressBar, { getProgressColor } from "../common/AppProgressBar";
 
 const MUTED = "#64748B";
 const TEXT = "#0F172A";
 const PRIMARY = "#0891B2";
-
-function getProgressGradient(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-  if (value === 0) return "#94A3B8";
-  if (value >= 100) return "linear-gradient(90deg, #22C55E 0%, #16A34A 100%)";
-  if (value >= 90) return "linear-gradient(90deg, #0891B2 0%, #F59E0B 100%)";
-  return "linear-gradient(90deg, #EA580C 0%, #F59E0B 45%, #0891B2 100%)";
-}
-
-function getProgressTextColor(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-  if (value === 0) return "#94A3B8";
-  if (value >= 100) return "#16A34A";
-  if (value >= 90) return "#F59E0B";
-  if (value >= 30) return PRIMARY;
-  return "#EA580C";
-}
 
 export default function MyCourseContinueSection({ course, onContinue }) {
   const theme = useTheme();
   if (!course) return null;
 
   const progress = Math.min(Math.max(course.progressPercentage ?? 0, 0), 100);
-  const progressTextColor = getProgressTextColor(progress);
+  const progressTextColor = getProgressColor(progress);
   const currentLesson = course.currentLessonDetail;
 
   return (
@@ -133,20 +117,7 @@ export default function MyCourseContinueSection({ course, onContinue }) {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, minWidth: 0 }}>
-              <LinearProgress
-                variant="determinate"
-                value={progress}
-                sx={{
-                  flex: 1,
-                  height: 8,
-                  borderRadius: 99,
-                  bgcolor: "rgba(100,116,139,0.12)",
-                  "& .MuiLinearProgress-bar": {
-                    borderRadius: 99,
-                    background: getProgressGradient(progress),
-                  },
-                }}
-              />
+              <AppProgressBar value={progress} height={8} sx={{ flex: 1 }} />
               <Typography sx={{ fontSize: 14, fontWeight: 700, color: progressTextColor, minWidth: 42 }}>
                 {progress}%
               </Typography>

@@ -4,7 +4,6 @@ import {
   Chip,
   Collapse,
   IconButton,
-  LinearProgress,
   Tooltip,
   Typography,
   alpha,
@@ -16,12 +15,14 @@ import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppButton from "../common/AppButton";
+import AppProgressBar, { getProgressColor } from "../common/AppProgressBar";
 import MyCourseProgressSummary from "./MyCourseProgressSummary";
 import { buildCourseDetailPath } from "../../utils/courseListParams";
 
@@ -51,6 +52,7 @@ function normalizeCourse(course = {}) {
     thumbnail: course.thumbnail ?? null,
     category: course.category ?? "",
     level: course.level ?? "",
+    instructor: course.instructor ?? "",
     totalLessons: course.totalLessons ?? 0,
     totalNodes: course.totalNodes ?? 0,
     totalMaterials: course.totalMaterials ?? 0,
@@ -134,23 +136,6 @@ function getCategoryChipStyle(category = "") {
     "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
   };
   return map[category] ?? { bgcolor: "#F1F5F9", color: "#64748B" };
-}
-
-function getProgressGradient(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-  if (value === 0) return "#94A3B8";
-  if (value >= 100) return "linear-gradient(90deg, #22C55E 0%, #16A34A 100%)";
-  if (value >= 90) return "linear-gradient(90deg, #0891B2 0%, #F59E0B 100%)";
-  return "linear-gradient(90deg, #EA580C 0%, #F59E0B 45%, #0891B2 100%)";
-}
-
-function getProgressTextColor(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-  if (value === 0) return "#94A3B8";
-  if (value >= 100) return "#16A34A";
-  if (value >= 90) return "#F59E0B";
-  if (value >= 30) return PRIMARY;
-  return "#EA580C";
 }
 
 function MetaItem({ icon: Icon, label }) {
@@ -242,7 +227,9 @@ export default function MyCourseRow({
   const canExpand = !isSavedRow && (data.modules.length > 0 || data.currentLessonDetail);
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, "/my-courses");
-  const progressTextColor = getProgressTextColor(progressValue);
+  const learningPath = `/my-courses/${data.courseId}/learn`;
+  const titlePath = isSavedRow ? detailPath : learningPath;
+  const progressTextColor = getProgressColor(progressValue);
 
   const statusChip = isSavedRow
     ? getSavedStatusChip()
@@ -255,9 +242,9 @@ export default function MyCourseRow({
   const handleAction = () => {
     if (isSavedRow) {
       navigate(detailPath);
-      return;
+    } else {
+      navigate(learningPath);
     }
-    onAction?.(course);
   };
 
   return (
@@ -336,7 +323,7 @@ export default function MyCourseRow({
         <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1.25 }}>
           <Typography
             component={Link}
-            to={detailPath}
+            to={titlePath}
             sx={{
               fontWeight: 700,
               fontSize: { xs: 16, md: 17 },
@@ -389,6 +376,9 @@ export default function MyCourseRow({
             <MetaItem icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài học`} />
             <MetaItem icon={RouteOutlinedIcon} label={`${data.totalNodes} chặng`} />
             <MetaItem icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
+            {data.instructor && (
+              <MetaItem icon={PersonOutlineOutlinedIcon} label={data.instructor} />
+            )}
           </Box>
 
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
@@ -420,20 +410,7 @@ export default function MyCourseRow({
 
           {!isSavedRow && (
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 0.25 }}>
-              <LinearProgress
-                variant="determinate"
-                value={progressValue}
-                sx={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 99,
-                  bgcolor: "rgba(100,116,139,0.12)",
-                  "& .MuiLinearProgress-bar": {
-                    borderRadius: 99,
-                    background: getProgressGradient(progressValue),
-                  },
-                }}
-              />
+              <AppProgressBar value={progressValue} height={6} sx={{ flex: 1 }} />
               <Typography
                 sx={{
                   fontSize: 12,

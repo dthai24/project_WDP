@@ -50,6 +50,7 @@ const MOCK_ENROLLED_COURSES = [
     courseName: "Tiếng Anh Thương Mại & Giao Tiếp Công Sở",
     category: "Giao tiếp",
     level: "Trung cấp",
+    instructor: "Nguyễn Minh An",
     totalLessons: 8,
     totalNodes: 2,
     totalMaterials: 5,
@@ -79,6 +80,7 @@ const MOCK_ENROLLED_COURSES = [
     courseName: "Luyện viết IELTS Task 2",
     category: "IELTS",
     level: "Nâng cao",
+    instructor: "Trần Quốc Huy",
     totalLessons: 16,
     totalNodes: 6,
     totalMaterials: 20,
@@ -111,6 +113,7 @@ const MOCK_ENROLLED_COURSES = [
     courseName: "Giao tiếp đời sống hàng ngày",
     category: "Giao tiếp",
     level: "Cơ bản",
+    instructor: "Lê Thu Hà",
     totalLessons: 9,
     totalNodes: 3,
     totalMaterials: 8,
@@ -136,6 +139,7 @@ const MOCK_ENROLLED_COURSES = [
     courseName: "IELTS Reading: True/False/Not Given",
     category: "IELTS",
     level: "Trung cấp",
+    instructor: "Phạm Văn Đức",
     totalLessons: 13,
     totalNodes: 5,
     totalMaterials: 15,
@@ -171,6 +175,7 @@ const MOCK_SAVED_CATALOG = [
     courseName: "Kỹ năng thuyết trình tiếng Anh cho sinh viên",
     category: "Giao tiếp",
     level: "Cơ bản",
+    instructor: "Hoàng Thùy Linh",
     totalLessons: 12,
     totalNodes: 4,
     totalMaterials: 12,
@@ -184,6 +189,7 @@ const MOCK_SAVED_CATALOG = [
     courseName: "TOEIC Listening & Reading 750+",
     category: "TOEIC",
     level: "Trung cấp",
+    instructor: "Nguyễn Bảo Trân",
     totalLessons: 20,
     totalNodes: 5,
     totalMaterials: 18,
@@ -197,6 +203,7 @@ const MOCK_SAVED_CATALOG = [
     courseName: "Phát âm chuẩn & Intonation",
     category: "Phát âm",
     level: "Trung cấp",
+    instructor: "Đỗ Khánh Vy",
     totalLessons: 10,
     totalNodes: 3,
     totalMaterials: 9,
@@ -210,6 +217,7 @@ const MOCK_SAVED_CATALOG = [
     courseName: "IELTS Speaking Part 2 & 3",
     category: "IELTS",
     level: "Trung cấp",
+    instructor: "Vũ Minh Tuấn",
     totalLessons: 11,
     totalNodes: 4,
     totalMaterials: 14,
@@ -327,8 +335,7 @@ export default function MyCoursesListPage() {
   };
 
   const handleLearningAction = (course) => {
-    // TODO: chuyển tới /learning/:id khi có trang học
-    navigate(buildCourseDetailPath(course.courseId, new URLSearchParams(), "/my-courses"));
+    navigate(`/my-courses/${course.courseId}/learn`);
   };
 
   const renderEmptyState = () => {
