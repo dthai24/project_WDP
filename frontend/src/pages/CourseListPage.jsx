@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Grid, Pagination, alpha, useTheme } from "@mui/material";
+import { Box, Grid, alpha, useTheme } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import EmptyState from "../components/common/EmptyState";
 import CourseCard from "../components/course/CourseCard";
 import CourseCatalogToolbar from "../components/course/CourseCatalogToolbar";
+import CourseListPagination, {
+  COURSE_LIST_PAGE_SIZE,
+} from "../components/course/CourseListPagination";
 import { toast } from "../components/common/Toast";
 import {
   buildActiveFilterChips,
@@ -15,7 +18,7 @@ import {
   resetCourseListParams,
 } from "../utils/courseListParams";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 
 const CATEGORY_OPTIONS = [
   { value: "Giao tiếp", label: "Giao tiếp" },
@@ -199,6 +202,162 @@ const MOCK_COURSES = [
     popularity: 610,
     createdAt: "2026-05-01T10:00:00.000Z",
   },
+  {
+    courseId: 11,
+    courseName: "IELTS Reading: True/False/Not Given",
+    description:
+      "Chiến lược đọc nhanh, nhận diện paraphrase và xử lý dạng câu hỏi True/False/Not Given trong IELTS Reading.",
+    category: "IELTS",
+    level: "Trung cấp",
+    totalLessons: 13,
+    totalNodes: 5,
+    totalMaterials: 15,
+    progressPercentage: 55,
+    isEnrolled: true,
+    popularity: 870,
+    createdAt: "2026-04-28T10:00:00.000Z",
+    thumbnail: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80",
+  },
+  {
+    courseId: 12,
+    courseName: "TOEIC Part 7: Đọc hiểu nhanh",
+    description:
+      "Luyện đọc email, thông báo và bài quảng cáo trong Part 7 với mẹo quản lý thời gian hiệu quả.",
+    category: "TOEIC",
+    level: "Cơ bản",
+    totalLessons: 10,
+    totalNodes: 3,
+    totalMaterials: 10,
+    progressPercentage: 0,
+    isEnrolled: false,
+    popularity: 640,
+    createdAt: "2026-04-25T10:00:00.000Z",
+  },
+  {
+    courseId: 13,
+    courseName: "Email tiếng Anh chuyên nghiệp",
+    description:
+      "Viết email trang trọng, từ chối lịch sự và follow-up hiệu quả trong môi trường công việc quốc tế.",
+    category: "Giao tiếp",
+    level: "Trung cấp",
+    totalLessons: 9,
+    totalNodes: 3,
+    totalMaterials: 8,
+    progressPercentage: 20,
+    isEnrolled: true,
+    popularity: 750,
+    createdAt: "2026-04-22T10:00:00.000Z",
+    thumbnail: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80",
+  },
+  {
+    courseId: 14,
+    courseName: "Thì trong tiếng Anh: Tổng ôn",
+    description:
+      "Ôn tập 12 thì cơ bản và nâng cao, phân biệt cách dùng thực tế qua bài tập viết và chuyển đổi thì.",
+    category: "Ngữ pháp",
+    level: "Trung cấp",
+    totalLessons: 18,
+    totalNodes: 6,
+    totalMaterials: 24,
+    progressPercentage: 0,
+    isEnrolled: false,
+    popularity: 930,
+    createdAt: "2026-04-18T10:00:00.000Z",
+  },
+  {
+    courseId: 15,
+    courseName: "Shadowing & Connected Speech",
+    description:
+      "Luyện nói theo người bản xứ, nắm quy tắc nối âm và rút gọn âm để nghe hiểu tự nhiên hơn.",
+    category: "Phát âm",
+    level: "Nâng cao",
+    totalLessons: 14,
+    totalNodes: 4,
+    totalMaterials: 13,
+    progressPercentage: 65,
+    isEnrolled: true,
+    popularity: 580,
+    createdAt: "2026-04-15T10:00:00.000Z",
+    thumbnail: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=800&q=80",
+  },
+  {
+    courseId: 16,
+    courseName: "IELTS Listening: Map & Diagram",
+    description:
+      "Kỹ năng nghe mô tả bản đồ, sơ đồ và quy trình — dạng bài thường gặp trong IELTS Listening.",
+    category: "IELTS",
+    level: "Cơ bản",
+    totalLessons: 11,
+    totalNodes: 4,
+    totalMaterials: 12,
+    progressPercentage: 0,
+    isEnrolled: false,
+    popularity: 810,
+    createdAt: "2026-04-12T10:00:00.000Z",
+  },
+  {
+    courseId: 17,
+    courseName: "Phỏng vấn xin việc bằng tiếng Anh",
+    description:
+      "Chuẩn bị câu trả lời STAR, mô tả kinh nghiệm và đặt câu hỏi ngược trong buổi phỏng vấn.",
+    category: "Giao tiếp",
+    level: "Nâng cao",
+    totalLessons: 10,
+    totalNodes: 3,
+    totalMaterials: 9,
+    progressPercentage: 0,
+    isEnrolled: false,
+    popularity: 1050,
+    createdAt: "2026-04-08T10:00:00.000Z",
+    thumbnail: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=800&q=80",
+  },
+  {
+    courseId: 18,
+    courseName: "TOEIC 900+: Chiến lược cao điểm",
+    description:
+      "Tổng hợp chiến thuật cho thí sinh mục tiêu 900+, tập trung vào bẫy và từ vựng học thuật.",
+    category: "TOEIC",
+    level: "Nâng cao",
+    totalLessons: 22,
+    totalNodes: 7,
+    totalMaterials: 25,
+    progressPercentage: 85,
+    isEnrolled: true,
+    popularity: 1320,
+    createdAt: "2026-04-05T10:00:00.000Z",
+    thumbnail: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&q=80",
+  },
+  {
+    courseId: 19,
+    courseName: "Mệnh đề & Câu phức tiếng Anh",
+    description:
+      "Relative clauses, conditionals và câu ghép phức tạp — nền tảng viết luận và báo cáo chuẩn học thuật.",
+    category: "Ngữ pháp",
+    level: "Nâng cao",
+    totalLessons: 16,
+    totalNodes: 5,
+    totalMaterials: 19,
+    progressPercentage: 10,
+    isEnrolled: true,
+    popularity: 690,
+    createdAt: "2026-04-01T10:00:00.000Z",
+  },
+  {
+    courseId: 20,
+    courseName: "Luyện nghe podcast tiếng Anh",
+    description:
+      "Nghe podcast thực tế, ghi chú ý chính và tóm tắt nội dung — phù hợp trình độ trung cấp trở lên.",
+    category: "Phát âm",
+    level: "Trung cấp",
+    totalLessons: 12,
+    totalNodes: 4,
+    totalMaterials: 10,
+    progressPercentage: 0,
+    isEnrolled: false,
+    popularity: 560,
+    createdAt: "2026-03-28T10:00:00.000Z",
+    thumbnail: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&q=80",
+  },
 ];
 
 async function fetchCourses() {
@@ -310,7 +469,7 @@ export default function CourseListPage() {
   const handleSortChange = (event) => {
     updateFilters({ sort: event.target.value, page: 1 });
   };
-  const handlePageChange = (_, value) => {
+  const handlePageChange = (value) => {
     updateFilters({ page: value });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -430,23 +589,11 @@ export default function CourseListPage() {
             ))}
           </Grid>
 
-          {totalPages > 1 && (
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 5 }}>
-              <Pagination
-                count={totalPages}
-                page={currentPage}
-                onChange={handlePageChange}
-                color="primary"
-                size="medium"
-                sx={{
-                  "& .MuiPaginationItem-root": {
-                    borderRadius: "10px",
-                    fontWeight: 600,
-                  },
-                }}
-              />
-            </Box>
-          )}
+          <CourseListPagination
+            page={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </Box>
