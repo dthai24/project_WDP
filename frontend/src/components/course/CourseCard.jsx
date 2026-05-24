@@ -3,7 +3,6 @@ import {
   Card,
   CardContent,
   Chip,
-  LinearProgress,
   Typography,
   alpha,
   useTheme,
@@ -12,11 +11,25 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AppButton from "../common/AppButton";
+import AppProgressBar, { getProgressColor } from "../common/AppProgressBar";
+import CourseBookmarkButton from "./CourseBookmarkButton";
 import { buildCourseDetailPath } from "../../utils/courseListParams";
 
 /* ─── helpers ─── */
+
+const MUTED = "#64748B";
+const TEXT = "#0F172A";
+
+function formatStudentCount(count) {
+  if (count >= 1000) return count.toLocaleString("vi-VN");
+  return String(count);
+}
 
 function normalizeCourse(course = {}) {
   const progress = course.progressPercentage ?? course.progress ?? 0;
@@ -27,6 +40,10 @@ function normalizeCourse(course = {}) {
     thumbnail:         course.thumbnail ?? null,
     category:          course.category ?? "",
     level:             course.level ?? "",
+    instructor:        course.instructor ?? "",
+    rating:            course.rating ?? null,
+    reviewCount:       course.reviewCount ?? 0,
+    studentCount:      course.studentCount ?? 0,
     totalLessons:      course.totalLessons ?? course.totalNodes ?? 0,
     totalNodes:        course.totalNodes ?? 0,
     totalMaterials:    course.totalMaterials ?? 0,
@@ -70,6 +87,37 @@ function getStatusChipStyle(isEnrolled, progress) {
   };
 }
 
+function getMyCoursesStatusChip(progress) {
+  if (progress >= 100) {
+    return {
+      label: "Hoàn thành",
+      sx: {
+        bgcolor: "rgba(4,120,87,0.12)",
+        color: "#047857",
+        border: "1px solid rgba(4,120,87,0.24)",
+      },
+    };
+  }
+  if (progress > 0) {
+    return {
+      label: "Đang học",
+      sx: {
+        bgcolor: "rgba(8,145,178,0.12)",
+        color: "#0891B2",
+        border: "1px solid rgba(8,145,178,0.20)",
+      },
+    };
+  }
+  return {
+    label: "Chưa bắt đầu",
+    sx: {
+      bgcolor: "rgba(100,116,139,0.10)",
+      color: "#64748B",
+      border: "1px solid rgba(100,116,139,0.18)",
+    },
+  };
+}
+
 function getLevelChipStyle(level = "") {
   const l = level.toLowerCase();
   if (l.includes("cơ bản") || l.includes("sơ cấp")) return {
@@ -99,35 +147,6 @@ function getCategoryChipStyle(category = "") {
     "Phát âm":   { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
   };
   return map[category] ?? { bgcolor: "#F1F5F9", color: "#64748B" };
-}
-
-function getProgressGradient(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-
-  if (value === 0) {
-    return "#94A3B8";
-  }
-
-  if (value >= 100) {
-    return "linear-gradient(90deg, #22C55E 0%, #16A34A 100%)";
-  }
-
-  if (value >= 90) {
-    return "linear-gradient(90deg, #0891B2 0%, #F59E0B 100%)";
-  }
-
-  return "linear-gradient(90deg, #EA580C 0%, #F59E0B 45%, #0891B2 100%)";
-}
-
-function getProgressTextColor(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-
-  if (value === 0) return "#94A3B8";
-  if (value >= 100) return "#16A34A";
-  if (value >= 90) return "#F59E0B";
-  if (value >= 70) return "#0891B2";
-  if (value >= 30) return "#0891B2";
-  return "#EA580C";
 }
 
 /* ─── sub-components ─── */
@@ -170,11 +189,11 @@ function CourseThumbnail({ thumbnail }) {
   );
 }
 
-function MetaItem({ icon: Icon, label }) {
+function MetaInline({ icon: Icon, label }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      <Icon sx={{ fontSize: 12, color: "#94A3B8", flexShrink: 0 }} />
-      <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 500, lineHeight: 1, fontSize: 11.5 }}>
+      <Icon sx={{ fontSize: 15, color: "rgba(8,145,178,0.75)", flexShrink: 0 }} />
+      <Typography sx={{ fontSize: 12.5, color: MUTED, fontWeight: 500, lineHeight: 1.2 }}>
         {label}
       </Typography>
     </Box>
@@ -185,24 +204,38 @@ function MetaItem({ icon: Icon, label }) {
 
 export default function CourseCard({
   course,
+  variant = "catalog",
+  isSaved = false,
+  onToggleSave,
   onEnroll,
   onContinueLearning,
+  onStartLearning,
   onClick,
 }) {
   const theme   = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isCatalog = variant === "catalog";
+  const isMyCourses = variant === "myCourses";
   const data         = normalizeCourse(course);
-  const statusChip   = getStatusChipStyle(data.isEnrolled, data.progressPercentage);
+  const statusChip   = isMyCourses
+    ? getMyCoursesStatusChip(data.progressPercentage)
+    : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
   const levelStyle   = getLevelChipStyle(data.level);
   const categoryStyle = getCategoryChipStyle(data.category);
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
-  const progressTextColor = getProgressTextColor(progressValue);
+  const progressTextColor = getProgressColor(progressValue);
   const isCompleted = progressValue >= 100;
-  const listFromUrl =
-    location.pathname === "/courses" ? `${location.pathname}${location.search}` : undefined;
+  const isNotStarted = isMyCourses && progressValue === 0;
+  const listFromUrl = isMyCourses
+    ? "/my-courses"
+    : location.pathname === "/courses"
+      ? `${location.pathname}${location.search}`
+      : undefined;
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, listFromUrl);
+  const lastActivity = course.lastActivity;
+  const showProgress = isMyCourses || data.isEnrolled;
 
   return (
     <Card
@@ -236,6 +269,7 @@ export default function CourseCard({
       {/* ── Body ── */}
       <CardContent
         sx={{
+          position: "relative",
           flex: 1,
           display: "flex",
           flexDirection: "column",
@@ -244,7 +278,13 @@ export default function CourseCard({
           "&:last-child": { pb: 2 },
         }}
       >
-        {/* Title link */}
+        {isCatalog && onToggleSave && (
+          <Box sx={{ position: "absolute", top: 10, right: 10, zIndex: 1 }}>
+            <CourseBookmarkButton isSaved={isSaved} onToggle={onToggleSave} />
+          </Box>
+        )}
+
+        {/* Title */}
         <Typography
           component={Link}
           to={detailPath}
@@ -253,15 +293,46 @@ export default function CourseCard({
           sx={{
             fontWeight: 700,
             lineHeight: 1.35,
-            color: "#0F172A",
+            color: TEXT,
             textDecoration: "none",
             cursor: "pointer",
+            pr: isCatalog && onToggleSave ? 4 : 0,
             transition: `color 0.18s ${theme.ios18?.transition}`,
             "&:hover": { color: "primary.main" },
           }}
         >
           {data.courseName}
         </Typography>
+
+        {/* Đánh giá & học viên */}
+        {(data.rating != null || data.studentCount > 0) && (
+          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.25 }}>
+            {data.rating != null && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                <StarRoundedIcon sx={{ fontSize: 15, color: "#F59E0B" }} />
+                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1 }}>
+                  {Number(data.rating).toFixed(1)}
+                </Typography>
+                {data.reviewCount > 0 && (
+                  <Typography sx={{ fontSize: 11.5, color: MUTED, lineHeight: 1 }}>
+                    ({data.reviewCount.toLocaleString("vi-VN")})
+                  </Typography>
+                )}
+              </Box>
+            )}
+            {data.rating != null && data.studentCount > 0 && (
+              <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "#CBD5E1", flexShrink: 0 }} />
+            )}
+            {data.studentCount > 0 && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                <PeopleOutlineRoundedIcon sx={{ fontSize: 15, color: "#94A3B8" }} />
+                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1 }}>
+                  {formatStudentCount(data.studentCount)} học viên
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        )}
 
         {/* Chip row — status + level + category */}
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
@@ -286,15 +357,43 @@ export default function CourseCard({
           )}
         </Box>
 
-        {/* Metadata */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.25 }}>
-          <MetaItem icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài học`} />
-          <MetaItem icon={RouteOutlinedIcon}    label={`${data.totalNodes} chặng`} />
-          <MetaItem icon={ArticleOutlinedIcon}  label={`${data.totalMaterials} học liệu`} />
+        {/* Metadata — icon + text inline */}
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 1.5,
+            py: 0.5,
+          }}
+        >
+          <MetaInline icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài học`} />
+          <MetaInline icon={RouteOutlinedIcon} label={`${data.totalNodes} chặng`} />
+          <MetaInline icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
         </Box>
 
-        {/* Progress bar — only when enrolled */}
-        {data.isEnrolled && (
+        {/* Giảng viên */}
+        {data.instructor && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
+            <PersonOutlineOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8", flexShrink: 0 }} />
+            <Typography sx={{ fontSize: 11.5, color: MUTED, flexShrink: 0 }}>Giảng viên:</Typography>
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: TEXT,
+                fontWeight: 600,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {data.instructor}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Progress bar */}
+        {showProgress && (
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
               <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 600, fontSize: 11.5 }}>
@@ -309,25 +408,40 @@ export default function CourseCard({
                 </Typography>
               </Box>
             </Box>
-            <LinearProgress
-              variant="determinate"
-              value={progressValue}
-              sx={{
-                height: 6,
-                borderRadius: 99,
-                bgcolor: "rgba(100,116,139,0.12)",
-                "& .MuiLinearProgress-bar": {
-                  borderRadius: 99,
-                  background: getProgressGradient(progressValue),
-                },
-              }}
-            />
+            <AppProgressBar value={progressValue} height={6} />
           </Box>
         )}
 
-        {/* Action button — distinct colors by state */}
+        {isMyCourses && lastActivity && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: -0.25 }}>
+            <AccessTimeOutlinedIcon sx={{ fontSize: 12, color: "#94A3B8" }} />
+            <Typography variant="caption" sx={{ color: "#64748B", fontSize: 11.5, fontWeight: 500 }}>
+              Học gần nhất: {lastActivity}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Action button */}
         <Box sx={{ mt: "auto", pt: 0.75 }}>
-          {data.isEnrolled ? (
+          {isMyCourses ? (
+            <AppButton
+              fullWidth
+              size="small"
+              variant="contained"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isCompleted) {
+                  onContinueLearning?.(course);
+                } else if (isNotStarted) {
+                  onStartLearning?.(course) ?? onContinueLearning?.(course);
+                } else {
+                  onContinueLearning?.(course);
+                }
+              }}
+            >
+              {isCompleted ? "Ôn tập lại" : isNotStarted ? "Bắt đầu học" : "Tiếp tục học"}
+            </AppButton>
+          ) : data.isEnrolled ? (
             <AppButton
               fullWidth
               size="small"

@@ -8,7 +8,6 @@ import {
   Chip,
   Grid,
   IconButton,
-  LinearProgress,
   Link as MuiLink,
   Typography,
   alpha,
@@ -32,7 +31,10 @@ import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import AppButton from "../components/common/AppButton";
+import AppProgressBar, { getProgressColor } from "../components/common/AppProgressBar";
 import CourseCard from "../components/course/CourseCard";
+import CourseBookmarkButton from "../components/course/CourseBookmarkButton";
+import useSavedCourses from "../hooks/useSavedCourses";
 import { buildCourseDetailPath, buildCourseListPath } from "../utils/courseListParams";
 
 const PRIMARY = "#0891B2";
@@ -274,35 +276,6 @@ function getCategoryChipSx(category = "") {
   return map[category] ?? { bgcolor: "#F1F5F9", color: MUTED };
 }
 
-function getProgressGradient(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-
-  if (value === 0) {
-    return "#94A3B8";
-  }
-
-  if (value >= 100) {
-    return "linear-gradient(90deg, #22C55E 0%, #16A34A 100%)";
-  }
-
-  if (value >= 90) {
-    return "linear-gradient(90deg, #0891B2 0%, #F59E0B 100%)";
-  }
-
-  return "linear-gradient(90deg, #EA580C 0%, #F59E0B 45%, #0891B2 100%)";
-}
-
-function getProgressTextColor(progress) {
-  const value = Math.max(0, Math.min(progress, 100));
-
-  if (value === 0) return "#94A3B8";
-  if (value >= 100) return "#16A34A";
-  if (value >= 90) return "#F59E0B";
-  if (value >= 70) return "#0891B2";
-  if (value >= 30) return "#0891B2";
-  return "#EA580C";
-}
-
 function formatStudentCount(count) {
   if (count >= 1000) return count.toLocaleString("vi-VN");
   return String(count);
@@ -375,7 +348,7 @@ function CourseMetaRow({ course }) {
 
 function CourseProgressBlock({ progress, sx }) {
   const value = Math.min(Math.max(progress, 0), 100);
-  const textColor = getProgressTextColor(value);
+  const textColor = getProgressColor(value);
   const completed = value >= 100;
 
   return (
@@ -391,19 +364,7 @@ function CourseProgressBlock({ progress, sx }) {
           </Typography>
         </Box>
       </Box>
-      <LinearProgress
-        variant="determinate"
-        value={value}
-        sx={{
-          height: 6,
-          borderRadius: 99,
-          bgcolor: "rgba(100,116,139,0.12)",
-          "& .MuiLinearProgress-bar": {
-            borderRadius: 99,
-            background: getProgressGradient(value),
-          },
-        }}
-      />
+      <AppProgressBar value={value} height={6} />
     </Box>
   );
 }
@@ -412,7 +373,9 @@ function CourseProgressBlock({ progress, sx }) {
 function CourseIntro({ course, isEnrolled }) {
   const [searchParams] = useSearchParams();
   const coursesListPath = buildCourseListPath(searchParams);
+  const { isSaved, toggleSave } = useSavedCourses();
   const statusChip = getStatusChip(isEnrolled, course.progress);
+  const courseId = course.id ?? course.courseId;
 
   return (
     <Box>
@@ -431,18 +394,27 @@ function CourseIntro({ course, isEnrolled }) {
         </Typography>
       </Breadcrumbs>
 
-      <Typography
-        sx={{
-          fontWeight: 700,
-          color: TEXT,
-          lineHeight: 1.25,
-          fontSize: { xs: 24, sm: 28, md: 32 },
-          mb: 1.25,
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {course.title}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5, mb: 1.25 }}>
+        <Typography
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            fontWeight: 700,
+            color: TEXT,
+            lineHeight: 1.25,
+            fontSize: { xs: 24, sm: 28, md: 32 },
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {course.title}
+        </Typography>
+        <CourseBookmarkButton
+          isSaved={isSaved(courseId)}
+          onToggle={() => toggleSave(courseId)}
+          size="medium"
+          iconSize={26}
+        />
+      </Box>
 
       <Typography sx={{ fontSize: 15, color: MUTED, lineHeight: 1.65, mb: 2 }}>
         {course.shortDescription}
@@ -916,12 +888,11 @@ export default function CourseDetailPage() {
   const handleEnroll = () => {
     // TODO: gọi API đăng ký khóa học
     setIsEnrolled(true);
+    navigate(`/my-courses/${id}/learn`);
   };
 
   const handleContinue = () => {
-    // TODO: điều hướng tới /learning/:id khi có trang learning
-    console.log("Navigate to learning:", id);
-    navigate(`/learning/${id}`);
+    navigate(`/my-courses/${id}/learn`);
   };
 
   return (

@@ -20,14 +20,14 @@ export const COURSE_LIST_PARAM_KEYS = [
 export const COURSE_FROM_PARAM = "from";
 
 function isCourseListPath(path) {
-  return path === "/courses";
+  return path === "/courses" || path === "/my-courses";
 }
 
 function resolveFromUrl(searchParams) {
   const from = searchParams.get(COURSE_FROM_PARAM);
-  if (!from || !from.startsWith("/courses")) return null;
+  if (!from || !from.startsWith("/")) return null;
   const pathOnly = from.split("?")[0];
-  if (pathOnly !== "/courses") return null;
+  if (!isCourseListPath(pathOnly)) return null;
   return from;
 }
 
@@ -176,7 +176,22 @@ export const STATUS_FILTER_LABELS = {
   not_enrolled: "Chưa đăng ký",
 };
 
-export function buildActiveFilterChips(filters) {
+export const MY_COURSE_STATUS_LABELS = {
+  learning: "Đang học",
+  completed: "Hoàn thành",
+  not_started: "Chưa bắt đầu",
+};
+
+export function hasActiveFilterSelections(filters) {
+  return (
+    Boolean(filters.keyword) ||
+    filters.categories.length > 0 ||
+    filters.levels.length > 0 ||
+    filters.statuses.length > 0
+  );
+}
+
+export function buildActiveFilterChips(filters, statusLabels = STATUS_FILTER_LABELS) {
   const chips = [];
 
   if (filters.keyword) {
@@ -211,7 +226,7 @@ export function buildActiveFilterChips(filters) {
       key: `status:${value}`,
       type: "status",
       value,
-      label: STATUS_FILTER_LABELS[value] ?? value,
+      label: statusLabels[value] ?? value,
     });
   });
 

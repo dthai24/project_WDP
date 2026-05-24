@@ -18,28 +18,34 @@ export const pageContentSx = {
 
 export default function MainLayout({ children }) {
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#FFFFFF" }}>
-      {/* Full-width sticky header */}
-      <Header />
-
-      {/* Fixed sidebar — rendered outside the flow so it doesn't scroll */}
-      <Sidebar />
-
-      {/* Main content offset by sidebar width */}
+    <>
       <Box
         sx={{
-          ml: `${SIDEBAR_WIDTH}px`,
+          minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
-          minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
           bgcolor: "#FFFFFF",
         }}
       >
-        <Box component="main" sx={{ flex: 1 }}>
+        <Header />
+
+        {/* Fixed sidebar — rendered outside the flow so it doesn't scroll */}
+        <Sidebar />
+
+        <Box
+          component="main"
+          sx={{
+            ml: `${SIDEBAR_WIDTH}px`,
+            flex: 1,
+            bgcolor: "#FFFFFF",
+          }}
+        >
           <Box sx={pageContentSx}>{children ?? <Outlet />}</Box>
         </Box>
-        <Footer />
       </Box>
-    </Box>
+
+      {/* Full viewport width — renders above fixed sidebar at page bottom */}
+      <Footer />
+    </>
   );
 }
