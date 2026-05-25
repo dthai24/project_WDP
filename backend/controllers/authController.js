@@ -1,6 +1,8 @@
 const { sql } = require('../config/db');
 const nodemailer = require('nodemailer');
 
+const ROLE_STUDENT = 'Student';
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -78,7 +80,7 @@ const login = async (req, res) => {
     // 1. Lấy thông tin user
     const userReq = new sql.Request();
     userReq.input('email', sql.NVarChar(150), normalizedEmail);
-    const userResult = await userReq.query('SELECT * FROM Users WHERE Email = @email');
+    const userResult = await userReq.query('SELECT UserId, FullName, Email, Phone, Password, IsFirstLogin FROM Users WHERE Email = @email');
 
     if (userResult.recordset.length === 0)
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng.' });
@@ -103,7 +105,7 @@ const login = async (req, res) => {
 
     // Tài khoản đăng ký qua OTP là Student; fallback nếu chưa có bản ghi User_Roles
     if (roles.length === 0) {
-      roles = ['Student'];
+      roles = [ROLE_STUDENT];
     }
 
     return res.json({
@@ -227,39 +229,46 @@ const verifyOtp = async (req, res) => {
         message: 'Mã OTP đã hết hạn (quá 3 phút). Vui lòng yêu cầu mã mới.',
       });
 
-    // Chèn user mới vào Users
-    const insertReq = new sql.Request();
-    insertReq.input('fullName',    sql.NVarChar(100), record.FullName);
-    insertReq.input('email',       sql.NVarChar(150), record.Email);
-    insertReq.input('phone',       sql.NVarChar(20),  record.Phone);
-    insertReq.input('password',    sql.NVarChar(255), record.Password);
-    insertReq.input('dateOfBirth', sql.Date,          record.DateOfBirth);
+    const transaction = new sql.Transaction();
+    await transaction.begin();
 
-    await insertReq.query(`
-      INSERT INTO Users (FullName, Email, Phone, Password, DateOfBirth)
-      VALUES (@fullName, @email, @phone, @password, @dateOfBirth)
-    `);
+    try {
+      // Chèn user mới vào Users
+      const insertReq = new sql.Request(transaction);
+      insertReq.input('fullName',    sql.NVarChar(100), record.FullName);
+      insertReq.input('email',       sql.NVarChar(150), record.Email);
+      insertReq.input('phone',       sql.NVarChar(20),  record.Phone);
+      insertReq.input('password',    sql.NVarChar(255), record.Password);
+      insertReq.input('dateOfBirth', sql.Date,          record.DateOfBirth);
 
-    const userIdReq = new sql.Request();
-    userIdReq.input('email', sql.NVarChar(150), record.Email);
-    const userIdResult = await userIdReq.query(
-      'SELECT UserId FROM Users WHERE Email = @email'
-    );
-    const newUserId = userIdResult.recordset[0]?.UserId;
-
-    if (newUserId) {
-      const assignRoleReq = new sql.Request();
-      assignRoleReq.input('userId', sql.Int, newUserId);
-      await assignRoleReq.query(`
-        INSERT INTO User_Roles (UserId, RoleId)
-        SELECT @userId, RoleId FROM Roles WHERE RoleName = N'Student'
+      const userResult = await insertReq.query(`
+        INSERT INTO Users (FullName, Email, Phone, Password, DateOfBirth)
+        OUTPUT INSERTED.UserId
+        VALUES (@fullName, @email, @phone, @password, @dateOfBirth)
       `);
-    }
 
-    // Xoá bản ghi OTP
-    const deleteReq = new sql.Request();
-    deleteReq.input('email', sql.NVarChar(150), record.Email);
-    await deleteReq.query('DELETE FROM OTP_Verification WHERE Email = @email');
+      const newUserId = userResult.recordset[0]?.UserId;
+
+      if (newUserId) {
+        const assignRoleReq = new sql.Request(transaction);
+        assignRoleReq.input('userId', sql.Int, newUserId);
+        assignRoleReq.input('roleName', sql.NVarChar(50), ROLE_STUDENT);
+        await assignRoleReq.query(`
+          INSERT INTO User_Roles (UserId, RoleId)
+          SELECT @userId, RoleId FROM Roles WHERE RoleName = @roleName
+        `);
+      }
+
+      // Xoá bản ghi OTP
+      const deleteReq = new sql.Request(transaction);
+      deleteReq.input('email', sql.NVarChar(150), record.Email);
+      await deleteReq.query('DELETE FROM OTP_Verification WHERE Email = @email');
+
+      await transaction.commit();
+    } catch (dbErr) {
+      await transaction.rollback();
+      throw dbErr;
+    }
 
     return res.json({
       success: true,
@@ -307,20 +316,30 @@ const savePreferences = async (req, res) => {
     if (userResult.recordset.length === 0)
       return res.status(404).json({ success: false, message: 'Người dùng không tồn tại.' });
 
-    const deleteOld = new sql.Request();
-    deleteOld.input('userId', sql.Int, userId);
-    await deleteOld.query('DELETE FROM User_Preferences WHERE UserId = @userId');
+    const transaction = new sql.Transaction();
+    await transaction.begin();
 
-    for (const tagId of tagIds) {
-      const insertReq = new sql.Request();
-      insertReq.input('userId', sql.Int, parseInt(userId, 10));
-      insertReq.input('tagId',  sql.Int, parseInt(tagId,  10));
-      await insertReq.query('INSERT INTO User_Preferences (UserId, TagId) VALUES (@userId, @tagId)');
+    try {
+      const deleteOld = new sql.Request(transaction);
+      deleteOld.input('userId', sql.Int, userId);
+      await deleteOld.query('DELETE FROM User_Preferences WHERE UserId = @userId');
+
+      for (const tagId of tagIds) {
+        const insertReq = new sql.Request(transaction);
+        insertReq.input('userId', sql.Int, parseInt(userId, 10));
+        insertReq.input('tagId',  sql.Int, parseInt(tagId,  10));
+        await insertReq.query('INSERT INTO User_Preferences (UserId, TagId) VALUES (@userId, @tagId)');
+      }
+
+      const updateReq = new sql.Request(transaction);
+      updateReq.input('userId', sql.Int, userId);
+      await updateReq.query('UPDATE Users SET IsFirstLogin = 0, UpdatedAt = GETDATE() WHERE UserId = @userId');
+
+      await transaction.commit();
+    } catch (dbErr) {
+      await transaction.rollback();
+      throw dbErr;
     }
-
-    const updateReq = new sql.Request();
-    updateReq.input('userId', sql.Int, userId);
-    await updateReq.query('UPDATE Users SET IsFirstLogin = 0 WHERE UserId = @userId');
 
     return res.json({
       success: true,
@@ -427,7 +446,7 @@ const resetPassword = async (req, res) => {
     updateReq.input('email',       sql.NVarChar(150), normalizedEmail);
     updateReq.input('newPassword', sql.NVarChar(255), newPassword);
     await updateReq.query(
-      'UPDATE Users SET Password = @newPassword, ResetOtpCode = NULL, ResetOtpExpires = NULL WHERE Email = @email'
+      'UPDATE Users SET Password = @newPassword, ResetOtpCode = NULL, ResetOtpExpires = NULL, UpdatedAt = GETDATE() WHERE Email = @email'
     );
 
     return res.json({
