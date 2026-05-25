@@ -44,11 +44,20 @@ function ToastAlert({ message, severity, closeToast }) {
           alignItems: "center",
           "& .MuiAlert-message": {
             padding: 0,
+            flex: 1,
+            minWidth: 0,
             fontSize: 14,
             fontWeight: 600,
             lineHeight: 1.45,
           },
-          "& .MuiAlert-action": { pt: 0, alignItems: "center", ml: 1 },
+          "& .MuiAlert-action": {
+            pt: 0,
+            alignItems: "center",
+            ml: "auto",
+            mr: -0.5,
+            pl: 1.5,
+            flexShrink: 0,
+          },
         }}
       >
         {message}
@@ -85,6 +94,11 @@ export const toast = {
 const toastGlobalStyles = {
   ".Toastify__toast.app-toast": {
     marginBottom: "12px",
+    width: "100%",
+    maxWidth: 440,
+  },
+  ".Toastify__toast.app-toast > div": {
+    width: "100%",
   },
   ".Toastify__progress-bar.app-toast-progress": {
     opacity: "1 !important",
@@ -126,7 +140,8 @@ export default function ToastProvider() {
           boxShadow: "none",
           padding: 0,
           minHeight: "unset",
-          width: "auto",
+          width: "100%",
+          maxWidth: 440,
         }}
         progressStyle={{
           opacity: 1,
