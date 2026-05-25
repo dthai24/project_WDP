@@ -20,6 +20,7 @@ import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../common/Logo";
+import AppButton from "../common/AppButton";
 import SearchBox from "../common/SearchBox";
 import { toast } from "../common/Toast";
 import {
@@ -333,20 +334,37 @@ export default function Header({
               </Tooltip>
             )}
 
-            <IconButton
-              aria-label="Thông báo"
-              size="medium"
-              sx={{
-                color: "text.secondary",
-                borderRadius: theme.ios18?.radius?.xs,
-                "&:hover": {
-                  color: "primary.main",
-                  bgcolor: alpha(theme.palette.primary.main, 0.08),
-                },
-              }}
-            >
-              <NotificationsOutlinedIcon />
-            </IconButton>
+            {user && (
+              <IconButton
+                aria-label="Thông báo"
+                size="medium"
+                sx={{
+                  color: "text.secondary",
+                  borderRadius: theme.ios18?.radius?.xs,
+                  "&:hover": {
+                    color: "primary.main",
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  },
+                }}
+              >
+                <NotificationsOutlinedIcon />
+              </IconButton>
+            )}
+
+            {!user && (
+              <AppButton
+                onClick={() => navigate("/login")}
+                sx={{
+                  px: { xs: 2, sm: 2.5 },
+                  py: 0.75,
+                  fontSize: 13,
+                  minWidth: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Đăng nhập
+              </AppButton>
+            )}
 
             {user && (
               <Box {...userZoneHandlers} sx={{ position: "relative" }}>
