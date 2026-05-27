@@ -1,9 +1,10 @@
 import { Box } from "@mui/material";
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import Sidebar from "./Sidebar";
 import { SIDEBAR_WIDTH } from "./Sidebar";
+import { getUser, isMentor } from "../../utils/authUtils";
 
 /** Header height — matches AppBar Toolbar minHeight at sm breakpoint */
 export const HEADER_HEIGHT = 60;
@@ -17,6 +18,13 @@ export const pageContentSx = {
 };
 
 export default function MainLayout({ children }) {
+  const user = getUser();
+  const isAuthenticated = user && Object.keys(user).length > 0 && sessionStorage.getItem("user");
+
+  if (isAuthenticated && isMentor(user)) {
+    return <Navigate to="/mentor/courses" replace />;
+  }
+
   return (
     <>
       <Box

@@ -14,54 +14,52 @@ import MyCoursesListPage from './pages/MyCoursesListPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import MentorCoursesPage from './pages/mentor/MentorCoursesPage';
+import MentorNewsPage from './pages/mentor/MentorNewsPage';
+import MentorStudentProgressPage from './pages/mentor/MentorStudentProgressPage';
+import MentorCoursePlaceholder from './components/mentor/MentorCoursePlaceholder';
 
 import MainLayout from './components/layout/MainLayout';
+import MentorLayout from './components/layout/MentorLayout';
 import ProtectedRoute from './components/common/ProtectedRoute';
+
+const MENTOR_BLOCK_REDIRECTS = { Mentor: '/mentor/courses' };
+const STUDENT_MENTOR_ROUTE_REDIRECTS = { Student: '/courses' };
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ──────────────────────────────────────────────────── */}
-        {/* Public routes — accessible without login            */}
-        {/* ──────────────────────────────────────────────────── */}
+        {/* Public routes */}
         <Route path="/login"           element={<LoginPage />} />
         <Route path="/register"        element={<RegisterPage />} />
         <Route path="/verify-otp"      element={<OtpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
         <Route path="/unauthorized"    element={<UnauthorizedPage />} />
-
-        {/* Demo UI components — public */}
         <Route path="/test-component" element={<TestPage />} />
 
-        {/* ──────────────────────────────────────────────────── */}
-        {/* Onboarding survey — any authenticated user          */}
-        {/* ──────────────────────────────────────────────────── */}
         <Route
           path="/survey"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
               <SurveyPage />
             </ProtectedRoute>
           }
         />
 
-        {/* ──────────────────────────────────────────────────── */}
-        {/* Main app with Header + Sidebar + Footer             */}
-        {/* Root "/" shows HomePage for everyone (public)        */}
-        {/* Other pages under "/" require login (Student role)   */}
-        {/* ──────────────────────────────────────────────────── */}
+        {/* Student app shell */}
         <Route path="/" element={<MainLayout />}>
-          {/* Landing page — public, no login required */}
           <Route index element={<HomePage />} />
           <Route path="home" element={<HomePage />} />
 
-          {/* Student-accessible routes — require login */}
           <Route
             path="courses"
             element={
-              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+              <ProtectedRoute
+                allowedRoles={['Student', 'Admin']}
+                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+              >
                 <CourseListPage />
               </ProtectedRoute>
             }
@@ -69,7 +67,10 @@ export default function App() {
           <Route
             path="courses/:id"
             element={
-              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+              <ProtectedRoute
+                allowedRoles={['Student', 'Admin']}
+                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+              >
                 <CourseDetailPage />
               </ProtectedRoute>
             }
@@ -77,7 +78,10 @@ export default function App() {
           <Route
             path="my-courses"
             element={
-              <ProtectedRoute allowedRoles={['Student']}>
+              <ProtectedRoute
+                allowedRoles={['Student']}
+                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+              >
                 <MyCoursesListPage />
               </ProtectedRoute>
             }
@@ -85,7 +89,10 @@ export default function App() {
           <Route
             path="my-courses/:courseId/learn"
             element={
-              <ProtectedRoute allowedRoles={['Student']}>
+              <ProtectedRoute
+                allowedRoles={['Student']}
+                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+              >
                 <CourseLearningPage />
               </ProtectedRoute>
             }
@@ -93,55 +100,80 @@ export default function App() {
           <Route
             path="profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute
+                allowedRoles={['Student', 'Admin']}
+                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+              >
                 <ProfilePage />
               </ProtectedRoute>
             }
           />
         </Route>
 
-        {/* ──────────────────────────────────────────────────── */}
-        {/* Admin routes — Admin role only                      */}
-        {/* ──────────────────────────────────────────────────── */}
+        {/* Admin routes */}
         <Route
           path="/admin/*"
           element={
             <ProtectedRoute allowedRoles={['Admin']}>
-              {/* TODO: Replace with admin layout / dashboard pages */}
               <Navigate to="/" replace />
             </ProtectedRoute>
           }
         />
 
-        {/* ──────────────────────────────────────────────────── */}
-        {/* Mentor routes — Mentor role only                    */}
-        {/* ──────────────────────────────────────────────────── */}
+        {/* Mentor routes */}
         <Route
-          path="/mentor/*"
+          path="/mentor"
           element={
-            <ProtectedRoute allowedRoles={['Mentor']}>
-              {/* TODO: Replace with mentor layout / dashboard pages */}
-              <Navigate to="/" replace />
+            <ProtectedRoute
+              allowedRoles={['Mentor']}
+              roleRedirects={STUDENT_MENTOR_ROUTE_REDIRECTS}
+            >
+              <MentorLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="/mentor/courses" replace />} />
+          <Route path="courses/create" element={
+            <MentorCoursePlaceholder
+              title="Tạo khóa học"
+              description="Tạo khóa học mới và thiết lập thông tin cơ bản."
+            />
+          } />
+          <Route path="courses/:courseId/edit" element={
+            <MentorCoursePlaceholder
+              title="Chỉnh sửa khóa học"
+              description="Cập nhật thông tin khóa học."
+            />
+          } />
+          <Route path="courses/:courseId/content" element={
+            <MentorCoursePlaceholder
+              title="Quản lý nội dung"
+              description="Quản lý chương, chặng, bài học và học liệu."
+            />
+          } />
+          <Route path="courses/:courseId" element={
+            <MentorCoursePlaceholder
+              title="Chi tiết khóa học"
+              description="Xem tổng quan khóa học."
+            />
+          } />
+          <Route path="courses" element={<MentorCoursesPage />} />
+          <Route path="news" element={<MentorNewsPage />} />
+          <Route path="student-progress" element={<MentorStudentProgressPage />} />
+          <Route path="paths" element={<Navigate to="/mentor/courses" replace />} />
+          <Route path="*" element={<Navigate to="/mentor/courses" replace />} />
+        </Route>
 
-        {/* ──────────────────────────────────────────────────── */}
-        {/* Student routes — Student role only                  */}
-        {/* ──────────────────────────────────────────────────── */}
+        {/* Student-specific routes placeholder */}
         <Route
           path="/student/*"
           element={
             <ProtectedRoute allowedRoles={['Student']}>
-              {/* TODO: Replace with student-specific pages */}
               <Navigate to="/" replace />
             </ProtectedRoute>
           }
         />
 
-        {/* ──────────────────────────────────────────────────── */}
-        {/* Fallback — unknown routes go to home                */}
-        {/* ──────────────────────────────────────────────────── */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
