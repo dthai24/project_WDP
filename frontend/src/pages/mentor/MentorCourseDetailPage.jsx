@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Box } from '@mui/material';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
 import Loading from '../../components/common/Loading';
+import { toast } from '../../components/common/Toast';
 import MentorCourseDetailHeader from '../../components/mentor/course/MentorCourseDetailHeader';
 import MentorCourseOverviewTab from '../../components/mentor/course/MentorCourseOverviewTab';
 import MentorCourseContentTab from '../../components/mentor/course/MentorCourseContentTab';
@@ -24,6 +26,7 @@ export default function MentorCourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [publishing, setPublishing] = useState(false);
+  const [publishDialog, setPublishDialog] = useState(null);
 
   const activeTab = parseMentorCourseDetailTab(searchParams);
 
@@ -71,20 +74,56 @@ export default function MentorCourseDetailPage() {
     }
   };
 
-  const handlePublishToggle = async () => {
+  const handlePublishToggle = () => {
     if (!course || publishing) return;
+    setPublishDialog(course.status === 'published' ? 'unpublish' : 'publish');
+  };
 
-    const nextPublished = course.status !== 'published';
+  const handleClosePublishDialog = () => {
+    if (publishing) return;
+    setPublishDialog(null);
+  };
+
+  const handleConfirmPublishToggle = async () => {
+    if (!course || !publishDialog || publishing) return;
+
+    const nextPublished = publishDialog === 'publish';
     setPublishing(true);
 
+    // TODO: wire real API — updateCoursePublishStatus(courseId, isPublished)
     const result = await updateCoursePublishStatus(course.courseId, nextPublished);
 
     if (result.ok && result.course) {
       setCourse(result.course);
+      toast.success(
+        nextPublished ? 'Đã xuất bản khóa học.' : 'Đã hủy xuất bản khóa học.',
+      );
+      setPublishDialog(null);
+    } else {
+      toast.error(result.message ?? 'Không thể cập nhật trạng thái khóa học.');
     }
 
     setPublishing(false);
   };
+
+  const publishDialogConfig =
+    publishDialog === 'unpublish'
+      ? {
+          title: 'Hủy xuất bản khóa học?',
+          message:
+            'Học viên đã đăng ký vẫn được giữ dữ liệu học tập, nhưng khóa học sẽ chuyển về trạng thái bản nháp/không công khai.',
+          confirmLabel: 'Hủy xuất bản',
+          destructive: true,
+        }
+      : publishDialog === 'publish'
+        ? {
+            title: 'Xuất bản khóa học?',
+            message:
+              'Khóa học sẽ hiển thị công khai và học viên mới có thể đăng ký. Bạn có thể hủy xuất bản bất cứ lúc nào.',
+            confirmLabel: 'Xuất bản',
+            destructive: false,
+          }
+        : null;
 
   if (loading) {
     return (
@@ -119,6 +158,18 @@ export default function MentorCourseDetailPage() {
       />
 
       <Box key={activeTab}>{renderActiveTabPanel()}</Box>
+
+      <ConfirmDialog
+        open={Boolean(publishDialogConfig)}
+        onClose={handleClosePublishDialog}
+        onConfirm={handleConfirmPublishToggle}
+        title={publishDialogConfig?.title}
+        message={publishDialogConfig?.message}
+        confirmLabel={publishDialogConfig?.confirmLabel}
+        cancelLabel="Hủy"
+        destructive={publishDialogConfig?.destructive}
+        loading={publishing}
+      />
     </Box>
   );
 }
