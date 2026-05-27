@@ -2,13 +2,13 @@ const sql = require('mssql');
 require('dotenv').config();
 
 const dbConfig = {
-  server:   process.env.DB_SERVER   || 'localhost',
-  database: process.env.DB_NAME     || 'LearningPath_Base',
-  user:     process.env.DB_USER     || 'sa',
-  password: process.env.DB_PASSWORD || 'sa123',
-  port:     parseInt(process.env.DB_PORT || '1433', 10),
+  server: process.env.DB_SERVER || 'localhost',
+  database: process.env.DB_NAME || 'LearningPath_Base',
+  user: process.env.DB_USER || 'he180380',
+  password: process.env.DB_PASSWORD || '123',
+  port: parseInt(process.env.DB_PORT || '1433', 10),
   options: {
-    encrypt:                false,
+    encrypt: false,
     trustServerCertificate: true,
   },
 };
