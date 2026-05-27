@@ -1,28 +1,71 @@
-import { mentorCoursesMock } from '../data/mentorCoursesMock';
 import { normalizeMentorCourse } from '../utils/mentorCourseUtils';
 
 /**
  * Fetch courses managed by the current mentor.
- * TODO: replace mock with real API call
- *   fetchMentorCourses({ q, status, category, level, sort, page, pageSize })
+ * Gọi backend thật: POST /api/courses/my-courses
  */
 export async function fetchMentorCourses(query = {}) {
-  // const user = getUser();
-  // const params = new URLSearchParams();
-  // Object.entries(query).forEach(([key, value]) => {
-  //   if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
-  // });
-  // const response = await fetch(`http://localhost:5000/api/mentor/courses?${params}`, {
-  //   headers: { 'x-user-id': String(user.userId) },
-  // });
-  // const data = await response.json();
-  // return { ok: response.ok, courses: (data.courses ?? []).map(normalizeMentorCourse) };
+  try {
+    const rawUser = sessionStorage.getItem('user');
 
-  void query;
-  await delay(300);
-  return { ok: true, courses: mentorCoursesMock.map(normalizeMentorCourse) };
-}
+    if (!rawUser) {
+      return {
+        ok: false,
+        courses: [],
+        message: 'Chưa có user trong sessionStorage',
+      };
+    }
 
-function delay(ms) {
-  return new Promise((resolve) => { setTimeout(resolve, ms); });
+    const user = JSON.parse(rawUser);
+
+    const userId =
+      user.userId ||
+      user.UserId ||
+      user.id ||
+      user.Id;
+
+    if (!userId) {
+      return {
+        ok: false,
+        courses: [],
+        message: 'Không tìm thấy userId',
+      };
+    }
+
+    const response = await fetch('http://localhost:5000/api/courses/my-courses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: Number(userId),
+        roleName: 'mentor',
+      }),
+    });
+
+    const data = await response.json();
+
+    console.log('FETCH MENTOR COURSES RESPONSE:', data);
+
+    if (!response.ok || !data.success) {
+      return {
+        ok: false,
+        courses: [],
+        message: data.message || 'Không thể lấy khóa học của mentor',
+      };
+    }
+
+    return {
+      ok: true,
+      courses: (data.data || []).map(normalizeMentorCourse),
+    };
+  } catch (error) {
+    console.error('fetchMentorCourses error:', error);
+
+    return {
+      ok: false,
+      courses: [],
+      message: error.message,
+    };
+  }
 }
