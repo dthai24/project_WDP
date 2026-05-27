@@ -19,7 +19,7 @@ export default function MentorCourseCreateStepIndicator({ currentStep = 1 }) {
         flexWrap: 'wrap',
         alignItems: 'center',
         gap: { xs: 1, sm: 1.5 },
-        mb: 2.5,
+        mb: 1.75,
       }}
     >
       {STEPS.map(({ step, label }, index) => {
@@ -27,12 +27,12 @@ export default function MentorCourseCreateStepIndicator({ currentStep = 1 }) {
         const active = step === currentStep;
 
         return (
-          <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
               <Box
                 sx={{
-                  width: 24,
-                  height: 24,
+                  width: 22,
+                  height: 22,
                   borderRadius: '999px',
                   display: 'grid',
                   placeItems: 'center',
@@ -45,11 +45,11 @@ export default function MentorCourseCreateStepIndicator({ currentStep = 1 }) {
                   boxShadow: active ? '0 0 0 3px rgba(8,145,178,0.12)' : 'none',
                 }}
               >
-                {done ? <CheckRoundedIcon sx={{ fontSize: 14 }} /> : step}
+                {done ? <CheckRoundedIcon sx={{ fontSize: 13 }} /> : step}
               </Box>
               <Typography
                 sx={{
-                  fontSize: { xs: 12, sm: 13 },
+                  fontSize: { xs: 11, sm: 12 },
                   fontWeight: active ? 700 : 500,
                   color: active ? TEXT : done ? TEXT : MUTED,
                   whiteSpace: 'nowrap',
