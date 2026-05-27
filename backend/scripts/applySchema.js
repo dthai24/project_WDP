@@ -7,7 +7,7 @@ const dbConfig = {
   server: process.env.DB_SERVER || 'localhost',
   database: 'master',
   user: process.env.DB_USER || 'sa',
-  password: process.env.DB_PASSWORD || 'sa123',
+  password: process.env.DB_PASSWORD || '', // Removed hardcoded 'sa123'
   port: parseInt(process.env.DB_PORT || '1433', 10),
   options: { encrypt: false, trustServerCertificate: true },
 };
@@ -18,13 +18,11 @@ const splitBatches = (content) =>
     .map((batch) => batch.trim())
     .filter(Boolean);
 
-async function main() {
-  const schemaPath = path.join(__dirname, '..', '..', 'database', 'SQL_LearningPath.sql');
-  const content = fs.readFileSync(schemaPath, 'utf8');
+async function executeFile(filePath, description) {
+  const content = fs.readFileSync(filePath, 'utf8');
   const batches = splitBatches(content);
 
-  console.log(`Đang áp dụng schema (${batches.length} batch)...`);
-  await sql.connect(dbConfig);
+  console.log(`Đang áp dụng ${description} (${batches.length} batch)...`);
 
   for (let i = 0; i < batches.length; i += 1) {
     const batch = batches[i];
@@ -40,6 +38,15 @@ async function main() {
       throw err;
     }
   }
+}
+
+async function main() {
+  const schemaPath = path.join(__dirname, '..', '..', 'database', 'SQL_LearningPath.sql');
+
+  console.log('Kết nối tới SQL Server...');
+  await sql.connect(dbConfig);
+
+  await executeFile(schemaPath, 'SQL_LearningPath.sql');
 
   console.log('✅ Schema đã được áp dụng thành công.');
   process.exit(0);

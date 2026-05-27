@@ -19,8 +19,7 @@ import {
   parseCourseListParams,
   resetCourseListParams,
 } from "../utils/courseListParams";
-import { getCoursesApi, enrollCourseApi } from '../services/authService';
-import { getMyCoursesApi } from '../services/authService';
+import { enrollCourseApi } from '../services/authService';
 const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 
 const CATEGORY_OPTIONS = [
@@ -48,7 +47,23 @@ const SORT_OPTIONS = [
   { value: "progress", label: "Tiến độ cao nhất" },
 ];
 
-
+async function fetchCourses(userId) {
+  try {
+    const headers = {};
+    if (userId) {
+      headers["x-user-id"] = userId;
+    }
+    const res = await fetch("http://localhost:5000/api/courses", { headers });
+    const data = await res.json();
+    if (data.success && data.courses) {
+      return data.courses;
+    }
+    return [];
+  } catch (err) {
+    console.error("Error fetching courses:", err);
+    throw err;
+  }
+}
 
 export default function CourseListPage() {
   const theme = useTheme();
@@ -73,64 +88,29 @@ export default function CourseListPage() {
   };
 
   useEffect(() => {
-  let isMounted = true;
-  
-  async function loadData() {
-    try {
-      setLoading(true);
+    let isMounted = true;
 
-      const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+    async function loadCourses() {
+      try {
+        setLoading(true);
+        const userRaw = sessionStorage.getItem("user");
+        const currentUser = userRaw ? JSON.parse(userRaw) : null;
 
-      const [allCoursesRes, myCoursesRes] = await Promise.all([
-        getCoursesApi(),
-        user.userId ? getMyCoursesApi(user.userId) : { ok: true, data: { courses: [] } }
-      ]);
-
-      if (!isMounted) return;
-
-      const myCourseIds = (myCoursesRes.ok && myCoursesRes.data.courses) 
-        ? myCoursesRes.data.courses.map(c => c.CourseId) 
-        : [];
-
-      if (allCoursesRes.ok && allCoursesRes.data.success) {
-        const mapped = allCoursesRes.data.courses.map((c) => ({
-          courseId:           c.CourseId,
-          courseName:         c.CourseName,
-          description:        c.Description   ?? '',
-          createdAt:          c.CreatedAt,
-          category:           c.Category      ?? 'Giao tiếp',
-          level:              c.Level         ?? 'Cơ bản',
-          instructor:         c.Instructor    ?? '',
-          totalLessons:       c.TotalLessons  ?? 0,
-          rating:             c.Rating        ?? 4.5,
-          studentCount:       c.StudentCount  ?? 0,
-          popularity:         c.StudentCount  ?? 0,
-          thumbnail:          c.Thumbnail     ?? null,
-          reviewCount:        Math.round((c.StudentCount ?? 0) * 0.55),
-          progressPercentage: 0,
-
-          isEnrolled:         myCourseIds.includes(c.CourseId),
-        }));
-        
-        setCourses(mapped);
-      } else {
-        toast.error('Không thể tải danh sách khóa học.');
-        setCourses([]);
+        const data = await fetchCourses(currentUser?.userId);
+        if (isMounted) setCourses(Array.isArray(data) ? data : []);
+      } catch {
+        toast.error("Không thể tải danh sách khóa học. Vui lòng thử lại.");
+        if (isMounted) setCourses([]);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Có lỗi xảy ra khi tải dữ liệu.');
-      if (isMounted) setCourses([]);
-    } finally {
-      if (isMounted) setLoading(false);
     }
-  }
 
-  loadData();
-  return () => {
-    isMounted = false;
-  };
-}, []);
+    loadCourses();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredCourses = useMemo(() => {
     const keyword = filters.keyword.toLowerCase();
