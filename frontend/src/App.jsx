@@ -77,7 +77,7 @@ export default function App() {
           <Route
             path="my-courses"
             element={
-              <ProtectedRoute allowedRoles={['Student']}>
+              <ProtectedRoute allowedRoles={['Student','Mentor']}>
                 <MyCoursesListPage />
               </ProtectedRoute>
             }
