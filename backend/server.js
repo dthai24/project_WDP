@@ -4,7 +4,9 @@ require('dotenv').config();
 
 const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
-const courseRoutes = require('./routes/course.routes');
+const userRoutes = require('./routes/userRoutes');
+const courseRoutes = require('./routes/courses.router');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
