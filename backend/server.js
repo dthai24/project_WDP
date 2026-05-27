@@ -1,5 +1,5 @@
 const express = require('express');
-const cors = require('cors');
+const cors    = require('cors');
 require('dotenv').config();
 
 const { connectDB } = require('./config/db');
@@ -19,7 +19,9 @@ connectDB();
 
 // ---- Routes ----
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
+
 // ---- Health-check ----
 app.get('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running 🚀' }));
 

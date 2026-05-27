@@ -20,6 +20,7 @@ import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../common/Logo";
+import AppButton from "../common/AppButton";
 import SearchBox from "../common/SearchBox";
 import { toast } from "../common/Toast";
 import {
@@ -38,23 +39,6 @@ const ERROR = "#DC2626";
 const USER_MENU_ITEMS = [
   { key: "profile", label: "Hồ sơ cá nhân", icon: PersonOutlineRoundedIcon, path: "/profile" },
 ];
-
-function getUserId(user) {
-  return user?.userId ?? user?.UserId ?? user?.id ?? user?.Id;
-}
-
-function getUserRoleName(user) {
-  const role =
-    user?.roleName ??
-    user?.RoleName ??
-    user?.role ??
-    user?.Role ??
-    user?.roles?.[0] ??
-    user?.Roles?.[0];
-
-  return Array.isArray(role) ? role[0] : role;
-}
-
 
 function getUserInitials(user) {
   const name = user?.fullName || user?.email || "?";
@@ -203,49 +187,8 @@ export default function Header({
 
   const displayName = user?.fullName || "Phúc Nguyễn";
   const displayEmail = user?.email || "";
-  const displayRole = getUserRoleName(user) || "Học viên";
-  const handleMyCourses = async () => {
-    const userId = getUserId(user);
-    const roleName = getUserRoleName(user);
+  const displayRole = user?.role || "Học viên";
 
-    if (!userId || !roleName) {
-      console.error("Missing userId or roleName in session user:", user);
-      toast.error("Không tìm thấy thông tin đăng nhập. Vui lòng đăng nhập lại.");
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    try {
-      const res = await fetch("http://localhost:5000/api/courses/my-courses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: Number(userId),
-          roleName: String(roleName),
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok || !result.success) {
-        toast.error(result.message || "Không thể lấy khóa học của tôi.");
-        return;
-      }
-
-      navigate("/my-courses", {
-        state: {
-          courses: result.data,
-          userId: Number(userId),
-          roleName: String(roleName),
-        },
-      });
-    } catch (error) {
-      console.error("Get my courses error:", error.message);
-      toast.error("Không thể kết nối server.");
-    }
-  };
   const applyCourseKeyword = (value) => {
     const current = parseCourseListParams(searchParams);
     const next = buildCourseListSearchParams(
@@ -290,9 +233,9 @@ export default function Header({
   const userZoneHandlers = isMobile
     ? {}
     : {
-      onMouseEnter: openUserMenu,
-      onMouseLeave: scheduleCloseUserMenu,
-    };
+        onMouseEnter: openUserMenu,
+        onMouseLeave: scheduleCloseUserMenu,
+      };
 
   return (
     <AppBar
@@ -363,7 +306,7 @@ export default function Header({
                 <Box
                   component="button"
                   type="button"
-                  onClick={handleMyCourses}
+                  onClick={() => navigate("/my-courses")}
                   sx={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -391,20 +334,37 @@ export default function Header({
               </Tooltip>
             )}
 
-            <IconButton
-              aria-label="Thông báo"
-              size="medium"
-              sx={{
-                color: "text.secondary",
-                borderRadius: theme.ios18?.radius?.xs,
-                "&:hover": {
-                  color: "primary.main",
-                  bgcolor: alpha(theme.palette.primary.main, 0.08),
-                },
-              }}
-            >
-              <NotificationsOutlinedIcon />
-            </IconButton>
+            {user && (
+              <IconButton
+                aria-label="Thông báo"
+                size="medium"
+                sx={{
+                  color: "text.secondary",
+                  borderRadius: theme.ios18?.radius?.xs,
+                  "&:hover": {
+                    color: "primary.main",
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  },
+                }}
+              >
+                <NotificationsOutlinedIcon />
+              </IconButton>
+            )}
+
+            {!user && (
+              <AppButton
+                onClick={() => navigate("/login")}
+                sx={{
+                  px: { xs: 2, sm: 2.5 },
+                  py: 0.75,
+                  fontSize: 13,
+                  minWidth: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Đăng nhập
+              </AppButton>
+            )}
 
             {user && (
               <Box {...userZoneHandlers} sx={{ position: "relative" }}>

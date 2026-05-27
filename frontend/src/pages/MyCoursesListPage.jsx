@@ -269,90 +269,12 @@ function pickContinueCourse(courses) {
   return learning[0] ?? null;
 }
 
-function getSessionUser() {
-  try {
-    return JSON.parse(sessionStorage.getItem("user") || "{}");
-  } catch (error) {
-    console.error("Parse session user error:", error);
-    return {};
-  }
-}
-
-function getUserId(user) {
-  return user?.userId ?? user?.UserId ?? user?.id ?? user?.Id;
-}
-
-function getUserRole(user) {
-  const role =
-    user?.roleName ??
-    user?.RoleName ??
-    user?.role ??
-    user?.Role ??
-    user?.roles?.[0] ??
-    user?.Roles?.[0];
-
-  return Array.isArray(role) ? role[0] : role;
-}
-
-async function fetchMyCourses(userId, roleName) {
-  const res = await fetch("http://localhost:5000/api/courses/my-courses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      userId: Number(userId),
-      roleName: String(roleName),
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error("Cannot fetch my courses");
-  }
-
-  const result = await res.json();
-  return result.data || [];
-}
-function normalizeCourse(course, isSaved) {
-  const courseId = course.courseId ?? course.CourseId;
-
-  return {
-    courseId,
-    courseName: course.courseName ?? course.CourseName ?? "Chưa có tên khóa học",
-    description: course.description ?? course.Description ?? "",
-    category: course.category ?? course.Category ?? "Giao tiếp",
-    level: course.level ?? course.Level ?? "Cơ bản",
-    instructor: course.instructor ?? course.Instructor ?? "Chưa cập nhật",
-    totalLessons: course.totalLessons ?? course.TotalLessons ?? 0,
-    totalNodes: course.totalNodes ?? course.TotalNodes ?? 0,
-    totalMaterials: course.totalMaterials ?? course.TotalMaterials ?? 0,
-    progressPercentage: course.progressPercentage ?? course.ProgressPercentage ?? 0,
-    enrollmentStatus:
-      course.enrollmentStatus ??
-      course.EnrollmentStatus ??
-      "learning",
-    currentStage: course.currentStage ?? course.CurrentStage,
-    currentLesson: course.currentLesson ?? course.CurrentLesson,
-    lastActivity: course.lastActivity ?? course.LastActivity ?? "",
-    lastActivityOrder: course.lastActivityOrder ?? course.LastActivityOrder ?? 99,
-    thumbnail: course.thumbnail ?? course.Thumbnail ?? "",
-    modules: course.modules ?? course.Modules ?? [],
-    currentLessonDetail:
-      course.currentLessonDetail ?? course.CurrentLessonDetail ?? null,
-    recentLessons: course.recentLessons ?? course.RecentLessons ?? [],
-    isSaved: isSaved(courseId),
-  };
-}
-
 export default function MyCoursesListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { savedIds, isSaved, unsave } = useSavedCourses();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const keyword = (searchParams.get("keyword") ?? "").trim();
   const [allCourses, setAllCourses] = useState([]);
 
