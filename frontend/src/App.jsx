@@ -20,6 +20,9 @@ import MentorStudentProgressPage from './pages/mentor/MentorStudentProgressPage'
 import MentorCreateCoursePage from './pages/mentor/MentorCreateCoursePage';
 import MentorCreateCourseContentPage from './pages/mentor/MentorCreateCourseContentPage';
 import MentorCreateCourseReviewPage from './pages/mentor/MentorCreateCourseReviewPage';
+import MentorEditCoursePage from './pages/mentor/MentorEditCoursePage';
+import MentorEditCourseContentPage from './pages/mentor/MentorEditCourseContentPage';
+import MentorEditCourseReviewPage from './pages/mentor/MentorEditCourseReviewPage';
 import MentorCourseDetailPage from './pages/mentor/MentorCourseDetailPage';
 import MentorCoursePlaceholder from './components/mentor/MentorCoursePlaceholder';
 
@@ -140,18 +143,9 @@ export default function App() {
           <Route path="courses/create/review" element={<MentorCreateCourseReviewPage />} />
           <Route path="courses/create/content" element={<MentorCreateCourseContentPage />} />
           <Route path="courses/create" element={<MentorCreateCoursePage />} />
-          <Route path="courses/:courseId/edit" element={
-            <MentorCoursePlaceholder
-              title="Chỉnh sửa khóa học"
-              description="Cập nhật thông tin khóa học."
-            />
-          } />
-          <Route path="courses/:courseId/content" element={
-            <MentorCoursePlaceholder
-              title="Quản lý nội dung"
-              description="Quản lý chương, bài và học liệu."
-            />
-          } />
+          <Route path="courses/:courseId/review" element={<MentorEditCourseReviewPage />} />
+          <Route path="courses/:courseId/content/edit" element={<MentorEditCourseContentPage />} />
+          <Route path="courses/:courseId/edit" element={<MentorEditCoursePage />} />
           <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
           <Route path="courses" element={<MentorCoursesPage />} />
           <Route path="news" element={<MentorNewsPage />} />
