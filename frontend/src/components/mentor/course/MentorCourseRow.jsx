@@ -140,7 +140,7 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
 export default function MentorCourseRow({ course }) {
   const theme = useTheme();
   const statusChip = getStatusChip(course.status);
-  const detailPath = `/mentor/courses/${course.courseId}`;
+  const detailPath = `/mentor/courses/${course.courseId}?tab=course`;
 
   return (
     <Box

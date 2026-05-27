@@ -20,6 +20,7 @@ import MentorStudentProgressPage from './pages/mentor/MentorStudentProgressPage'
 import MentorCreateCoursePage from './pages/mentor/MentorCreateCoursePage';
 import MentorCreateCourseContentPage from './pages/mentor/MentorCreateCourseContentPage';
 import MentorCreateCourseReviewPage from './pages/mentor/MentorCreateCourseReviewPage';
+import MentorCourseDetailPage from './pages/mentor/MentorCourseDetailPage';
 import MentorCoursePlaceholder from './components/mentor/MentorCoursePlaceholder';
 
 import MainLayout from './components/layout/MainLayout';
@@ -151,12 +152,7 @@ export default function App() {
               description="Quản lý chương, bài và học liệu."
             />
           } />
-          <Route path="courses/:courseId" element={
-            <MentorCoursePlaceholder
-              title="Chi tiết khóa học"
-              description="Xem tổng quan khóa học."
-            />
-          } />
+          <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
           <Route path="courses" element={<MentorCoursesPage />} />
           <Route path="news" element={<MentorNewsPage />} />
           <Route path="student-progress" element={<MentorStudentProgressPage />} />

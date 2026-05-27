@@ -1,5 +1,12 @@
 import { mentorCoursesMock } from '../data/mentorCoursesMock';
+import { mentorCourseDetailById } from '../data/mentorCourseDetailMock';
+import { mentorCourseStudentsByCourseId } from '../data/mentorCourseStudentsMock';
 import { normalizeMentorCourse } from '../utils/mentorCourseUtils';
+import { normalizeMentorCourseDetail } from '../utils/mentorCourseDetailUtils';
+import {
+  computeCourseStudentStats,
+  normalizeCourseStudent,
+} from '../utils/mentorCourseStudentsUtils';
 import { buildCreateCourseStep1Payload } from '../utils/mentorCourseFormUtils';
 import { saveCreateCourseStep1ToStorage, saveCreateCourseContentToStorage } from '../utils/mentorCourseCreateStorage';
 import { buildCourseContentPayload, buildFullCreateCoursePayload } from '../utils/mentorCourseContentUtils';
@@ -128,6 +135,101 @@ export async function createCourseWithContent(course, paths) {
   void payload;
   await delay(600);
   return { ok: true, courseId: Date.now() };
+}
+
+/**
+ * Fetch a single mentor course with content tree.
+ * TODO: replace mock with real API call
+ *   fetchMentorCourseDetail(courseId) → GET /api/mentor/courses/:courseId
+ */
+export async function fetchMentorCourseDetail(courseId) {
+  // const user = getUser();
+  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
+  //   headers: { 'x-user-id': String(user.userId) },
+  // });
+  // const data = await response.json();
+  // if (!response.ok) return { ok: false, message: data.message };
+  // return { ok: true, course: normalizeMentorCourseDetail(data.course) };
+
+  await delay(350);
+  const id = Number(courseId);
+  const raw = mentorCourseDetailById[id];
+
+  if (!raw) {
+    return { ok: false, message: 'Không tìm thấy khóa học.' };
+  }
+
+  return { ok: true, course: normalizeMentorCourseDetail(raw) };
+}
+
+/**
+ * Toggle publish status for a mentor course.
+ * TODO: replace mock with real API call
+ *   updateCoursePublishStatus(courseId, isPublished) → PATCH /api/mentor/courses/:courseId/publish
+ */
+export async function updateCoursePublishStatus(courseId, isPublished) {
+  // const user = getUser();
+  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/publish`, {
+  //   method: 'PATCH',
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //     'x-user-id': String(user.userId),
+  //   },
+  //   body: JSON.stringify({ isPublished }),
+  // });
+  // const data = await response.json();
+  // if (!response.ok) return { ok: false, message: data.message };
+  // return { ok: true, course: normalizeMentorCourseDetail(data.course) };
+
+  await delay(400);
+  const id = Number(courseId);
+  const raw = mentorCourseDetailById[id];
+
+  if (!raw) {
+    return { ok: false, message: 'Không tìm thấy khóa học.' };
+  }
+
+  const updated = {
+    ...raw,
+    IsPublished: Boolean(isPublished),
+  };
+
+  mentorCourseDetailById[id] = updated;
+
+  return { ok: true, course: normalizeMentorCourseDetail(updated) };
+}
+
+/**
+ * Fetch students enrolled in a course with optional filters.
+ * TODO: replace mock with real API call
+ *   fetchCourseStudents(courseId, filters) → GET /api/mentor/courses/:courseId/students
+ */
+export async function fetchCourseStudents(courseId, filters = {}) {
+  // TODO: fetch learner progress by courseId from API
+  // const params = new URLSearchParams(filters);
+  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students?${params}`);
+  // return { ok: true, students: data.students.map(normalizeCourseStudent) };
+
+  void filters;
+  await delay(300);
+  const id = Number(courseId);
+  const rawStudents = mentorCourseStudentsByCourseId[id] ?? [];
+
+  return { ok: true, students: rawStudents.map(normalizeCourseStudent) };
+}
+
+/**
+ * Fetch aggregate student stats for a course.
+ * TODO: replace mock with real API call
+ *   fetchCourseStudentStats(courseId) → GET /api/mentor/courses/:courseId/students/stats
+ */
+export async function fetchCourseStudentStats(courseId) {
+  await delay(200);
+  const id = Number(courseId);
+  const rawStudents = mentorCourseStudentsByCourseId[id] ?? [];
+  const students = rawStudents.map(normalizeCourseStudent);
+
+  return { ok: true, stats: computeCourseStudentStats(students) };
 }
 
 /**
