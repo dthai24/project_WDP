@@ -12,6 +12,7 @@ import CourseListPagination, {
 import EmptyState from "../components/common/EmptyState";
 import useSavedCourses from "../hooks/useSavedCourses";
 import { buildActiveFilterChips, buildCourseDetailPath } from "../utils/courseListParams";
+import { getMyCoursesApi } from '../services/authService';
 
 const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 
@@ -43,192 +44,7 @@ const DEFAULT_FILTERS = {
   page: 1,
 };
 
-/** Khóa đã đăng ký / đang học / hoàn thành — TODO: thay bằng API */
-const MOCK_ENROLLED_COURSES = [
-  {
-    courseId: 1,
-    courseName: "Tiếng Anh Thương Mại & Giao Tiếp Công Sở",
-    category: "Giao tiếp",
-    level: "Trung cấp",
-    instructor: "Nguyễn Minh An",
-    totalLessons: 8,
-    totalNodes: 2,
-    totalMaterials: 5,
-    progressPercentage: 40,
-    enrollmentStatus: "learning",
-    currentStage: 1,
-    currentLesson: 3,
-    lastActivity: "2 ngày trước",
-    lastActivityOrder: 2,
-    thumbnail: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",
-    modules: [
-      { id: 1, title: "Chặng 1: Nền tảng từ vựng", completedLessons: 3, totalLessons: 3, status: "completed" },
-      { id: 2, title: "Chặng 2: Email & giao tiếp", completedLessons: 1, totalLessons: 4, status: "learning" },
-    ],
-    currentLessonDetail: {
-      stage: "Chặng 2: Email & giao tiếp",
-      lesson: "Bài 3",
-      title: "Cấu trúc email chuyên nghiệp",
-    },
-    recentLessons: [
-      { id: 1, label: "Bài 2 · Từ vựng cốt lõi công sở", isCompleted: true },
-      { id: 2, label: "Bài 3 · Cấu trúc email chuyên nghiệp", isCompleted: false, isCurrent: true },
-    ],
-  },
-  {
-    courseId: 3,
-    courseName: "Luyện viết IELTS Task 2",
-    category: "IELTS",
-    level: "Nâng cao",
-    instructor: "Trần Quốc Huy",
-    totalLessons: 16,
-    totalNodes: 6,
-    totalMaterials: 20,
-    progressPercentage: 75,
-    enrollmentStatus: "learning",
-    currentStage: 4,
-    currentLesson: 11,
-    lastActivity: "Hôm qua",
-    lastActivityOrder: 1,
-    thumbnail: "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=800&q=80",
-    modules: [
-      { id: 1, title: "Chặng 1: Nền tảng", completedLessons: 3, totalLessons: 3, status: "completed" },
-      { id: 2, title: "Chặng 2: Kỹ năng chính", completedLessons: 4, totalLessons: 4, status: "completed" },
-      { id: 3, title: "Chặng 3: Luyện đề nâng cao", completedLessons: 2, totalLessons: 5, status: "learning" },
-      { id: 4, title: "Chặng 4: Ôn tập tổng hợp", completedLessons: 0, totalLessons: 4, status: "not_started" },
-    ],
-    currentLessonDetail: {
-      stage: "Chặng 3: Luyện đề nâng cao",
-      lesson: "Bài 11",
-      title: "Phân tích đề bài phức tạp",
-    },
-    recentLessons: [
-      { id: 1, label: "Bài 9 · Mở bài hiệu quả", isCompleted: true },
-      { id: 2, label: "Bài 10 · Thân bài logic", isCompleted: true },
-      { id: 3, label: "Bài 11 · Phân tích đề bài phức tạp", isCompleted: false, isCurrent: true },
-    ],
-  },
-  {
-    courseId: 8,
-    courseName: "Giao tiếp đời sống hàng ngày",
-    category: "Giao tiếp",
-    level: "Cơ bản",
-    instructor: "Lê Thu Hà",
-    totalLessons: 9,
-    totalNodes: 3,
-    totalMaterials: 8,
-    progressPercentage: 100,
-    enrollmentStatus: "completed",
-    lastActivity: "5 ngày trước",
-    lastActivityOrder: 5,
-    thumbnail: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80",
-    modules: [
-      { id: 1, title: "Chặng 1: Chào hỏi & giới thiệu", completedLessons: 3, totalLessons: 3, status: "completed" },
-      { id: 2, title: "Chặng 2: Mua sắm & du lịch", completedLessons: 3, totalLessons: 3, status: "completed" },
-      { id: 3, title: "Chặng 3: Tình huống xã giao", completedLessons: 3, totalLessons: 3, status: "completed" },
-    ],
-    currentLessonDetail: null,
-    recentLessons: [
-      { id: 1, label: "Bài 7 · Hỏi đường", isCompleted: true },
-      { id: 2, label: "Bài 8 · Đặt phòng khách sạn", isCompleted: true },
-      { id: 3, label: "Bài 9 · Bài kiểm tra cuối khóa", isCompleted: true },
-    ],
-  },
-  {
-    courseId: 11,
-    courseName: "IELTS Reading: True/False/Not Given",
-    category: "IELTS",
-    level: "Trung cấp",
-    instructor: "Phạm Văn Đức",
-    totalLessons: 13,
-    totalNodes: 5,
-    totalMaterials: 15,
-    progressPercentage: 55,
-    enrollmentStatus: "learning",
-    currentStage: 2,
-    currentLesson: 7,
-    lastActivity: "3 ngày trước",
-    lastActivityOrder: 3,
-    thumbnail: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80",
-    modules: [
-      { id: 1, title: "Chặng 1: Chiến lược cơ bản", completedLessons: 4, totalLessons: 4, status: "completed" },
-      { id: 2, title: "Chặng 2: T/F/NG nâng cao", completedLessons: 2, totalLessons: 5, status: "learning" },
-      { id: 3, title: "Chặng 3: Luyện đề thực chiến", completedLessons: 0, totalLessons: 4, status: "not_started" },
-    ],
-    currentLessonDetail: {
-      stage: "Chặng 2: T/F/NG nâng cao",
-      lesson: "Bài 7",
-      title: "Nhận diện bẫy Not Given",
-    },
-    recentLessons: [
-      { id: 1, label: "Bài 5 · Đọc lướt & quét thông tin", isCompleted: true },
-      { id: 2, label: "Bài 6 · Paraphrase trong đề", isCompleted: true },
-      { id: 3, label: "Bài 7 · Nhận diện bẫy Not Given", isCompleted: false, isCurrent: true },
-    ],
-  },
-];
 
-/** Khóa chỉ lưu, chưa đăng ký — TODO: thay bằng API */
-const MOCK_SAVED_CATALOG = [
-  {
-    courseId: 2,
-    courseName: "Kỹ năng thuyết trình tiếng Anh cho sinh viên",
-    category: "Giao tiếp",
-    level: "Cơ bản",
-    instructor: "Hoàng Thùy Linh",
-    totalLessons: 12,
-    totalNodes: 4,
-    totalMaterials: 12,
-    progressPercentage: 0,
-    enrollmentStatus: "none",
-    savedAtOrder: 1,
-    thumbnail: null,
-  },
-  {
-    courseId: 4,
-    courseName: "TOEIC Listening & Reading 750+",
-    category: "TOEIC",
-    level: "Trung cấp",
-    instructor: "Nguyễn Bảo Trân",
-    totalLessons: 20,
-    totalNodes: 5,
-    totalMaterials: 18,
-    progressPercentage: 0,
-    enrollmentStatus: "none",
-    savedAtOrder: 2,
-    thumbnail: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80",
-  },
-  {
-    courseId: 6,
-    courseName: "Phát âm chuẩn & Intonation",
-    category: "Phát âm",
-    level: "Trung cấp",
-    instructor: "Đỗ Khánh Vy",
-    totalLessons: 10,
-    totalNodes: 3,
-    totalMaterials: 9,
-    progressPercentage: 0,
-    enrollmentStatus: "none",
-    savedAtOrder: 3,
-    thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80",
-  },
-  {
-    courseId: 7,
-    courseName: "IELTS Speaking Part 2 & 3",
-    category: "IELTS",
-    level: "Trung cấp",
-    instructor: "Vũ Minh Tuấn",
-    totalLessons: 11,
-    totalNodes: 4,
-    totalMaterials: 14,
-    progressPercentage: 0,
-    enrollmentStatus: "none",
-    savedAtOrder: 4,
-    thumbnail: null,
-  },
-];
-
-const ENROLLED_IDS = new Set(MOCK_ENROLLED_COURSES.map((c) => c.courseId));
 
 function getRowVariant(course) {
   if (course.enrollmentStatus === "completed") return "completed";
@@ -276,19 +92,43 @@ export default function MyCoursesListPage() {
   const { savedIds, isSaved, unsave } = useSavedCourses();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const keyword = (searchParams.get("keyword") ?? "").trim();
+// ── Real data ──────────────────────────────────────────────
+const [enrolledCourses, setEnrolledCourses] = useState([]);
+
+useEffect(() => {
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+  if (!user.userId) return;
+  getMyCoursesApi(user.userId).then(({ ok, data }) => {
+    if (ok && data.success) {
+      setEnrolledCourses(
+        data.courses.map((c) => ({
+          courseId:            c.CourseId,
+          courseName:          c.CourseName,
+          description:         c.Description  ?? '',
+          thumbnail:           c.Thumbnail    ?? null,
+          category:            c.Category     ?? 'Giao tiếp',
+          level:               c.Level        ?? 'Cơ bản',
+          instructor:          c.Instructor   ?? '',
+          totalLessons:        c.TotalLessons ?? 0,
+          rating:              c.Rating       ?? 4.5,
+          progressPercentage:  c.ProgressPercentage ?? 0,
+          enrollmentStatus:    c.ProgressPercentage >= 100 ? 'completed' : 'learning',
+          lastActivityOrder:   1,
+          modules:             [],
+          currentLessonDetail: null,
+          recentLessons:       [],
+        }))
+      );
+    }
+  });
+}, []);
 
   const allCourses = useMemo(() => {
-    const enrolled = MOCK_ENROLLED_COURSES.map((course) => ({
-      ...course,
-      isSaved: isSaved(course.courseId),
-    }));
-
-    const savedOnly = MOCK_SAVED_CATALOG.filter(
-      (course) => savedIds.has(course.courseId) && !ENROLLED_IDS.has(course.courseId)
-    ).map((course) => ({ ...course, isSaved: true }));
-
-    return [...enrolled, ...savedOnly];
-  }, [savedIds, isSaved]);
+  return enrolledCourses.map((course) => ({
+    ...course,
+    isSaved: isSaved(course.courseId),
+  }));
+}, [isSaved, enrolledCourses]);
 
   const showReset = hasActiveFilters(filters, keyword);
   const activeFilterChips = useMemo(

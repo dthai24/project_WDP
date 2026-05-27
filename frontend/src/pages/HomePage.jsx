@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -25,6 +25,8 @@ import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined
 import AppButton from "../components/common/AppButton";
 import AppProgressBar, { getProgressColor } from "../components/common/AppProgressBar";
 import heroImg from "../asset/image/herosection.png";
+// Thêm import
+import { getTopCoursesApi } from '../services/authService';
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -796,7 +798,7 @@ function PathsSection() {
 
 /* ─── Section 4: Suggested courses ──────────────────────── */
 
-function CoursesSection({ onExplore, onNavigateCourse }) {
+function CoursesSection({ courses = MOCK_COURSES,onExplore, onNavigateCourse }) {
   const theme = useTheme();
 
   return (
@@ -814,7 +816,7 @@ function CoursesSection({ onExplore, onNavigateCourse }) {
           gap: 2.5,
         }}
       >
-        {MOCK_COURSES.map((course) => (
+        {courses.map((course) => (
           <CourseHomeCard
             key={course.courseId}
             course={course}
@@ -1186,6 +1188,27 @@ export default function HomePage() {
 
   // TODO: replace with real API call
   const continueCourse = MOCK_CONTINUE_COURSE;
+  const [topCourses, setTopCourses] = useState(MOCK_COURSES);
+
+useEffect(() => {
+  getTopCoursesApi(4).then(({ ok, data }) => {
+    if (ok && data.success && data.courses.length > 0) {
+      setTopCourses(
+        data.courses.map((c) => ({
+          courseId:     c.CourseId,
+          courseName:   c.CourseName,
+          category:     c.Category     ?? 'Giao tiếp',
+          level:        c.Level        ?? 'Cơ bản',
+          instructor:   c.Instructor   ?? '',
+          rating:       c.Rating       ?? 4.5,
+          studentCount: c.StudentCount ?? 0,
+          totalLessons: c.TotalLessons ?? 0,
+          thumbnail:    c.Thumbnail    ?? null,
+        }))
+      );
+    }
+  });
+}, []);
 
   const handleExplore   = () => navigate("/courses");
   const handleMyCourses = () => navigate("/my-courses");
@@ -1232,6 +1255,7 @@ export default function HomePage() {
         <PathsSection />
 
         <CoursesSection
+        courses={topCourses}
           onExplore={handleExplore}
           onNavigateCourse={handleCourseNav}
         />
