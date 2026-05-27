@@ -1,4 +1,6 @@
 // TODO: update backend/DB MaterialType to support TEXT
+import { resolveVideoEmbed } from './videoEmbedUtils';
+
 export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
 
 export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
@@ -30,6 +32,15 @@ export const MATERIAL_URL_LABELS = {
 
 export const DOC_SOURCE_UPLOAD = 'UPLOAD';
 export const DOC_SOURCE_LINK = 'LINK';
+export const VIDEO_SOURCE_LINK = 'LINK';
+
+export function getVideoDefaultFields() {
+  return {
+    SourceType: VIDEO_SOURCE_LINK,
+    MaterialUrl: '',
+    EmbedUrl: null,
+  };
+}
 
 export const DOC_ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
 
@@ -347,6 +358,18 @@ export function buildCourseContentPayload(paths) {
               FileName: material.FileName ?? null,
               FileSize: material.FileSize ?? null,
               MaterialUrl: null,
+            };
+          }
+
+          if (material.MaterialType === 'VIDEO') {
+            const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
+            const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
+            // TODO: backend should support EmbedUrl for VIDEO material
+            return {
+              ...base,
+              SourceType: VIDEO_SOURCE_LINK,
+              MaterialUrl: materialUrl,
+              EmbedUrl: embedUrl,
             };
           }
 
