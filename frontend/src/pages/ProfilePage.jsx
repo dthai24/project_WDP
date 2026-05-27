@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Avatar,
   Box,
@@ -274,6 +274,50 @@ export default function ProfilePage() {
     dateOfBirth: INITIAL_PROFILE.dateOfBirth,
     currentLevel: INITIAL_PROFILE.currentLevel,
   });
+
+  const userRaw = sessionStorage.getItem("user");
+  const currentUser = userRaw ? JSON.parse(userRaw) : null;
+
+  useEffect(() => {
+    if (!currentUser?.userId) return;
+
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/users/profile", {
+          headers: {
+            "x-user-id": currentUser.userId
+          }
+        });
+        const data = await response.json();
+        if (data.success && data.profile) {
+          const fetchedProfile = {
+            ...profile,
+            name: data.profile.name,
+            email: data.profile.email,
+            phone: data.profile.phone,
+            dateOfBirth: data.profile.dateOfBirth ? data.profile.dateOfBirth.split('T')[0] : "",
+            joinedAt: new Date(data.profile.joinedAt).toLocaleDateString("vi-VN"),
+            stats: {
+              ...profile.stats,
+              learning: data.profile.stats.learning,
+              completed: data.profile.stats.completed,
+            }
+          };
+          setProfile(fetchedProfile);
+          setFormData({
+            name: fetchedProfile.name,
+            phone: fetchedProfile.phone,
+            dateOfBirth: fetchedProfile.dateOfBirth,
+            currentLevel: fetchedProfile.currentLevel,
+          });
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải hồ sơ:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const initials = profile.name
     .split(" ")
     .filter(Boolean)
@@ -285,9 +329,41 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSave = () => {
-    setProfile((prev) => ({ ...prev, ...formData }));
-    setEditMode(false);
+  const handleSave = async () => {
+    if (!currentUser?.userId) return;
+
+    try {
+      const response = await fetch("http://localhost:5000/api/users/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": currentUser.userId
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+          dateOfBirth: formData.dateOfBirth
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setProfile((prev) => ({ ...prev, ...formData }));
+        setEditMode(false);
+
+        // Optional: Update session storage to reflect new name in Navbar
+        const updatedUser = { ...currentUser, fullName: formData.name };
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        // Force a small storage event to update Header if they listen to it, 
+        // though normally context is better.
+        window.dispatchEvent(new Event("storage"));
+      } else {
+        alert("Cập nhật thất bại: " + data.message);
+      }
+    } catch (err) {
+      console.error("Lỗi cập nhật hồ sơ:", err);
+      alert("Đã xảy ra lỗi khi cập nhật hồ sơ.");
+    }
   };
 
   const handleCancel = () => {

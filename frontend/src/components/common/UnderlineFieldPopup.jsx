@@ -62,6 +62,7 @@ function PopupField({
           placeholder={field.placeholder}
           disabled={disabled}
           fullWidth
+          autoComplete={isPassword ? "new-password" : "off"}
           sx={{
             fontSize: 13.5,
             fontWeight: 600,

@@ -4,26 +4,26 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import UnderlineFieldPopup from "../common/UnderlineFieldPopup";
 
 const EMPTY_FORM = {
-  current: "",
-  newPassword: "",
-  confirm: "",
+  _currPass: "",
+  _newPass: "",
+  _confPass: "",
 };
 
 const PASSWORD_FIELDS = [
   {
-    name: "current",
+    name: "_currPass",
     label: "Mật khẩu hiện tại",
     placeholder: "Nhập mật khẩu hiện tại",
     type: "password",
   },
   {
-    name: "newPassword",
+    name: "_newPass",
     label: "Mật khẩu mới",
     placeholder: "Nhập mật khẩu mới",
     type: "password",
   },
   {
-    name: "confirm",
+    name: "_confPass",
     label: "Xác nhận mật khẩu mới",
     placeholder: "Nhập lại mật khẩu mới",
     type: "password",
@@ -32,11 +32,11 @@ const PASSWORD_FIELDS = [
 
 function validatePasswordForm(form) {
   const errors = {};
-  if (!form.current.trim()) errors.current = "Vui lòng nhập mật khẩu hiện tại";
-  if (!form.newPassword.trim()) errors.newPassword = "Vui lòng nhập mật khẩu mới";
-  else if (form.newPassword.length < 6) errors.newPassword = "Mật khẩu mới tối thiểu 6 ký tự";
-  if (!form.confirm.trim()) errors.confirm = "Vui lòng xác nhận mật khẩu mới";
-  else if (form.confirm !== form.newPassword) errors.confirm = "Mật khẩu xác nhận không khớp";
+  if (!form._currPass.trim()) errors._currPass = "Vui lòng nhập mật khẩu hiện tại";
+  if (!form._newPass.trim()) errors._newPass = "Vui lòng nhập mật khẩu mới";
+  else if (form._newPass.length < 6) errors._newPass = "Mật khẩu mới tối thiểu 6 ký tự";
+  if (!form._confPass.trim()) errors._confPass = "Vui lòng xác nhận mật khẩu mới";
+  else if (form._confPass !== form._newPass) errors._confPass = "Mật khẩu xác nhận không khớp";
   return errors;
 }
 
@@ -44,15 +44,15 @@ export default function ChangePasswordDialog({ open, onClose, onSubmit, loading 
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [passwordVisibility, setPasswordVisibility] = useState({
-    current: false,
-    newPassword: false,
-    confirm: false,
+    _currPass: false,
+    _newPass: false,
+    _confPass: false,
   });
 
   const resetState = () => {
     setForm(EMPTY_FORM);
     setErrors({});
-    setPasswordVisibility({ current: false, newPassword: false, confirm: false });
+    setPasswordVisibility({ _currPass: false, _newPass: false, _confPass: false });
   };
 
   const handleClose = () => {
@@ -80,10 +80,41 @@ export default function ChangePasswordDialog({ open, onClose, onSubmit, loading 
     if (onSubmit) {
       const result = await onSubmit(form);
       if (result === false) return;
+      handleClose();
+      return;
     }
 
-    // TODO: gọi API đổi mật khẩu nếu chưa truyền onSubmit
-    handleClose();
+    const userRaw = sessionStorage.getItem("user");
+    const currentUser = userRaw ? JSON.parse(userRaw) : null;
+    if (!currentUser?.userId) {
+      setErrors({ current: "Không tìm thấy phiên đăng nhập" });
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/users/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": currentUser.userId
+        },
+        body: JSON.stringify({
+          currentPassword: form._currPass,
+          newPassword: form._newPass
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert("Đổi mật khẩu thành công!");
+        handleClose();
+      } else {
+        setErrors({ _currPass: data.message });
+      }
+    } catch (err) {
+      console.error(err);
+      setErrors({ _currPass: "Lỗi kết nối đến server" });
+    }
   };
 
   return (
