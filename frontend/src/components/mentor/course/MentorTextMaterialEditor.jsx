@@ -391,7 +391,7 @@ export default function MentorTextMaterialEditor({
         }}
       >
         <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
-          Soạn nội dung bài đọc
+          Soạn nội dung văn bản
         </Typography>
         <AppButton
           variant="outlined"
@@ -563,7 +563,7 @@ export default function MentorTextMaterialEditor({
           </Box>
 
           <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
-            Nội dung bài đọc
+            Nội dung văn bản
           </ContentFieldLabel>
 
           <Box sx={{ position: 'relative' }}>
@@ -581,7 +581,7 @@ export default function MentorTextMaterialEditor({
                   zIndex: 1,
                 }}
               >
-                Nhập nội dung bài đọc tại đây...
+                Nhập nội dung văn bản tại đây...
               </Typography>
             )}
             <Box

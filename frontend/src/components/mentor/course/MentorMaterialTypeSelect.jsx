@@ -12,7 +12,7 @@ const PRIMARY_SELECTED = '#0E7490';
 // TODO: update backend/DB MaterialType to support TEXT
 export const MATERIAL_TYPE_SELECT_OPTIONS = [
   { value: 'VIDEO', label: 'Video', icon: PlayCircleRoundedIcon, color: '#E11D48', soft: 'rgba(225,29,72,0.10)' },
-  { value: 'TEXT', label: 'Bài đọc', icon: ArticleRoundedIcon, color: '#0891B2', soft: 'rgba(8,145,178,0.10)' },
+  { value: 'TEXT', label: 'Văn bản', icon: ArticleRoundedIcon, color: '#0891B2', soft: 'rgba(8,145,178,0.10)' },
   { value: 'DOC', label: 'Tài liệu', icon: DescriptionRoundedIcon, color: '#2563EB', soft: 'rgba(37,99,235,0.10)' },
   { value: 'TEST', label: 'Bài kiểm tra', icon: QuizRoundedIcon, color: '#7C3AED', soft: 'rgba(124,58,237,0.10)' },
 ];

@@ -1,19 +1,40 @@
 import { Box, IconButton, InputBase, Typography } from '@mui/material';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
-import { MATERIAL_URL_PLACEHOLDERS } from '../../../utils/mentorCourseContentUtils';
+import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
+import {
+  getDocDefaultFields,
+  MATERIAL_URL_LABELS,
+  MATERIAL_URL_PLACEHOLDERS,
+} from '../../../utils/mentorCourseContentUtils';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import MentorMaterialTypeSelect from './MentorMaterialTypeSelect';
 import MentorTextMaterialEditor from './MentorTextMaterialEditor';
+import MentorDocumentMaterialEditor from './MentorDocumentMaterialEditor';
 
 function buildTypeChangePatch(currentType, nextType) {
   const patch = { MaterialType: nextType };
+
   if (nextType === 'TEXT') {
     patch.MaterialUrl = '';
+    patch.SourceType = undefined;
+    patch.File = null;
+    patch.FileName = null;
+    patch.FileSize = null;
+  } else if (nextType === 'DOC') {
+    patch.Content = '';
+    Object.assign(patch, getDocDefaultFields());
   } else if (currentType === 'TEXT') {
     patch.Content = '';
+  } else if (currentType === 'DOC') {
+    patch.SourceType = undefined;
+    patch.File = null;
+    patch.FileName = null;
+    patch.FileSize = null;
+    patch.MaterialUrl = '';
   }
+
   return patch;
 }
 
@@ -23,18 +44,34 @@ export default function MentorMaterialRow({
   onChange,
   onDelete,
   disabled = false,
+  showDragHandle = false,
+  isDragging = false,
+  isDragOver = false,
+  onDragHandleStart,
+  onDragHandleEnd,
+  onDragOver,
+  onDrop,
 }) {
   const isText = material.MaterialType === 'TEXT';
+  const isDoc = material.MaterialType === 'DOC';
+  const showUrlField = !isText && !isDoc;
   const typeTheme = MATERIAL_TYPE_THEME[material.MaterialType] ?? MATERIAL_TYPE_THEME.VIDEO;
   const placeholder = MATERIAL_URL_PLACEHOLDERS[material.MaterialType] ?? '';
+  const urlLabel = MATERIAL_URL_LABELS[material.MaterialType] ?? 'Link';
+  const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
 
   return (
     <Box
       data-content-error={`material-${material.tempId}`}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       sx={{
         py: 1.75,
         px: { xs: 0.5, sm: 0.75 },
         borderBottom: '1px dashed rgba(15,23,42,0.08)',
+        borderTop: isDragOver ? `2px solid ${typeTheme.color}` : '2px solid transparent',
+        opacity: isDragging ? 0.45 : 1,
+        transition: 'opacity 0.15s ease, border-color 0.15s ease',
         '&:last-of-type': { borderBottom: 'none' },
       }}
     >
@@ -46,6 +83,32 @@ export default function MentorMaterialRow({
           gap: { xs: 1.25, sm: 1.25 },
         }}
       >
+        {showDragHandle ? (
+          <Box
+            draggable
+            onDragStart={onDragHandleStart}
+            onDragEnd={onDragHandleEnd}
+            aria-label="Kéo để đổi thứ tự học liệu"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: { xs: '100%', sm: 28 },
+              minWidth: { sm: 28 },
+              flexShrink: 0,
+              alignSelf: { sm: 'flex-start' },
+              pt: { sm: 2.5 },
+              color: MUTED,
+              cursor: 'grab',
+              touchAction: 'none',
+              userSelect: 'none',
+              '&:active': { cursor: 'grabbing' },
+              '&:hover': { color: typeTheme.color },
+            }}
+          >
+            <DragIndicatorRoundedIcon sx={{ fontSize: 22 }} />
+          </Box>
+        ) : null}
         <Box
           sx={{
             width: { xs: '100%', sm: 160 },
@@ -73,12 +136,21 @@ export default function MentorMaterialRow({
           )}
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 0, pt: { sm: 2.5 } }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <ContentFieldLabel sx={fieldLabelSx}>
+            Tiêu đề{isText ? '' : ' *'}
+          </ContentFieldLabel>
           <InputBase
             value={material.Title}
             onChange={(event) => onChange(material.tempId, { Title: event.target.value })}
             disabled={disabled}
-            placeholder={isText ? 'Ví dụ: Đoạn đọc về chủ đề du lịch' : 'Tiêu đề học liệu *'}
+            placeholder={
+              isText
+                ? 'Ví dụ: Đoạn văn về chủ đề du lịch (tuỳ chọn)'
+                : isDoc
+                  ? 'Ví dụ: Slide bài giảng tuần 1'
+                  : 'Ví dụ: Video giới thiệu bài học'
+            }
             fullWidth
             sx={{
               fontSize: 13,
@@ -97,15 +169,15 @@ export default function MentorMaterialRow({
           )}
         </Box>
 
-        {!isText && (
+        {showUrlField && (
           <Box
             sx={{
               flex: { xs: 'none', sm: 1.2 },
               minWidth: 0,
               width: { xs: '100%', sm: 'auto' },
-              pt: { sm: 2.5 },
             }}
           >
+            <ContentFieldLabel sx={fieldLabelSx}>{urlLabel}</ContentFieldLabel>
             <InputBase
               value={material.MaterialUrl}
               onChange={(event) => onChange(material.tempId, { MaterialUrl: event.target.value })}
@@ -136,8 +208,8 @@ export default function MentorMaterialRow({
             alignItems: 'center',
             width: { sm: 40 },
             flexShrink: 0,
-            alignSelf: { sm: isText ? 'flex-start' : 'center' },
-            pt: { sm: isText ? 2.5 : 0 },
+            alignSelf: { sm: 'flex-start' },
+            pt: { sm: 2.5 },
             mt: { xs: -0.25, sm: 0 },
           }}
         >
@@ -152,6 +224,15 @@ export default function MentorMaterialRow({
           </IconButton>
         </Box>
       </Box>
+
+      {isDoc && (
+        <MentorDocumentMaterialEditor
+          material={material}
+          errors={errors}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      )}
 
       {isText && (
         <MentorTextMaterialEditor

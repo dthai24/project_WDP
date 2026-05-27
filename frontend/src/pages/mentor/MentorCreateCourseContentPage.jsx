@@ -20,6 +20,7 @@ import {
   getFirstContentErrorTarget,
   validateCourseContent,
   withNormalizedOrders,
+  reorderMaterials,
 } from '../../utils/mentorCourseContentUtils';
 import { loadCreateCourseDraft } from '../../utils/mentorCourseCreateStorage';
 
@@ -235,6 +236,24 @@ export default function MentorCreateCourseContentPage() {
     );
   };
 
+  const handleMaterialReorder = (pathTempId, nodeTempId, fromIndex, toIndex) => {
+    applyPaths((prev) =>
+      prev.map((path) => {
+        if (path.tempId !== pathTempId) return path;
+        return {
+          ...path,
+          nodes: (path.nodes ?? []).map((node) => {
+            if (node.tempId !== nodeTempId) return node;
+            return {
+              ...node,
+              materials: reorderMaterials(node.materials ?? [], fromIndex, toIndex),
+            };
+          }),
+        };
+      }),
+    );
+  };
+
   const handleSaveDraftClick = async () => {
     setSavingDraft(true);
     try {
@@ -445,6 +464,7 @@ export default function MentorCreateCourseContentPage() {
           onAddMaterial={handleAddMaterial}
           onMaterialChange={handleMaterialChange}
           onMaterialDelete={handleMaterialDelete}
+          onMaterialReorder={handleMaterialReorder}
           disabled={submitting || savingDraft}
         />
 
