@@ -13,30 +13,31 @@ import CourseLearningPage from './pages/CourseLearningPage';
 import MyCoursesListPage from './pages/MyCoursesListPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
 
 import MainLayout from './components/layout/MainLayout';
-
-/** Guard: redirect về /login nếu chưa đăng nhập */
-function ProtectedRoute({ children }) {
-  const user = sessionStorage.getItem('user');
-  return user ? children : <Navigate to="/login" replace />;
-}
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth routes — public */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/verify-otp" element={<OtpPage />} />
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Public routes — accessible without login            */}
+        {/* ──────────────────────────────────────────────────── */}
+        <Route path="/login"           element={<LoginPage />} />
+        <Route path="/register"        element={<RegisterPage />} />
+        <Route path="/verify-otp"      element={<OtpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/reset-password"  element={<ResetPasswordPage />} />
+        <Route path="/unauthorized"    element={<UnauthorizedPage />} />
 
         {/* Demo UI components — public */}
         <Route path="/test-component" element={<TestPage />} />
 
-        {/* Onboarding survey — cần đăng nhập */}
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Onboarding survey — any authenticated user          */}
+        {/* ──────────────────────────────────────────────────── */}
         <Route
           path="/survey"
           element={
@@ -46,26 +47,102 @@ export default function App() {
           }
         />
 
-        {/* Main app — Header + Footer */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/home" replace />} />
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Main app with Header + Sidebar + Footer             */}
+        {/* Root "/" shows HomePage for everyone (public)        */}
+        {/* Other pages under "/" require login (Student role)   */}
+        {/* ──────────────────────────────────────────────────── */}
+        <Route path="/" element={<MainLayout />}>
+          {/* Landing page — public, no login required */}
+          <Route index element={<HomePage />} />
           <Route path="home" element={<HomePage />} />
-          <Route path="courses" element={<CourseListPage />} />
-          <Route path="courses/:id" element={<CourseDetailPage />} />
-          <Route path="my-courses" element={<MyCoursesListPage />} />
-          <Route path="my-courses/:courseId/learn" element={<CourseLearningPage />} />
-          <Route path="profile" element={<ProfilePage />} />
+
+          {/* Student-accessible routes — require login */}
+          <Route
+            path="courses"
+            element={
+              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+                <CourseListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="courses/:id"
+            element={
+              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+                <CourseDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="my-courses"
+            element={
+              <ProtectedRoute allowedRoles={['Student']}>
+                <MyCoursesListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="my-courses/:courseId/learn"
+            element={
+              <ProtectedRoute allowedRoles={['Student']}>
+                <CourseLearningPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Admin routes — Admin role only                      */}
+        {/* ──────────────────────────────────────────────────── */}
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute allowedRoles={['Admin']}>
+              {/* TODO: Replace with admin layout / dashboard pages */}
+              <Navigate to="/" replace />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Mentor routes — Mentor role only                    */}
+        {/* ──────────────────────────────────────────────────── */}
+        <Route
+          path="/mentor/*"
+          element={
+            <ProtectedRoute allowedRoles={['Mentor']}>
+              {/* TODO: Replace with mentor layout / dashboard pages */}
+              <Navigate to="/" replace />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Student routes — Student role only                  */}
+        {/* ──────────────────────────────────────────────────── */}
+        <Route
+          path="/student/*"
+          element={
+            <ProtectedRoute allowedRoles={['Student']}>
+              {/* TODO: Replace with student-specific pages */}
+              <Navigate to="/" replace />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Fallback — unknown routes go to home                */}
+        {/* ──────────────────────────────────────────────────── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
