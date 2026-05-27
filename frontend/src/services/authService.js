@@ -18,6 +18,42 @@ const apiGet = async (endpoint) => {
   return { ok: response.ok, status: response.status, data };
 };
 
+const apiGetBase = async (url) => {
+  const response = await fetch(`http://localhost:5000${url}`);
+  const data = await response.json();
+  return { ok: response.ok, data };
+};
+
+const apiPostBase = async (url, body) => {
+  const response = await fetch(`http://localhost:5000${url}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  return { ok: response.ok, data };
+};
+
+export const getCoursesApi = (userId) => {
+  const headers = {};
+  if (userId) {
+    headers['x-user-id'] = String(userId);
+  }
+  return fetch('http://localhost:5000/api/courses', { headers })
+    .then((response) => response.json())
+    .then((data) => ({ ok: true, data }))
+    .catch(() => ({ ok: false, data: {} }));
+};
+
+export const getTopCoursesApi = (limit = 4) =>
+  apiGetBase(`/api/courses/top?limit=${limit}`);
+
+export const enrollCourseApi = (userId, courseId) =>
+  apiPostBase('/api/courses/enroll', { userId, courseId });
+
+export const getMyCoursesApi = (userId) =>
+  apiGetBase(`/api/courses/my?userId=${userId}`);
+
 /** POST /api/auth/login */
 export const loginApi = (email, password) =>
   apiFetch('/login', { email, password });
