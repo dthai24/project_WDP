@@ -26,6 +26,7 @@ import {
   isPathSnapshotSaved,
   withNormalizedOrders,
   reorderMaterials,
+  scrollToContentItem,
   MATERIAL_TYPE_LABELS,
 } from '../../utils/mentorCourseContentUtils';
 import { loadCreateCourseDraft } from '../../utils/mentorCourseCreateStorage';
@@ -206,6 +207,10 @@ export default function MentorCreateCourseContentPage() {
   const applyPaths = useCallback((updater) => {
     setPaths((prev) => withNormalizedOrders(updater(prev)));
     setValidationErrors({ root: [], paths: {} });
+  }, []);
+
+  const handleNavigateToContent = useCallback((target) => {
+    scrollToContentItem(target, { setExpandedPaths, setExpandedNodes });
   }, []);
 
   const handleAddPath = () => {
@@ -654,6 +659,7 @@ export default function MentorCreateCourseContentPage() {
           paths={paths}
           courseName={courseName}
           footer={footerActions}
+          onNavigateToItem={handleNavigateToContent}
         />
       </Box>
 

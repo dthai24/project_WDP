@@ -347,6 +347,47 @@ export function getFirstContentErrorTarget(errors, paths = []) {
   return null;
 }
 
+/**
+ * Build DOM selector for a content builder item (chapter / lesson / material).
+ */
+export function getContentItemScrollSelector(target) {
+  if (!target?.type) return null;
+
+  if (target.type === 'chapter' && target.pathTempId) {
+    return `[data-content-error="chapter-${target.pathTempId}"]`;
+  }
+  if (target.type === 'lesson' && target.nodeTempId) {
+    return `[data-content-error="lesson-${target.nodeTempId}"]`;
+  }
+  if (target.type === 'material' && target.materialTempId) {
+    return `[data-content-error="material-${target.materialTempId}"]`;
+  }
+
+  return null;
+}
+
+/**
+ * Expand parent sections if needed, then scroll to a content builder item.
+ */
+export function scrollToContentItem(
+  target,
+  { setExpandedPaths, setExpandedNodes, delayMs = 180 } = {},
+) {
+  if (target.pathTempId && setExpandedPaths) {
+    setExpandedPaths((prev) => ({ ...prev, [target.pathTempId]: true }));
+  }
+  if (target.nodeTempId && setExpandedNodes) {
+    setExpandedNodes((prev) => ({ ...prev, [target.nodeTempId]: true }));
+  }
+
+  const selector = getContentItemScrollSelector(target);
+  if (!selector) return;
+
+  window.setTimeout(() => {
+    document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, delayMs);
+}
+
 export function buildCourseContentPayload(paths) {
   return {
     paths: withNormalizedOrders(paths).map(({ tempId: _tempId, nodes, ...path }) => ({

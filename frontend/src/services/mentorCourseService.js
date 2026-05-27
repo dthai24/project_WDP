@@ -233,6 +233,55 @@ export async function fetchCourseStudentStats(courseId) {
 }
 
 /**
+ * Update basic info of an existing mentor course.
+ * TODO: replace with real API call — updateCourseBasicInfo(courseId, payload)
+ *   PATCH /api/mentor/courses/:courseId
+ */
+export async function updateCourseBasicInfo(courseId, payload) {
+  // TODO: replace with API call
+  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
+  //   method: 'PATCH',
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //     'x-user-id': String(getUser()?.userId),
+  //   },
+  //   body: JSON.stringify(payload),
+  // });
+  // const data = await response.json();
+  // if (!response.ok) return { ok: false, message: data.message };
+  // return { ok: true, courseId };
+
+  void courseId; void payload;
+  await delay(400);
+  return { ok: true, courseId };
+}
+
+/**
+ * Update content (paths / nodes / materials) of an existing mentor course.
+ * TODO: replace with real API call — updateCourseContent(courseId, paths)
+ *   PUT /api/mentor/courses/:courseId/content
+ */
+export async function updateCourseContent(courseId, paths) {
+  // TODO: replace with API call
+  // const payload = buildCourseContentPayload(paths);
+  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/content`, {
+  //   method: 'PUT',
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //     'x-user-id': String(getUser()?.userId),
+  //   },
+  //   body: JSON.stringify(payload),
+  // });
+  // const data = await response.json();
+  // if (!response.ok) return { ok: false, message: data.message };
+  // return { ok: true };
+
+  void courseId; void paths;
+  await delay(400);
+  return { ok: true };
+}
+
+/**
  * Create a new mentor course (draft or published).
  * TODO: replace with createCourse API
  *   createCourse(payload) → POST /api/mentor/courses

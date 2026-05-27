@@ -1,9 +1,19 @@
 import { Box, Typography } from '@mui/material';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import PlayLessonRoundedIcon from '@mui/icons-material/PlayLessonRounded';
 import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
-import { countContentStats } from '../../../utils/mentorCourseContentUtils';
+import {
+  countContentStats,
+  MATERIAL_TYPE_LABELS,
+} from '../../../utils/mentorCourseContentUtils';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-import { BUILDER_PANEL_SX, CHAPTER_THEME, LESSON_THEME, MATERIAL_SECTION_THEME } from './mentorCourseContentStyles';
+import {
+  BUILDER_PANEL_SX,
+  CHAPTER_THEME,
+  LESSON_THEME,
+  MATERIAL_SECTION_THEME,
+  MATERIAL_TYPE_THEME,
+} from './mentorCourseContentStyles';
 
 function StatPill({ label, value, color }) {
   return (
@@ -29,12 +39,91 @@ function StatPill({ label, value, color }) {
   );
 }
 
+function OutlineNavItem({
+  label,
+  meta,
+  icon: Icon,
+  iconColor,
+  indent = 0,
+  onClick,
+  disabled = false,
+}) {
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={onClick}
+      disabled={disabled || !onClick}
+      sx={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 0.65,
+        width: '100%',
+        textAlign: 'left',
+        border: 'none',
+        background: 'none',
+        cursor: onClick && !disabled ? 'pointer' : 'default',
+        font: 'inherit',
+        pl: indent * 1.5,
+        pr: 0.5,
+        py: 0.55,
+        borderRadius: '10px',
+        transition: 'background-color 0.15s',
+        '&:hover': onClick && !disabled ? { bgcolor: 'rgba(8,145,178,0.06)' } : undefined,
+        '&:disabled': { opacity: 0.55, cursor: 'default' },
+      }}
+    >
+      {Icon ? (
+        <Icon sx={{ fontSize: 15, color: iconColor, mt: 0.15, flexShrink: 0 }} />
+      ) : iconColor ? (
+        <Box
+          sx={{
+            width: 6,
+            height: 6,
+            borderRadius: '999px',
+            bgcolor: iconColor,
+            mt: 0.55,
+            flexShrink: 0,
+            ml: 0.45,
+          }}
+        />
+      ) : null}
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography
+          sx={{
+            fontSize: indent === 2 ? 12 : 13,
+            fontWeight: indent === 0 ? 700 : 600,
+            color: TEXT,
+            lineHeight: 1.4,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {label}
+        </Typography>
+        {meta && (
+          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.15, lineHeight: 1.35 }}>
+            {meta}
+          </Typography>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
 export default function MentorContentOverview({
   paths,
   courseName = '',
   footer = null,
+  onNavigateToItem,
 }) {
   const { pathCount, nodeCount, materialCount } = countContentStats(paths);
+
+  const handleNavigate = (target) => {
+    if (onNavigateToItem) onNavigateToItem(target);
+  };
 
   return (
     <Box
@@ -85,28 +174,94 @@ export default function MentorContentOverview({
             Thêm chương đầu tiên để xem outline nội dung khóa học.
           </Typography>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.25,
+              maxHeight: { lg: 'calc(100vh - 380px)' },
+              overflowY: 'auto',
+              pr: 0.25,
+              mr: -0.25,
+            }}
+          >
             {paths.map((path, pathIndex) => {
-              const nodeLen = (path.nodes ?? []).length;
+              const nodes = path.nodes ?? [];
               const chapterTitle = path.PathName || `Chương ${pathIndex + 1}`;
 
               return (
-                <Box key={path.tempId}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
-                    <MenuBookRoundedIcon
-                      sx={{ fontSize: 17, color: CHAPTER_THEME.color, mt: 0.15, flexShrink: 0 }}
-                    />
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
-                        Chương {pathIndex + 1}: {chapterTitle}
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25, lineHeight: 1.45 }}>
-                        {nodeLen > 0
-                          ? `${nodeLen} bài học`
-                          : 'Thêm bài học để hoàn thiện cấu trúc chương.'}
-                      </Typography>
-                    </Box>
-                  </Box>
+                <Box key={path.tempId} sx={{ mb: 0.5 }}>
+                  <OutlineNavItem
+                    label={`Chương ${pathIndex + 1}: ${chapterTitle}`}
+                    meta={
+                      nodes.length > 0
+                        ? `${nodes.length} bài học`
+                        : 'Chưa có bài học'
+                    }
+                    icon={MenuBookRoundedIcon}
+                    iconColor={CHAPTER_THEME.color}
+                    indent={0}
+                    onClick={() =>
+                      handleNavigate({ type: 'chapter', pathTempId: path.tempId })
+                    }
+                  />
+
+                  {nodes.map((node, nodeIndex) => {
+                    const materials = node.materials ?? [];
+                    const lessonTitle = node.NodeName || `Bài ${nodeIndex + 1}`;
+
+                    return (
+                      <Box key={node.tempId}>
+                        <OutlineNavItem
+                          label={`Bài ${nodeIndex + 1}: ${lessonTitle}`}
+                          meta={
+                            materials.length > 0
+                              ? `${materials.length} học liệu`
+                              : 'Chưa có học liệu'
+                          }
+                          icon={PlayLessonRoundedIcon}
+                          iconColor={LESSON_THEME.color}
+                          indent={1}
+                          onClick={() =>
+                            handleNavigate({
+                              type: 'lesson',
+                              pathTempId: path.tempId,
+                              nodeTempId: node.tempId,
+                            })
+                          }
+                        />
+
+                        {materials.map((material, materialIndex) => {
+                          const typeLabel =
+                            MATERIAL_TYPE_LABELS[material.MaterialType] ?? 'Học liệu';
+                          const materialTitle =
+                            String(material.Title ?? '').trim() ||
+                            `${typeLabel} ${materialIndex + 1}`;
+                          const theme =
+                            MATERIAL_TYPE_THEME[material.MaterialType] ??
+                            MATERIAL_TYPE_THEME.VIDEO;
+
+                          return (
+                            <OutlineNavItem
+                              key={material.tempId}
+                              label={`${typeLabel}: ${materialTitle}`}
+                              icon={null}
+                              iconColor={theme.color}
+                              indent={2}
+                              onClick={() =>
+                                handleNavigate({
+                                  type: 'material',
+                                  pathTempId: path.tempId,
+                                  nodeTempId: node.tempId,
+                                  materialTempId: material.tempId,
+                                })
+                              }
+                            />
+                          );
+                        })}
+                      </Box>
+                    );
+                  })}
                 </Box>
               );
             })}
