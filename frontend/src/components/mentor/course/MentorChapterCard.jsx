@@ -5,7 +5,7 @@ import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import MentorLessonBlock from './MentorLessonBlock';
-import { ContentFieldLabel } from './MentorContentSectionHeading';
+import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import {
   CHAPTER_THEME,
@@ -32,6 +32,7 @@ export default function MentorChapterCard({
   onAddMaterial,
   onMaterialChange,
   onMaterialDelete,
+  onMaterialReorder,
   disabled = false,
 }) {
   const lessonCount = (path.nodes ?? []).length;
@@ -125,19 +126,15 @@ export default function MentorChapterCard({
             </Typography>
           )}
 
-          <ContentFieldLabel sx={{ mt: 1.25 }}>Mô tả chương</ContentFieldLabel>
-          <Box sx={contentFieldSx(false, CHAPTER_THEME)}>
-            <InputBase
-              value={path.Description}
-              onChange={(event) => onChange(path.tempId, { Description: event.target.value })}
-              disabled={disabled}
-              placeholder="Mô tả ngắn (tuỳ chọn)"
-              fullWidth
-              multiline
-              minRows={2}
-              sx={{ fontSize: 13, color: TEXT, alignItems: 'flex-start' }}
-            />
-          </Box>
+          <ContentShortDescriptionField
+            label="Mô tả ngắn"
+            value={path.Description}
+            onChange={(event) => onChange(path.tempId, { Description: event.target.value })}
+            disabled={disabled}
+            theme={CHAPTER_THEME}
+            placeholder="Mô tả ngắn về nội dung chương (tuỳ chọn)"
+            labelSx={{ mt: 1.25 }}
+          />
 
           <Box sx={{ mt: 2 }}>
             {errors._nodes && (
@@ -168,6 +165,9 @@ export default function MentorChapterCard({
                     }
                     onMaterialDelete={(materialTempId) =>
                       onMaterialDelete(path.tempId, node.tempId, materialTempId)
+                    }
+                    onMaterialReorder={(fromIndex, toIndex) =>
+                      onMaterialReorder(path.tempId, node.tempId, fromIndex, toIndex)
                     }
                     disabled={disabled}
                   />

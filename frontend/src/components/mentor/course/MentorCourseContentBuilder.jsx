@@ -22,6 +22,7 @@ export default function MentorCourseContentBuilder({
   onAddMaterial,
   onMaterialChange,
   onMaterialDelete,
+  onMaterialReorder,
   disabled = false,
 }) {
   return (
@@ -112,6 +113,7 @@ export default function MentorCourseContentBuilder({
               onAddMaterial={onAddMaterial}
               onMaterialChange={onMaterialChange}
               onMaterialDelete={onMaterialDelete}
+              onMaterialReorder={onMaterialReorder}
               disabled={disabled}
             />
           ))}

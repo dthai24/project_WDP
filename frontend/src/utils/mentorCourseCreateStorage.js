@@ -1,5 +1,5 @@
 import { buildCreateCourseStep1Payload } from './mentorCourseFormUtils';
-import { withNormalizedOrders } from './mentorCourseContentUtils';
+import { sanitizePathsForStorage, withNormalizedOrders } from './mentorCourseContentUtils';
 
 export const MENTOR_COURSE_CREATE_STORAGE_KEY = 'mentor_course_create_draft';
 
@@ -54,7 +54,7 @@ export function loadCreateCourseStep1FromStorage() {
 }
 
 export function saveCreateCourseContentToStorage(course, paths) {
-  return saveCreateCourseDraft({ course, paths: withNormalizedOrders(paths) });
+  return saveCreateCourseDraft({ course, paths: sanitizePathsForStorage(paths) });
 }
 
 export function clearCreateCourseDraft() {
