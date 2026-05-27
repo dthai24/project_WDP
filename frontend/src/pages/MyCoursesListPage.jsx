@@ -94,6 +94,7 @@ export default function MyCoursesListPage() {
   const keyword = (searchParams.get("keyword") ?? "").trim();
   const [allCourses, setAllCourses] = useState([]);
 
+  //________________FETCH DATA______________________
   useEffect(() => {
     const getData = async () => {
       try {
@@ -162,18 +163,6 @@ export default function MyCoursesListPage() {
 
     getData();
   }, []);
-  // const allCourses = useMemo(() => {
-  //   const enrolled = MOCK_ENROLLED_COURSES.map((course) => ({
-  //     ...course,
-  //     isSaved: isSaved(course.courseId),
-  //   }));
-
-  //   const savedOnly = MOCK_SAVED_CATALOG.filter(
-  //     (course) => savedIds.has(course.courseId) && !ENROLLED_IDS.has(course.courseId)
-  //   ).map((course) => ({ ...course, isSaved: true }));
-
-  //   return [...enrolled, ...savedOnly];
-  // }, [savedIds, isSaved]);
 
   const showReset = hasActiveFilters(filters, keyword);
   const activeFilterChips = useMemo(
