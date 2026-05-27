@@ -35,7 +35,7 @@ function getMenuPaperSx(theme) {
   };
 }
 
-function FilterTrigger({ icon: Icon, label, hasValue, onClick, open }) {
+function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor = ICON }) {
   const theme = useTheme();
   return (
     <Box
@@ -77,7 +77,7 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open }) {
         }),
       }}
     >
-      <Icon sx={{ fontSize: 15, color: ICON, flexShrink: 0 }} />
+      <Icon sx={{ fontSize: 15, color: iconColor, flexShrink: 0 }} />
       <Typography
         component="span"
         noWrap
@@ -222,6 +222,7 @@ export default function MentorCoursesToolbar({
             hasValue={statusFilter !== 'all'}
             open={Boolean(statusAnchor)}
             onClick={(e) => setStatusAnchor(e.currentTarget)}
+            iconColor="#047857"
           />
           <FilterTrigger
             icon={CategoryOutlinedIcon}
@@ -229,6 +230,7 @@ export default function MentorCoursesToolbar({
             hasValue={categoryFilter !== 'all'}
             open={Boolean(categoryAnchor)}
             onClick={(e) => setCategoryAnchor(e.currentTarget)}
+            iconColor="#EA580C"
           />
           <FilterTrigger
             icon={SchoolOutlinedIcon}
@@ -236,12 +238,13 @@ export default function MentorCoursesToolbar({
             hasValue={levelFilter !== 'all'}
             open={Boolean(levelAnchor)}
             onClick={(e) => setLevelAnchor(e.currentTarget)}
+            iconColor="#2563EB"
           />
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.5 }}>
-            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: ICON }} />
+            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: '#0891B2' }} />
             <Typography
               variant="caption"
               sx={{ color: MUTED, fontWeight: 500, whiteSpace: 'nowrap', fontSize: 12 }}
@@ -255,6 +258,7 @@ export default function MentorCoursesToolbar({
             hasValue
             open={Boolean(sortAnchor)}
             onClick={(e) => setSortAnchor(e.currentTarget)}
+            iconColor="#7C3AED"
           />
           {showReset ? (
             <Tooltip title="Đặt lại bộ lọc">
