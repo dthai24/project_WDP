@@ -54,7 +54,7 @@ const MOCK_CONTINUE_COURSE = {
   lastActivity: "Hôm qua",
   thumbnail: "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=600&q=75",
   currentLessonDetail: {
-    stage: "Chặng 3: Luyện đề nâng cao",
+    stage: "Chương 3: Luyện đề nâng cao",
     lesson: "Bài 9",
     title: "Từ nối & cohesion devices",
   },
@@ -310,7 +310,7 @@ const HERO_STATS = [
   },
   {
     title: "5 lộ trình",
-    desc: "học theo từng chặng",
+    desc: "học theo từng chương",
     Icon: RouteOutlinedIcon,
     iconBg: "rgba(124,58,237,0.12)",
     iconColor: "#7C3AED",
@@ -431,7 +431,7 @@ function HeroSection({ onExplore }) {
             textShadow: "0 1px 1px rgba(255,255,255,0.25)",
           }}
         >
-          Khám phá khóa học phù hợp, học theo từng chặng rõ ràng và theo dõi tiến độ của bạn mỗi ngày.
+          Khám phá khóa học phù hợp, học theo từng chương rõ ràng và theo dõi tiến độ của bạn mỗi ngày.
         </Typography>
 
         {/* CTA buttons */}
@@ -620,7 +620,7 @@ function ContinueSection({ course, onContinue, onExplore }) {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <PlaceOutlinedIcon sx={{ fontSize: 14, color: "#94A3B8" }} />
                   <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-                    Chặng {course.currentStage} · Bài {course.currentLesson}
+                    Chương {course.currentStage} · Bài {course.currentLesson}
                   </Typography>
                 </Box>
               )}

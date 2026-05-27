@@ -367,8 +367,8 @@ export default function CourseCard({
             py: 0.5,
           }}
         >
-          <MetaInline icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài học`} />
-          <MetaInline icon={RouteOutlinedIcon} label={`${data.totalNodes} chặng`} />
+          <MetaInline icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
+          <MetaInline icon={RouteOutlinedIcon} label={`${data.totalNodes} chương`} />
           <MetaInline icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
         </Box>
 

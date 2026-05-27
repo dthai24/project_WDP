@@ -228,7 +228,7 @@ export default function MentorCourseRow({ course }) {
           />
           <MetricItem
             icon={MenuBookRoundedIcon}
-            label="Bài học"
+            label="Bài"
             value={course.totalLessons ?? 0}
             iconColor={METRIC_COLORS.lessons}
           />
