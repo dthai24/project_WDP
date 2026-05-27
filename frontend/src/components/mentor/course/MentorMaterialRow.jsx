@@ -3,6 +3,7 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
 import {
   getDocDefaultFields,
+  getVideoDefaultFields,
   MATERIAL_URL_LABELS,
   MATERIAL_URL_PLACEHOLDERS,
 } from '../../../utils/mentorCourseContentUtils';
@@ -12,19 +13,28 @@ import { ContentFieldLabel } from './MentorContentSectionHeading';
 import MentorMaterialTypeSelect from './MentorMaterialTypeSelect';
 import MentorTextMaterialEditor from './MentorTextMaterialEditor';
 import MentorDocumentMaterialEditor from './MentorDocumentMaterialEditor';
+import MentorVideoMaterialEditor from './MentorVideoMaterialEditor';
 
 function buildTypeChangePatch(currentType, nextType) {
   const patch = { MaterialType: nextType };
 
   if (nextType === 'TEXT') {
     patch.MaterialUrl = '';
+    patch.EmbedUrl = null;
     patch.SourceType = undefined;
     patch.File = null;
     patch.FileName = null;
     patch.FileSize = null;
   } else if (nextType === 'DOC') {
     patch.Content = '';
+    patch.EmbedUrl = null;
     Object.assign(patch, getDocDefaultFields());
+  } else if (nextType === 'VIDEO') {
+    patch.Content = '';
+    patch.File = null;
+    patch.FileName = null;
+    patch.FileSize = null;
+    Object.assign(patch, getVideoDefaultFields());
   } else if (currentType === 'TEXT') {
     patch.Content = '';
   } else if (currentType === 'DOC') {
@@ -32,6 +42,10 @@ function buildTypeChangePatch(currentType, nextType) {
     patch.File = null;
     patch.FileName = null;
     patch.FileSize = null;
+    patch.MaterialUrl = '';
+    patch.EmbedUrl = null;
+  } else if (currentType === 'VIDEO') {
+    patch.EmbedUrl = null;
     patch.MaterialUrl = '';
   }
 
@@ -54,7 +68,8 @@ export default function MentorMaterialRow({
 }) {
   const isText = material.MaterialType === 'TEXT';
   const isDoc = material.MaterialType === 'DOC';
-  const showUrlField = !isText && !isDoc;
+  const isVideo = material.MaterialType === 'VIDEO';
+  const showUrlField = !isText && !isDoc && !isVideo;
   const typeTheme = MATERIAL_TYPE_THEME[material.MaterialType] ?? MATERIAL_TYPE_THEME.VIDEO;
   const placeholder = MATERIAL_URL_PLACEHOLDERS[material.MaterialType] ?? '';
   const urlLabel = MATERIAL_URL_LABELS[material.MaterialType] ?? 'Link';
@@ -224,6 +239,15 @@ export default function MentorMaterialRow({
           </IconButton>
         </Box>
       </Box>
+
+      {isVideo && (
+        <MentorVideoMaterialEditor
+          material={material}
+          errors={errors}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      )}
 
       {isDoc && (
         <MentorDocumentMaterialEditor
