@@ -20,12 +20,7 @@ import {
 
 export { MATERIAL_TYPE_LABELS };
 
-export const REVIEW_OUTLINE_TYPE_LABELS = {
-  VIDEO: 'Video',
-  TEXT: 'Bài đọc',
-  DOC: 'Tài liệu',
-  TEST: 'Bài kiểm tra',
-};
+export const REVIEW_OUTLINE_TYPE_LABELS = { ...MATERIAL_TYPE_LABELS };
 
 export function countMaterialsInPath(path = {}) {
   return (path.nodes ?? []).reduce((sum, node) => sum + (node.materials ?? []).length, 0);
@@ -393,7 +388,7 @@ export function validateCourseDraft(draft) {
           if (!alreadyReported) {
             errors.push({
               type: 'material',
-              message: `${materialLabel}: Bài đọc chưa có nội dung.`,
+              message: `${materialLabel}: Văn bản chưa có nội dung.`,
               targetId: material.tempId,
             });
           }
@@ -525,7 +520,7 @@ export function buildReviewChecklist(draft, validation) {
   );
 
   const textOk = !validation.errors.some(
-    (item) => item.type === 'material' && item.message.includes('Bài đọc'),
+    (item) => item.type === 'material' && item.message.includes('Văn bản'),
   );
   const docOk = !validation.errors.some(
     (item) => item.type === 'material' && item.message.includes('Tài liệu'),
@@ -563,7 +558,7 @@ export function buildReviewChecklist(draft, validation) {
     },
     {
       id: 'text-content',
-      label: 'Bài đọc có nội dung',
+      label: 'Văn bản có nội dung',
       status: materialCounts.TEXT === 0 ? 'ok' : textOk ? 'ok' : 'error',
     },
     {
