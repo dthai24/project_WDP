@@ -74,7 +74,7 @@ const MOCK_LEARNING = {
     modules: [
       {
         id: 1,
-        title: "Chặng 1: Nền tảng từ vựng thương mại",
+        title: "Chương 1: Nền tảng từ vựng thương mại",
         lessons: [
           mkLesson(1, "Giới thiệu khóa học & lộ trình học", "5 phút", "video", "completed"),
           mkLesson(2, "Từ vựng cốt lõi trong môi trường công sở", "18 phút", "video", "completed"),
@@ -84,7 +84,7 @@ const MOCK_LEARNING = {
       },
       {
         id: 2,
-        title: "Chặng 2: Viết email & giao tiếp văn bản",
+        title: "Chương 2: Viết email & giao tiếp văn bản",
         lessons: [
           mkLesson(5, "Cấu trúc email chuyên nghiệp chuẩn mực", "15 phút", "video", "not_started"),
           mkLesson(6, "Viết email từ chối & đề xuất lịch sự", "20 phút", "reading", "not_started"),
@@ -99,7 +99,7 @@ const MOCK_LEARNING = {
     modules: [
       {
         id: 1,
-        title: "Chặng 1: Nền tảng",
+        title: "Chương 1: Nền tảng",
         lessons: [
           mkLesson(10, "Tổng quan IELTS Writing Task 2", "10 phút", "video", "completed"),
           mkLesson(11, "Cấu trúc bài luận 4 đoạn", "14 phút", "reading", "completed"),
@@ -108,7 +108,7 @@ const MOCK_LEARNING = {
       },
       {
         id: 2,
-        title: "Chặng 2: Kỹ năng chính",
+        title: "Chương 2: Kỹ năng chính",
         lessons: [
           mkLesson(13, "Phân tích đề Opinion Essay", "16 phút", "video", "completed"),
           mkLesson(14, "Viết Introduction chuẩn", "18 phút", "reading", "completed"),
@@ -118,7 +118,7 @@ const MOCK_LEARNING = {
       },
       {
         id: 3,
-        title: "Chặng 3: Luyện đề nâng cao",
+        title: "Chương 3: Luyện đề nâng cao",
         lessons: [
           mkLesson(17, "Phân tích đề Discussion Essay", "20 phút", "video", "completed"),
           mkLesson(18, "Luyện tập đề thực tế", "25 phút", "quiz", "completed"),
@@ -129,7 +129,7 @@ const MOCK_LEARNING = {
       },
       {
         id: 4,
-        title: "Chặng 4: Ôn tập tổng hợp",
+        title: "Chương 4: Ôn tập tổng hợp",
         lessons: [
           mkLesson(22, "Tổng kết kỹ năng viết IELTS", "15 phút", "reading", "not_started"),
           mkLesson(23, "Đề thi thử số 2", "45 phút", "quiz", "not_started"),
@@ -144,7 +144,7 @@ const MOCK_LEARNING = {
     modules: [
       {
         id: 1,
-        title: "Chặng 1: Thì cơ bản",
+        title: "Chương 1: Thì cơ bản",
         lessons: [
           mkLesson(30, "Thì hiện tại đơn & liên tục", "15 phút", "video", "completed"),
           mkLesson(31, "Thì quá khứ đơn & liên tục", "14 phút", "reading", "current"),
@@ -153,7 +153,7 @@ const MOCK_LEARNING = {
       },
       {
         id: 2,
-        title: "Chặng 2: Câu phức & điều kiện",
+        title: "Chương 2: Câu phức & điều kiện",
         lessons: [
           mkLesson(33, "Mệnh đề quan hệ", "18 phút", "video", "not_started"),
           mkLesson(34, "Câu điều kiện loại 1 và 2", "20 phút", "reading", "not_started"),
@@ -168,7 +168,7 @@ const MOCK_LEARNING = {
     modules: [
       {
         id: 1,
-        title: "Chặng 1: Nguyên âm",
+        title: "Chương 1: Nguyên âm",
         lessons: [
           mkLesson(40, "Hệ thống nguyên âm tiếng Anh", "12 phút", "video", "completed"),
           mkLesson(41, "Luyện âm /æ/, /ʌ/, /ɑ:/", "16 phút", "video", "completed"),
@@ -177,7 +177,7 @@ const MOCK_LEARNING = {
       },
       {
         id: 2,
-        title: "Chặng 2: Phụ âm & liên kết âm",
+        title: "Chương 2: Phụ âm & liên kết âm",
         lessons: [
           mkLesson(43, "Âm /θ/ và /ð/ — th sounds", "14 phút", "video", "not_started"),
           mkLesson(44, "Kỹ thuật liên kết âm tự nhiên", "18 phút", "reading", "not_started"),
