@@ -1,5 +1,12 @@
 // TODO: update backend/DB MaterialType to support TEXT
 import { resolveVideoEmbed } from './videoEmbedUtils';
+import {
+  buildTestMaterialPayload,
+  getTestDefaultFields,
+  validateTestMaterial,
+} from './mentorTestContentUtils';
+
+export { getTestDefaultFields } from './mentorTestContentUtils';
 
 export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
 
@@ -83,7 +90,16 @@ export function sanitizePathsForStorage(paths) {
     ...path,
     nodes: (path.nodes ?? []).map((node) => ({
       ...node,
-      materials: (node.materials ?? []).map(({ File: _file, ...material }) => material),
+      materials: (node.materials ?? []).map(({ File: _file, ...material }) => {
+        if (material.MaterialType !== 'TEST' || !(material.Sections ?? []).length) {
+          return material;
+        }
+
+        return {
+          ...material,
+          Sections: material.Sections.map(({ File: _sectionFile, ...section }) => section),
+        };
+      }),
     })),
   }));
 }
@@ -237,6 +253,17 @@ export function validateCourseContent(paths) {
               materialErrors.MaterialUrl = 'Vui lòng nhập link tài liệu hợp lệ';
             }
           }
+        } else if (material.MaterialType === 'VIDEO') {
+          if (!String(material.Title ?? '').trim()) {
+            materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
+          }
+
+          const materialUrl = String(material.MaterialUrl ?? '').trim();
+          if (materialUrl && !isSimpleUrl(materialUrl)) {
+            materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
+          }
+        } else if (material.MaterialType === 'TEST') {
+          Object.assign(materialErrors, validateTestMaterial(material));
         } else {
           if (!String(material.Title ?? '').trim()) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
@@ -371,6 +398,14 @@ export function buildCourseContentPayload(paths) {
               MaterialUrl: materialUrl,
               EmbedUrl: embedUrl,
             };
+          }
+
+          if (material.MaterialType === 'TEST') {
+            // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
+            return buildTestMaterialPayload(material, {
+              ...base,
+              Description: trimShortDescription(material.Description),
+            });
           }
 
           return {
