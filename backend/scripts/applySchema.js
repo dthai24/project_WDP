@@ -41,14 +41,16 @@ async function executeFile(filePath, description) {
 }
 
 async function main() {
-  const schemaPath = path.join(__dirname, '..', '..', 'database', 'SQL_LearningPath.sql');
+  const schemaPath = path.join(__dirname, '..', '..', 'database', 'schema.sql');
+  const seedPath = path.join(__dirname, '..', '..', 'database', 'seed.sql');
 
   console.log('Kết nối tới SQL Server...');
   await sql.connect(dbConfig);
 
-  await executeFile(schemaPath, 'SQL_LearningPath.sql');
+  await executeFile(schemaPath, 'schema.sql');
+  await executeFile(seedPath, 'seed.sql');
 
-  console.log('✅ Schema đã được áp dụng thành công.');
+  console.log('✅ Schema và Seed đã được áp dụng thành công.');
   process.exit(0);
 }
 
