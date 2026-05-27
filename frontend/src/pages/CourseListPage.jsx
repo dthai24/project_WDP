@@ -49,15 +49,44 @@ const SORT_OPTIONS = [
 
 async function fetchCourses(userId) {
   try {
-    const headers = {};
-    if (userId) {
-      headers["x-user-id"] = userId;
+    const url = userId
+      ? `http://localhost:5000/api/courses?userId=${userId}`
+      : "http://localhost:5000/api/courses";
+
+    const res = await fetch(url);
+
+    const result = await res.json();
+
+    console.log("ALL COURSES RESPONSE:", result);
+
+    if (!res.ok || !result.success) {
+      return [];
     }
-    const res = await fetch("http://localhost:5000/api/courses", { headers });
-    const data = await res.json();
-    if (data.success && data.courses) {
-      return data.courses;
-    }
+
+    return result.data || [];
+  } catch (err) {
+    console.error("Error fetching courses:", err);
+    throw err;
+  }
+}
+
+function getUserId(user) {
+  return user.userId ?? user.UserId ?? user.id ?? user.Id;
+}
+
+function getUserRoleName(user) {
+  const role =
+    user?.roleName ??
+    user?.RoleName ??
+    user?.role ??
+    user?.Role ??
+    user?.roles?.[0] ??
+    user?.Roles?.[0];
+
+  return String(role || "").toLowerCase();
+}
+async function fetchCourses(userId, roleName) {
+  if (roleName !== "student") {
     return [];
   } catch (err) {
     console.error("Error fetching courses:", err);
@@ -94,7 +123,7 @@ export default function CourseListPage() {
         setLoading(true);
         const userRaw = sessionStorage.getItem("user");
         const currentUser = userRaw ? JSON.parse(userRaw) : null;
-        
+
         const data = await fetchCourses(currentUser?.userId);
         if (isMounted) setCourses(Array.isArray(data) ? data : []);
       } catch {

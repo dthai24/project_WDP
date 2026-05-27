@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -1187,10 +1187,26 @@ export default function HomePage() {
   // TODO: replace with real API call
   const continueCourse = MOCK_CONTINUE_COURSE;
 
-  const handleExplore   = () => navigate("/courses");
+  const handleExplore = () => navigate("/courses");
   const handleMyCourses = () => navigate("/my-courses");
-  const handleContinue  = (course) => navigate(`/my-courses/${course.courseId}/learn`);
+  const handleContinue = (course) => navigate(`/my-courses/${course.courseId}/learn`);
   const handleCourseNav = (courseId) => navigate(`/courses/${courseId}`);
+
+  const [courses, setCourses] = useState([]);
+  useEffect(() => {
+    const getData = async () => {
+      const res = await fetch('http://localhost:5000/api/courses');
+      const result = await res.json();
+
+      if (!result.success) {
+        console.error(result.message);
+        return;
+      }
+
+      setCourses(result.data);
+    }
+    getData()
+  }, [])
 
   return (
     /* Wide root — hero can breathe at full width */
@@ -1232,6 +1248,7 @@ export default function HomePage() {
         <PathsSection />
 
         <CoursesSection
+          courses={courses}
           onExplore={handleExplore}
           onNavigateCourse={handleCourseNav}
         />

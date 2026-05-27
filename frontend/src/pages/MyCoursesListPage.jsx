@@ -276,19 +276,88 @@ export default function MyCoursesListPage() {
   const { savedIds, isSaved, unsave } = useSavedCourses();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const keyword = (searchParams.get("keyword") ?? "").trim();
+  const [allCourses, setAllCourses] = useState([]);
 
-  const allCourses = useMemo(() => {
-    const enrolled = MOCK_ENROLLED_COURSES.map((course) => ({
-      ...course,
-      isSaved: isSaved(course.courseId),
-    }));
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const rawUser = sessionStorage.getItem("user");
 
-    const savedOnly = MOCK_SAVED_CATALOG.filter(
-      (course) => savedIds.has(course.courseId) && !ENROLLED_IDS.has(course.courseId)
-    ).map((course) => ({ ...course, isSaved: true }));
+        console.log("RAW USER:", rawUser);
 
-    return [...enrolled, ...savedOnly];
-  }, [savedIds, isSaved]);
+        if (!rawUser) {
+          console.error("Chưa có user trong sessionStorage");
+          return;
+        }
+
+        const user = JSON.parse(rawUser);
+
+        console.log("PARSED USER:", user);
+
+        const userId = user.userId || user.UserId || user.id || user.Id;
+
+        const roleName = Array.isArray(user.roles)
+          ? (
+            typeof user.roles[0] === "string"
+              ? user.roles[0]
+              : user.roles[0]?.roleName || user.roles[0]?.RoleName
+          )
+          : user.roles || user.roleName || user.RoleName || user.role;
+
+        console.log("SEND TO BACKEND:", {
+          userId,
+          roleName,
+        });
+
+        if (!userId || !roleName) {
+          console.error("Thiếu userId hoặc roleName sau khi đọc sessionStorage", {
+            userId,
+            roleName,
+            user,
+          });
+          return;
+        }
+
+        const res = await fetch("http://localhost:5000/api/courses/my-courses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: Number(userId),
+            roleName: String(roleName).toLowerCase(),
+          }),
+        });
+
+        const result = await res.json();
+
+        console.log("MY COURSES RESPONSE:", result);
+
+        if (!res.ok || !result.success) {
+          console.error(result.message || "Không thể lấy danh sách Courses");
+          return;
+        }
+
+        setAllCourses(result.data || []);
+      } catch (error) {
+        console.log("Fetch courses error:", error);
+      }
+    };
+
+    getData();
+  }, []);
+  // const allCourses = useMemo(() => {
+  //   const enrolled = MOCK_ENROLLED_COURSES.map((course) => ({
+  //     ...course,
+  //     isSaved: isSaved(course.courseId),
+  //   }));
+
+  //   const savedOnly = MOCK_SAVED_CATALOG.filter(
+  //     (course) => savedIds.has(course.courseId) && !ENROLLED_IDS.has(course.courseId)
+  //   ).map((course) => ({ ...course, isSaved: true }));
+
+  //   return [...enrolled, ...savedOnly];
+  // }, [savedIds, isSaved]);
 
   const showReset = hasActiveFilters(filters, keyword);
   const activeFilterChips = useMemo(
