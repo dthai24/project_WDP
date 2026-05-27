@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -1188,112 +1188,25 @@ export default function HomePage() {
   const continueCourse = MOCK_CONTINUE_COURSE;
 
   const handleExplore = () => navigate("/courses");
-
-  const getUserId = () => {
-    return user.userId ?? user.UserId ?? user.id ?? user.Id;
-  };
-
-  const handleMyCourses = () => {
-    const userId = user.userId ?? user.UserId ?? user.id ?? user.Id;
-    const role = user.role ?? user.roles ?? user.Role ?? user.Roles;
-
-    if (!userId || !role) {
-      console.error("Missing userId or role in session:", user);
-      navigate("/my-courses");
-      return;
-    }
-
-    const getUserId = () => {
-      return user.userId ?? user.UserId ?? user.id ?? user.Id;
-    };
-
-    const getRoleId = () => {
-      return user.roleId ?? user.RoleId ?? user.roleID ?? user.roleIds?.[0] ?? user.RoleIds?.[0];
-    };
-
-    const handleMyCourses = async () => {
-      const userId = getUserId();
-      const roleId = getRoleId();
-
-      if (!userId || !roleId) {
-        console.error("Missing userId or roleId in session:", user);
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const res = await fetch("http://localhost:5000/api/courses/my-courses", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: Number(userId),
-            roleId: Number(roleId),
-          }),
-        });
-
-        const result = await res.json();
-
-        if (!res.ok || !result.success) {
-          console.error("Get my courses failed:", result.message);
-          return;
-        }
-
-        navigate("/my-courses", {
-          state: {
-            courses: result.data,
-            userId: Number(userId),
-            roleId: Number(roleId),
-          },
-        });
-      } catch (error) {
-        console.error("Get my courses error:", error.message);
-      }
-    };
-    navigate(`/my-courses?${params.toString()}`);
-  };
-
+  const handleMyCourses = () => navigate("/my-courses");
   const handleContinue = (course) => navigate(`/my-courses/${course.courseId}/learn`);
   const handleCourseNav = (courseId) => navigate(`/courses/${courseId}`);
 
-
-  /* ____ Fetch Data _____________________________*/
-
   const [courses, setCourses] = useState([]);
-
   useEffect(() => {
     const getData = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/courses");
+      const res = await fetch('http://localhost:5000/api/courses');
+      const result = await res.json();
 
-        if (!res.ok) {
-          throw new Error("Cannot fetch courses");
-        }
-
-        const result = await res.json();
-
-        const normalizedCourses = (result.data || []).map((course) => ({
-          courseId: course.courseId ?? course.CourseId,
-          courseName: course.courseName ?? course.CourseName,
-          description: course.description ?? course.Description ?? "",
-          category: course.category ?? course.Category ?? "Chưa phân loại",
-          level: course.level ?? course.Level ?? "Cơ bản",
-          instructor: course.instructor ?? course.Instructor ?? "Chưa cập nhật",
-          rating: course.rating ?? course.Rating ?? 0,
-          studentCount: course.studentCount ?? course.StudentCount ?? 0,
-          totalLessons: course.totalLessons ?? course.TotalLessons ?? 0,
-          thumbnail: course.thumbnail ?? course.Thumbnail ?? "",
-        }));
-
-        setCourses(normalizedCourses);
-      } catch (error) {
-        console.error("Get courses error:", error.message);
+      if (!result.success) {
+        console.error(result.message);
+        return;
       }
-    };
 
-    getData();
-  }, []);
+      setCourses(result.data);
+    }
+    getData()
+  }, [])
 
   return (
     /* Wide root — hero can breathe at full width */
@@ -1335,6 +1248,7 @@ export default function HomePage() {
         <PathsSection />
 
         <CoursesSection
+          courses={courses}
           onExplore={handleExplore}
           onNavigateCourse={handleCourseNav}
           courses={courses}

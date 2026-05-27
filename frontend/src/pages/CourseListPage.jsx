@@ -389,10 +389,24 @@ const SORT_OPTIONS = [
 // ];
 function getSessionUser() {
   try {
-    return JSON.parse(sessionStorage.getItem("user") || "{}");
-  } catch (error) {
-    console.error("Parse session user error:", error);
-    return {};
+    const url = userId
+      ? `http://localhost:5000/api/courses?userId=${userId}`
+      : "http://localhost:5000/api/courses";
+
+    const res = await fetch(url);
+
+    const result = await res.json();
+
+    console.log("ALL COURSES RESPONSE:", result);
+
+    if (!res.ok || !result.success) {
+      return [];
+    }
+
+    return result.data || [];
+  } catch (err) {
+    console.error("Error fetching courses:", err);
+    throw err;
   }
 }
 
@@ -488,19 +502,11 @@ export default function CourseListPage() {
     async function loadCourses() {
       try {
         setLoading(true);
+        const userRaw = sessionStorage.getItem("user");
+        const currentUser = userRaw ? JSON.parse(userRaw) : null;
 
-        if (roleName !== "student") {
-          if (isMounted) {
-            setCourses([]);
-          }
-          return;
-        }
-
-        const data = await fetchCourses(userId, roleName);
-
-        if (isMounted) {
-          setCourses(Array.isArray(data) ? data : []);
-        }
+        const data = await fetchCourses(currentUser?.userId);
+        if (isMounted) setCourses(Array.isArray(data) ? data : []);
       } catch {
         toast.error("Không thể tải danh sách khóa học. Vui lòng thử lại.");
 

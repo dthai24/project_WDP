@@ -26,12 +26,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth routes — public */}
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Public routes — accessible without login            */}
+        {/* ──────────────────────────────────────────────────── */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-otp" element={<OtpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* Demo UI components — public */}
         <Route path="/test-component" element={<TestPage />} />
@@ -57,16 +60,53 @@ export default function App() {
         >
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="home" element={<HomePage />} />
-          <Route path="courses" element={<CourseListPage />} />
-          <Route path="courses/:id" element={<CourseDetailPage />} />
-          <Route path="my-courses" element={<MyCoursesListPage />} />
-          <Route path="my-courses/:courseId/learn" element={<CourseLearningPage />} />
-          <Route path="profile" element={<ProfilePage />} />
+
+          {/* Student-accessible routes — require login */}
+          <Route
+            path="courses"
+            element={
+              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+                <CourseListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="courses/:id"
+            element={
+              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+                <CourseDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="my-courses"
+            element={
+              <ProtectedRoute allowedRoles={['Student', 'Mentor']}>
+                <MyCoursesListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="my-courses/:courseId/learn"
+            element={
+              <ProtectedRoute allowedRoles={['Student']}>
+                <CourseLearningPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+      </Routes >
+    </BrowserRouter >
   );
 }
