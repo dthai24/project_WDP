@@ -23,9 +23,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 
 // ---- Health-check ----
-app.get('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running 🚀' }));
+app.get('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running' }));
 
 // ---- Start ----
 app.listen(PORT, () => {
-  console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);
+  console.log(`Server đang chạy tại: http://localhost:${PORT}`);
 });
