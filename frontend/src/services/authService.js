@@ -34,8 +34,16 @@ const apiPostBase = async (url, body) => {
   return { ok: response.ok, data };
 };
 
-export const getCoursesApi = () =>
-  apiGetBase('/api/courses');
+export const getCoursesApi = (userId) => {
+  const headers = {};
+  if (userId) {
+    headers['x-user-id'] = String(userId);
+  }
+  return fetch('http://localhost:5000/api/courses', { headers })
+    .then((response) => response.json())
+    .then((data) => ({ ok: true, data }))
+    .catch(() => ({ ok: false, data: {} }));
+};
 
 export const getTopCoursesApi = (limit = 4) =>
   apiGetBase(`/api/courses/top?limit=${limit}`);
