@@ -33,7 +33,7 @@ function getMenuPaperSx(theme) {
   };
 }
 
-function FilterTrigger({ icon: Icon, label, hasValue, onClick, open }) {
+function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor = ICON }) {
   const theme = useTheme();
 
   return (
@@ -76,7 +76,7 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open }) {
         }),
       }}
     >
-      <Icon sx={{ fontSize: 15, color: ICON, flexShrink: 0 }} />
+      <Icon sx={{ fontSize: 15, color: iconColor, flexShrink: 0 }} />
       <Typography
         component="span"
         noWrap
@@ -141,6 +141,7 @@ function CompactMultiSelect({
   onChange,
   options,
   placeholder,
+  iconColor = ICON,
 }) {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -169,6 +170,7 @@ function CompactMultiSelect({
         hasValue={hasValue}
         open={open}
         onClick={(event) => setAnchorEl(event.currentTarget)}
+        iconColor={iconColor}
       />
       <Menu
         anchorEl={anchorEl}
@@ -194,7 +196,7 @@ function CompactMultiSelect({
   );
 }
 
-function CompactSelect({ icon, value, onChange, options }) {
+function CompactSelect({ icon, value, onChange, options, iconColor = ICON }) {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -208,6 +210,7 @@ function CompactSelect({ icon, value, onChange, options }) {
         hasValue
         open={open}
         onClick={(event) => setAnchorEl(event.currentTarget)}
+        iconColor={iconColor}
       />
       <Menu
         anchorEl={anchorEl}
@@ -304,6 +307,7 @@ export default function CourseCatalogToolbar({
             onChange={onCategoriesChange}
             options={categoryOptions}
             placeholder="Danh mục"
+            iconColor="#EA580C"
           />
           <CompactMultiSelect
             icon={SchoolOutlinedIcon}
@@ -311,6 +315,7 @@ export default function CourseCatalogToolbar({
             onChange={onLevelsChange}
             options={levelOptions}
             placeholder="Trình độ"
+            iconColor="#2563EB"
           />
           <CompactMultiSelect
             icon={FactCheckOutlinedIcon}
@@ -318,12 +323,13 @@ export default function CourseCatalogToolbar({
             onChange={onStatusesChange}
             options={statusOptions}
             placeholder="Trạng thái"
+            iconColor="#047857"
           />
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 0.5 }}>
-            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: ICON }} />
+            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: "#0891B2" }} />
             <Typography
               variant="caption"
               sx={{ color: MUTED, fontWeight: 500, whiteSpace: "nowrap", fontSize: 12 }}
@@ -336,6 +342,7 @@ export default function CourseCatalogToolbar({
             value={sortBy}
             onChange={onSortChange}
             options={sortOptions}
+            iconColor="#7C3AED"
           />
           {showReset ? (
             <Tooltip title="Đặt lại bộ lọc">

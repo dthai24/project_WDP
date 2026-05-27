@@ -1,26 +1,17 @@
 import {
   Box,
   Chip,
-  IconButton,
-  Menu,
-  MenuItem,
-  Tooltip,
+  Link as MuiLink,
   Typography,
   alpha,
-  useMediaQuery,
   useTheme,
 } from '@mui/material';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import PeopleOutlineRoundedIcon from '@mui/icons-material/PeopleOutlineRounded';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
-import MoreHorizRoundedIcon from '@mui/icons-material/MoreHorizRounded';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AppButton from '../../common/AppButton';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import { Link } from 'react-router-dom';
 import {
   formatMentorCourseDate,
   truncateText,
@@ -30,14 +21,34 @@ const TEXT = '#0F172A';
 const MUTED = '#64748B';
 const PRIMARY = '#0891B2';
 
+const METRIC_COLORS = {
+  students: '#2563EB',
+  rating: '#D97706',
+  lessons: '#0891B2',
+  updated: '#7C3AED',
+};
+
+const PILL_CHIP_SX = {
+  borderRadius: '999px',
+  height: 24,
+  fontSize: 12,
+  fontWeight: 700,
+  lineHeight: '24px',
+  '& .MuiChip-label': {
+    px: 1.2,
+    lineHeight: '24px',
+    fontWeight: 700,
+  },
+};
+
 function getStatusChip(status) {
   if (status === 'published') {
     return {
       label: 'Đã xuất bản',
       sx: {
-        bgcolor: 'rgba(4,120,87,0.10)',
+        bgcolor: 'rgba(4,120,87,0.12)',
         color: '#047857',
-        border: '1px solid rgba(4,120,87,0.22)',
+        border: '1px solid rgba(4,120,87,0.24)',
       },
     };
   }
@@ -51,6 +62,43 @@ function getStatusChip(status) {
   };
 }
 
+function getLevelChipStyle(level = '') {
+  const l = level.toLowerCase();
+  if (l.includes('cơ bản') || l.includes('sơ cấp')) {
+    return {
+      bgcolor: 'rgba(56,189,248,0.12)',
+      color: '#0284C7',
+      border: '1px solid rgba(56,189,248,0.22)',
+    };
+  }
+  if (l.includes('trung cấp')) {
+    return {
+      bgcolor: 'rgba(245,158,11,0.12)',
+      color: '#D97706',
+      border: '1px solid rgba(245,158,11,0.22)',
+    };
+  }
+  if (l.includes('nâng cao')) {
+    return {
+      bgcolor: 'rgba(234,88,12,0.12)',
+      color: '#EA580C',
+      border: '1px solid rgba(234,88,12,0.22)',
+    };
+  }
+  return { bgcolor: '#F1F5F9', color: '#64748B' };
+}
+
+function getCategoryChipStyle(category = '') {
+  const map = {
+    'Giao tiếp': { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' },
+    IELTS: { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' },
+    TOEIC: { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' },
+    'Ngữ pháp': { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' },
+    'Phát âm': { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' },
+  };
+  return map[category] ?? { bgcolor: '#F1F5F9', color: '#64748B' };
+}
+
 function CourseThumbnail({ thumbnail, courseName }) {
   return (
     <Box
@@ -60,7 +108,7 @@ function CourseThumbnail({ thumbnail, courseName }) {
         borderRadius: '14px',
         flexShrink: 0,
         overflow: 'hidden',
-        bgcolor: alpha(PRIMARY, 0.06),
+        bgcolor: alpha(PRIMARY, 0.1),
         backgroundImage: thumbnail ? `url(${thumbnail})` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -69,7 +117,7 @@ function CourseThumbnail({ thumbnail, courseName }) {
       }}
     >
       {!thumbnail && (
-        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: alpha(PRIMARY, 0.35) }} />
+        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
       )}
       {!thumbnail && courseName && (
         <Typography sx={{ display: 'none' }}>{courseName}</Typography>
@@ -78,10 +126,10 @@ function CourseThumbnail({ thumbnail, courseName }) {
   );
 }
 
-function MetricItem({ icon: Icon, label, value }) {
+function MetricItem({ icon: Icon, label, value, iconColor }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-      <Icon sx={{ fontSize: 15, color: MUTED, flexShrink: 0 }} />
+      <Icon sx={{ fontSize: 15, color: iconColor, flexShrink: 0 }} />
       <Typography sx={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap' }}>
         {label}: <Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>{value}</Box>
       </Typography>
@@ -91,16 +139,8 @@ function MetricItem({ icon: Icon, label, value }) {
 
 export default function MentorCourseRow({ course }) {
   const theme = useTheme();
-  const navigate = useNavigate();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [menuAnchor, setMenuAnchor] = useState(null);
-
   const statusChip = getStatusChip(course.status);
-  const basePath = `/mentor/courses/${course.courseId}`;
-
-  const handleView = () => navigate(basePath);
-  const handleEdit = () => navigate(`${basePath}/edit`);
-  const handleContent = () => navigate(`${basePath}/content`);
+  const detailPath = `/mentor/courses/${course.courseId}`;
 
   return (
     <Box
@@ -120,20 +160,24 @@ export default function MentorCourseRow({ course }) {
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.75 }}>
-          <Typography
+          <MuiLink
+            component={Link}
+            to={detailPath}
+            underline="hover"
             sx={{
               fontSize: { xs: 16, sm: 17 },
               fontWeight: 700,
               color: TEXT,
               lineHeight: 1.35,
+              '&:hover': { color: PRIMARY },
             }}
           >
             {course.courseName}
-          </Typography>
+          </MuiLink>
           <Chip
             size="small"
             label={statusChip.label}
-            sx={{ height: 24, fontSize: 11, fontWeight: 600, ...statusChip.sx }}
+            sx={{ ...PILL_CHIP_SX, ...statusChip.sx }}
           />
         </Box>
 
@@ -157,27 +201,14 @@ export default function MentorCourseRow({ course }) {
             <Chip
               size="small"
               label={course.categoryName}
-              sx={{
-                height: 24,
-                fontSize: 11,
-                fontWeight: 600,
-                bgcolor: alpha(PRIMARY, 0.08),
-                color: PRIMARY,
-              }}
+              sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.categoryName) }}
             />
           )}
           {course.levelName && (
             <Chip
               size="small"
               label={course.levelName}
-              variant="outlined"
-              sx={{
-                height: 24,
-                fontSize: 11,
-                fontWeight: 600,
-                borderColor: alpha('#0F172A', 0.12),
-                color: TEXT,
-              }}
+              sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.levelName) }}
             />
           )}
         </Box>
@@ -187,103 +218,32 @@ export default function MentorCourseRow({ course }) {
             icon={PeopleOutlineRoundedIcon}
             label="Học viên"
             value={course.studentCount ?? 0}
+            iconColor={METRIC_COLORS.students}
           />
           <MetricItem
             icon={StarRoundedIcon}
             label="Đánh giá"
             value={course.rating != null ? course.rating.toFixed(1) : '—'}
+            iconColor={METRIC_COLORS.rating}
           />
           <MetricItem
             icon={MenuBookRoundedIcon}
             label="Bài học"
             value={course.totalLessons ?? 0}
+            iconColor={METRIC_COLORS.lessons}
           />
-          <Typography sx={{ fontSize: 12, color: MUTED }}>
-            Cập nhật:{' '}
-            <Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>
-              {formatMentorCourseDate(course.updatedAt)}
-            </Box>
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+            <CalendarTodayOutlinedIcon
+              sx={{ fontSize: 15, color: METRIC_COLORS.updated, flexShrink: 0 }}
+            />
+            <Typography sx={{ fontSize: 12, color: MUTED }}>
+              Cập nhật:{' '}
+              <Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>
+                {formatMentorCourseDate(course.updatedAt)}
+              </Box>
+            </Typography>
+          </Box>
         </Box>
-      </Box>
-
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'row', md: 'column' },
-          alignItems: { xs: 'center', md: 'flex-end' },
-          justifyContent: { xs: 'flex-start', md: 'center' },
-          gap: 1,
-          flexShrink: 0,
-        }}
-      >
-        {!isMobile ? (
-          <>
-            <AppButton
-              variant="outlined"
-              size="small"
-              startIcon={<VisibilityOutlinedIcon sx={{ fontSize: 16 }} />}
-              onClick={handleView}
-              sx={{ px: 1.75, py: 0.75, fontSize: 13, minWidth: 120 }}
-            >
-              Xem
-            </AppButton>
-            <AppButton
-              variant="outlined"
-              size="small"
-              startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
-              onClick={handleEdit}
-              sx={{ px: 1.75, py: 0.75, fontSize: 13, minWidth: 120 }}
-            >
-              Chỉnh sửa
-            </AppButton>
-            <AppButton
-              variant="contained"
-              size="small"
-              startIcon={<FolderOutlinedIcon sx={{ fontSize: 16 }} />}
-              onClick={handleContent}
-              sx={{ px: 1.75, py: 0.75, fontSize: 13, minWidth: 120 }}
-            >
-              Nội dung
-            </AppButton>
-          </>
-        ) : (
-          <>
-            <AppButton variant="contained" size="small" onClick={handleContent} sx={{ fontSize: 13 }}>
-              Nội dung
-            </AppButton>
-            <Tooltip title="Thêm thao tác">
-              <IconButton
-                size="small"
-                onClick={(e) => setMenuAnchor(e.currentTarget)}
-                sx={{
-                  border: `1px solid ${alpha('#0F172A', 0.08)}`,
-                  borderRadius: '12px',
-                }}
-              >
-                <MoreHorizRoundedIcon />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              anchorEl={menuAnchor}
-              open={Boolean(menuAnchor)}
-              onClose={() => setMenuAnchor(null)}
-              slotProps={{
-                paper: {
-                  sx: {
-                    borderRadius: '12px',
-                    minWidth: 180,
-                    border: `1px solid ${alpha(PRIMARY, 0.1)}`,
-                  },
-                },
-              }}
-            >
-              <MenuItem onClick={() => { setMenuAnchor(null); handleView(); }}>Xem</MenuItem>
-              <MenuItem onClick={() => { setMenuAnchor(null); handleEdit(); }}>Chỉnh sửa</MenuItem>
-              <MenuItem onClick={() => { setMenuAnchor(null); handleContent(); }}>Quản lý nội dung</MenuItem>
-            </Menu>
-          </>
-        )}
       </Box>
     </Box>
   );
