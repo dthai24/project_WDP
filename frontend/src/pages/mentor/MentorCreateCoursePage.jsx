@@ -217,12 +217,10 @@ export default function MentorCreateCoursePage() {
           fontWeight: 800,
           color: '#0F172A',
           letterSpacing: '-0.02em',
-          mb: 0.75,
+          mb: 2,
+          maxWidth: 720,
         }}
       >
-        Tạo khóa học
-      </Typography>
-      <Typography sx={{ fontSize: 15, color: '#64748B', mb: 2, maxWidth: 640 }}>
         Bước 1: Thiết lập thông tin cơ bản cho khóa học.
       </Typography>
 

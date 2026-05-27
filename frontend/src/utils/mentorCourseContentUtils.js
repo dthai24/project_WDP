@@ -85,6 +85,23 @@ export function formatFileSize(bytes) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+export function serializePathSnapshot(path) {
+  const [normalized] = withNormalizedOrders([path]);
+  return JSON.stringify(normalized);
+}
+
+export function isPathSnapshotSaved(path, savedSnapshot) {
+  if (!savedSnapshot) return false;
+  return serializePathSnapshot(path) === savedSnapshot;
+}
+
+export function validatePathForSave(path) {
+  if (!String(path.PathName ?? '').trim()) {
+    return { PathName: 'Vui lòng nhập tên chương trước khi lưu.' };
+  }
+  return {};
+}
+
 export function sanitizePathsForStorage(paths) {
   return withNormalizedOrders(paths).map((path) => ({
     ...path,

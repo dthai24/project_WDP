@@ -4,6 +4,9 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
+import AppButton from '../../common/AppButton';
 import MentorLessonBlock from './MentorLessonBlock';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
@@ -34,6 +37,9 @@ export default function MentorChapterCard({
   onMaterialDelete,
   onMaterialReorder,
   disabled = false,
+  isSaved = false,
+  saving = false,
+  onSave,
 }) {
   const lessonCount = (path.nodes ?? []).length;
 
@@ -188,6 +194,59 @@ export default function MentorChapterCard({
             >
               <AddRoundedIcon sx={{ fontSize: 18 }} />
               Thêm bài học
+            </Box>
+
+            <Box
+              sx={{
+                mt: 2,
+                pt: 1.75,
+                borderTop: '1px solid rgba(15,23,42,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1.5,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                {isSaved ? (
+                  <CheckCircleRoundedIcon sx={{ fontSize: 18, color: '#059669', flexShrink: 0 }} />
+                ) : (
+                  <CloudOffOutlinedIcon sx={{ fontSize: 18, color: '#D97706', flexShrink: 0 }} />
+                )}
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: isSaved ? '#059669' : '#D97706',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {isSaved ? 'Chương đã lưu' : 'Chương chưa lưu'}
+                </Typography>
+              </Box>
+
+              <AppButton
+                variant="outlined"
+                onClick={onSave}
+                loading={saving}
+                disabled={disabled}
+                sx={{
+                  height: 36,
+                  borderRadius: '999px',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  px: 2,
+                  borderColor: CHAPTER_THEME.border,
+                  color: CHAPTER_THEME.color,
+                  '&:hover': {
+                    borderColor: CHAPTER_THEME.color,
+                    bgcolor: CHAPTER_THEME.bg,
+                  },
+                }}
+              >
+                Lưu
+              </AppButton>
             </Box>
           </Box>
         </Box>

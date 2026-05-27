@@ -104,14 +104,14 @@ export async function saveCreateCourseStep1(form, instructorId) {
  * Persist Step 2 content draft locally.
  * TODO: replace with API call — createCourseContent(courseId, payload)
  */
-export async function saveCreateCourseContent(course, paths) {
+export async function saveCreateCourseContent(course, paths, meta) {
   const contentPayload = buildCourseContentPayload(paths);
 
   // TODO: replace with API call
   // await createCourseContent(courseId, contentPayload);
 
   await delay(200);
-  saveCreateCourseContentToStorage(course, paths);
+  saveCreateCourseContentToStorage(course, paths, meta);
   return { ok: true, payload: contentPayload };
 }
 
