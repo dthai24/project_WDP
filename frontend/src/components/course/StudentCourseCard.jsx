@@ -74,7 +74,7 @@ export default function StudentCourseCard({
 
         <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
           <Typography variant="caption" color="text.secondary">
-            Bài học: {totalNodes} chặng
+            Chương: {totalNodes}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Học liệu: {totalMaterials} mục

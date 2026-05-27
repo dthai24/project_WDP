@@ -119,6 +119,20 @@ export const mentorCourseStatsMock = {
   totalStudents: 268,
 };
 
+export const mentorCourseCreateOptionsMock = {
+  categoryOptions: [
+    { value: 4, label: 'Ngữ pháp' },
+    { value: 3, label: 'IELTS' },
+    { value: 1, label: 'Giao tiếp' },
+    { value: 2, label: 'TOEIC' },
+  ],
+  levelOptions: [
+    { value: 1, label: 'Cơ bản' },
+    { value: 2, label: 'Trung cấp' },
+    { value: 3, label: 'Nâng cao' },
+  ],
+};
+
 export const mentorCourseFilterOptionsMock = {
   statusOptions: [
     { value: 'all', label: 'Tất cả' },

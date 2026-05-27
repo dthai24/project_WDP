@@ -373,8 +373,8 @@ export default function MyCourseRow({
           </Box>
 
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
-            <MetaItem icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài học`} />
-            <MetaItem icon={RouteOutlinedIcon} label={`${data.totalNodes} chặng`} />
+            <MetaItem icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
+            <MetaItem icon={RouteOutlinedIcon} label={`${data.totalNodes} chương`} />
             <MetaItem icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
             {data.instructor && (
               <MetaItem icon={PersonOutlineOutlinedIcon} label={data.instructor} />
@@ -394,7 +394,7 @@ export default function MyCourseRow({
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <PlaceOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8" }} />
                 <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
-                  Đang ở: Chặng {data.currentStage} · Bài {data.currentLesson}
+                  Đang ở: Chương {data.currentStage} · Bài {data.currentLesson}
                 </Typography>
               </Box>
             )}

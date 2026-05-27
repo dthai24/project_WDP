@@ -84,7 +84,7 @@ export default function MyCourseContinueSection({ course, onContinue }) {
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <PlaceOutlinedIcon sx={{ fontSize: 15, color: "#94A3B8" }} />
                 <Typography sx={{ fontSize: 14, color: MUTED, fontWeight: 500 }}>
-                  Đang ở: Chặng {course.currentStage} · Bài {course.currentLesson}
+                  Đang ở: Chương {course.currentStage} · Bài {course.currentLesson}
                 </Typography>
               </Box>
             )}

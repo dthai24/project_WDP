@@ -17,6 +17,9 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 import MentorCoursesPage from './pages/mentor/MentorCoursesPage';
 import MentorNewsPage from './pages/mentor/MentorNewsPage';
 import MentorStudentProgressPage from './pages/mentor/MentorStudentProgressPage';
+import MentorCreateCoursePage from './pages/mentor/MentorCreateCoursePage';
+import MentorCreateCourseContentPage from './pages/mentor/MentorCreateCourseContentPage';
+import MentorCreateCourseReviewPage from './pages/mentor/MentorCreateCourseReviewPage';
 import MentorCoursePlaceholder from './components/mentor/MentorCoursePlaceholder';
 
 import MainLayout from './components/layout/MainLayout';
@@ -133,12 +136,9 @@ export default function App() {
           }
         >
           <Route index element={<Navigate to="/mentor/courses" replace />} />
-          <Route path="courses/create" element={
-            <MentorCoursePlaceholder
-              title="Tạo khóa học"
-              description="Tạo khóa học mới và thiết lập thông tin cơ bản."
-            />
-          } />
+          <Route path="courses/create/review" element={<MentorCreateCourseReviewPage />} />
+          <Route path="courses/create/content" element={<MentorCreateCourseContentPage />} />
+          <Route path="courses/create" element={<MentorCreateCoursePage />} />
           <Route path="courses/:courseId/edit" element={
             <MentorCoursePlaceholder
               title="Chỉnh sửa khóa học"
@@ -148,7 +148,7 @@ export default function App() {
           <Route path="courses/:courseId/content" element={
             <MentorCoursePlaceholder
               title="Quản lý nội dung"
-              description="Quản lý chương, chặng, bài học và học liệu."
+              description="Quản lý chương, bài và học liệu."
             />
           } />
           <Route path="courses/:courseId" element={

@@ -99,7 +99,7 @@ const MOCK_COURSE_DETAILS = {
           { id: 5, title: "Cấu trúc email chuyên nghiệp chuẩn mực", type: "video", duration: "15 phút", isPreview: true, isCompleted: false },
           { id: 6, title: "Viết email từ chối & đề xuất lịch sự", type: "video", duration: "20 phút", isPreview: false, isCompleted: false },
           { id: 7, title: "Tình huống: họp trực tuyến", type: "video", duration: "12 phút", isPreview: false, isCompleted: false },
-          { id: 8, title: "Bài kiểm tra cuối chặng", type: "article", duration: "15 phút", isPreview: false, isCompleted: false },
+          { id: 8, title: "Bài kiểm tra cuối chương", type: "article", duration: "15 phút", isPreview: false, isCompleted: false },
         ],
       },
     ],
@@ -302,8 +302,8 @@ function SectionTitle({ children, sx }) {
 /** Metadata inline underline */
 function CourseMetaRow({ course }) {
   const items = [
-    { icon: MenuBookOutlinedIcon, label: "Bài học", value: `${course.lessonCount} bài` },
-    { icon: RouteOutlinedIcon, label: "Chặng", value: `${course.stageCount} chặng` },
+    { icon: MenuBookOutlinedIcon, label: "Bài", value: `${course.lessonCount} bài` },
+    { icon: RouteOutlinedIcon, label: "Chương", value: `${course.stageCount} chương` },
     { icon: ArticleOutlinedIcon, label: "Học liệu", value: `${course.materialCount} tài liệu` },
     { icon: AccessTimeOutlinedIcon, label: "Thời lượng", value: course.duration || "—" },
     { icon: CalendarTodayOutlinedIcon, label: "Cập nhật", value: course.updatedAt || "—" },
@@ -708,7 +708,7 @@ function CurriculumSection({ modules, isEnrolled, course }) {
         <Box>
           <SectionTitle sx={{ mb: 0.75 }}>Nội dung khóa học</SectionTitle>
           <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-            {course.stageCount} chặng • {course.lessonCount} bài học • {course.duration}
+            {course.stageCount} chương • {course.lessonCount} bài • {course.duration}
           </Typography>
         </Box>
         <IconButton
