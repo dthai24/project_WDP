@@ -4,11 +4,13 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useNavigate } from 'react-router-dom';
 import AppButton from '../../components/common/AppButton';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { toast } from '../../components/common/Toast';
 import MentorCourseContentBuilder from '../../components/mentor/course/MentorCourseContentBuilder';
 import MentorContentOverview from '../../components/mentor/course/MentorContentOverview';
 import MentorCourseCreateStepIndicator from '../../components/mentor/course/MentorCourseCreateStepIndicator';
 import MentorCourseLeaveDialog from '../../components/mentor/course/MentorCourseLeaveDialog';
+import MentorChapterDraftDialog from '../../components/mentor/course/MentorChapterDraftDialog';
 import { useMentorCourseLeaveGuard } from '../../hooks/useMentorCourseLeaveGuard';
 import { saveCreateCourseContent } from '../../services/mentorCourseService';
 import { getUser } from '../../utils/authUtils';
@@ -19,10 +21,39 @@ import {
   hasContentValidationErrors,
   getFirstContentErrorTarget,
   validateCourseContent,
+  validatePathForSave,
+  serializePathSnapshot,
+  isPathSnapshotSaved,
   withNormalizedOrders,
   reorderMaterials,
+  MATERIAL_TYPE_LABELS,
 } from '../../utils/mentorCourseContentUtils';
 import { loadCreateCourseDraft } from '../../utils/mentorCourseCreateStorage';
+
+function getDeleteDialogContent(deleteConfirm) {
+  if (!deleteConfirm) {
+    return { title: 'Xác nhận', message: '' };
+  }
+
+  if (deleteConfirm.type === 'chapter') {
+    return {
+      title: 'Xóa chương?',
+      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Toàn bộ bài học và học liệu trong chương sẽ bị xóa.`,
+    };
+  }
+
+  if (deleteConfirm.type === 'lesson') {
+    return {
+      title: 'Xóa bài học?',
+      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Toàn bộ học liệu trong bài học sẽ bị xóa.`,
+    };
+  }
+
+  return {
+    title: 'Xóa học liệu?',
+    message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Nội dung học liệu sẽ bị xóa vĩnh viễn.`,
+  };
+}
 
 function LeaveAwareBreadcrumbLink({ to, children, onNavigate, sx }) {
   return (
@@ -89,24 +120,39 @@ export default function MentorCreateCourseContentPage() {
   const [validationErrors, setValidationErrors] = useState({ root: [], paths: {} });
   const [expandedPaths, setExpandedPaths] = useState({});
   const [expandedNodes, setExpandedNodes] = useState({});
-  const [initialSnapshot, setInitialSnapshot] = useState('');
+  const [savedPathSnapshots, setSavedPathSnapshots] = useState({});
+  const [isCourseContentDraftSaved, setIsCourseContentDraftSaved] = useState(false);
+  const [savingChapterId, setSavingChapterId] = useState(null);
+  const [chapterDraftDialogOpen, setChapterDraftDialogOpen] = useState(false);
+  const [pendingChapterTempId, setPendingChapterTempId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
 
   const instructorId = getUser()?.userId ?? null;
   const courseName = course?.CourseName ?? '';
 
-  const isDirty = useMemo(() => {
-    const snapshot = JSON.stringify(withNormalizedOrders(paths));
-    if (!initialSnapshot) return paths.length > 0;
-    return snapshot !== initialSnapshot;
-  }, [paths, initialSnapshot]);
+  const isDirty = useMemo(
+    () => paths.some((path) => !isPathSnapshotSaved(path, savedPathSnapshots[path.tempId])),
+    [paths, savedPathSnapshots],
+  );
 
-  const persistDraft = useCallback(async () => {
+  const buildPathSnapshots = useCallback((nextPaths) => {
+    const snapshots = {};
+    nextPaths.forEach((path) => {
+      snapshots[path.tempId] = serializePathSnapshot(path);
+    });
+    return snapshots;
+  }, []);
+
+  const persistDraft = useCallback(async ({ markAllSaved = true } = {}) => {
     if (!course) return;
     await saveCreateCourseContent(course, paths);
-    setInitialSnapshot(JSON.stringify(withNormalizedOrders(paths)));
-  }, [course, paths]);
+    setIsCourseContentDraftSaved(true);
+    if (markAllSaved) {
+      setSavedPathSnapshots(buildPathSnapshots(paths));
+    }
+  }, [buildPathSnapshots, course, paths]);
 
   const {
     dialogOpen,
@@ -131,11 +177,31 @@ export default function MentorCreateCourseContentPage() {
     }
 
     const loadedPaths = withNormalizedOrders(draft.paths ?? []);
+    const snapshots = {};
+    loadedPaths.forEach((path) => {
+      snapshots[path.tempId] = serializePathSnapshot(path);
+    });
+
     setCourse(draft.course);
     setPaths(loadedPaths);
-    setInitialSnapshot(JSON.stringify(loadedPaths));
+    setSavedPathSnapshots(snapshots);
+    setIsCourseContentDraftSaved(
+      Boolean(draft.meta?.contentDraftSaved) || loadedPaths.length > 0,
+    );
     setReady(true);
   }, [navigate]);
+
+  useEffect(() => {
+    if (!isDirty) return undefined;
+
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
 
   const applyPaths = useCallback((updater) => {
     setPaths((prev) => withNormalizedOrders(updater(prev)));
@@ -154,11 +220,63 @@ export default function MentorCreateCourseContentPage() {
 
   const handlePathDelete = (pathTempId) => {
     applyPaths((prev) => prev.filter((path) => path.tempId !== pathTempId));
+    setSavedPathSnapshots((prev) => {
+      const next = { ...prev };
+      delete next[pathTempId];
+      return next;
+    });
     setExpandedPaths((prev) => {
       const next = { ...prev };
       delete next[pathTempId];
       return next;
     });
+  };
+
+  const requestDeletePath = (pathTempId) => {
+    const path = paths.find((item) => item.tempId === pathTempId);
+    const label = String(path?.PathName ?? '').trim() || 'Chương này';
+    setDeleteConfirm({ type: 'chapter', pathTempId, label });
+  };
+
+  const requestDeleteNode = (pathTempId, nodeTempId) => {
+    const path = paths.find((item) => item.tempId === pathTempId);
+    const node = (path?.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    const label = String(node?.NodeName ?? '').trim() || 'Bài học này';
+    setDeleteConfirm({ type: 'lesson', pathTempId, nodeTempId, label });
+  };
+
+  const requestDeleteMaterial = (pathTempId, nodeTempId, materialTempId) => {
+    const path = paths.find((item) => item.tempId === pathTempId);
+    const node = (path?.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    const material = (node?.materials ?? []).find((item) => item.tempId === materialTempId);
+    const title = String(material?.Title ?? '').trim();
+    const typeLabel = MATERIAL_TYPE_LABELS[material?.MaterialType] ?? 'Học liệu';
+    const label = title || `${typeLabel} này`;
+    setDeleteConfirm({
+      type: 'material',
+      pathTempId,
+      nodeTempId,
+      materialTempId,
+      label,
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteConfirm) return;
+
+    if (deleteConfirm.type === 'chapter') {
+      handlePathDelete(deleteConfirm.pathTempId);
+    } else if (deleteConfirm.type === 'lesson') {
+      handleNodeDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId);
+    } else {
+      handleMaterialDelete(
+        deleteConfirm.pathTempId,
+        deleteConfirm.nodeTempId,
+        deleteConfirm.materialTempId,
+      );
+    }
+
+    setDeleteConfirm(null);
   };
 
   const handleAddNode = (pathTempId) => {
@@ -254,6 +372,67 @@ export default function MentorCreateCourseContentPage() {
     );
   };
 
+  const executeChapterSave = async (pathTempId) => {
+    const path = paths.find((item) => item.tempId === pathTempId);
+    if (!path) return false;
+
+    const pathErrors = validatePathForSave(path);
+    if (pathErrors.PathName) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        paths: {
+          ...(prev.paths ?? {}),
+          [pathTempId]: {
+            ...(prev.paths?.[pathTempId] ?? {}),
+            ...pathErrors,
+          },
+        },
+      }));
+      toast.error(pathErrors.PathName);
+      return false;
+    }
+
+    setSavingChapterId(pathTempId);
+    try {
+      await persistDraft({ markAllSaved: false });
+      setSavedPathSnapshots((prev) => ({
+        ...prev,
+        [pathTempId]: serializePathSnapshot(path),
+      }));
+      toast.success('Đã lưu chương.');
+      return true;
+    } finally {
+      setSavingChapterId(null);
+    }
+  };
+
+  const handleSaveChapter = (pathTempId) => {
+    if (!isCourseContentDraftSaved) {
+      setPendingChapterTempId(pathTempId);
+      setChapterDraftDialogOpen(true);
+      return;
+    }
+
+    void executeChapterSave(pathTempId);
+  };
+
+  const handleChapterDraftDialogSave = async () => {
+    if (!pendingChapterTempId) return;
+
+    const saved = await executeChapterSave(pendingChapterTempId);
+    if (!saved) return;
+
+    setIsCourseContentDraftSaved(true);
+    setChapterDraftDialogOpen(false);
+    setPendingChapterTempId(null);
+  };
+
+  const handleChapterDraftDialogCancel = () => {
+    if (savingChapterId) return;
+    setChapterDraftDialogOpen(false);
+    setPendingChapterTempId(null);
+  };
+
   const handleSaveDraftClick = async () => {
     setSavingDraft(true);
     try {
@@ -313,6 +492,8 @@ export default function MentorCreateCourseContentPage() {
   };
 
   if (!ready || !course) return null;
+
+  const deleteDialogContent = getDeleteDialogContent(deleteConfirm);
 
   const footerActions = (
     <Box
@@ -419,12 +600,10 @@ export default function MentorCreateCourseContentPage() {
           fontWeight: 800,
           color: '#0F172A',
           letterSpacing: '-0.02em',
-          mb: 0.75,
+          mb: 1.75,
+          maxWidth: 720,
         }}
       >
-        Xây nội dung khóa học
-      </Typography>
-      <Typography sx={{ fontSize: 15, color: '#64748B', mb: 1.75, maxWidth: 720 }}>
         Bước 2: Tạo chương, bài học và học liệu cho khóa học.
       </Typography>
 
@@ -457,15 +636,18 @@ export default function MentorCreateCourseContentPage() {
           }
           onAddPath={handleAddPath}
           onPathChange={handlePathChange}
-          onPathDelete={handlePathDelete}
+          onPathDelete={requestDeletePath}
           onAddNode={handleAddNode}
           onNodeChange={handleNodeChange}
-          onNodeDelete={handleNodeDelete}
+          onNodeDelete={requestDeleteNode}
           onAddMaterial={handleAddMaterial}
           onMaterialChange={handleMaterialChange}
-          onMaterialDelete={handleMaterialDelete}
+          onMaterialDelete={requestDeleteMaterial}
           onMaterialReorder={handleMaterialReorder}
-          disabled={submitting || savingDraft}
+          disabled={submitting || savingDraft || Boolean(savingChapterId)}
+          savedPathSnapshots={savedPathSnapshots}
+          savingChapterId={savingChapterId}
+          onSaveChapter={handleSaveChapter}
         />
 
         <MentorContentOverview
@@ -490,6 +672,24 @@ export default function MentorCreateCourseContentPage() {
         onDiscard={handleDiscard}
         onSaveDraft={handleSaveDraft}
         saving={saving}
+      />
+
+      <MentorChapterDraftDialog
+        open={chapterDraftDialogOpen}
+        onCancel={handleChapterDraftDialogCancel}
+        onSaveDraft={handleChapterDraftDialogSave}
+        saving={Boolean(savingChapterId)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirm)}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleConfirmDelete}
+        title={deleteDialogContent.title}
+        message={deleteDialogContent.message}
+        confirmLabel="Xóa"
+        cancelLabel="Hủy"
+        destructive
       />
     </Box>
   );
