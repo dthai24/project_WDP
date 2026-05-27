@@ -4,12 +4,8 @@ require('dotenv').config();
 
 const { connectDB } = require('./config/db');
 const authRoutes    = require('./routes/authRoutes');
-<<<<<<< HEAD
-const courseRoutes = require('./routes/courseRoutes');
-=======
 const userRoutes    = require('./routes/userRoutes');
 const courseRoutes  = require('./routes/courseRoutes');
->>>>>>> origin/Nguyen_Tan_Dung_HE194923
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -23,10 +19,7 @@ connectDB();
 
 // ---- Routes ----
 app.use('/api/auth', authRoutes);
-<<<<<<< HEAD
-=======
 app.use('/api/users', userRoutes);
->>>>>>> origin/Nguyen_Tan_Dung_HE194923
 app.use('/api/courses', courseRoutes);
 
 // ---- Health-check ----
