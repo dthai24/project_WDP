@@ -42,7 +42,7 @@ function getMenuPaperSx(theme) {
   };
 }
 
-function FilterTrigger({ icon: Icon, label, hasValue, onClick, open }) {
+function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor = ICON }) {
   const theme = useTheme();
   return (
     <Box
@@ -82,7 +82,7 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open }) {
         }),
       }}
     >
-      <Icon sx={{ fontSize: 15, color: ICON, flexShrink: 0 }} />
+      <Icon sx={{ fontSize: 15, color: iconColor, flexShrink: 0 }} />
       <Typography
         component="span"
         noWrap
@@ -139,7 +139,7 @@ function FilterMenuItem({ selected, label, onClick }) {
   );
 }
 
-function CompactMultiSelect({ icon, value = [], onChange, options, placeholder }) {
+function CompactMultiSelect({ icon, value = [], onChange, options, placeholder, iconColor = ICON }) {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -167,6 +167,7 @@ function CompactMultiSelect({ icon, value = [], onChange, options, placeholder }
         hasValue={hasValue}
         open={open}
         onClick={(event) => setAnchorEl(event.currentTarget)}
+        iconColor={iconColor}
       />
       <Menu
         anchorEl={anchorEl}
@@ -192,7 +193,7 @@ function CompactMultiSelect({ icon, value = [], onChange, options, placeholder }
   );
 }
 
-function CompactSelect({ icon, value, onChange, options }) {
+function CompactSelect({ icon, value, onChange, options, iconColor = ICON }) {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -206,6 +207,7 @@ function CompactSelect({ icon, value, onChange, options }) {
         hasValue
         open={open}
         onClick={(event) => setAnchorEl(event.currentTarget)}
+        iconColor={iconColor}
       />
       <Menu
         anchorEl={anchorEl}
@@ -344,6 +346,7 @@ export default function MyCoursesToolbar({
             onChange={onCategoriesChange}
             options={categoryOptions}
             placeholder="Danh mục"
+            iconColor="#EA580C"
           />
           <CompactMultiSelect
             icon={SchoolOutlinedIcon}
@@ -351,12 +354,13 @@ export default function MyCoursesToolbar({
             onChange={onLevelsChange}
             options={levelOptions}
             placeholder="Trình độ"
+            iconColor="#2563EB"
           />
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 0.5 }}>
-            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: ICON }} />
+            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: "#0891B2" }} />
             <Typography
               variant="caption"
               sx={{ color: MUTED, fontWeight: 500, whiteSpace: "nowrap", fontSize: 12 }}
@@ -369,6 +373,7 @@ export default function MyCoursesToolbar({
             value={sortBy}
             onChange={onSortChange}
             options={sortOptions}
+            iconColor="#7C3AED"
           />
           {showReset ? (
             <Tooltip title="Đặt lại bộ lọc">
