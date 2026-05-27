@@ -13,14 +13,10 @@ import CourseLearningPage from './pages/CourseLearningPage';
 import MyCoursesListPage from './pages/MyCoursesListPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
 
 import MainLayout from './components/layout/MainLayout';
-
-/** Guard: redirect về /login nếu chưa đăng nhập */
-function ProtectedRoute({ children }) {
-  const user = sessionStorage.getItem('user');
-  return user ? children : <Navigate to="/login" replace />;
-}
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 export default function App() {
   return (
@@ -39,7 +35,9 @@ export default function App() {
         {/* Demo UI components — public */}
         <Route path="/test-component" element={<TestPage />} />
 
-        {/* Onboarding survey — cần đăng nhập */}
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Onboarding survey — any authenticated user          */}
+        {/* ──────────────────────────────────────────────────── */}
         <Route
           path="/survey"
           element={
@@ -49,12 +47,68 @@ export default function App() {
           }
         />
 
-        {/* Main app — Header + Footer */}
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Main app with Header + Sidebar + Footer             */}
+        {/* Root "/" shows HomePage for everyone (public)        */}
+        {/* Other pages under "/" require login (Student role)   */}
+        {/* ──────────────────────────────────────────────────── */}
+        <Route path="/" element={<MainLayout />}>
+          {/* Landing page — public, no login required */}
+          <Route index element={<HomePage />} />
+          <Route path="home" element={<HomePage />} />
+
+          {/* Student-accessible routes — require login */}
+          <Route
+            path="courses"
+            element={
+              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+                <CourseListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="courses/:id"
+            element={
+              <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+                <CourseDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="my-courses"
+            element={
+              <ProtectedRoute allowedRoles={['Student']}>
+                <MyCoursesListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="my-courses/:courseId/learn"
+            element={
+              <ProtectedRoute allowedRoles={['Student']}>
+                <CourseLearningPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+
+        {/* ──────────────────────────────────────────────────── */}
+        {/* Admin routes — Admin role only                      */}
+        {/* ──────────────────────────────────────────────────── */}
         <Route
-          path="/"
+          path="/admin/*"
           element={
-            <ProtectedRoute>
-              <MainLayout />
+            <ProtectedRoute allowedRoles={['Admin']}>
+              {/* TODO: Replace with admin layout / dashboard pages */}
+              <Navigate to="/" replace />
             </ProtectedRoute>
           }
         >

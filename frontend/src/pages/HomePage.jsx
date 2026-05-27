@@ -28,10 +28,10 @@ import heroImg from "../asset/image/herosection.png";
 
 /* ─── constants ─────────────────────────────────────────── */
 
-const PRIMARY = "#0891B2";
-const TEXT = "#0F172A";
-const MUTED = "#64748B";
-const BORDER = "rgba(8,145,178,0.08)";
+const PRIMARY   = "#0891B2";
+const TEXT      = "#0F172A";
+const MUTED     = "#64748B";
+const BORDER    = "rgba(8,145,178,0.08)";
 
 function getUser() {
   try { return JSON.parse(sessionStorage.getItem("user")) || {}; }
@@ -93,52 +93,52 @@ const MOCK_PATHS = [
   },
 ];
 
-// const MOCK_COURSES = [
-//   {
-//     courseId: 1,
-//     courseName: "Kỹ năng thuyết trình tiếng Anh cho sinh viên",
-//     category: "Giao tiếp",
-//     level: "Cơ bản",
-//     instructor: "Hoàng Thùy Linh",
-//     rating: 4.7,
-//     studentCount: 1240,
-//     totalLessons: 12,
-//     thumbnail: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=500&q=75",
-//   },
-//   {
-//     courseId: 2,
-//     courseName: "Tiếng Anh Thương Mại & Giao Tiếp Công Sở",
-//     category: "Giao tiếp",
-//     level: "Trung cấp",
-//     instructor: "Nguyễn Minh An",
-//     rating: 4.8,
-//     studentCount: 980,
-//     totalLessons: 8,
-//     thumbnail: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=500&q=75",
-//   },
-//   {
-//     courseId: 3,
-//     courseName: "Luyện viết IELTS Task 2",
-//     category: "IELTS",
-//     level: "Nâng cao",
-//     instructor: "Trần Quốc Huy",
-//     rating: 4.9,
-//     studentCount: 2100,
-//     totalLessons: 16,
-//     thumbnail: "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=500&q=75",
-//   },
-//   {
-//     courseId: 4,
-//     courseName: "Phát âm chuẩn & Intonation",
-//     category: "Phát âm",
-//     level: "Trung cấp",
-//     instructor: "Đỗ Khánh Vy",
-//     rating: 4.6,
-//     studentCount: 760,
-//     totalLessons: 10,
-//     thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&q=75",
-//   },
-// ];
+const MOCK_COURSES = [
+  {
+    courseId: 1,
+    courseName: "Kỹ năng thuyết trình tiếng Anh cho sinh viên",
+    category: "Giao tiếp",
+    level: "Cơ bản",
+    instructor: "Hoàng Thùy Linh",
+    rating: 4.7,
+    studentCount: 1240,
+    totalLessons: 12,
+    thumbnail: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=500&q=75",
+  },
+  {
+    courseId: 2,
+    courseName: "Tiếng Anh Thương Mại & Giao Tiếp Công Sở",
+    category: "Giao tiếp",
+    level: "Trung cấp",
+    instructor: "Nguyễn Minh An",
+    rating: 4.8,
+    studentCount: 980,
+    totalLessons: 8,
+    thumbnail: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=500&q=75",
+  },
+  {
+    courseId: 3,
+    courseName: "Luyện viết IELTS Task 2",
+    category: "IELTS",
+    level: "Nâng cao",
+    instructor: "Trần Quốc Huy",
+    rating: 4.9,
+    studentCount: 2100,
+    totalLessons: 16,
+    thumbnail: "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=500&q=75",
+  },
+  {
+    courseId: 4,
+    courseName: "Phát âm chuẩn & Intonation",
+    category: "Phát âm",
+    level: "Trung cấp",
+    instructor: "Đỗ Khánh Vy",
+    rating: 4.6,
+    studentCount: 760,
+    totalLessons: 10,
+    thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&q=75",
+  },
+];
 
 const BENEFITS = [
   {
@@ -268,11 +268,11 @@ function SectionHeader({ label, title, action, onAction }) {
 
 function CategoryChip({ category }) {
   const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
-    "IELTS": { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    "TOEIC": { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
-    "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
-    "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
+    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)",  color: "#2563EB" },
+    "IELTS":     { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
+    "TOEIC":     { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
+    "Ngữ pháp":  { bgcolor: "rgba(15,23,42,0.08)",   color: "#334155" },
+    "Phát âm":   { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
     "Mẹo học tập": { bgcolor: "rgba(245,158,11,0.10)", color: "#D97706" },
     "Kỹ năng nghe": { bgcolor: "rgba(8,145,178,0.10)", color: PRIMARY },
   };
@@ -446,7 +446,7 @@ function HeroSection({ onExplore }) {
           </AppButton>
         </Box>
 
-
+       
 
         {/* Stats — no wrapper container, items laid out flat */}
         <Box
@@ -796,7 +796,7 @@ function PathsSection() {
 
 /* ─── Section 4: Suggested courses ──────────────────────── */
 
-function CoursesSection({ onExplore, onNavigateCourse, courses }) {
+function CoursesSection({ onExplore, onNavigateCourse }) {
   const theme = useTheme();
 
   return (
@@ -814,7 +814,7 @@ function CoursesSection({ onExplore, onNavigateCourse, courses }) {
           gap: 2.5,
         }}
       >
-        {courses.map((course) => (
+        {MOCK_COURSES.map((course) => (
           <CourseHomeCard
             key={course.courseId}
             course={course}
@@ -829,9 +829,9 @@ function CoursesSection({ onExplore, onNavigateCourse, courses }) {
 function CourseHomeCard({ course, onClick }) {
   const theme = useTheme();
   const levelColors = {
-    "Cơ bản": { bg: "rgba(56,189,248,0.10)", text: "#0284C7" },
+    "Cơ bản":   { bg: "rgba(56,189,248,0.10)", text: "#0284C7" },
     "Trung cấp": { bg: "rgba(245,158,11,0.10)", text: "#D97706" },
-    "Nâng cao": { bg: "rgba(234,88,12,0.10)", text: "#EA580C" },
+    "Nâng cao":  { bg: "rgba(234,88,12,0.10)", text: "#EA580C" },
   };
   const lvl = levelColors[course.level] ?? { bg: "#F1F5F9", text: MUTED };
 
@@ -1183,7 +1183,7 @@ export default function HomePage() {
 
   const user = useMemo(() => getUser(), []);
   const displayName = user.fullName || "Học viên";
-  const role = user.roles;
+
   // TODO: replace with real API call
   const continueCourse = MOCK_CONTINUE_COURSE;
 
@@ -1229,9 +1229,9 @@ export default function HomePage() {
       >
         Xin chào,{" "}
         <Box component="span" sx={{ color: PRIMARY, fontWeight: 700 }}>
-          {role} --- {displayName}
+          {displayName}
         </Box>{" "}
-
+        
       </Typography>
 
       {/* Hero spans the full wide container */}
@@ -1251,7 +1251,6 @@ export default function HomePage() {
           courses={courses}
           onExplore={handleExplore}
           onNavigateCourse={handleCourseNav}
-          courses={courses}
         />
 
         <BenefitsSection />
