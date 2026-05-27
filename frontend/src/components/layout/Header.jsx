@@ -80,6 +80,9 @@ export default function Header({
   showUser = true,
   onLogout,
   logoHeight = 36,
+  logoTo = "/home",
+  profilePath = "/profile",
+  showMyCoursesButton = true,
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -92,16 +95,19 @@ export default function Header({
 
   const isCoursePage = location.pathname === "/courses";
   const isMyCoursesPage = location.pathname === "/my-courses";
-  const isCourseListSearchPage = isCoursePage || isMyCoursesPage;
+  const isMentorCoursesPage = location.pathname === "/mentor/courses";
+  const isCourseListSearchPage = isCoursePage || isMyCoursesPage || isMentorCoursesPage;
   const [search, setSearch] = useState("");
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const userMenuOpen = Boolean(userMenuAnchor);
 
   useEffect(() => {
-    if (isCourseListSearchPage) {
+    if (isMentorCoursesPage) {
+      setSearch(searchParams.get("q") || "");
+    } else if (isCourseListSearchPage) {
       setSearch(searchParams.get("keyword") || "");
     }
-  }, [isCourseListSearchPage, searchParams]);
+  }, [isCourseListSearchPage, isMentorCoursesPage, searchParams]);
 
   useEffect(
     () => () => {
@@ -141,7 +147,7 @@ export default function Header({
 
   const handleGoProfile = () => {
     closeUserMenu();
-    navigate("/profile");
+    navigate(profilePath);
   };
 
   const handleProfileTriggerClick = (event) => {
@@ -198,6 +204,20 @@ export default function Header({
     setSearchParams(next, { replace: true });
   };
 
+  const applyMentorCourseKeyword = (value) => {
+    const next = new URLSearchParams(searchParams);
+    const trimmed = value.trim();
+    if (trimmed) next.set("q", trimmed);
+    else next.delete("q");
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+  };
+
+  const applySearchKeyword = (value) => {
+    if (isMentorCoursesPage) applyMentorCourseKeyword(value);
+    else applyCourseKeyword(value);
+  };
+
   const handleSearchChange = (event) => {
     const value = event.target.value;
     setSearch(value);
@@ -208,7 +228,7 @@ export default function Header({
       clearTimeout(keywordDebounceRef.current);
     }
     keywordDebounceRef.current = setTimeout(() => {
-      applyCourseKeyword(value);
+      applySearchKeyword(value);
     }, KEYWORD_DEBOUNCE_MS);
   };
 
@@ -220,7 +240,7 @@ export default function Header({
     }
 
     if (isCourseListSearchPage) {
-      applyCourseKeyword(search);
+      applySearchKeyword(search);
       return;
     }
 
@@ -258,7 +278,7 @@ export default function Header({
             minWidth: 0,
           }}
         >
-          <Logo height={logoHeight} to="/home" />
+          <Logo height={logoHeight} to={logoTo} />
           <Typography
             component="span"
             sx={{
@@ -289,11 +309,13 @@ export default function Header({
             onKeyDown={handleSearchKeyDown}
             showClear={!isCourseListSearchPage}
             placeholder={
-              isMyCoursesPage
-                ? "Tìm trong khóa học của tôi..."
-                : isCoursePage
-                  ? "Tìm khóa học..."
-                  : "Tìm kiếm khóa học, lộ trình..."
+              isMentorCoursesPage
+                ? "Tìm khóa học..."
+                : isMyCoursesPage
+                  ? "Tìm trong khóa học của tôi..."
+                  : isCoursePage
+                    ? "Tìm khóa học..."
+                    : "Tìm kiếm khóa học, lộ trình..."
             }
             sx={{ width: "100%", maxWidth: 480 }}
           />
@@ -301,7 +323,7 @@ export default function Header({
 
         {showUser && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
-            {user && (
+            {user && showMyCoursesButton && (
               <Tooltip title="Khóa học của tôi">
                 <Box
                   component="button"
