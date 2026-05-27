@@ -19,7 +19,7 @@ import {
   parseCourseListParams,
   resetCourseListParams,
 } from "../utils/courseListParams";
-
+import { getCoursesApi, enrollCourseApi } from '../services/authService';
 const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 
 const CATEGORY_OPTIONS = [
@@ -85,14 +85,14 @@ function getUserRoleName(user) {
 
   return String(role || "").toLowerCase();
 }
-async function fetchCourses(userId, roleName) {
-  if (roleName !== "student") {
-    return [];
-  } catch (err) {
-    console.error("Error fetching courses:", err);
-    throw err;
-  }
-}
+// async function fetchCourses(userId, roleName) {
+//   if (roleName !== "student") {
+//     return [];
+//   } catch (err) {
+//     console.error("Error fetching courses:", err);
+//     throw err;
+//   }
+// }
 
 export default function CourseListPage() {
   const theme = useTheme();
@@ -118,10 +118,11 @@ export default function CourseListPage() {
 
   useEffect(() => {
     let isMounted = true;
+
     async function loadCourses() {
       try {
         setLoading(true);
-        const userRaw = sessionStorage.getItem("user");
+        const userRaw = sessionStorage.getItem('user');
         const currentUser = userRaw ? JSON.parse(userRaw) : null;
 
         const data = await fetchCourses(currentUser?.userId);
@@ -133,6 +134,7 @@ export default function CourseListPage() {
         if (isMounted) setLoading(false);
       }
     }
+
     loadCourses();
     return () => {
       isMounted = false;
@@ -212,16 +214,26 @@ export default function CourseListPage() {
     navigate(buildCourseDetailPath(course.courseId, searchParams, `${location.pathname}${location.search}`));
   };
 
-  const handleEnroll = (course) => {
-    // TODO: Replace with enroll API call.
-    setCourses((prev) =>
-      prev.map((item) =>
-        item.courseId === course.courseId
-          ? { ...item, isEnrolled: true, progressPercentage: 0 }
-          : item
-      )
-    );
-    toast.success(`Bạn đã đăng ký khóa "${course.courseName}"`);
+  const handleEnroll = async (course) => {
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+    if (!user.userId) {
+      toast.error('Vui lòng đăng nhập để đăng ký khóa học.');
+      return;
+    }
+
+    const { ok, data } = await enrollCourseApi(user.userId, course.courseId);
+    if (ok && data.success) {
+      setCourses((prev) =>
+        prev.map((item) =>
+          item.courseId === course.courseId
+            ? { ...item, isEnrolled: true, progressPercentage: 0 }
+            : item
+        )
+      );
+      toast.success(`Đã đăng ký khóa "${course.courseName}" thành công!`);
+    } else {
+      toast.error(data.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+    }
   };
 
   const handleRemoveFilterChip = (chip) => {
