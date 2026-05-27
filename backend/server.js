@@ -1,5 +1,5 @@
 const express = require('express');
-const cors    = require('cors');
+const cors = require('cors');
 require('dotenv').config();
 
 const { connectDB } = require('./config/db');
@@ -27,5 +27,5 @@ app.get('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R B
 
 // ---- Start ----
 app.listen(PORT, () => {
-  console.log(`Server đang chạy tại: http://localhost:${PORT}`);
+  console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);
 });

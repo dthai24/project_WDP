@@ -1,10 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { Box, Stack, Typography, Tooltip, useTheme } from "@mui/material";
-import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
-import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
-import NewspaperOutlinedIcon from "@mui/icons-material/NewspaperOutlined";
-import { getUser, isStudent } from "../../utils/authUtils";
+import { getUser } from "../../utils/authUtils";
+import { getMentorMenuItems, getStudentMenuItems } from "./sidebarMenuConfig";
 import { HEADER_HEIGHT } from "./MainLayout";
 
 export const SIDEBAR_WIDTH = 76;
@@ -14,39 +11,6 @@ const COLOR_ACTIVE = "#0891B2";
 const COLOR_INACTIVE = "#334155";
 const BG_ACTIVE = "rgba(8, 145, 178, 0.1)";
 const BG_HOVER = "rgba(8, 145, 178, 0.06)";
-
-function getMenuItems(user) {
-  const student = isStudent(user);
-  return [
-    {
-      id: "home",
-      label: "Trang chủ",
-      to: "/home",
-      Icon: HomeOutlinedIcon,
-      disabled: false,
-      end: true,
-    },
-    {
-      id: "courses",
-      label: "Khóa học",
-      to: "/courses",
-      Icon: MenuBookOutlinedIcon,
-      disabled: !student,
-    },
-    {
-      id: "paths",
-      label: "Lộ trình",
-      Icon: RouteOutlinedIcon,
-      disabled: true,
-    },
-    {
-      id: "news",
-      label: "Tin tức",
-      Icon: NewspaperOutlinedIcon,
-      disabled: true,
-    },
-  ];
-}
 
 function itemSx(active, disabled) {
   return {
@@ -115,14 +79,16 @@ function SidebarItem({ item }) {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ variant = "student" }) {
   const theme = useTheme();
-  const menuItems = getMenuItems(getUser());
+  const user = getUser();
+  const menuItems =
+    variant === "mentor" ? getMentorMenuItems() : getStudentMenuItems(user);
 
   return (
     <Box
       component="aside"
-      aria-label="Điều hướng chính"
+      aria-label={variant === "mentor" ? "Điều hướng mentor" : "Điều hướng chính"}
       sx={{
         position: "fixed",
         left: 0,
