@@ -1,15 +1,18 @@
-export const MATERIAL_TYPES = ['VIDEO', 'DOC', 'TEST'];
+// TODO: update backend/DB MaterialType to support TEXT
+export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
 
 export const MATERIAL_TYPE_LABELS = {
   VIDEO: 'Video',
+  TEXT: 'Bài đọc',
   DOC: 'Tài liệu',
   TEST: 'Bài kiểm tra',
 };
 
 export const MATERIAL_URL_PLACEHOLDERS = {
-  VIDEO: 'https://youtube.com/... hoặc link video',
-  DOC: 'https://.../document.pdf',
-  TEST: 'https://.../quiz hoặc link bài kiểm tra',
+  VIDEO: 'Link video bài học',
+  TEXT: 'Link văn bản',
+  DOC: 'Link tài liệu PDF/DOC',
+  TEST: 'Link bài kiểm tra',
 };
 
 let tempIdCounter = 0;
@@ -44,6 +47,7 @@ export function createEmptyMaterial() {
     MaterialType: 'VIDEO',
     Title: '',
     MaterialUrl: '',
+    Content: '',
     MaterialOrder: 1,
   };
 }
@@ -103,14 +107,14 @@ export function validateCourseContent(paths) {
     }
 
     if ((path.nodes ?? []).length === 0) {
-      pathErrors._nodes = 'Mỗi chương cần ít nhất 1 bài.';
+      pathErrors._nodes = 'Mỗi chương cần ít nhất 1 bài học.';
     }
 
     (path.nodes ?? []).forEach((node) => {
       const nodeErrors = { materials: {} };
 
       if (!String(node.NodeName ?? '').trim()) {
-        nodeErrors.NodeName = 'Vui lòng nhập tên bài.';
+        nodeErrors.NodeName = 'Vui lòng nhập tên bài học.';
       }
 
       (node.materials ?? []).forEach((material) => {
@@ -120,13 +124,25 @@ export function validateCourseContent(paths) {
           materialErrors.MaterialType = 'Vui lòng chọn loại học liệu.';
         }
 
-        if (!String(material.Title ?? '').trim()) {
-          materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
-        }
+        if (material.MaterialType === 'TEXT') {
+          if (!String(material.Title ?? '').trim()) {
+            materialErrors.Title = 'Vui lòng nhập tiêu đề bài đọc';
+          }
 
-        const materialUrl = String(material.MaterialUrl ?? '').trim();
-        if (materialUrl && !isSimpleUrl(materialUrl)) {
-          materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
+          const contentHtml = String(material.Content ?? '').trim();
+          const contentText = contentHtml.replace(/<[^>]*>/g, '').trim();
+          if (!contentText) {
+            materialErrors.Content = 'Vui lòng nhập nội dung bài đọc';
+          }
+        } else {
+          if (!String(material.Title ?? '').trim()) {
+            materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
+          }
+
+          const materialUrl = String(material.MaterialUrl ?? '').trim();
+          if (materialUrl && !isSimpleUrl(materialUrl)) {
+            materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
+          }
         }
 
         if (Object.keys(materialErrors).length > 0) {
@@ -156,6 +172,34 @@ export function hasContentValidationErrors(errors) {
   return Object.keys(errors.paths ?? {}).length > 0;
 }
 
+export function getFirstContentErrorTarget(errors, paths = []) {
+  if ((errors.root ?? []).length > 0) return 'content-builder-root';
+
+  for (const path of paths) {
+    const pathErrors = errors.paths?.[path.tempId];
+    if (!pathErrors) continue;
+
+    if (pathErrors.PathName || pathErrors._nodes) {
+      return `chapter-${path.tempId}`;
+    }
+
+    for (const node of path.nodes ?? []) {
+      const nodeErrors = pathErrors.nodes?.[node.tempId];
+      if (!nodeErrors) continue;
+
+      if (nodeErrors.NodeName) return `lesson-${node.tempId}`;
+
+      for (const material of node.materials ?? []) {
+        if (nodeErrors.materials?.[material.tempId]) {
+          return `material-${material.tempId}`;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export function buildCourseContentPayload(paths) {
   return {
     paths: withNormalizedOrders(paths).map(({ tempId: _tempId, nodes, ...path }) => ({
@@ -165,12 +209,27 @@ export function buildCourseContentPayload(paths) {
         NodeName: String(node.NodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
         Description: String(node.Description ?? '').trim() || null,
-        materials: (materials ?? []).map(({ tempId: _materialTempId, ...material }) => ({
-          MaterialType: material.MaterialType,
-          Title: String(material.Title ?? '').trim(),
-          MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
-          MaterialOrder: material.MaterialOrder,
-        })),
+        materials: (materials ?? []).map(({ tempId: _materialTempId, Content, EstimatedMinutes: _estimatedMinutes, ...material }) => {
+          const base = {
+            MaterialType: material.MaterialType,
+            Title: String(material.Title ?? '').trim(),
+            MaterialOrder: material.MaterialOrder,
+          };
+
+          if (material.MaterialType === 'TEXT') {
+            // TODO: backend should support Content for TEXT material
+            return {
+              ...base,
+              MaterialUrl: null,
+              Content: String(Content ?? '').trim(),
+            };
+          }
+
+          return {
+            ...base,
+            MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+          };
+        }),
       })),
     })),
   };

@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import AppButton from '../../components/common/AppButton';
 import { toast } from '../../components/common/Toast';
 import MentorCourseContentBuilder from '../../components/mentor/course/MentorCourseContentBuilder';
-import MentorContentPreview from '../../components/mentor/course/MentorContentPreview';
+import MentorContentOverview from '../../components/mentor/course/MentorContentOverview';
 import MentorCourseCreateStepIndicator from '../../components/mentor/course/MentorCourseCreateStepIndicator';
 import MentorCourseLeaveDialog from '../../components/mentor/course/MentorCourseLeaveDialog';
 import { useMentorCourseLeaveGuard } from '../../hooks/useMentorCourseLeaveGuard';
@@ -17,6 +17,7 @@ import {
   createEmptyNode,
   createEmptyPath,
   hasContentValidationErrors,
+  getFirstContentErrorTarget,
   validateCourseContent,
   withNormalizedOrders,
 } from '../../utils/mentorCourseContentUtils';
@@ -250,6 +251,35 @@ export default function MentorCreateCourseContentPage() {
 
     if (hasContentValidationErrors(errors)) {
       toast.error('Vui lòng kiểm tra lại cấu trúc nội dung khóa học.');
+
+      setExpandedPaths((prev) => {
+        const next = { ...prev };
+        paths.forEach((path) => {
+          if (errors.paths?.[path.tempId]) next[path.tempId] = true;
+        });
+        return next;
+      });
+
+      setExpandedNodes((prev) => {
+        const next = { ...prev };
+        paths.forEach((path) => {
+          const pathErrors = errors.paths?.[path.tempId];
+          if (!pathErrors?.nodes) return;
+          (path.nodes ?? []).forEach((node) => {
+            if (pathErrors.nodes[node.tempId]) next[node.tempId] = true;
+          });
+        });
+        return next;
+      });
+
+      const target = getFirstContentErrorTarget(errors, paths);
+      if (target) {
+        setTimeout(() => {
+          document
+            .querySelector(`[data-content-error="${target}"]`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 180);
+      }
       return;
     }
 
@@ -265,8 +295,74 @@ export default function MentorCreateCourseContentPage() {
 
   if (!ready || !course) return null;
 
+  const footerActions = (
+    <Box
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 1,
+        width: '100%',
+      }}
+    >
+      <AppButton
+        variant="outlined"
+        startIcon={<ArrowBackRoundedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
+        onClick={() => navigate('/mentor/courses/create')}
+        disabled={submitting || savingDraft || saving}
+        sx={{
+          flex: '1 1 0',
+          minWidth: 0,
+          height: 42,
+          borderRadius: '999px',
+          fontWeight: 700,
+          fontSize: { xs: 12, sm: 13 },
+          px: { xs: 1, sm: 2 },
+        }}
+      >
+        Quay lại
+      </AppButton>
+      <AppButton
+        variant="outlined"
+        onClick={handleSaveDraftClick}
+        loading={savingDraft}
+        disabled={submitting || saving}
+        sx={{
+          flex: '1 1 0',
+          minWidth: 0,
+          height: 42,
+          borderRadius: '999px',
+          fontWeight: 700,
+          fontSize: { xs: 12, sm: 13 },
+          px: { xs: 1, sm: 2 },
+        }}
+      >
+        Lưu nháp
+      </AppButton>
+      <AppButton
+        onClick={handleNext}
+        loading={submitting}
+        endIcon={!submitting ? <ArrowForwardRoundedIcon /> : undefined}
+        disabled={savingDraft || saving}
+        sx={{
+          flex: '1 1 0',
+          minWidth: 0,
+          height: 42,
+          borderRadius: '999px',
+          fontWeight: 700,
+          fontSize: { xs: 12, sm: 13 },
+          px: { xs: 1, sm: 2 },
+          bgcolor: '#0891B2',
+          '&:hover': { bgcolor: '#0E7490' },
+        }}
+      >
+        Tiếp theo
+      </AppButton>
+    </Box>
+  );
+
   return (
-    <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}>
+    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
       <Breadcrumbs
         separator="/"
         sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: '#64748B', mx: 0.5 } }}
@@ -309,8 +405,8 @@ export default function MentorCreateCourseContentPage() {
       >
         Xây nội dung khóa học
       </Typography>
-      <Typography sx={{ fontSize: 15, color: '#64748B', mb: 2, maxWidth: 720 }}>
-        Bước 2: Tạo chương, bài và học liệu cho khóa học.
+      <Typography sx={{ fontSize: 15, color: '#64748B', mb: 1.75, maxWidth: 720 }}>
+        Bước 2: Tạo chương, bài học và học liệu cho khóa học.
       </Typography>
 
       <MentorCourseCreateStepIndicator currentStep={2} />
@@ -318,10 +414,9 @@ export default function MentorCreateCourseContentPage() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 300px' },
-          gap: 2.5,
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 7fr) minmax(280px, 3fr)' },
+          gap: { xs: 2, lg: 2.5 },
           alignItems: 'start',
-          mb: 2.5,
         }}
       >
         <MentorCourseContentBuilder
@@ -351,58 +446,22 @@ export default function MentorCreateCourseContentPage() {
           onMaterialChange={handleMaterialChange}
           onMaterialDelete={handleMaterialDelete}
           disabled={submitting || savingDraft}
-          courseName={courseName}
         />
 
-        <MentorContentPreview paths={paths} courseName={courseName} />
+        <MentorContentOverview
+          paths={paths}
+          courseName={courseName}
+          footer={footerActions}
+        />
       </Box>
 
       <Box
         sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          gap: 1.25,
-          pt: 0.5,
+          display: { xs: 'flex', lg: 'none' },
+          mt: 2.5,
         }}
       >
-        <AppButton
-          variant="outlined"
-          startIcon={<ArrowBackRoundedIcon />}
-          onClick={() => navigate('/mentor/courses/create')}
-          disabled={submitting || savingDraft || saving}
-          sx={{ minWidth: 110, height: 44, borderRadius: '999px', fontWeight: 700 }}
-        >
-          Quay lại
-        </AppButton>
-
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
-          <AppButton
-            variant="outlined"
-            onClick={handleSaveDraftClick}
-            loading={savingDraft}
-            disabled={submitting || saving}
-            sx={{ minWidth: 110, height: 44, borderRadius: '999px', fontWeight: 700 }}
-          >
-            Lưu nháp
-          </AppButton>
-          <AppButton
-            onClick={handleNext}
-            loading={submitting}
-            endIcon={!submitting ? <ArrowForwardRoundedIcon /> : undefined}
-            disabled={savingDraft || saving}
-            sx={{
-              minWidth: 128,
-              height: 44,
-              borderRadius: '999px',
-              fontWeight: 700,
-              bgcolor: '#0891B2',
-              '&:hover': { bgcolor: '#0E7490' },
-            }}
-          >
-            Tiếp theo
-          </AppButton>
-        </Box>
+        {footerActions}
       </Box>
 
       <MentorCourseLeaveDialog

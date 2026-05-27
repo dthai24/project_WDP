@@ -1,11 +1,10 @@
 import { Box, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
-import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
-import MentorPathEditor from './MentorPathEditor';
-import MentorContentBlockHeading from './MentorContentSectionHeading';
-import { CREATE_CARD_SX, MUTED, TEXT } from './mentorCourseCreateStyles';
-import { CHAPTER_THEME, contentAddButtonSx } from './mentorCourseContentStyles';
+import AppButton from '../../common/AppButton';
+import MentorChapterCard from './MentorChapterCard';
+import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
+import { BUILDER_PANEL_SX, CHAPTER_THEME } from './mentorCourseContentStyles';
 
 export default function MentorCourseContentBuilder({
   paths,
@@ -24,67 +23,16 @@ export default function MentorCourseContentBuilder({
   onMaterialChange,
   onMaterialDelete,
   disabled = false,
-  courseName = '',
 }) {
   return (
-    <Box>
-      {courseName && (
-        <Box
-          sx={{
-            ...CREATE_CARD_SX,
-            mb: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.25,
-          }}
-        >
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: '12px',
-              bgcolor: 'rgba(15,23,42,0.06)',
-              border: '1px solid rgba(15,23,42,0.08)',
-              display: 'grid',
-              placeItems: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <SchoolRoundedIcon sx={{ fontSize: 22, color: TEXT }} />
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 600, mb: 0.25 }}>
-              Khóa học
-            </Typography>
-            <Typography sx={{ fontSize: 17, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
-              {courseName}
-            </Typography>
-          </Box>
-        </Box>
-      )}
-
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.75 }}>
-        <MentorContentBlockHeading
-          Icon={MenuBookRoundedIcon}
-          label="Chương học"
-          theme={CHAPTER_THEME}
-          sx={{ mb: 0 }}
-        />
-        <Box
-          component="button"
-          type="button"
-          onClick={onAddPath}
-          disabled={disabled}
-          sx={{
-            ...contentAddButtonSx(CHAPTER_THEME),
-            cursor: disabled ? 'default' : 'pointer',
-            opacity: disabled ? 0.6 : 1,
-            flexShrink: 0,
-          }}
-        >
-          <AddRoundedIcon sx={{ fontSize: 18 }} />
-          Thêm chương
-        </Box>
+    <Box id="content-builder-root" data-content-error="content-builder-root">
+      <Box sx={{ mb: 2 }}>
+        <Typography sx={{ fontSize: 18, fontWeight: 800, color: TEXT, lineHeight: 1.35 }}>
+          Nội dung khóa học
+        </Typography>
+        <Typography sx={{ fontSize: 14, color: MUTED, mt: 0.35, lineHeight: 1.5, maxWidth: 520 }}>
+          Tạo chương, bài học và học liệu theo đúng thứ tự học.
+        </Typography>
       </Box>
 
       {(errors.root ?? []).length > 0 && (
@@ -107,18 +55,11 @@ export default function MentorCourseContentBuilder({
       )}
 
       {paths.length === 0 ? (
-        <Box
-          sx={{
-            ...CREATE_CARD_SX,
-            textAlign: 'center',
-            py: 4,
-            borderLeft: `4px solid ${CHAPTER_THEME.color}`,
-          }}
-        >
+        <Box sx={{ ...BUILDER_PANEL_SX, textAlign: 'center', py: 4.5, px: 2 }}>
           <Box
             sx={{
-              width: 48,
-              height: 48,
+              width: 52,
+              height: 52,
               borderRadius: '14px',
               bgcolor: CHAPTER_THEME.bg,
               border: `1px solid ${CHAPTER_THEME.border}`,
@@ -128,37 +69,33 @@ export default function MentorCourseContentBuilder({
               mb: 1.25,
             }}
           >
-            <MenuBookRoundedIcon sx={{ fontSize: 26, color: CHAPTER_THEME.color }} />
+            <MenuBookRoundedIcon sx={{ fontSize: 28, color: CHAPTER_THEME.color }} />
           </Box>
-          <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT, mb: 0.75 }}>
+          <Typography sx={{ fontSize: 17, fontWeight: 700, color: TEXT, mb: 0.5 }}>
             Chưa có chương nào
           </Typography>
           <Typography sx={{ fontSize: 14, color: MUTED, mb: 2, maxWidth: 420, mx: 'auto', lineHeight: 1.55 }}>
-            Thêm chương đầu tiên, sau đó tạo bài và học liệu bên trong.
+            Thêm chương đầu tiên để bắt đầu xây dựng nội dung khóa học.
           </Typography>
-          <Box
-            component="button"
-            type="button"
+          <AppButton
             onClick={onAddPath}
             disabled={disabled}
+            startIcon={<AddRoundedIcon />}
             sx={{
-              ...contentAddButtonSx(CHAPTER_THEME),
-              bgcolor: CHAPTER_THEME.bg,
-              cursor: disabled ? 'default' : 'pointer',
-              px: 2,
-              py: 1,
+              height: 40,
               borderRadius: '999px',
-              opacity: disabled ? 0.6 : 1,
+              fontWeight: 700,
+              bgcolor: PRIMARY,
+              '&:hover': { bgcolor: '#0E7490' },
             }}
           >
-            <AddRoundedIcon sx={{ fontSize: 18 }} />
             Thêm chương
-          </Box>
+          </AppButton>
         </Box>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {paths.map((path, pathIndex) => (
-            <MentorPathEditor
+            <MentorChapterCard
               key={path.tempId}
               path={path}
               pathIndex={pathIndex}
@@ -178,6 +115,29 @@ export default function MentorCourseContentBuilder({
               disabled={disabled}
             />
           ))}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', pt: 0.25 }}>
+            <AppButton
+              variant="outlined"
+              onClick={onAddPath}
+              disabled={disabled}
+              startIcon={<AddRoundedIcon />}
+              sx={{
+                height: 40,
+                borderRadius: '999px',
+                fontWeight: 700,
+                px: 2,
+                borderColor: CHAPTER_THEME.border,
+                color: CHAPTER_THEME.color,
+                '&:hover': {
+                  borderColor: CHAPTER_THEME.color,
+                  bgcolor: CHAPTER_THEME.bg,
+                },
+              }}
+            >
+              Thêm chương
+            </AppButton>
+          </Box>
         </Box>
       )}
     </Box>
