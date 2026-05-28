@@ -1,11 +1,66 @@
-import { Box, Typography } from '@mui/material';
-import { CONTENT_CARD_META_SX, CONTENT_CARD_TITLE_SX } from './mentorCourseContentStyles';
+import { Box, InputBase, Typography } from '@mui/material';
+import { CONTENT_SHORT_DESCRIPTION_MAX } from '../../../utils/mentorCourseContentUtils';
+import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { CONTENT_CARD_META_SX, CONTENT_CARD_TITLE_SX, contentFieldSx } from './mentorCourseContentStyles';
 
 export function ContentFieldLabel({ children, sx }) {
   return (
     <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#64748B', mb: 0.5, lineHeight: 1.35, ...sx }}>
       {children}
     </Typography>
+  );
+}
+
+export function ContentShortDescriptionField({
+  label = 'Mô tả ngắn',
+  value,
+  onChange,
+  disabled = false,
+  theme,
+  placeholder = 'Mô tả ngắn (tuỳ chọn)',
+  maxLength = CONTENT_SHORT_DESCRIPTION_MAX,
+  labelSx,
+  containerSx,
+}) {
+  const charCount = String(value ?? '').length;
+
+  const handleChange = (event) => {
+    const next = event.target.value.slice(0, maxLength);
+    if (next === event.target.value) {
+      onChange(event);
+      return;
+    }
+    onChange({ ...event, target: { ...event.target, value: next } });
+  };
+
+  return (
+    <Box sx={containerSx}>
+      <ContentFieldLabel sx={labelSx}>{label}</ContentFieldLabel>
+      <Box sx={contentFieldSx(false, theme)}>
+        <InputBase
+          value={value ?? ''}
+          onChange={handleChange}
+          disabled={disabled}
+          placeholder={placeholder}
+          fullWidth
+          multiline
+          minRows={2}
+          inputProps={{ maxLength }}
+          sx={{ fontSize: 13, color: TEXT, alignItems: 'flex-start' }}
+        />
+      </Box>
+      <Typography
+        sx={{
+          fontSize: 11,
+          color: charCount >= maxLength ? '#DC2626' : MUTED,
+          mt: 0.35,
+          lineHeight: 1.3,
+          textAlign: 'right',
+        }}
+      >
+        {charCount}/{maxLength}
+      </Typography>
+    </Box>
   );
 }
 

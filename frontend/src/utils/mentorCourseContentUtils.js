@@ -1,19 +1,125 @@
 // TODO: update backend/DB MaterialType to support TEXT
+import { resolveVideoEmbed } from './videoEmbedUtils';
+import {
+  buildTestMaterialPayload,
+  getTestDefaultFields,
+  validateTestMaterial,
+} from './mentorTestContentUtils';
+
+export { getTestDefaultFields } from './mentorTestContentUtils';
+
 export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
+
+export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
+
+export function trimShortDescription(value) {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, CONTENT_SHORT_DESCRIPTION_MAX);
+}
 
 export const MATERIAL_TYPE_LABELS = {
   VIDEO: 'Video',
-  TEXT: 'Bài đọc',
+  TEXT: 'Văn bản',
   DOC: 'Tài liệu',
   TEST: 'Bài kiểm tra',
 };
 
 export const MATERIAL_URL_PLACEHOLDERS = {
-  VIDEO: 'Link video bài học',
+  VIDEO: 'Ví dụ: https://youtube.com/watch?v=...',
   TEXT: 'Link văn bản',
-  DOC: 'Link tài liệu PDF/DOC',
+  DOC: 'Ví dụ: https://drive.google.com/file/...',
+  TEST: 'Ví dụ: https://forms.google.com/...',
+};
+
+export const MATERIAL_URL_LABELS = {
+  VIDEO: 'Link video',
   TEST: 'Link bài kiểm tra',
 };
+
+export const DOC_SOURCE_UPLOAD = 'UPLOAD';
+export const DOC_SOURCE_LINK = 'LINK';
+export const VIDEO_SOURCE_LINK = 'LINK';
+
+export function getVideoDefaultFields() {
+  return {
+    SourceType: VIDEO_SOURCE_LINK,
+    MaterialUrl: '',
+    EmbedUrl: null,
+  };
+}
+
+export const DOC_ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+
+export function getDocDefaultFields() {
+  return {
+    SourceType: DOC_SOURCE_UPLOAD,
+    File: null,
+    FileName: null,
+    FileSize: null,
+    MaterialUrl: '',
+  };
+}
+
+export function isAllowedDocFile(file) {
+  if (!file?.name) return false;
+  const lower = file.name.toLowerCase();
+  return DOC_ALLOWED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+export function getDocFileTypeLabel(fileName) {
+  const lower = String(fileName ?? '').toLowerCase();
+  if (lower.endsWith('.pdf')) return 'PDF';
+  if (lower.endsWith('.doc')) return 'DOC';
+  if (lower.endsWith('.docx')) return 'DOCX';
+  if (lower.endsWith('.ppt')) return 'PPT';
+  if (lower.endsWith('.pptx')) return 'PPTX';
+  return 'Tài liệu';
+}
+
+export function formatFileSize(bytes) {
+  if (bytes == null || Number.isNaN(Number(bytes))) return '';
+  const size = Number(bytes);
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function serializePathSnapshot(path) {
+  const [normalized] = withNormalizedOrders([path]);
+  return JSON.stringify(normalized);
+}
+
+export function isPathSnapshotSaved(path, savedSnapshot) {
+  if (!savedSnapshot) return false;
+  return serializePathSnapshot(path) === savedSnapshot;
+}
+
+export function validatePathForSave(path) {
+  if (!String(path.PathName ?? '').trim()) {
+    return { PathName: 'Vui lòng nhập tên chương trước khi lưu.' };
+  }
+  return {};
+}
+
+export function sanitizePathsForStorage(paths) {
+  return withNormalizedOrders(paths).map((path) => ({
+    ...path,
+    nodes: (path.nodes ?? []).map((node) => ({
+      ...node,
+      materials: (node.materials ?? []).map(({ File: _file, ...material }) => {
+        if (material.MaterialType !== 'TEST' || !(material.Sections ?? []).length) {
+          return material;
+        }
+
+        return {
+          ...material,
+          Sections: material.Sections.map(({ File: _sectionFile, ...section }) => section),
+        };
+      }),
+    })),
+  }));
+}
 
 let tempIdCounter = 0;
 
@@ -77,6 +183,22 @@ export function withNormalizedOrders(paths) {
   }));
 }
 
+export function reorderMaterials(materials, fromIndex, toIndex) {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= materials.length ||
+    toIndex >= materials.length
+  ) {
+    return materials;
+  }
+  const next = [...materials];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
 export function countContentStats(paths) {
   const normalized = withNormalizedOrders(paths);
   const pathCount = normalized.length;
@@ -125,15 +247,40 @@ export function validateCourseContent(paths) {
         }
 
         if (material.MaterialType === 'TEXT') {
-          if (!String(material.Title ?? '').trim()) {
-            materialErrors.Title = 'Vui lòng nhập tiêu đề bài đọc';
-          }
-
           const contentHtml = String(material.Content ?? '').trim();
           const contentText = contentHtml.replace(/<[^>]*>/g, '').trim();
           if (!contentText) {
-            materialErrors.Content = 'Vui lòng nhập nội dung bài đọc';
+            materialErrors.Content = 'Vui lòng nhập nội dung văn bản';
           }
+        } else if (material.MaterialType === 'DOC') {
+          if (!String(material.Title ?? '').trim()) {
+            materialErrors.Title = 'Vui lòng nhập tiêu đề tài liệu';
+          }
+
+          const sourceType =
+            material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+
+          if (sourceType === DOC_SOURCE_UPLOAD) {
+            if (!material.File) {
+              materialErrors.File = 'Vui lòng chọn file tài liệu';
+            }
+          } else {
+            const materialUrl = String(material.MaterialUrl ?? '').trim();
+            if (!materialUrl || !isSimpleUrl(materialUrl)) {
+              materialErrors.MaterialUrl = 'Vui lòng nhập link tài liệu hợp lệ';
+            }
+          }
+        } else if (material.MaterialType === 'VIDEO') {
+          if (!String(material.Title ?? '').trim()) {
+            materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
+          }
+
+          const materialUrl = String(material.MaterialUrl ?? '').trim();
+          if (materialUrl && !isSimpleUrl(materialUrl)) {
+            materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
+          }
+        } else if (material.MaterialType === 'TEST') {
+          Object.assign(materialErrors, validateTestMaterial(material));
         } else {
           if (!String(material.Title ?? '').trim()) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
@@ -200,16 +347,64 @@ export function getFirstContentErrorTarget(errors, paths = []) {
   return null;
 }
 
+/**
+ * Build DOM selector for a content builder item (chapter / lesson / material).
+ */
+export function getContentItemScrollSelector(target) {
+  if (!target?.type) return null;
+
+  if (target.type === 'chapter' && target.pathTempId) {
+    return `[data-content-error="chapter-${target.pathTempId}"]`;
+  }
+  if (target.type === 'lesson' && target.nodeTempId) {
+    return `[data-content-error="lesson-${target.nodeTempId}"]`;
+  }
+  if (target.type === 'material' && target.materialTempId) {
+    return `[data-content-error="material-${target.materialTempId}"]`;
+  }
+
+  return null;
+}
+
+/**
+ * Expand parent sections if needed, then scroll to a content builder item.
+ */
+export function scrollToContentItem(
+  target,
+  { setExpandedPaths, setExpandedNodes, delayMs = 180 } = {},
+) {
+  if (target.pathTempId && setExpandedPaths) {
+    setExpandedPaths((prev) => ({ ...prev, [target.pathTempId]: true }));
+  }
+  if (target.nodeTempId && setExpandedNodes) {
+    setExpandedNodes((prev) => ({ ...prev, [target.nodeTempId]: true }));
+  }
+
+  const selector = getContentItemScrollSelector(target);
+  if (!selector) return;
+
+  window.setTimeout(() => {
+    document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, delayMs);
+}
+
 export function buildCourseContentPayload(paths) {
   return {
     paths: withNormalizedOrders(paths).map(({ tempId: _tempId, nodes, ...path }) => ({
       PathName: String(path.PathName ?? '').trim(),
-      Description: String(path.Description ?? '').trim() || null,
+      Description: trimShortDescription(path.Description),
       nodes: (nodes ?? []).map(({ tempId: _nodeTempId, materials, ...node }) => ({
         NodeName: String(node.NodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
-        Description: String(node.Description ?? '').trim() || null,
-        materials: (materials ?? []).map(({ tempId: _materialTempId, Content, EstimatedMinutes: _estimatedMinutes, ...material }) => {
+        Description: trimShortDescription(node.Description),
+        materials: (materials ?? []).map(
+          ({
+            tempId: _materialTempId,
+            Content,
+            File,
+            EstimatedMinutes: _estimatedMinutes,
+            ...material
+          }) => {
           const base = {
             MaterialType: material.MaterialType,
             Title: String(material.Title ?? '').trim(),
@@ -223,6 +418,52 @@ export function buildCourseContentPayload(paths) {
               MaterialUrl: null,
               Content: String(Content ?? '').trim(),
             };
+          }
+
+          if (material.MaterialType === 'DOC') {
+            // TODO: backend should support document upload and SourceType
+            const sourceType =
+              material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+
+            if (sourceType === DOC_SOURCE_LINK) {
+              return {
+                ...base,
+                SourceType: DOC_SOURCE_LINK,
+                File: null,
+                FileName: null,
+                FileSize: null,
+                MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+              };
+            }
+
+            return {
+              ...base,
+              SourceType: DOC_SOURCE_UPLOAD,
+              File: File ?? null,
+              FileName: material.FileName ?? null,
+              FileSize: material.FileSize ?? null,
+              MaterialUrl: null,
+            };
+          }
+
+          if (material.MaterialType === 'VIDEO') {
+            const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
+            const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
+            // TODO: backend should support EmbedUrl for VIDEO material
+            return {
+              ...base,
+              SourceType: VIDEO_SOURCE_LINK,
+              MaterialUrl: materialUrl,
+              EmbedUrl: embedUrl,
+            };
+          }
+
+          if (material.MaterialType === 'TEST') {
+            // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
+            return buildTestMaterialPayload(material, {
+              ...base,
+              Description: trimShortDescription(material.Description),
+            });
           }
 
           return {

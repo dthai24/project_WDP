@@ -4,8 +4,11 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
+import AppButton from '../../common/AppButton';
 import MentorLessonBlock from './MentorLessonBlock';
-import { ContentFieldLabel } from './MentorContentSectionHeading';
+import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import {
   CHAPTER_THEME,
@@ -32,7 +35,11 @@ export default function MentorChapterCard({
   onAddMaterial,
   onMaterialChange,
   onMaterialDelete,
+  onMaterialReorder,
   disabled = false,
+  isSaved = false,
+  saving = false,
+  onSave,
 }) {
   const lessonCount = (path.nodes ?? []).length;
 
@@ -125,19 +132,15 @@ export default function MentorChapterCard({
             </Typography>
           )}
 
-          <ContentFieldLabel sx={{ mt: 1.25 }}>Mô tả chương</ContentFieldLabel>
-          <Box sx={contentFieldSx(false, CHAPTER_THEME)}>
-            <InputBase
-              value={path.Description}
-              onChange={(event) => onChange(path.tempId, { Description: event.target.value })}
-              disabled={disabled}
-              placeholder="Mô tả ngắn (tuỳ chọn)"
-              fullWidth
-              multiline
-              minRows={2}
-              sx={{ fontSize: 13, color: TEXT, alignItems: 'flex-start' }}
-            />
-          </Box>
+          <ContentShortDescriptionField
+            label="Mô tả ngắn"
+            value={path.Description}
+            onChange={(event) => onChange(path.tempId, { Description: event.target.value })}
+            disabled={disabled}
+            theme={CHAPTER_THEME}
+            placeholder="Mô tả ngắn về nội dung chương (tuỳ chọn)"
+            labelSx={{ mt: 1.25 }}
+          />
 
           <Box sx={{ mt: 2 }}>
             {errors._nodes && (
@@ -169,6 +172,9 @@ export default function MentorChapterCard({
                     onMaterialDelete={(materialTempId) =>
                       onMaterialDelete(path.tempId, node.tempId, materialTempId)
                     }
+                    onMaterialReorder={(fromIndex, toIndex) =>
+                      onMaterialReorder(path.tempId, node.tempId, fromIndex, toIndex)
+                    }
                     disabled={disabled}
                   />
                 ))}
@@ -188,6 +194,59 @@ export default function MentorChapterCard({
             >
               <AddRoundedIcon sx={{ fontSize: 18 }} />
               Thêm bài học
+            </Box>
+
+            <Box
+              sx={{
+                mt: 2,
+                pt: 1.75,
+                borderTop: '1px solid rgba(15,23,42,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1.5,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                {isSaved ? (
+                  <CheckCircleRoundedIcon sx={{ fontSize: 18, color: '#059669', flexShrink: 0 }} />
+                ) : (
+                  <CloudOffOutlinedIcon sx={{ fontSize: 18, color: '#D97706', flexShrink: 0 }} />
+                )}
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: isSaved ? '#059669' : '#D97706',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {isSaved ? 'Chương đã lưu' : 'Chương chưa lưu'}
+                </Typography>
+              </Box>
+
+              <AppButton
+                variant="outlined"
+                onClick={onSave}
+                loading={saving}
+                disabled={disabled}
+                sx={{
+                  height: 36,
+                  borderRadius: '999px',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  px: 2,
+                  borderColor: CHAPTER_THEME.border,
+                  color: CHAPTER_THEME.color,
+                  '&:hover': {
+                    borderColor: CHAPTER_THEME.color,
+                    bgcolor: CHAPTER_THEME.bg,
+                  },
+                }}
+              >
+                Lưu
+              </AppButton>
             </Box>
           </Box>
         </Box>
