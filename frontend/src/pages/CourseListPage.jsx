@@ -159,8 +159,10 @@ export default function CourseListPage() {
       }
       if (filters.statuses.length > 0) {
         const matchesStatus = filters.statuses.some((status) => {
-          if (status === "enrolled") return course.isEnrolled;
-          if (status === "not_enrolled") return !course.isEnrolled;
+          if (status === "enrolled") 
+            { return course.enrollmentStatus !== "available"; } 
+          if (status === "not_enrolled") 
+            { return course.enrollmentStatus === "available"; }
           return false;
         });
         if (!matchesStatus) return false;
@@ -226,7 +228,7 @@ export default function CourseListPage() {
       setCourses((prev) =>
         prev.map((item) =>
           item.courseId === course.courseId
-            ? { ...item, isEnrolled: true, progressPercentage: 0 }
+            ? { ...item, enrollmentStatus: "enrolled", isEnrolled: true, progressPercentage: 0 }
             : item
         )
       );

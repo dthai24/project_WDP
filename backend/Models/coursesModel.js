@@ -286,6 +286,44 @@ const getCourseLessonsRaw = async (courseId) => {
 
     return result.recordset;
 };
+//=======================================================
+// Enroll khoa hoc
+//=======================================================
+const enrollCourse = async (userId, courseId) => {
+    const request = new sql.Request();
+
+    request.input('userId', sql.Int, Number(userId));
+    request.input('courseId', sql.Int, Number(courseId));
+
+  
+    const existed = await request.query(`
+        SELECT *
+        FROM User_Courses
+        WHERE UserId = @userId
+          AND CourseId = @courseId
+    `);
+
+    if (existed.recordset.length > 0) {
+        throw new Error('COURSE_ALREADY_ENROLLED');
+    }
+
+    await request.query(`
+        INSERT INTO User_Courses (
+            UserId,
+            CourseId,
+            EnrollmentDate,
+            ProgressPercentage
+        )
+        VALUES (
+            @userId,
+            @courseId,
+            GETDATE(),
+            0
+        )
+    `);
+
+    return true;
+};
 
 // ======================================================
 // Build modules theo progress
@@ -587,4 +625,5 @@ module.exports = {
     getStudentCourses,
     getMentorCourses,
     getAllCourses,
+    enrollCourse
 };

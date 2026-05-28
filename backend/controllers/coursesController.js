@@ -49,7 +49,44 @@ const getAllCourses = async (req, res) => {
   }
 };
 
+const enroll = async (req, res) => {
+  try {
+    const { userId, courseId } = req.body;
+
+    if (!userId || !courseId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin đăng ký'
+      });
+    }
+
+    await courseModel.enrollCourse(userId, courseId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đăng ký khóa học thành công!',
+    });
+
+  } catch (error) {
+
+    if (error.message === 'COURSE_ALREADY_ENROLLED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Bạn đã đăng ký khóa học này rồi'
+      });
+    }
+
+    console.error('Enroll error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi đăng ký'
+    });
+  }
+};
+
 module.exports = {
   getMyCourses,
   getAllCourses,
+  enroll
 };

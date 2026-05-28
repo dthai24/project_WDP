@@ -7,11 +7,11 @@ import MentorCourseInfoReview from '../../components/mentor/course/MentorCourseI
 import MentorCourseContentReview from '../../components/mentor/course/MentorCourseContentReview';
 import MentorCourseReviewActions from '../../components/mentor/course/MentorCourseReviewActions';
 import MentorCourseReviewStatusPanel from '../../components/mentor/course/MentorCourseReviewStatusPanel';
-import {
-  createCourseWithContent,
-  fetchCourseCategories,
-  fetchCourseLevels,
-} from '../../services/mentorCourseService';
+// import {
+//   createCourseWithContent,
+//   fetchCourseCategories,
+//   fetchCourseLevels,
+// } from '../../services/mentorCourseService';
 import {
   clearCreateCourseDraft,
   loadCreateCourseDraft,

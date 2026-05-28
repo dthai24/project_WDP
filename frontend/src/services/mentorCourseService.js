@@ -1,9 +1,9 @@
-// <<<<<<< HEAD
-// =======
+// // <<<<<<< HEAD
+// // =======
 // import { mentorCoursesMock } from '../data/mentorCoursesMock';
 // import { mentorCourseDetailById } from '../data/mentorCourseDetailMock';
 // import { mentorCourseStudentsByCourseId } from '../data/mentorCourseStudentsMock';
-// >>>>>>> origin/Trinh_Cong_Phuc_Nguyen_HE176116
+// // >>>>>>> origin/Trinh_Cong_Phuc_Nguyen_HE176116
 // import { normalizeMentorCourse } from '../utils/mentorCourseUtils';
 // import { normalizeMentorCourseDetail } from '../utils/mentorCourseDetailUtils';
 // import {
@@ -127,16 +127,16 @@
 //           const payload = buildCreateCourseStep1Payload(form, instructorId);
 
 //           // TODO: replace with API call when backend is ready
-//           // const response = await fetch('http://localhost:5000/api/mentor/courses/draft', {
-//           //   method: 'POST',
-//           //   headers: {
-//           //     'Content-Type': 'application/json',
-//           //     'x-user-id': String(instructorId),
-//           //   },
-//           //   body: JSON.stringify(payload),
-//           // });
-//           // const data = await response.json();
-//           // if (!response.ok) return { ok: false, message: data.message };
+//           const response = await fetch('http://localhost:5000/api/mentor/courses/draft', {
+//             method: 'POST',
+//             headers: {
+//               'Content-Type': 'application/json',
+//               'x-user-id': String(instructorId),
+//             },
+//             body: JSON.stringify(payload),
+//           });
+//           const data = await response.json();
+//           if (!response.ok) return { ok: false, message: data.message };
 
 //           await delay(200);
 //           saveCreateCourseStep1ToStorage(form, instructorId);
@@ -166,7 +166,7 @@
 //           const payload = buildFullCreateCoursePayload(course, paths);
 
 //           // TODO: replace with API call
-//           // const response = await fetch(`${API_BASE}/mentor/courses`, { method: 'POST', body: JSON.stringify(payload) });
+//            const response = await fetch(`${API_BASE}/mentor/courses`, { method: 'POST', body: JSON.stringify(payload) });
 
 //           void payload;
 //           await delay(600);
@@ -179,17 +179,17 @@
 //          *   createCourse(payload) → POST /api/mentor/courses
 //          */
 //         export async function createCourse(payload) {
-//           // const user = getUser();
-//           // const response = await fetch('http://localhost:5000/api/mentor/courses', {
-//           //   method: 'POST',
-//           //   headers: {
-//           //     'Content-Type': 'application/json',
-//           //     'x-user-id': String(user.userId),
-//           //   },
-//           //   body: JSON.stringify(payload),
-//           // });
-//           // const data = await response.json();
-//           // return { ok: response.ok, courseId: data.courseId, message: data.message };
+//           const user = getUser();
+//           const response = await fetch('http://localhost:5000/api/mentor/courses', {
+//             method: 'POST',
+//             headers: {
+//               'Content-Type': 'application/json',
+//               'x-user-id': String(user.userId),
+//             },
+//             body: JSON.stringify(payload),
+//           });
+//           const data = await response.json();
+//           return { ok: response.ok, courseId: data.courseId, message: data.message };
 
 //           void payload;
 //           await delay(600);
@@ -212,16 +212,16 @@
 //   const payload = buildCreateCourseStep1Payload(form, instructorId);
 
 //   // TODO: replace with API call when backend is ready
-//   // const response = await fetch('http://localhost:5000/api/mentor/courses/draft', {
-//   //   method: 'POST',
-//   //   headers: {
-//   //     'Content-Type': 'application/json',
-//   //     'x-user-id': String(instructorId),
-//   //   },
-//   //   body: JSON.stringify(payload),
-//   // });
-//   // const data = await response.json();
-//   // if (!response.ok) return { ok: false, message: data.message };
+//   const response = await fetch('http://localhost:5000/api/mentor/courses/draft', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//       'x-user-id': String(instructorId),
+//     },
+//     body: JSON.stringify(payload),
+//   });
+//   const data = await response.json();
+//   if (!response.ok) return { ok: false, message: data.message };
 
 //   await delay(200);
 //   saveCreateCourseStep1ToStorage(form, instructorId);
@@ -264,13 +264,13 @@
 //  *   fetchMentorCourseDetail(courseId) → GET /api/mentor/courses/:courseId
 //  */
 // export async function fetchMentorCourseDetail(courseId) {
-//   // const user = getUser();
-//   // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
-//   //   headers: { 'x-user-id': String(user.userId) },
-//   // });
-//   // const data = await response.json();
-//   // if (!response.ok) return { ok: false, message: data.message };
-//   // return { ok: true, course: normalizeMentorCourseDetail(data.course) };
+//   const user = getUser();
+//   const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
+//     headers: { 'x-user-id': String(user.userId) },
+//   });
+//   const data = await response.json();
+//   if (!response.ok) return { ok: false, message: data.message };
+//   return { ok: true, course: normalizeMentorCourseDetail(data.course) };
 
 //   await delay(350);
 //   const id = Number(courseId);
@@ -289,18 +289,18 @@
 //  *   updateCoursePublishStatus(courseId, isPublished) → PATCH /api/mentor/courses/:courseId/publish
 //  */
 // export async function updateCoursePublishStatus(courseId, isPublished) {
-//   // const user = getUser();
-//   // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/publish`, {
-//   //   method: 'PATCH',
-//   //   headers: {
-//   //     'Content-Type': 'application/json',
-//   //     'x-user-id': String(user.userId),
-//   //   },
-//   //   body: JSON.stringify({ isPublished }),
-//   // });
-//   // const data = await response.json();
-//   // if (!response.ok) return { ok: false, message: data.message };
-//   // return { ok: true, course: normalizeMentorCourseDetail(data.course) };
+//   const user = getUser();
+//   const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/publish`, {
+//     method: 'PATCH',
+//     headers: {
+//       'Content-Type': 'application/json',
+//       'x-user-id': String(user.userId),
+//     },
+//     body: JSON.stringify({ isPublished }),
+//   });
+//   const data = await response.json();
+//   if (!response.ok) return { ok: false, message: data.message };
+//   return { ok: true, course: normalizeMentorCourseDetail(data.course) };
 
 //   await delay(400);
 //   const id = Number(courseId);
@@ -360,17 +360,17 @@
 //  */
 // export async function updateCourseBasicInfo(courseId, payload) {
 //   // TODO: replace with API call
-//   // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
-//   //   method: 'PATCH',
-//   //   headers: {
-//   //     'Content-Type': 'application/json',
-//   //     'x-user-id': String(getUser()?.userId),
-//   //   },
-//   //   body: JSON.stringify(payload),
-//   // });
-//   // const data = await response.json();
-//   // if (!response.ok) return { ok: false, message: data.message };
-//   // return { ok: true, courseId };
+//   const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
+//     method: 'PATCH',
+//     headers: {
+//       'Content-Type': 'application/json',
+//       'x-user-id': String(getUser()?.userId),
+//     },
+//     body: JSON.stringify(payload),
+//   });
+//   const data = await response.json();
+//   if (!response.ok) return { ok: false, message: data.message };
+//   return { ok: true, courseId };
 
 //   void courseId; void payload;
 //   await delay(400);
@@ -384,18 +384,18 @@
 //  */
 // export async function updateCourseContent(courseId, paths) {
 //   // TODO: replace with API call
-//   // const payload = buildCourseContentPayload(paths);
-//   // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/content`, {
-//   //   method: 'PUT',
-//   //   headers: {
-//   //     'Content-Type': 'application/json',
-//   //     'x-user-id': String(getUser()?.userId),
-//   //   },
-//   //   body: JSON.stringify(payload),
-//   // });
-//   // const data = await response.json();
-//   // if (!response.ok) return { ok: false, message: data.message };
-//   // return { ok: true };
+//   const payload = buildCourseContentPayload(paths);
+//   const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/content`, {
+//     method: 'PUT',
+//     headers: {
+//       'Content-Type': 'application/json',
+//       'x-user-id': String(getUser()?.userId),
+//     },
+//     body: JSON.stringify(payload),
+//   });
+//   const data = await response.json();
+//   if (!response.ok) return { ok: false, message: data.message };
+//   return { ok: true };
 
 //   void courseId; void paths;
 //   await delay(400);
@@ -408,17 +408,17 @@
 //  *   createCourse(payload) → POST /api/mentor/courses
 //  */
 // export async function createCourse(payload) {
-//   // const user = getUser();
-//   // const response = await fetch('http://localhost:5000/api/mentor/courses', {
-//   //   method: 'POST',
-//   //   headers: {
-//   //     'Content-Type': 'application/json',
-//   //     'x-user-id': String(user.userId),
-//   //   },
-//   //   body: JSON.stringify(payload),
-//   // });
-//   // const data = await response.json();
-//   // return { ok: response.ok, courseId: data.courseId, message: data.message };
+//   const user = getUser();
+//   const response = await fetch('http://localhost:5000/api/mentor/courses', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//       'x-user-id': String(user.userId),
+//     },
+//     body: JSON.stringify(payload),
+//   });
+//   const data = await response.json();
+//   return { ok: response.ok, courseId: data.courseId, message: data.message };
 
 //   void payload;
 //   await delay(600);

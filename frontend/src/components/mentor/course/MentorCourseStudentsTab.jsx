@@ -5,10 +5,10 @@ import MentorCourseStudentsSummary from './MentorCourseStudentsSummary';
 import MentorCourseStudentsToolbar from './MentorCourseStudentsToolbar';
 import MentorCourseStudentsList from './MentorCourseStudentsList';
 import MentorCourseStudentsPagination from './MentorCourseStudentsPagination';
-import {
-  fetchCourseStudents,
-  fetchCourseStudentStats,
-} from '../../../services/mentorCourseService';
+// import {
+//   fetchCourseStudents,
+//   fetchCourseStudentStats,
+// } from '../../../services/mentorCourseService';
 import {
   filterAndSortCourseStudents,
   hasActiveCourseStudentFilters,

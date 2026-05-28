@@ -8,12 +8,12 @@ import { toast } from '../../components/common/Toast';
 import MentorCourseInfoReview from '../../components/mentor/course/MentorCourseInfoReview';
 import MentorCourseContentReview from '../../components/mentor/course/MentorCourseContentReview';
 import { MUTED, PRIMARY, TEXT } from '../../components/mentor/course/mentorCourseCreateStyles';
-import {
-  fetchCourseCategories,
-  fetchCourseLevels,
-  updateCourseBasicInfo,
-  updateCourseContent,
-} from '../../services/mentorCourseService';
+// import {
+//   fetchCourseCategories,
+//   fetchCourseLevels,
+//   updateCourseBasicInfo,
+//   updateCourseContent,
+// } from '../../services/mentorCourseService';
 import {
   clearEditCourseDraft,
   loadEditCourseDraft,

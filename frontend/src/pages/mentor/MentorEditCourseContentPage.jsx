@@ -12,7 +12,7 @@ import MentorCourseLeaveDialog from '../../components/mentor/course/MentorCourse
 import MentorChapterDraftDialog from '../../components/mentor/course/MentorChapterDraftDialog';
 import { MUTED, PRIMARY, TEXT } from '../../components/mentor/course/mentorCourseCreateStyles';
 import { useMentorCourseLeaveGuard } from '../../hooks/useMentorCourseLeaveGuard';
-import { fetchMentorCourseDetail } from '../../services/mentorCourseService';
+//import { fetchMentorCourseDetail } from '../../services/mentorCourseService';
 import { getUser } from '../../utils/authUtils';
 import {
   courseDetailToEditCourse,

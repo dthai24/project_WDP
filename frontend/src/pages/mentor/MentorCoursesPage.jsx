@@ -8,7 +8,7 @@ import MentorCourseList from '../../components/mentor/course/MentorCourseList';
 import MentorCourseListPagination, {
   MENTOR_COURSE_LIST_PAGE_SIZE,
 } from '../../components/mentor/course/MentorCourseListPagination';
-import { fetchMentorCourses } from '../../services/mentorCourseService';
+//import { fetchMentorCourses } from '../../services/mentorCourseService';
 import {
   filterAndSortMentorCourses,
   paginateMentorCourses,

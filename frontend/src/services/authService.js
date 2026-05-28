@@ -51,8 +51,8 @@ export const getTopCoursesApi = (limit = 4) =>
 export const enrollCourseApi = (userId, courseId) =>
   apiPostBase('/api/courses/enroll', { userId, courseId });
 
-export const getMyCoursesApi = (userId) =>
-  apiGetBase(`/api/courses/my?userId=${userId}`);
+export const getMyCoursesApi = (userId, roleName) => 
+  apiPostBase('/api/courses/my-courses', { userId, roleName, });
 
 /** POST /api/auth/login */
 export const loginApi = (email, password) =>
