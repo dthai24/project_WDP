@@ -81,3 +81,22 @@ export const forgotPasswordApi = (email) =>
 /** POST /api/auth/reset-password — xác nhận OTP + cập nhật mật khẩu */
 export const resetPasswordApi = (email, otp, newPassword) =>
   apiFetch('/reset-password', { email, otp, newPassword });
+
+/**
+ * POST /api/users/avatar — tải lên ảnh đại diện đã hợp nhất (face + frame).
+ * @param {Blob} blob   - Merged PNG blob from AvatarCropperModal canvas fusion
+ * @param {number} userId
+ * @returns {{ ok: boolean, data: { success: boolean, avatarUrl?: string, message?: string } }}
+ */
+export const uploadAvatarApi = async (blob, userId) => {
+  const formData = new FormData();
+  formData.append('avatar', blob, 'avatar.png');
+
+  const response = await fetch('http://localhost:5000/api/users/avatar', {
+    method: 'POST',
+    headers: { 'x-user-id': String(userId) },
+    body: formData,
+  });
+  const data = await response.json();
+  return { ok: response.ok, data };
+};

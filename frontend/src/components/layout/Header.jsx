@@ -121,6 +121,29 @@ export default function Header({
   const userRaw = sessionStorage.getItem("user");
   const user = userRaw ? JSON.parse(userRaw) : null;
 
+  const [avatarUrl, setAvatarUrl] = useState(() => {
+    const explicitAvatar = sessionStorage.getItem("avatarUrl");
+    if (explicitAvatar) return explicitAvatar;
+    return user?.avatarUrl || null;
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const explicitAvatar = sessionStorage.getItem("avatarUrl");
+      if (explicitAvatar) {
+        setAvatarUrl(explicitAvatar);
+        return;
+      }
+      const raw = sessionStorage.getItem("user");
+      const u = raw ? JSON.parse(raw) : null;
+      if (u?.avatarUrl) {
+        setAvatarUrl(u.avatarUrl);
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const clearCloseTimer = () => {
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
@@ -419,19 +442,34 @@ export default function Header({
                       },
                     }}
                   >
-                    <Avatar
-                      onClick={handleProfileTriggerClick}
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        bgcolor: "primary.main",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {getUserInitials(user)}
-                    </Avatar>
+                    {avatarUrl ? (
+                      <Box
+                        component="img"
+                        src={avatarUrl}
+                        alt="avatar"
+                        onClick={handleProfileTriggerClick}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          objectFit: "contain",
+                          cursor: "pointer",
+                        }}
+                      />
+                    ) : (
+                      <Avatar
+                        onClick={handleProfileTriggerClick}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          bgcolor: "primary.main",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {getUserInitials(user)}
+                      </Avatar>
+                    )}
                     <Typography
                       variant="body2"
                       onClick={handleProfileTriggerClick}
@@ -489,17 +527,30 @@ export default function Header({
                     }}
                   >
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-                      <Avatar
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          fontSize: 14,
-                          fontWeight: 700,
-                          bgcolor: PRIMARY,
-                        }}
-                      >
-                        {getUserInitials(user)}
-                      </Avatar>
+                      {avatarUrl ? (
+                        <Box
+                          component="img"
+                          src={avatarUrl}
+                          alt="avatar"
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            objectFit: "contain",
+                          }}
+                        />
+                      ) : (
+                        <Avatar
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            fontSize: 14,
+                            fontWeight: 700,
+                            bgcolor: PRIMARY,
+                          }}
+                        >
+                          {getUserInitials(user)}
+                        </Avatar>
+                      )}
                       <Box sx={{ minWidth: 0 }}>
                         <Typography
                           sx={{

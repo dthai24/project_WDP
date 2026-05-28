@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Avatar,
   Box,
@@ -8,11 +8,13 @@ import {
   Link as MuiLink,
   Typography,
   alpha,
+  Tooltip,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import AppButton from "../components/common/AppButton";
 import ChangePasswordDialog from "../components/profile/ChangePasswordDialog";
 import { underlineFieldSx as valueUnderlineSx } from "../components/common/UnderlineFieldPopup";
+import AvatarCropperModal from "../components/AvatarCropperModal";
 
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
@@ -263,11 +265,36 @@ function StatRow({ icon: Icon, iconColor, label, value, last = false, children }
 }
 
 
+// ── Safe State Initialization Helpers ──
+const getInitialUser = () => {
+  try {
+    const userRaw = sessionStorage.getItem("user");
+    return userRaw ? JSON.parse(userRaw) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const getInitialAvatar = () => {
+  try {
+    const explicitAvatar = sessionStorage.getItem("avatarUrl");
+    if (explicitAvatar) return explicitAvatar;
+    const userObj = getInitialUser();
+    return userObj?.avatarUrl || null;
+  } catch (e) {
+    return null;
+  }
+};
+
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 export default function ProfilePage() {
+  const currentUser = useMemo(() => getInitialUser(), []);
+
   const [profile, setProfile] = useState(INITIAL_PROFILE);
   const [editMode, setEditMode] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(getInitialAvatar);
   const [formData, setFormData] = useState({
     name: INITIAL_PROFILE.name,
     phone: INITIAL_PROFILE.phone,
@@ -275,41 +302,41 @@ export default function ProfilePage() {
     currentLevel: INITIAL_PROFILE.currentLevel,
   });
 
-  const userRaw = sessionStorage.getItem("user");
-  const currentUser = userRaw ? JSON.parse(userRaw) : null;
-
   useEffect(() => {
-    if (!currentUser?.userId) return;
+    // Safely parse inside the effect to avoid any dependency array tracking issues
+    const cUser = getInitialUser();
+    if (!cUser?.userId) return;
 
     const fetchProfile = async () => {
       try {
         const response = await fetch("http://localhost:5000/api/users/profile", {
           headers: {
-            "x-user-id": currentUser.userId
+            "x-user-id": cUser.userId
           }
         });
         const data = await response.json();
-        if (data.success && data.profile) {
-          const fetchedProfile = {
-            ...profile,
-            name: data.profile.name,
-            email: data.profile.email,
-            phone: data.profile.phone,
-            dateOfBirth: data.profile.dateOfBirth ? data.profile.dateOfBirth.split('T')[0] : "",
-            joinedAt: new Date(data.profile.joinedAt).toLocaleDateString("vi-VN"),
+        const p = data?.profile;
+        if (data?.success && p) {
+          setProfile(prev => ({
+            ...prev,
+            name: p.name || prev.name,
+            email: p.email || prev.email,
+            phone: p.phone || prev.phone,
+            dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : prev.dateOfBirth,
+            joinedAt: p.joinedAt ? new Date(p.joinedAt).toLocaleDateString("vi-VN") : prev.joinedAt,
             stats: {
-              ...profile.stats,
-              learning: data.profile.stats.learning,
-              completed: data.profile.stats.completed,
+              ...prev.stats,
+              learning: p.stats?.learning ?? 0,
+              completed: p.stats?.completed ?? 0,
             }
-          };
-          setProfile(fetchedProfile);
-          setFormData({
-            name: fetchedProfile.name,
-            phone: fetchedProfile.phone,
-            dateOfBirth: fetchedProfile.dateOfBirth,
-            currentLevel: fetchedProfile.currentLevel,
-          });
+          }));
+
+          setFormData(prevForm => ({
+            ...prevForm,
+            name: p.name || prevForm.name,
+            phone: p.phone || prevForm.phone,
+            dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : prevForm.dateOfBirth,
+          }));
         }
       } catch (err) {
         console.error("Lỗi khi tải hồ sơ:", err);
@@ -318,11 +345,11 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
-  const initials = profile.name
+  const initials = (profile?.name || "Người dùng")
     .split(" ")
     .filter(Boolean)
     .slice(-2)
-    .map((w) => w[0].toUpperCase())
+    .map((w) => w[0]?.toUpperCase() || "")
     .join("");
 
   const handleFormChange = (e) => {
@@ -420,20 +447,65 @@ export default function ProfilePage() {
         }}
       >
         {/* Avatar */}
-        <Avatar
-          sx={{
-            width: { xs: 72, md: 88 },
-            height: { xs: 72, md: 88 },
-            bgcolor: PRIMARY,
-            fontSize: { xs: 26, md: 32 },
-            fontWeight: 700,
-            flexShrink: 0,
-            boxShadow: `0 4px 16px ${alpha(PRIMARY, 0.28)}`,
-            letterSpacing: 1,
-          }}
-        >
-          {initials}
-        </Avatar>
+        <Tooltip title="Đổi ảnh đại diện" placement="bottom">
+          <Box
+            onClick={() => setCropperOpen(true)}
+            sx={{
+              position: "relative",
+              width: { xs: 72, md: 88 },
+              height: { xs: 72, md: 88 },
+              flexShrink: 0,
+              cursor: "pointer",
+              "&:hover .avatar-cam-overlay": { opacity: 1 },
+            }}
+          >
+            {avatarUrl ? (
+              <Box
+                component="img"
+                src={avatarUrl}
+                alt="avatar"
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <Avatar
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  bgcolor: PRIMARY,
+                  fontSize: { xs: 26, md: 32 },
+                  fontWeight: 700,
+                  boxShadow: `0 4px 16px ${alpha(PRIMARY, 0.28)}`,
+                  letterSpacing: 1,
+                }}
+              >
+                {initials}
+              </Avatar>
+            )}
+            {/* Camera hover overlay */}
+            <Box
+              className="avatar-cam-overlay"
+              sx={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                bgcolor: "rgba(8,145,178,0.55)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: 0,
+                transition: "opacity 0.2s",
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                <path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-12H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V6.2A3 3 0 0 0 19 3.2z" />
+              </svg>
+            </Box>
+          </Box>
+        </Tooltip>
 
         {/* Info */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -576,7 +648,7 @@ export default function ProfilePage() {
               }
             />
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.875 }}>
-              {profile.goals.map((goal) => (
+              {profile?.goals?.map((goal) => (
                 <Chip
                   key={goal}
                   icon={<AutoAwesomeIcon sx={{ fontSize: "14px !important", color: `${ACCENT} !important` }} />}
@@ -628,13 +700,13 @@ export default function ProfilePage() {
                 icon={MenuBookOutlinedIcon}
                 iconColor={PRIMARY}
                 label="Khóa đang học"
-                value={`${profile.stats.learning} khóa`}
+                value={`${profile?.stats?.learning || 0} khóa`}
               />
               <StatRow
                 icon={CheckCircleRoundedIcon}
                 iconColor={SUCCESS}
                 label="Khóa hoàn thành"
-                value={`${profile.stats.completed} khóa`}
+                value={`${profile?.stats?.completed || 0} khóa`}
                 last
               />
             </SectionCard>
@@ -677,6 +749,21 @@ export default function ProfilePage() {
       <ChangePasswordDialog
         open={passwordDialogOpen}
         onClose={() => setPasswordDialogOpen(false)}
+      />
+
+      {/* ── Avatar Cropper Modal — isolated, no layout impact ── */}
+      <AvatarCropperModal
+        open={cropperOpen}
+        onClose={() => setCropperOpen(false)}
+        onAvatarUpdated={(url, baseUrl) => {
+          setAvatarUrl(url);
+          setProfile((prev) => ({ ...prev, avatarUrl: url }));
+          sessionStorage.setItem('avatarUrl', url);
+          if (baseUrl) {
+            sessionStorage.setItem('baseAvatarUrl', baseUrl);
+          }
+          window.dispatchEvent(new Event('storage'));
+        }}
       />
     </Box>
   );
