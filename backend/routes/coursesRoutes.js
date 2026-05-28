@@ -4,6 +4,7 @@ const router = express.Router();
 const {
     getAllCourses,
     getMyCourses,
+    enroll
 } = require('../controllers/coursesController');
 
 const optionalAuth = (req, res, next) => {
@@ -26,5 +27,7 @@ router.get('/', optionalAuth, getAllCourses);
 // POST /api/courses/my-courses
 // Lấy khóa học theo role student / mentor
 router.post('/my-courses', getMyCourses);
+// Dang ki khoa hoc
+router.post('/enroll', enroll);
 
 module.exports = router;

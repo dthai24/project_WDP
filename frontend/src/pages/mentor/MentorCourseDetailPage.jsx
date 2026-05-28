@@ -9,10 +9,10 @@ import MentorCourseDetailHeader from '../../components/mentor/course/MentorCours
 import MentorCourseOverviewTab from '../../components/mentor/course/MentorCourseOverviewTab';
 import MentorCourseContentTab from '../../components/mentor/course/MentorCourseContentTab';
 import MentorCourseStudentsTab from '../../components/mentor/course/MentorCourseStudentsTab';
-import {
-  fetchMentorCourseDetail,
-  updateCoursePublishStatus,
-} from '../../services/mentorCourseService';
+// import {
+//   fetchMentorCourseDetail,
+//   updateCoursePublishStatus,
+// } from '../../services/mentorCourseService';
 import {
   MENTOR_COURSE_DETAIL_TABS,
   parseMentorCourseDetailTab,

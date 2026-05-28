@@ -8,11 +8,11 @@ import MentorCourseCreateForm from '../../components/mentor/course/MentorCourseC
 import MentorCourseCreateStepIndicator from '../../components/mentor/course/MentorCourseCreateStepIndicator';
 import MentorCourseLeaveDialog from '../../components/mentor/course/MentorCourseLeaveDialog';
 import { useMentorCourseLeaveGuard } from '../../hooks/useMentorCourseLeaveGuard';
-import {
-  fetchCourseCategories,
-  fetchCourseLevels,
-  saveCreateCourseStep1,
-} from '../../services/mentorCourseService';
+// import {
+//   //fetchCourseCategories,
+//   //fetchCourseLevels,
+//   saveCreateCourseStep1,
+// } from '../../services/mentorCourseService';
 import { getUser } from '../../utils/authUtils';
 import {
   formFromStep1Payload,

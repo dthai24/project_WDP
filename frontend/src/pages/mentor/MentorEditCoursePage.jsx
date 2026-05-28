@@ -19,11 +19,11 @@ import MentorCourseContentBuilder from '../../components/mentor/course/MentorCou
 import MentorContentOverview from '../../components/mentor/course/MentorContentOverview';
 import MentorChapterDraftDialog from '../../components/mentor/course/MentorChapterDraftDialog';
 import { MUTED, PRIMARY, TEXT } from '../../components/mentor/course/mentorCourseCreateStyles';
-import {
-  fetchCourseCategories,
-  fetchCourseLevels,
-  fetchMentorCourseDetail,
-} from '../../services/mentorCourseService';
+// import {
+//   fetchCourseCategories,
+//   fetchCourseLevels,
+//   fetchMentorCourseDetail,
+// } from '../../services/mentorCourseService';
 import { getUser } from '../../utils/authUtils';
 import {
   buildCreateCourseStep1Payload,

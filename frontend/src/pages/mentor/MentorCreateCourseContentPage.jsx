@@ -12,7 +12,7 @@ import MentorCourseCreateStepIndicator from '../../components/mentor/course/Ment
 import MentorCourseLeaveDialog from '../../components/mentor/course/MentorCourseLeaveDialog';
 import MentorChapterDraftDialog from '../../components/mentor/course/MentorChapterDraftDialog';
 import { useMentorCourseLeaveGuard } from '../../hooks/useMentorCourseLeaveGuard';
-import { saveCreateCourseContent } from '../../services/mentorCourseService';
+//import { saveCreateCourseContent } from '../../services/mentorCourseService';
 import { getUser } from '../../utils/authUtils';
 import {
   createEmptyMaterial,
