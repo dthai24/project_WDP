@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { Box, Collapse, IconButton, InputBase, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
@@ -5,7 +6,7 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import MentorMaterialRow from './MentorMaterialRow';
-import { ContentFieldLabel } from './MentorContentSectionHeading';
+import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import {
   LESSON_THEME,
@@ -25,9 +26,60 @@ export default function MentorLessonBlock({
   onAddMaterial,
   onMaterialChange,
   onMaterialDelete,
+  onMaterialReorder,
   disabled = false,
 }) {
-  const materialCount = (node.materials ?? []).length;
+  const materials = node.materials ?? [];
+  const materialCount = materials.length;
+  const canReorder = materialCount > 1 && !disabled;
+
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+
+  const resetDragState = useCallback(() => {
+    setDragIndex(null);
+    setOverIndex(null);
+  }, []);
+
+  const handleDragStart = useCallback(
+    (index) => (event) => {
+      if (!canReorder) return;
+      setDragIndex(index);
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(index));
+    },
+    [canReorder],
+  );
+
+  const handleDragOver = useCallback(
+    (index) => (event) => {
+      if (!canReorder || dragIndex === null) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      if (overIndex !== index) setOverIndex(index);
+    },
+    [canReorder, dragIndex, overIndex],
+  );
+
+  const handleDrop = useCallback(
+    (index) => (event) => {
+      if (!canReorder) return;
+      event.preventDefault();
+      const fromIndex =
+        dragIndex ?? Number.parseInt(event.dataTransfer.getData('text/plain'), 10);
+      if (Number.isNaN(fromIndex) || fromIndex === index) {
+        resetDragState();
+        return;
+      }
+      onMaterialReorder(fromIndex, index);
+      resetDragState();
+    },
+    [canReorder, dragIndex, onMaterialReorder, resetDragState],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    resetDragState();
+  }, [resetDragState]);
 
   return (
     <Box sx={lessonBlockSx()} data-content-error={`lesson-${node.tempId}`}>
@@ -116,19 +168,15 @@ export default function MentorLessonBlock({
             </Typography>
           )}
 
-          <ContentFieldLabel sx={{ mt: 1.1 }}>Mô tả bài học</ContentFieldLabel>
-          <Box sx={contentFieldSx(false, LESSON_THEME)}>
-            <InputBase
-              value={node.Description}
-              onChange={(event) => onChange(node.tempId, { Description: event.target.value })}
-              disabled={disabled}
-              placeholder="Mô tả ngắn (tuỳ chọn)"
-              fullWidth
-              multiline
-              minRows={2}
-              sx={{ fontSize: 13, color: TEXT, alignItems: 'flex-start' }}
-            />
-          </Box>
+          <ContentShortDescriptionField
+            label="Mô tả ngắn"
+            value={node.Description}
+            onChange={(event) => onChange(node.tempId, { Description: event.target.value })}
+            disabled={disabled}
+            theme={LESSON_THEME}
+            placeholder="Mô tả ngắn về nội dung bài học (tuỳ chọn)"
+            labelSx={{ mt: 1.1 }}
+          />
 
           <Box sx={{ mt: 2 }}>
             {materialCount === 0 ? (
@@ -137,7 +185,7 @@ export default function MentorLessonBlock({
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1 }}>
-                {(node.materials ?? []).map((material) => (
+                {materials.map((material, materialIndex) => (
                   <MentorMaterialRow
                     key={material.tempId}
                     material={material}
@@ -145,6 +193,13 @@ export default function MentorLessonBlock({
                     onChange={onMaterialChange}
                     onDelete={onMaterialDelete}
                     disabled={disabled}
+                    showDragHandle={canReorder}
+                    isDragging={dragIndex === materialIndex}
+                    isDragOver={overIndex === materialIndex && dragIndex !== materialIndex}
+                    onDragHandleStart={handleDragStart(materialIndex)}
+                    onDragHandleEnd={handleDragEnd}
+                    onDragOver={handleDragOver(materialIndex)}
+                    onDrop={handleDrop(materialIndex)}
                   />
                 ))}
               </Box>

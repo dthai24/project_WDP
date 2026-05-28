@@ -7,6 +7,8 @@ import {
   useTheme,
 } from '@mui/material';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
+import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 import PeopleOutlineRoundedIcon from '@mui/icons-material/PeopleOutlineRounded';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
@@ -24,7 +26,9 @@ const PRIMARY = '#0891B2';
 const METRIC_COLORS = {
   students: '#2563EB',
   rating: '#D97706',
+  chapters: '#7C3AED',
   lessons: '#0891B2',
+  materials: '#475569',
   updated: '#7C3AED',
 };
 
@@ -140,11 +144,15 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
 export default function MentorCourseRow({ course }) {
   const theme = useTheme();
   const statusChip = getStatusChip(course.status);
-  const detailPath = `/mentor/courses/${course.courseId}`;
+  const detailPath = `/mentor/courses/${course.courseId}?tab=course`;
+  const totalChapters = course.totalChapters ?? course.totalNodes ?? 0;
+  const totalLessons = course.totalLessons ?? 0;
+  const totalMaterials = course.totalMaterials ?? 0;
 
   return (
     <Box
       sx={{
+        position: 'relative',
         p: { xs: 2, sm: 2.25 },
         borderRadius: '20px',
         bgcolor: '#FFFFFF',
@@ -158,28 +166,23 @@ export default function MentorCourseRow({ course }) {
     >
       <CourseThumbnail thumbnail={course.thumbnail} courseName={course.courseName} />
 
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.75 }}>
-          <MuiLink
-            component={Link}
-            to={detailPath}
-            underline="hover"
-            sx={{
-              fontSize: { xs: 16, sm: 17 },
-              fontWeight: 700,
-              color: TEXT,
-              lineHeight: 1.35,
-              '&:hover': { color: PRIMARY },
-            }}
-          >
-            {course.courseName}
-          </MuiLink>
-          <Chip
-            size="small"
-            label={statusChip.label}
-            sx={{ ...PILL_CHIP_SX, ...statusChip.sx }}
-          />
-        </Box>
+      <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
+        <MuiLink
+          component={Link}
+          to={detailPath}
+          underline="hover"
+          sx={{
+            display: 'block',
+            fontSize: { xs: 16, sm: 17 },
+            fontWeight: 700,
+            color: TEXT,
+            lineHeight: 1.35,
+            mb: 0.75,
+            '&:hover': { color: PRIMARY },
+          }}
+        >
+          {course.courseName}
+        </MuiLink>
 
         <Typography
           sx={{
@@ -227,10 +230,22 @@ export default function MentorCourseRow({ course }) {
             iconColor={METRIC_COLORS.rating}
           />
           <MetricItem
+            icon={RouteOutlinedIcon}
+            label="Chương"
+            value={totalChapters}
+            iconColor={METRIC_COLORS.chapters}
+          />
+          <MetricItem
             icon={MenuBookRoundedIcon}
             label="Bài"
-            value={course.totalLessons ?? 0}
+            value={totalLessons}
             iconColor={METRIC_COLORS.lessons}
+          />
+          <MetricItem
+            icon={ArticleOutlinedIcon}
+            label="Học liệu"
+            value={totalMaterials}
+            iconColor={METRIC_COLORS.materials}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
             <CalendarTodayOutlinedIcon
@@ -244,6 +259,22 @@ export default function MentorCourseRow({ course }) {
             </Typography>
           </Box>
         </Box>
+      </Box>
+
+      <Box
+        sx={{
+          position: { xs: 'absolute', md: 'static' },
+          top: { xs: 16, md: 'auto' },
+          right: { xs: 16, md: 'auto' },
+          flexShrink: 0,
+          alignSelf: { md: 'flex-start' },
+        }}
+      >
+        <Chip
+          size="small"
+          label={statusChip.label}
+          sx={{ ...PILL_CHIP_SX, ...statusChip.sx }}
+        />
       </Box>
     </Box>
   );

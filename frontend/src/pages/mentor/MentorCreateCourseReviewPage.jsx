@@ -1,38 +1,37 @@
-import { useEffect, useState } from 'react';
-import { Box, Breadcrumbs, Link as MuiLink, Typography, alpha } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import { useEffect, useMemo, useState } from 'react';
+import { Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import AppButton from '../../components/common/AppButton';
 import { toast } from '../../components/common/Toast';
-import MentorCourseCreateStepIndicator from '../../components/mentor/course/MentorCourseCreateStepIndicator';
-import MentorContentPreview from '../../components/mentor/course/MentorContentPreview';
-import { loadCreateCourseDraft } from '../../utils/mentorCourseCreateStorage';
-
-function BreadcrumbLink({ to, children, navigate, sx }) {
-  return (
-    <MuiLink
-      component="button"
-      type="button"
-      underline="hover"
-      onClick={() => navigate(to)}
-      sx={{
-        border: 'none',
-        background: 'none',
-        cursor: 'pointer',
-        font: 'inherit',
-        p: 0,
-        ...sx,
-      }}
-    >
-      {children}
-    </MuiLink>
-  );
-}
+import MentorCourseReviewHeader from '../../components/mentor/course/MentorCourseReviewHeader';
+import MentorCourseInfoReview from '../../components/mentor/course/MentorCourseInfoReview';
+import MentorCourseContentReview from '../../components/mentor/course/MentorCourseContentReview';
+import MentorCourseReviewActions from '../../components/mentor/course/MentorCourseReviewActions';
+import MentorCourseReviewStatusPanel from '../../components/mentor/course/MentorCourseReviewStatusPanel';
+import {
+  createCourseWithContent,
+  fetchCourseCategories,
+  fetchCourseLevels,
+} from '../../services/mentorCourseService';
+import {
+  clearCreateCourseDraft,
+  loadCreateCourseDraft,
+  saveCreateCourseDraft,
+} from '../../utils/mentorCourseCreateStorage';
+import {
+  buildCreateCoursePayload,
+  buildReviewChecklist,
+  getReviewOverviewStats,
+  validateCourseDraft,
+} from '../../utils/mentorCourseReviewUtils';
 
 export default function MentorCreateCourseReviewPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useState(null);
   const [ready, setReady] = useState(false);
+  const [categoryLabel, setCategoryLabel] = useState('');
+  const [levelLabel, setLevelLabel] = useState('');
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     const saved = loadCreateCourseDraft();
@@ -42,90 +41,150 @@ export default function MentorCreateCourseReviewPage() {
       return;
     }
 
-    if (!(saved.paths ?? []).length) {
-      toast.error('Vui lòng xây dựng nội dung khóa học trước.');
-      navigate('/mentor/courses/create/content', { replace: true });
-      return;
-    }
-
     setDraft(saved);
     setReady(true);
   }, [navigate]);
 
+  useEffect(() => {
+    if (!draft?.course) return undefined;
+
+    let cancelled = false;
+
+    (async () => {
+      const [categoryResult, levelResult] = await Promise.all([
+        fetchCourseCategories(),
+        fetchCourseLevels(),
+      ]);
+
+      if (cancelled) return;
+
+      const category = (categoryResult.categories ?? []).find(
+        (item) => String(item.value) === String(draft.course.CategoryId),
+      );
+      const level = (levelResult.levels ?? []).find(
+        (item) => String(item.value) === String(draft.course.LevelId),
+      );
+
+      setCategoryLabel(category?.label ?? '');
+      setLevelLabel(level?.label ?? '');
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draft]);
+
+  const validation = useMemo(
+    () => (draft ? validateCourseDraft(draft) : { isValid: false, errors: [], warnings: [] }),
+    [draft],
+  );
+
+  const checklist = useMemo(
+    () => (draft ? buildReviewChecklist(draft, validation) : []),
+    [draft, validation],
+  );
+
+  const overview = useMemo(
+    () => getReviewOverviewStats(draft?.paths ?? []),
+    [draft],
+  );
+
+  const persistDraft = async (isPublished) => {
+    const payload = buildCreateCoursePayload(draft, isPublished);
+    const nextDraft = {
+      ...draft,
+      course: payload.course,
+    };
+
+    saveCreateCourseDraft(nextDraft);
+
+    // TODO: replace with API call
+    // await createCourseWithContent(payload)
+    const result = await createCourseWithContent(payload.course, draft.paths ?? []);
+    if (!result.ok) {
+      throw new Error('Không thể lưu khóa học.');
+    }
+
+    clearCreateCourseDraft();
+  };
+
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
+    try {
+      await persistDraft(false);
+      toast.success('Đã lưu bản nháp khóa học.');
+      navigate('/mentor/courses');
+    } catch {
+      toast.error('Không thể lưu bản nháp. Vui lòng thử lại.');
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    const latestValidation = validateCourseDraft(draft);
+    if (!latestValidation.isValid) {
+      toast.error('Vui lòng hoàn thiện các mục còn thiếu trước khi xuất bản.');
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      await persistDraft(true);
+      toast.success('Đã xuất bản khóa học.');
+      navigate('/mentor/courses');
+    } catch {
+      toast.error('Không thể xuất bản khóa học. Vui lòng thử lại.');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   if (!ready || !draft) return null;
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1080, mx: 'auto' }}>
-      <Breadcrumbs
-        separator="/"
-        sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: '#64748B', mx: 0.5 } }}
-      >
-        <BreadcrumbLink to="/home" navigate={navigate} sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}>
-          Trang chủ
-        </BreadcrumbLink>
-        <BreadcrumbLink
-          to="/mentor/courses"
-          navigate={navigate}
-          sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
-        >
-          Khóa học của tôi
-        </BreadcrumbLink>
-        <Typography sx={{ fontSize: 13, color: '#0F172A', fontWeight: 600 }}>
-          Xem lại & xuất bản
-        </Typography>
-      </Breadcrumbs>
-
-      <Typography
-        component="h1"
-        sx={{
-          fontSize: { xs: 24, sm: 28 },
-          fontWeight: 800,
-          color: '#0F172A',
-          letterSpacing: '-0.02em',
-          mb: 0.75,
-        }}
-      >
-        Xem lại & xuất bản
-      </Typography>
-      <Typography sx={{ fontSize: 15, color: '#64748B', mb: 2, maxWidth: 640 }}>
-        Bước 3: Kiểm tra lại thông tin trước khi xuất bản khóa học.
-      </Typography>
-
-      <MentorCourseCreateStepIndicator currentStep={3} />
+    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
+      <MentorCourseReviewHeader />
 
       <Box
         sx={{
-          py: 3,
-          px: 3,
-          borderRadius: '20px',
-          bgcolor: '#FFFFFF',
-          border: `1px solid ${alpha('#0F172A', 0.08)}`,
-          boxShadow: '0 1px 2px rgba(8,145,178,0.04)',
-          mb: 2.5,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 7fr) minmax(280px, 3fr)' },
+          gap: { xs: 2, lg: 2.5 },
+          alignItems: 'start',
+          mt: 0.5,
         }}
       >
-        <Typography sx={{ fontSize: 16, fontWeight: 700, color: '#0F172A', mb: 1 }}>
-          {draft.course.CourseName || 'Khóa học chưa đặt tên'}
-        </Typography>
-        <Typography sx={{ fontSize: 14, color: '#64748B', lineHeight: 1.6, mb: 2 }}>
-          {/* TODO: Step 3 — review course info and publish */}
-          Trang xem lại và xuất bản sẽ được triển khai ở bước tiếp theo.
-        </Typography>
-
-        <Box sx={{ maxWidth: 360 }}>
-          <MentorContentPreview paths={draft.paths ?? []} courseName={draft.course.CourseName ?? ''} />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <MentorCourseInfoReview
+            course={draft.course}
+            categoryLabel={categoryLabel}
+            levelLabel={levelLabel}
+          />
+          <MentorCourseContentReview paths={draft.paths ?? []} />
         </Box>
+
+        <MentorCourseReviewStatusPanel
+          checklist={checklist}
+          validation={validation}
+          overview={overview}
+          onBack={() => navigate('/mentor/courses/create/content')}
+          onSaveDraft={handleSaveDraft}
+          onPublish={handlePublish}
+          savingDraft={savingDraft}
+          publishing={publishing}
+        />
       </Box>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
-        <AppButton
-          variant="outlined"
-          startIcon={<ArrowBackRoundedIcon />}
-          onClick={() => navigate('/mentor/courses/create/content')}
-          sx={{ minWidth: 110, height: 44, borderRadius: '999px', fontWeight: 700 }}
-        >
-          Quay lại
-        </AppButton>
+      <Box sx={{ display: { xs: 'block', lg: 'none' }, mt: 2.5 }}>
+        <MentorCourseReviewActions
+          onBack={() => navigate('/mentor/courses/create/content')}
+          onSaveDraft={handleSaveDraft}
+          onPublish={handlePublish}
+          savingDraft={savingDraft}
+          publishing={publishing}
+          canPublish={validation.isValid}
+        />
       </Box>
     </Box>
   );

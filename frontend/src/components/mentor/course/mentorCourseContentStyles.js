@@ -78,18 +78,39 @@ export function contentFieldSx(hasError, theme = CHAPTER_THEME) {
   };
 }
 
+export const TEST_ADD_QUESTION_THEME = {
+  color: '#059669',
+  bg: 'rgba(5,150,105,0.12)',
+  border: 'rgba(5,150,105,0.22)',
+  focus: 'rgba(5,150,105,0.22)',
+};
+
+export const TEST_ADD_SECTION_THEME = {
+  color: '#7C3AED',
+  bg: 'rgba(124,58,237,0.12)',
+  border: 'rgba(124,58,237,0.22)',
+  focus: 'rgba(124,58,237,0.22)',
+};
+
 export function contentAddButtonSx(theme = CHAPTER_THEME) {
   return {
     border: 'none',
-    background: 'none',
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     gap: 0.5,
     fontSize: 13,
     fontWeight: 700,
+    fontFamily: 'inherit',
     color: theme.color,
-    p: 0,
+    px: 1.25,
+    py: 0.65,
+    borderRadius: '10px',
+    bgcolor: theme.bg,
+    transition: 'background-color 0.15s',
+    '&:hover': {
+      bgcolor: theme.focus ?? theme.border,
+    },
   };
 }
 

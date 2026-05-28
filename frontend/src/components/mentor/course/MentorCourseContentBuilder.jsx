@@ -5,6 +5,7 @@ import AppButton from '../../common/AppButton';
 import MentorChapterCard from './MentorChapterCard';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import { BUILDER_PANEL_SX, CHAPTER_THEME } from './mentorCourseContentStyles';
+import { isPathSnapshotSaved } from '../../../utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentBuilder({
   paths,
@@ -22,7 +23,11 @@ export default function MentorCourseContentBuilder({
   onAddMaterial,
   onMaterialChange,
   onMaterialDelete,
+  onMaterialReorder,
   disabled = false,
+  savedPathSnapshots = {},
+  savingChapterId = null,
+  onSaveChapter,
 }) {
   return (
     <Box id="content-builder-root" data-content-error="content-builder-root">
@@ -112,7 +117,11 @@ export default function MentorCourseContentBuilder({
               onAddMaterial={onAddMaterial}
               onMaterialChange={onMaterialChange}
               onMaterialDelete={onMaterialDelete}
+              onMaterialReorder={onMaterialReorder}
               disabled={disabled}
+              isSaved={isPathSnapshotSaved(path, savedPathSnapshots[path.tempId])}
+              saving={savingChapterId === path.tempId}
+              onSave={() => onSaveChapter?.(path.tempId)}
             />
           ))}
 

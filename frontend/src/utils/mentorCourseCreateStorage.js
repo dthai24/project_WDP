@@ -1,5 +1,5 @@
 import { buildCreateCourseStep1Payload } from './mentorCourseFormUtils';
-import { withNormalizedOrders } from './mentorCourseContentUtils';
+import { sanitizePathsForStorage, withNormalizedOrders } from './mentorCourseContentUtils';
 
 export const MENTOR_COURSE_CREATE_STORAGE_KEY = 'mentor_course_create_draft';
 
@@ -20,6 +20,9 @@ export function normalizeCreateCourseDraft(data) {
   return {
     course: data.course ?? null,
     paths: withNormalizedOrders(data.paths ?? []),
+    meta: {
+      contentDraftSaved: Boolean(data.meta?.contentDraftSaved),
+    },
   };
 }
 
@@ -53,8 +56,17 @@ export function loadCreateCourseStep1FromStorage() {
   return draft?.course ?? null;
 }
 
-export function saveCreateCourseContentToStorage(course, paths) {
-  return saveCreateCourseDraft({ course, paths: withNormalizedOrders(paths) });
+export function saveCreateCourseContentToStorage(course, paths, meta = {}) {
+  const existing = loadCreateCourseDraft();
+  return saveCreateCourseDraft({
+    course,
+    paths: sanitizePathsForStorage(paths),
+    meta: {
+      ...(existing?.meta ?? {}),
+      ...meta,
+      contentDraftSaved: true,
+    },
+  });
 }
 
 export function clearCreateCourseDraft() {
