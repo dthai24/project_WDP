@@ -146,20 +146,20 @@ export default function MentorCourseDetailPage() {
   const publishDialogConfig =
     publishDialog === 'unpublish'
       ? {
-          title: 'Hủy xuất bản khóa học?',
-          message:
-            'Học viên đã đăng ký vẫn được giữ dữ liệu học tập, nhưng khóa học sẽ chuyển về trạng thái bản nháp/không công khai.',
-          confirmLabel: 'Hủy xuất bản',
-          destructive: true,
-        }
+        title: 'Hủy xuất bản khóa học?',
+        message:
+          'Học viên đã đăng ký vẫn được giữ dữ liệu học tập, nhưng khóa học sẽ chuyển về trạng thái bản nháp/không công khai.',
+        confirmLabel: 'Hủy xuất bản',
+        destructive: true,
+      }
       : publishDialog === 'publish'
         ? {
-            title: 'Xuất bản khóa học?',
-            message:
-              'Khóa học sẽ hiển thị công khai và học viên mới có thể đăng ký. Bạn có thể hủy xuất bản bất cứ lúc nào.',
-            confirmLabel: 'Xuất bản',
-            destructive: false,
-          }
+          title: 'Xuất bản khóa học?',
+          message:
+            'Khóa học sẽ hiển thị công khai và học viên mới có thể đăng ký. Bạn có thể hủy xuất bản bất cứ lúc nào.',
+          confirmLabel: 'Xuất bản',
+          destructive: false,
+        }
         : null;
 
   if (loading) {

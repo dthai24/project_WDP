@@ -118,9 +118,9 @@ export function resetMentorCourseListParams(currentSearchParams) {
  */
 export function buildMentorCourseActiveChips(filters, options = {}) {
   const {
-    statusOptions  = [],
+    statusOptions = [],
     categoryOptions = [],
-    levelOptions   = [],
+    levelOptions = [],
   } = options;
 
   const chips = [];

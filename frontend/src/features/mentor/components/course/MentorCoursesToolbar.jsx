@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   alpha,
   Box,
@@ -19,8 +19,11 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import { mentorCourseFilterOptionsMock } from '@/features/mentor/data/mentorCoursesMock';
-import { MENTOR_COURSE_LIST_DEFAULTS } from '@/features/mentor/utils/mentorCourseListParams';
-
+// import { MENTOR_COURSE_LIST_DEFAULTS } from '@/features/mentor/utils/mentorCourseListParams';
+import {
+  fetchCourseCategories,
+  fetchCourseLevels
+} from '../../services/mentorCourseService'
 const MUTED = '#64748B';
 const ICON = '#94A3B8';
 
@@ -34,7 +37,7 @@ function getMenuPaperSx(theme) {
     minWidth: 168,
   };
 }
-
+//-----Trigger Filter-------------
 function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor = ICON }) {
   const theme = useTheme();
   return (
@@ -53,11 +56,10 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor =
         height: 34,
         px: 1.25,
         pr: 0.75,
-        border: `1px solid ${
-          hasValue
-            ? alpha(theme.palette.primary.main, 0.22)
-            : alpha(theme.palette.primary.main, 0.1)
-        }`,
+        border: `1px solid ${hasValue
+          ? alpha(theme.palette.primary.main, 0.22)
+          : alpha(theme.palette.primary.main, 0.1)
+          }`,
         borderRadius: theme.ios18?.radius?.pill ?? 9999,
         bgcolor: alpha(theme.palette.primary.main, 0.04),
         color: hasValue ? theme.palette.text.primary : MUTED,
@@ -97,7 +99,7 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor =
     </Box>
   );
 }
-
+//----Menu Filter-----------------
 function FilterMenu({ anchorEl, open, onClose, options, value, onSelect }) {
   const theme = useTheme();
   return (
@@ -188,23 +190,120 @@ export default function MentorCoursesToolbar({
   totalCount = 0,
   showReset = false,
   onReset,
-  activeFilterChips = [],
+  //activeFilterChips = [],
   onRemoveFilterChip,
-  statusOptions   = mentorCourseFilterOptionsMock.statusOptions,
-  categoryOptions = mentorCourseFilterOptionsMock.categoryOptions,
-  levelOptions    = mentorCourseFilterOptionsMock.levelOptions,
-  sortOptions     = mentorCourseFilterOptionsMock.sortOptions,
+  statusOptions = mentorCourseFilterOptionsMock.statusOptions,
+  // categoryOptions = mentorCourseFilterOptionsMock.categoryOptions,
+  //levelOptions = mentorCourseFilterOptionsMock.levelOptions,
+  sortOptions = mentorCourseFilterOptionsMock.sortOptions,
 }) {
   const theme = useTheme();
-  const [statusAnchor,   setStatusAnchor]   = useState(null);
+  const [statusAnchor, setStatusAnchor] = useState(null);
   const [categoryAnchor, setCategoryAnchor] = useState(null);
-  const [levelAnchor,    setLevelAnchor]    = useState(null);
-  const [sortAnchor,     setSortAnchor]     = useState(null);
+  const [levelAnchor, setLevelAnchor] = useState(null);
+  const [sortAnchor, setSortAnchor] = useState(null);
 
-  const statusLabel   = statusOptions.find((o) => o.value === statusFilter)?.label   ?? 'Trạng thái';
+  const [categoryOptions, setCategoryOptions] = useState([
+    { value: 'all', label: 'Tất cả danh mục' },
+  ]);
+
+  const [levelOptions, setLevelOptions] = useState([
+    { value: 'all', label: 'Tất cả Level' }
+  ])
+
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        //Category
+        const cate = await fetchCourseCategories();
+
+        const categories = cate.categories.map((category) => ({
+          value: String(category.value),
+          label: category.label,
+        }));
+
+        setCategoryOptions([
+          { value: 'all', label: 'Tất cả danh mục' },
+          ...categories,
+        ]);
+        //---------------
+        //Level
+        const level = await fetchCourseLevels();
+
+        const rs = level.levels.map((lv) => ({
+          value: lv.value,
+          label: lv.label
+        }));
+
+        setLevelOptions([
+          { value: 'all', label: 'Tất cả Levels' },
+          ...rs,
+        ])
+
+      } catch (error) {
+        console.error(error.message);
+      }
+    };
+    getData();
+  }, []);
+
+  //ACTIVE CHIPS
+  const [activeFilterChips, setActiveFilterChips] = useState([]);
+  useEffect(() => {
+    const chips = [];
+
+    if (statusFilter !== 'all') {
+      const selectedStatus = statusOptions.find(
+        (option) => String(option.value) === String(statusFilter)
+      );
+
+      chips.push({
+        key: 'status',
+        type: 'status',
+        label: selectedStatus?.label ?? statusFilter,
+      });
+    }
+
+    if (categoryFilter !== 'all') {
+      const selectedCategory = categoryOptions.find(
+        (option) => String(option.value) === String(categoryFilter)
+      );
+
+      chips.push({
+        key: 'category',
+        type: 'category',
+        label: selectedCategory?.label ?? categoryFilter,
+      });
+    }
+
+    if (levelFilter !== 'all') {
+      const selectedLevel = levelOptions.find(
+        (option) => String(option.value) === String(levelFilter)
+      );
+
+      chips.push({
+        key: 'level',
+        type: 'level',
+        label: selectedLevel?.label ?? levelFilter,
+      });
+    }
+
+    setActiveFilterChips(chips);
+  }, [
+    statusFilter,
+    categoryFilter,
+    levelFilter,
+    statusOptions,
+    categoryOptions,
+    levelOptions,
+  ]);
+
+  const statusLabel = statusOptions.find((o) => o.value === statusFilter)?.label ?? 'Trạng thái';
   const categoryLabel = categoryOptions.find((o) => o.value === categoryFilter)?.label ?? 'Danh mục';
-  const levelLabel    = levelOptions.find((o) => o.value === levelFilter)?.label    ?? 'Trình độ';
-  const sortLabel     = sortOptions.find((o) => o.value === sortBy)?.label     ?? 'Sắp xếp';
+  const levelLabel = levelOptions.find((o) => o.value === levelFilter)?.label ?? 'Trình độ';
+  const sortLabel = sortOptions.find((o) => o.value === sortBy)?.label ?? 'Sắp xếp';
+
 
   return (
     <Box
@@ -216,6 +315,7 @@ export default function MentorCoursesToolbar({
     >
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, flex: 1, minWidth: 0 }}>
+          {/* COURSES'S STATUS (ISPUBLISHED) */}
           <FilterTrigger
             icon={FactCheckOutlinedIcon}
             label={statusLabel}
@@ -224,6 +324,7 @@ export default function MentorCoursesToolbar({
             onClick={(e) => setStatusAnchor(e.currentTarget)}
             iconColor="#047857"
           />
+          {/* COURSE'S CATEGORY */}
           <FilterTrigger
             icon={CategoryOutlinedIcon}
             label={categoryLabel}
@@ -232,6 +333,7 @@ export default function MentorCoursesToolbar({
             onClick={(e) => setCategoryAnchor(e.currentTarget)}
             iconColor="#EA580C"
           />
+          {/* COURES'S LEVEL */}
           <FilterTrigger
             icon={SchoolOutlinedIcon}
             label={levelLabel}
