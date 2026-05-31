@@ -11,7 +11,7 @@ const getMyCourses = async (req, res) => {
       });
     }
 
-    const courses = await courseModel.getCoursesByRole(userId, roleName);
+    const courses = await courseModel.getCoursesByUserRole(userId, roleName);
 
     return res.status(200).json({
       success: true,
@@ -28,28 +28,6 @@ const getMyCourses = async (req, res) => {
   }
 };
 
-const getAllCourses = async (req, res) => {
-  try {
-    const userId = req.query.userId || null;
-
-    const courses = await courseModel.getAllCourses(userId);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Lấy tất cả khóa học thành công',
-      data: courses,
-    });
-  } catch (error) {
-    console.error('Get all courses error:', error);
-
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi server khi lấy tất cả khóa học',
-    });
-  }
-};
-
 module.exports = {
-  getMyCourses,
-  getAllCourses,
+  getMyCourses
 };

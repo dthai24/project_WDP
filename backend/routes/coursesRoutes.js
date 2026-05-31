@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const {
-    getAllCourses,
-    getMyCourses,
+    getMyCourses
 } = require('../controllers/coursesController');
 
 const optionalAuth = (req, res, next) => {
@@ -21,7 +20,7 @@ const optionalAuth = (req, res, next) => {
 // GET /api/courses
 // Lấy tất cả khóa học
 // Nếu có userId thì lấy kèm progress của user đó
-router.get('/', optionalAuth, getAllCourses);
+
 
 // POST /api/courses/my-courses
 // Lấy khóa học theo role student / mentor
