@@ -1,8 +1,15 @@
+<<<<<<< Updated upstream
 import { useEffect, useState } from "react";
 import LoginPage from "./pages/Auth/LoginPage";
+=======
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+>>>>>>> Stashed changes
 import HomePage from "./pages/Home/HomePage";
+import AdminRoutes from "./routes/admin-routes";
 
 function App() {
+<<<<<<< Updated upstream
   const [currentPage, setCurrentPage] = useState("home");
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -41,6 +48,21 @@ function App() {
       onLoginClick={() => setCurrentPage("login")}
       onLogout={handleLogout}
     />
+=======
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Main Public Route */}
+        <Route path="/" element={<HomePage />} />
+        
+        {/* Admin Dashboard Subsystem Route Group */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
+        
+        {/* Fallback Redirect to Home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+>>>>>>> Stashed changes
   );
 }
 
