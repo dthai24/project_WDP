@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-export default function HomePage() {
+export default function HomePage({ currentUser, onLoginClick, onLogout }) {
   const features = [
     {
       title: "Personalized Learning",
@@ -41,7 +41,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-slate-800 font-sans selection:bg-blue-100 antialiased">
       
-      {/* 1. NAVBAR - Glassmorphism */}
+      {/* 1. NAVBAR - Kết hợp giao diện mới và tính năng Login của bạn kia */}
       <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-slate-200/50 px-6 lg:px-16 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 via-indigo-600 to-teal-500 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
@@ -60,23 +60,45 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-4">
+          <Link 
+            to="/become-mentor" 
+            className="hidden sm:inline-block text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors"
+          >
+            Become a Mentor
+          </Link>
           
-          <button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.98] transition-all">
-            Join Now
-          </button>
+          {currentUser ? (
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:block text-right">
+                <p className="text-sm font-bold text-slate-900">{currentUser.name}</p>
+                <p className="text-xs font-medium text-slate-500">{currentUser.role}</p>
+              </div>
+              <button
+                onClick={onLogout}
+                className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all active:scale-[0.98]"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onLoginClick}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.98] transition-all"
+            >
+              Login
+            </button>
+          )}
         </div>
       </nav>
 
-      {/* 2. HERO SECTION - Chỉ sử dụng duy nhất ảnh background phủ rộng */}
+      {/* 2. HERO SECTION - Giữ nguyên giao diện full nền ảnh sạch sẽ của bạn Thái */}
       <section 
         className="relative px-6 lg:px-16 pt-20 pb-24 md:pt-32 md:pb-32 overflow-hidden bg-cover bg-center"
         style={{ backgroundImage: "url('/images/background.png')" }}
       >
-        {/* Lớp phủ (Overlay) để chữ không bị chìm vào ảnh nền */}
         <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px]"></div>
 
         <div className="relative z-10 max-w-7xl mx-auto">
-          {/* Chuyển sang bố cục thoáng đạt, tập trung hoàn toàn vào nội dung chữ */}
           <div className="max-w-2xl space-y-8">
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-slate-900 tracking-tight leading-[1.1]">
               Transform Your Skills <br />
@@ -90,8 +112,11 @@ export default function HomePage() {
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row gap-4">
-              <button className="bg-slate-950 hover:bg-slate-900 text-white font-bold px-8 py-4 rounded-xl shadow-xl active:scale-[0.98] transition-all text-sm">
-                Explore Roadmaps
+              <button 
+                onClick={currentUser ? undefined : onLoginClick}
+                className="bg-slate-950 hover:bg-slate-900 text-white font-bold px-8 py-4 rounded-xl shadow-xl active:scale-[0.98] transition-all text-sm"
+              >
+                {currentUser ? "Explore Roadmaps" : "Login to Explore"}
               </button>
               <Link 
                 to="/become-mentor" 
@@ -103,7 +128,16 @@ export default function HomePage() {
           </div>
         </div>
 
-        
+        {/* Dải công nghệ chân trang Hero */}
+        <div className="relative z-10 max-w-7xl mx-auto mt-20 pt-8 border-t border-slate-900/10 flex flex-wrap items-center gap-x-8 gap-y-4">
+          <span className="text-xs font-black uppercase tracking-widest text-slate-900">Powered by Innovation</span>
+          <div className="flex flex-wrap items-center gap-6 font-bold text-sm text-slate-600">
+            <span>ReactJS</span>
+            <span>NodeJS</span>
+            <span>MongoDB</span>
+            <span>TailwindCSS</span>
+          </div>
+        </div>
       </section>
 
       {/* 3. FEATURES SECTION */}
