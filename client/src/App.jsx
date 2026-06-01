@@ -1,7 +1,11 @@
-import HomePage from "./pages/Home/HomePage";
+import React from "react";
+import AppRoutes from "./routes/AppRoutes"; // Đường dẫn đến file AppRoutes của bạn
 
-function App() {
-  return <HomePage />;
+export default function App() {
+  return (
+    <>
+      {/* Chỉ gọi duy nhất AppRoutes ở đây để quản lý toàn bộ trang */}
+      <AppRoutes />
+    </>
+  );
 }
-
-export default App;
