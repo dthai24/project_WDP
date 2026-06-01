@@ -2,13 +2,19 @@ import React, { useState } from "react";
 
 const testAccounts = [
   {
-    email: "student@learnpath.com",
+    email: "admin@gmail.com",
+    password: "123456",
+    name: "Admin User",
+    role: "Admin",
+  },
+  {
+    email: "student@gmail.com",
     password: "123456",
     name: "Student User",
     role: "Learner",
   },
   {
-    email: "mentor@learnpath.com",
+    email: "mentor@gmail.com",
     password: "123456",
     name: "Mentor User",
     role: "Mentor",
@@ -189,12 +195,11 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   value={formData.email}
                   onChange={handleChange}
                   autoComplete="email"
-                  placeholder="student@learnpath.com"
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${
-                    errors.email
+                  placeholder="student@gmail.com"
+                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${errors.email
                       ? "border-red-300 focus:border-red-500 focus:ring-red-100"
                       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                  }`}
+                    }`}
                 />
                 {errors.email && (
                   <p className="mt-2 text-sm font-medium text-red-600">
@@ -227,11 +232,10 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   onChange={handleChange}
                   autoComplete="current-password"
                   placeholder="Enter your password"
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${
-                    errors.password
+                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${errors.password
                       ? "border-red-300 focus:border-red-500 focus:ring-red-100"
                       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                  }`}
+                    }`}
                 />
                 {errors.password && (
                   <p className="mt-2 text-sm font-medium text-red-600">
