@@ -118,7 +118,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   L
                 </div>
                 <span className="text-2xl font-extrabold tracking-tight">
-                  LearnPath
+                  Lexiora — Learn English Smarter
                 </span>
               </div>
               <h1 className="text-5xl font-extrabold leading-tight tracking-tight">
@@ -197,8 +197,8 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   autoComplete="email"
                   placeholder="student@gmail.com"
                   className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${errors.email
-                      ? "border-red-300 focus:border-red-500 focus:ring-red-100"
-                      : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-100"
+                    : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
                     }`}
                 />
                 {errors.email && (
@@ -233,8 +233,8 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   autoComplete="current-password"
                   placeholder="Enter your password"
                   className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${errors.password
-                      ? "border-red-300 focus:border-red-500 focus:ring-red-100"
-                      : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-100"
+                    : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
                     }`}
                 />
                 {errors.password && (
