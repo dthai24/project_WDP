@@ -1,5 +1,8 @@
 import React from "react";
-export default function HomePage({ currentUser, onLoginClick, onLogout }) {
+import { useNavigate } from "react-router-dom";
+
+export default function HomePage() {
+  const navigate = useNavigate();
   const features = [
     {
       title: "Personalized Learning",
@@ -55,31 +58,9 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
           <a href="#about" className="hover:text-blue-600 transition-colors">About</a>
         </div>
 
-        {currentUser ? (
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-bold text-slate-900">
-                {currentUser.name}
-              </p>
-              <p className="text-xs font-medium text-slate-500">
-                {currentUser.role}
-              </p>
-            </div>
-            <button
-              onClick={onLogout}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-full font-medium shadow-lg shadow-slate-900/20 hover:-translate-y-0.5 transition-all duration-300"
-            >
-              Logout
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={onLoginClick}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full font-medium shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-0.5 transition-all duration-300"
-          >
-            Login
-          </button>
-        )}
+        <button onClick={() => navigate('/login')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full font-medium shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-0.5 transition-all duration-300">
+          Get Started
+        </button>
       </nav>
 
       {/* Hero Section - Clean & Modern Light Theme */}
@@ -103,13 +84,10 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button
-              onClick={currentUser ? undefined : onLoginClick}
-              className="bg-slate-900 text-white font-semibold px-8 py-4 rounded-full shadow-xl hover:bg-slate-800 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-            >
-              {currentUser ? "Explore Courses" : "Login to Explore"}
+            <button onClick={() => navigate('/login')} className="bg-slate-900 text-white font-semibold px-8 py-4 rounded-full shadow-xl hover:bg-slate-800 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              Explore Courses
             </button>
-            <button className="bg-white text-slate-700 border border-slate-200 font-semibold px-8 py-4 rounded-full shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:-translate-y-1 transition-all duration-300">
+            <button onClick={() => navigate('/login')} className="bg-white text-slate-700 border border-slate-200 font-semibold px-8 py-4 rounded-full shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:-translate-y-1 transition-all duration-300">
               Become a Mentor
             </button>
           </div>
