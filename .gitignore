@@ -1,0 +1,13 @@
+# Chặn hoàn toàn thư mục node_modules ở mọi cấp độ
+node_modules/
+**/node_modules/
+
+# Chặn file cấu hình cache rác của eslint
+.eslintcache
+
+# Chặn vĩnh viễn file project context không cho lên git web
+PROJECT_CONTEXT.md
+
+# Chặn các file môi trường bảo mật (nếu có)
+.env
+.env.local
