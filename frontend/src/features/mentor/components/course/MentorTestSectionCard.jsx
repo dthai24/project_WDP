@@ -133,6 +133,10 @@ export default function MentorTestSectionCard({
   questionCountAll = 0,
   showScoreField = false,
   defaultExpanded = true,
+  lockSkillType = false,
+  hideDelete = false,
+  sectionBadgeLabel,
+  questionBankMode = false,
   onChange,
   onDelete,
 }) {
@@ -144,6 +148,18 @@ export default function MentorTestSectionCard({
   const skillAccent = skillTheme.color;
   const showListeningSource = skillType === TEST_SKILL_LISTENING;
   const displayTitle = getSectionDisplayTitle(section);
+  const badgeLabel = sectionBadgeLabel ?? `Phần ${index + 1}`;
+  const sectionTitleLabel = questionBankMode ? 'Tên bài' : 'Tên phần';
+  const sectionTitlePlaceholder = questionBankMode
+    ? 'Ví dụ: Bài nghe đoạn hội thoại ngắn'
+    : 'Ví dụ: Phần nghe đoạn hội thoại ngắn';
+  const sectionDescLabel = questionBankMode ? 'Mô tả bài' : 'Mô tả phần';
+  const sectionDescPlaceholder = questionBankMode
+    ? 'Mô tả ngắn cho bài (tuỳ chọn)'
+    : 'Mô tả ngắn cho phần kiểm tra (tuỳ chọn)';
+  const emptyQuestionsText = questionBankMode
+    ? 'Chưa có câu hỏi trong bài này.'
+    : 'Chưa có câu hỏi trong phần này.';
 
   const updateSection = (patch) => onChange({ ...section, ...patch });
 
@@ -217,7 +233,7 @@ export default function MentorTestSectionCard({
                 bgcolor: `${skillAccent}18`,
               }}
             >
-              Phần {index + 1}
+              {badgeLabel}
             </Typography>
             <SkillChip skillType={skillType} />
             <Typography
@@ -254,72 +270,76 @@ export default function MentorTestSectionCard({
           )}
         </IconButton>
 
-        <IconButton
-          size="small"
-          onClick={onDelete}
-          disabled={disabled}
-          aria-label="Xóa phần kiểm tra"
-          sx={{
-            color: MUTED,
-            flexShrink: 0,
-            '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
-          }}
-        >
-          <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
-        </IconButton>
+        {!hideDelete ? (
+          <IconButton
+            size="small"
+            onClick={onDelete}
+            disabled={disabled}
+            aria-label="Xóa phần kiểm tra"
+            sx={{
+              color: MUTED,
+              flexShrink: 0,
+              '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
+            }}
+          >
+            <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        ) : null}
       </Box>
 
       <Collapse in={expanded}>
         <Box sx={{ p: { xs: 1.15, sm: 1.35 }, bgcolor: `${skillAccent}06` }}>
           <Box sx={{ mb: 1.25 }}>
-            <ContentFieldLabel sx={fieldLabelSx}>Tên phần</ContentFieldLabel>
+            <ContentFieldLabel sx={fieldLabelSx}>{sectionTitleLabel}</ContentFieldLabel>
             <InputBase
               value={section.SectionTitle ?? ''}
               onChange={(event) => updateSection({ SectionTitle: event.target.value })}
               disabled={disabled}
-              placeholder="Ví dụ: Phần nghe đoạn hội thoại ngắn"
+              placeholder={sectionTitlePlaceholder}
               fullWidth
               sx={fieldInputSx(false, skillAccent)}
             />
           </Box>
 
-          <Box sx={{ mb: 1.25 }}>
-            <ContentFieldLabel sx={fieldLabelSx}>Kỹ năng</ContentFieldLabel>
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.5,
-                p: 0.5,
-                borderRadius: '12px',
-                bgcolor: '#F8FAFC',
-                border: `1px solid ${errors.SkillType ? '#DC2626' : 'rgba(15,23,42,0.08)'}`,
-              }}
-            >
-              {SKILL_OPTIONS.map((option) => (
-                <SkillOptionButton
-                  key={option.value}
-                  option={option}
-                  selected={skillType}
-                  disabled={disabled}
-                  accentColor={TEST_SKILL_CHIP_COLORS[option.value]?.color ?? accentColor}
-                  onSelect={handleSkillChange}
-                />
-              ))}
+          {!lockSkillType ? (
+            <Box sx={{ mb: 1.25 }}>
+              <ContentFieldLabel sx={fieldLabelSx}>Kỹ năng</ContentFieldLabel>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 0.5,
+                  p: 0.5,
+                  borderRadius: '12px',
+                  bgcolor: '#F8FAFC',
+                  border: `1px solid ${errors.SkillType ? '#DC2626' : 'rgba(15,23,42,0.08)'}`,
+                }}
+              >
+                {SKILL_OPTIONS.map((option) => (
+                  <SkillOptionButton
+                    key={option.value}
+                    option={option}
+                    selected={skillType}
+                    disabled={disabled}
+                    accentColor={TEST_SKILL_CHIP_COLORS[option.value]?.color ?? accentColor}
+                    onSelect={handleSkillChange}
+                  />
+                ))}
+              </Box>
+              {errors.SkillType && (
+                <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>
+                  {errors.SkillType}
+                </Typography>
+              )}
             </Box>
-            {errors.SkillType && (
-              <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>
-                {errors.SkillType}
-              </Typography>
-            )}
-          </Box>
+          ) : null}
 
           <Box sx={{ mb: showListeningSource ? 1.25 : 1.5 }}>
-            <ContentFieldLabel sx={fieldLabelSx}>Mô tả phần</ContentFieldLabel>
+            <ContentFieldLabel sx={fieldLabelSx}>{sectionDescLabel}</ContentFieldLabel>
             <InputBase
               value={section.Description ?? ''}
               onChange={(event) => updateSection({ Description: event.target.value })}
               disabled={disabled}
-              placeholder="Mô tả ngắn cho phần kiểm tra (tuỳ chọn)"
+              placeholder={sectionDescPlaceholder}
               fullWidth
               multiline
               minRows={2}
@@ -356,7 +376,7 @@ export default function MentorTestSectionCard({
               }}
             >
               <Typography sx={{ fontSize: 12, color: MUTED, mb: 1 }}>
-                Chưa có câu hỏi trong phần này.
+                {emptyQuestionsText}
               </Typography>
               <Box
                 component="button"

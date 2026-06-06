@@ -438,7 +438,7 @@ export default function MentorEditCoursePage() {
       return;
     }
 
-    const ce = validateCourseContent(paths);
+    const ce = validateCourseContent(paths, { courseId: Number(courseId) });
     setContentErrors(ce);
     if (hasContentValidationErrors(ce)) {
       toast.error('Vui lòng kiểm tra lại cấu trúc nội dung khóa học.');
@@ -608,6 +608,7 @@ export default function MentorEditCoursePage() {
           >
             <MentorCourseContentBuilder
               paths={paths}
+              courseId={Number(courseId)}
               errors={contentErrors}
               expandedPaths={expandedPaths}
               expandedNodes={expandedNodes}

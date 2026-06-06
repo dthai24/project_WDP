@@ -62,6 +62,11 @@ function buildTypeChangePatch(currentType, nextType) {
     patch.Sections = undefined;
     patch.TotalScore = undefined;
     patch.ScoringMode = undefined;
+    patch.QuestionBankId = undefined;
+    patch.QuestionBankTitle = undefined;
+    patch.QuestionBankScope = undefined;
+    patch.TestSource = undefined;
+    patch.FinalTestConfig = undefined;
     patch.TestSkill = undefined;
     patch.AudioUrl = undefined;
     patch.Questions = undefined;
@@ -84,6 +89,8 @@ export default function MentorMaterialRow({
   onDragHandleEnd,
   onDragOver,
   onDrop,
+  courseId = null,
+  chapterId = null,
 }) {
   const isText = material.MaterialType === 'TEXT';
   const isDoc = material.MaterialType === 'DOC';
@@ -295,6 +302,8 @@ export default function MentorMaterialRow({
           errors={errors}
           onChange={onChange}
           disabled={disabled}
+          courseId={courseId}
+          chapterId={chapterId}
         />
       )}
     </Box>
