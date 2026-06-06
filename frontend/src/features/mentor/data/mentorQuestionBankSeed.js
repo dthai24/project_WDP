@@ -5,7 +5,7 @@
 export const mentorQuestionBankSeed = [
   {
     id: 1001,
-    title: 'Bộ câu hỏi chương 1 – Khởi động',
+    title: 'Khởi động & Làm quen thuật ngữ',
     description: 'Luyện tập từ vựng và mẫu câu chào hỏi công sở',
     courseId: 1,
     courseTitle: 'Tiếng Anh Thương Mại & Giao Tiếp Công Sở',

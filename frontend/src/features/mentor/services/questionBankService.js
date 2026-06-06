@@ -40,7 +40,11 @@ function saveStoredBanks(banks) {
 function normalizeBank(bank) {
   if (bank?.chapterId == null || bank.chapterId === '') return null;
   const { scope: _scope, ...rest } = bank;
-  return rest;
+  const chapterTitle = rest.chapterTitle?.trim() ?? '';
+  return {
+    ...rest,
+    title: chapterTitle || rest.title?.trim() || '',
+  };
 }
 
 function getAllBanks() {
@@ -225,7 +229,7 @@ export async function createQuestionBank(payload) {
     courseTitle: payload.courseTitle ?? '',
     chapterId: payload.chapterId,
     chapterTitle: payload.chapterTitle ?? '',
-    title: payload.title ?? '',
+    title: payload.title?.trim() || payload.chapterTitle?.trim() || '',
     description: payload.description ?? '',
     status: 'DRAFT',
     sections: payload.sections ?? [],

@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Breadcrumbs,
-  InputBase,
   Link as MuiLink,
   Typography,
 } from '@mui/material';
@@ -38,6 +37,7 @@ import {
   validateTestMaterial,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { CREATE_CARD_SX, MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
 import {
   createQuestionBank,
   fetchCourseContentOutlineForQB,
@@ -46,28 +46,6 @@ import {
   updateQuestionBank,
 } from '@/features/mentor/services/questionBankService';
 
-const FIELD_LABEL_SX = { fontSize: 12, fontWeight: 700, color: MUTED, mb: 0.5 };
-
-const inputBaseSx = (hasError, disabled = false) => ({
-  fontSize: 13,
-  color: disabled ? MUTED : TEXT,
-  px: 1.25,
-  py: 0.75,
-  borderRadius: '10px',
-  border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-  bgcolor: disabled ? 'rgba(15,23,42,0.03)' : '#fff',
-  width: '100%',
-  opacity: disabled ? 0.75 : 1,
-  '&:focus-within': {
-    borderColor: hasError ? '#DC2626' : disabled ? 'rgba(15,23,42,0.12)' : PRIMARY,
-  },
-});
-
-function FieldError({ msg }) {
-  if (!msg) return null;
-  return <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>{msg}</Typography>;
-}
-
 function validateForm(form, { chaptersCount = 0 } = {}) {
   const errors = {};
   if (chaptersCount === 0) {
@@ -75,7 +53,6 @@ function validateForm(form, { chaptersCount = 0 } = {}) {
   } else if (!form.chapterId) {
     errors.chapterId = 'Vui lòng chọn chương từ mục lục bên phải';
   }
-  if (!form.title.trim()) errors.title = 'Vui lòng nhập tên bộ câu hỏi';
   return errors;
 }
 
@@ -92,7 +69,6 @@ function resolveChapterEditorState(chapter, bankRes) {
 
     return {
       editingBankId: bank.id,
-      title: bank.title ?? '',
       sections: loadedSections,
       activeSectionId: firstReading,
     };
@@ -101,7 +77,6 @@ function resolveChapterEditorState(chapter, bankRes) {
   const initialSections = createQuestionBankSkillSections();
   return {
     editingBankId: null,
-    title: `Bộ câu hỏi – ${chapter.chapterTitle}`,
     sections: initialSections,
     activeSectionId:
       initialSections.find((s) => s.SkillType === TEST_SKILL_LISTENING)?.tempId ?? '',
@@ -120,7 +95,6 @@ export default function MentorQuestionBankCreatePage() {
   const [course, setCourse] = useState(null);
   const [courseLoading, setCourseLoading] = useState(true);
   const [form, setForm] = useState({
-    title: '',
     courseId,
     chapterId,
   });
@@ -151,7 +125,7 @@ export default function MentorQuestionBankCreatePage() {
     [form.chapterId, hasChapters],
   );
 
-  const canUseGenerator = canUseBankInfo && Boolean(form.title.trim());
+  const canUseGenerator = canUseBankInfo;
 
   const questionCount = useMemo(() => getFilledQuestionCount(sections), [sections]);
 
@@ -182,13 +156,14 @@ export default function MentorQuestionBankCreatePage() {
     [courseChapters, activeChapterId],
   );
 
+  const bankTitle = selectedChapter?.chapterTitle?.trim() ?? '';
+
   const applyChapterEditorState = useCallback((chapter, bankRes) => {
     const nextState = resolveChapterEditorState(chapter, bankRes);
     setEditingBankId(nextState.editingBankId);
     setForm((prev) => ({
       ...prev,
       chapterId: String(chapter.chapterId),
-      title: nextState.title,
     }));
     setSections(nextState.sections);
     setSectionErrors({});
@@ -296,11 +271,6 @@ export default function MentorQuestionBankCreatePage() {
     }
   }, [activeSection, skillSections]);
 
-  const setField = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
-  };
-
   const handleChapterSelect = (nextChapterId) => {
     if (String(nextChapterId) === String(activeChapterId)) return;
 
@@ -365,15 +335,14 @@ export default function MentorQuestionBankCreatePage() {
 
   const validateSections = () => {
     if (!canUseGenerator) {
-      if (!canUseBankInfo) {
-        return {
-          _context: 'Vui lòng nhập tên bộ câu hỏi trước khi tạo câu hỏi',
-        };
-      }
-      return { _context: 'Vui lòng nhập tên bộ câu hỏi trước khi tạo câu hỏi' };
+      return {
+        _context: hasChapters
+          ? 'Chọn chương từ mục lục bên phải trước khi tạo câu hỏi'
+          : 'Khóa học chưa có chương để tạo câu hỏi',
+      };
     }
     const materialErrors = validateTestMaterial(
-      { Title: form.title, Sections: sections, ScoringMode: SCORING_MODE_AUTO },
+      { Title: bankTitle, Sections: sections, ScoringMode: SCORING_MODE_AUTO },
       { inlineSections: true, skipTitle: true },
     );
     if (materialErrors.Sections) {
@@ -395,6 +364,11 @@ export default function MentorQuestionBankCreatePage() {
       return;
     }
 
+    if (!bankTitle) {
+      toast.error('Không tìm thấy tên chương.');
+      return;
+    }
+
     if (sectionValidation._context || sectionValidation._sections) {
       if (sectionValidation.sections) setSectionErrors(sectionValidation.sections);
       toast.error(
@@ -409,16 +383,16 @@ export default function MentorQuestionBankCreatePage() {
 
       const res = editingBankId
         ? await updateQuestionBank(editingBankId, {
-            title: form.title.trim(),
-            chapterTitle: selectedChapter?.chapterTitle ?? '',
+            title: bankTitle,
+            chapterTitle: bankTitle,
             sections: sectionsPayload,
           })
         : await createQuestionBank({
-            title: form.title.trim(),
+            title: bankTitle,
             courseId: Number(courseId),
             courseTitle: course?.courseName ?? '',
             chapterId: Number(form.chapterId),
-            chapterTitle: selectedChapter?.chapterTitle ?? '',
+            chapterTitle: bankTitle,
             sections: sectionsPayload,
           });
 
@@ -528,7 +502,16 @@ export default function MentorQuestionBankCreatePage() {
           alignItems: 'start',
         }}
       >
-        <Box sx={{ width: { xs: '100%', lg: 200 }, flexShrink: 0 }}>
+        <Box
+          sx={{
+            width: { xs: '100%', lg: 200 },
+            flexShrink: 0,
+            alignSelf: 'flex-start',
+            position: { lg: 'sticky' },
+            top: { lg: HEADER_HEIGHT + 16 },
+            zIndex: 2,
+          }}
+        >
           <MentorQuestionBankSkillNav
             sections={sections}
             activeSkill={activeSkill}
@@ -552,7 +535,7 @@ export default function MentorQuestionBankCreatePage() {
         >
         <Box id="question-bank-builder-root">
           <Box sx={{ ...CREATE_CARD_SX, mb: { xs: 2, lg: 0 } }}>
-            {!canUseBankInfo && hasChapters && (
+            {!canUseBankInfo && (
               <Typography
                 sx={{
                   fontSize: 13,
@@ -564,52 +547,16 @@ export default function MentorQuestionBankCreatePage() {
                   lineHeight: 1.5,
                 }}
               >
-                Chọn chương từ mục lục khóa học ở cột bên phải để bắt đầu tạo bộ câu hỏi.
+                {hasChapters
+                  ? 'Chọn chương từ mục lục khóa học ở cột bên phải để bắt đầu tạo bộ câu hỏi.'
+                  : 'Khóa học chưa có chương để tạo bộ câu hỏi.'}
               </Typography>
             )}
-
-            <Box
-              id="qb-form-info"
-              sx={{ mb: 2.5, opacity: canUseBankInfo ? 1 : 0.6, scrollMarginTop: 24 }}
-            >
-              <Box>
-                <Typography sx={FIELD_LABEL_SX}>
-                  Tên bộ câu hỏi <Box component="span" sx={{ color: '#DC2626' }}>*</Box>
-                </Typography>
-                <InputBase
-                  value={form.title}
-                  onChange={(e) => setField('title', e.target.value)}
-                  placeholder="Ví dụ: Bộ câu hỏi chương 1 – Từ vựng cơ bản"
-                  fullWidth
-                  disabled={!canUseBankInfo}
-                  sx={inputBaseSx(Boolean(errors.title), !canUseBankInfo)}
-                />
-                <FieldError msg={errors.title} />
-              </Box>
-            </Box>
 
             <Box
               id="qb-questions"
               sx={{ opacity: canUseGenerator ? 1 : 0.6, scrollMarginTop: 24 }}
             >
-              {!canUseGenerator && (
-                <Typography
-                  sx={{
-                    fontSize: 13,
-                    color: MUTED,
-                    mb: 2,
-                    p: 1.25,
-                    borderRadius: '10px',
-                    bgcolor: 'rgba(15,23,42,0.04)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {!canUseBankInfo
-                    ? 'Chọn chương từ mục lục bên phải trước khi thêm câu hỏi.'
-                    : 'Nhập tên bộ câu hỏi trước khi thêm câu hỏi.'}
-                </Typography>
-              )}
-
               <Box sx={{ pointerEvents: canUseGenerator ? 'auto' : 'none' }}>
                 {activeSection ? (
                   <>

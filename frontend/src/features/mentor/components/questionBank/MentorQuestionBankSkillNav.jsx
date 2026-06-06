@@ -145,8 +145,6 @@ export default function MentorQuestionBankSkillNav({
       sx={{
         ...BUILDER_PANEL_SX,
         p: 1.25,
-        position: { md: 'sticky' },
-        top: { md: 24 },
       }}
     >
       <Typography

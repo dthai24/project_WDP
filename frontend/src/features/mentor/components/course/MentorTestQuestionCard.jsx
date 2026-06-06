@@ -1,8 +1,13 @@
-import { Box, IconButton, InputBase, Switch, Typography } from '@mui/material';
+import { Box, IconButton, InputBase, Switch, Tooltip, Typography } from '@mui/material';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import ShuffleRoundedIcon from '@mui/icons-material/ShuffleRounded';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import MentorQuestionTypeFields from './MentorQuestionTypeFields';
-import { normalizeTestQuestion } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  canShuffleTestQuestionOptions,
+  normalizeTestQuestion,
+  shuffleTestQuestionOptions,
+} from '@/features/mentor/utils/mentorTestContentUtils';
 
 function normalizeSingleCorrect(options) {
   const keep = Math.max(0, options.findIndex((o) => o.IsCorrect));
@@ -21,8 +26,13 @@ export default function MentorTestQuestionCard({
 }) {
   const normalizedQuestion = normalizeTestQuestion(question);
   const allowMultiple = Boolean(normalizedQuestion.AllowMultipleAnswers);
+  const canShuffleOptions = canShuffleTestQuestionOptions(normalizedQuestion);
 
   const handleChange = (nextQuestion) => onChange(normalizeTestQuestion(nextQuestion));
+
+  const handleShuffleOptions = () => {
+    handleChange(shuffleTestQuestionOptions(normalizedQuestion));
+  };
 
   const handleScoreChange = (event) =>
     handleChange({ ...normalizedQuestion, Score: event.target.value });
@@ -96,6 +106,24 @@ export default function MentorTestQuestionCard({
             }}
           />
         </Box>
+
+        <Tooltip title="Xáo trộn đáp án" arrow>
+          <span>
+            <IconButton
+              size="small"
+              onClick={handleShuffleOptions}
+              disabled={disabled || !canShuffleOptions}
+              aria-label="Xáo trộn đáp án"
+              sx={{
+                p: 0.4,
+                color: 'rgba(15,23,42,0.22)',
+                '&:hover': { color: TEXT, bgcolor: 'rgba(15,23,42,0.06)' },
+              }}
+            >
+              <ShuffleRoundedIcon sx={{ fontSize: 17 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
 
         {/* Delete */}
         <IconButton
