@@ -5,16 +5,20 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
-import { Link, useSearchParams } from 'react-router-dom';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import AppButton from '@/shared/ui/AppButton';
 import MentorQuestionBankToolbar from '@/features/mentor/components/questionBank/MentorQuestionBankToolbar';
 import MentorQuestionBankList from '@/features/mentor/components/questionBank/MentorQuestionBankList';
 import MentorQuestionBankListPagination, {
   QB_LIST_PAGE_SIZE,
 } from '@/features/mentor/components/questionBank/MentorQuestionBankListPagination';
+import MentorSelectCourseForQBDialog from '@/features/mentor/components/questionBank/MentorSelectCourseForQBDialog';
+import { mentorQuestionBankFilterOptionsMock } from '@/features/mentor/data/mentorQuestionBankMock';
 import {
-  mentorQuestionBankMock,
-  mentorQuestionBankFilterOptionsMock,
-} from '@/features/mentor/data/mentorQuestionBankMock';
+  fetchCoursesForQB,
+  getQuestionBankListSummaries,
+} from '@/features/mentor/services/questionBankService';
 import {
   parseQBListParams,
   hasActiveQBFilters,
@@ -29,9 +33,12 @@ import {
 const PAGE_SIZE = QB_LIST_PAGE_SIZE;
 
 export default function MentorQuestionBankListPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectDialogOpen, setSelectDialogOpen] = useState(false);
+  const [coursesWithoutQB, setCoursesWithoutQB] = useState([]);
 
   const queryState = useMemo(() => parseQBListParams(searchParams), [searchParams]);
   const showReset = hasActiveQBFilters(queryState);
@@ -47,10 +54,9 @@ export default function MentorQuestionBankListPage() {
     const loadItems = async () => {
       try {
         setLoading(true);
-        // TODO: replace with API GET /api/mentor/question-banks
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        if (isMounted) {
-          setItems(mentorQuestionBankMock);
+        const res = await getQuestionBankListSummaries();
+        if (isMounted && res.ok) {
+          setItems(res.items);
         }
       } finally {
         if (isMounted) {
@@ -64,6 +70,13 @@ export default function MentorQuestionBankListPage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectDialogOpen) return;
+    fetchCoursesForQB().then((res) => {
+      if (res.ok) setCoursesWithoutQB(res.courses);
+    });
+  }, [selectDialogOpen]);
 
   const updateQuery = (patch) => {
     setSearchParams(
@@ -133,6 +146,26 @@ export default function MentorQuestionBankListPage() {
             Ngân hàng câu hỏi
           </Typography>
         </Breadcrumbs>
+
+        <AppButton
+          startIcon={<AddRoundedIcon />}
+          onClick={() => setSelectDialogOpen(true)}
+          sx={{
+            height: 44,
+            px: 2.5,
+            fontSize: 14,
+            fontWeight: 700,
+            borderRadius: '999px',
+            bgcolor: '#0891B2',
+            color: '#fff',
+            flexShrink: 0,
+            width: { xs: '100%', sm: 'auto' },
+            boxShadow: 'none',
+            '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+          }}
+        >
+          Tạo bộ câu hỏi
+        </AppButton>
       </Box>
 
       <MentorQuestionBankToolbar
@@ -173,6 +206,15 @@ export default function MentorQuestionBankListPage() {
           />
         </>
       )}
+
+      <MentorSelectCourseForQBDialog
+        open={selectDialogOpen}
+        onClose={() => setSelectDialogOpen(false)}
+        courses={coursesWithoutQB}
+        onSelect={(course) =>
+          navigate(`/mentor/question-banks/create?courseId=${course.courseId}`)
+        }
+      />
     </Box>
   );
 }

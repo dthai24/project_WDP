@@ -43,31 +43,6 @@ export const mentorQuestionBankMock = [
     quizCount: 5,
     questionBankUpdatedAt: '2026-02-10T09:00:00.000Z',
   },
-  {
-    courseId: 4,
-    courseName: 'Ngữ pháp Tiếng Anh Nền Tảng',
-    description:
-      'Củng cố 12 thì động từ, câu điều kiện, câu bị động và các cấu trúc nâng cao.',
-    status: 'draft',
-    totalQuestionCount: 45,
-    publishedQuestionCount: 20,
-    draftQuestionCount: 25,
-    chapterWithQuestionCount: 2,
-    quizCount: 3,
-    questionBankUpdatedAt: '2026-05-01T16:45:00.000Z',
-  },
-  {
-    courseId: 5,
-    courseName: 'TOEIC Listening & Reading 750+',
-    description: 'Luyện đề TOEIC theo format ETS mới nhất, giải thích chi tiết từng đáp án.',
-    status: 'draft',
-    totalQuestionCount: 30,
-    publishedQuestionCount: 0,
-    draftQuestionCount: 30,
-    chapterWithQuestionCount: 1,
-    quizCount: 1,
-    questionBankUpdatedAt: '2026-05-20T11:00:00.000Z',
-  },
 ];
 
 export const mentorQuestionBankFilterOptionsMock = {

@@ -11,7 +11,8 @@ import { isStudent } from "@/features/auth/utils/authUtils";
 export function isMentorQuestionBankActive(pathname) {
   return (
     pathname === "/mentor/question-banks" ||
-    /^\/mentor\/courses\/\d+\/questions$/.test(pathname)
+    pathname === "/mentor/question-banks/create" ||
+    /^\/mentor\/courses\/\d+\/questions/.test(pathname)
   );
 }
 

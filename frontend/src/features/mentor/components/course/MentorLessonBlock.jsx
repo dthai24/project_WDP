@@ -28,6 +28,8 @@ export default function MentorLessonBlock({
   onMaterialDelete,
   onMaterialReorder,
   disabled = false,
+  courseId = null,
+  chapterId = null,
 }) {
   const materials = node.materials ?? [];
   const materialCount = materials.length;
@@ -193,6 +195,8 @@ export default function MentorLessonBlock({
                     onChange={onMaterialChange}
                     onDelete={onMaterialDelete}
                     disabled={disabled}
+                    courseId={courseId}
+                    chapterId={chapterId}
                     showDragHandle={canReorder}
                     isDragging={dragIndex === materialIndex}
                     isDragOver={overIndex === materialIndex && dragIndex !== materialIndex}

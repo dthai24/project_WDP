@@ -4,14 +4,7 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import AppButton from '@/shared/ui/AppButton';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import {
-  QUESTION_TYPE_FILL_BLANK,
-  QUESTION_TYPE_MATCHING,
-  QUESTION_TYPE_MULTIPLE_CHOICE,
-  QUESTION_TYPE_TEXT_ANSWER,
-  createDefaultMatchingPairs,
-  createTestTempId,
-} from '@/features/mentor/utils/mentorTestContentUtils';
+import { createTestTempId } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
 
@@ -88,398 +81,205 @@ export default function MentorQuestionTypeFields({
 }) {
   const handleFieldChange = (patch) => onChange({ ...question, ...patch });
 
-  if (question.QuestionType === QUESTION_TYPE_FILL_BLANK) {
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Câu có chỗ trống</ContentFieldLabel>
-          <InputBase
-            value={question.QuestionText ?? ''}
-            onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
-            disabled={disabled}
-            placeholder="Ví dụ: I ____ to school every day."
-            fullWidth
-            multiline
-            minRows={2}
-            sx={multilineInputSx(Boolean(errors.QuestionText), accentColor)}
-          />
-          {errors.QuestionText && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.QuestionText}</Typography>
-          )}
-          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.5 }}>
-            Dùng ____ để đánh dấu vị trí cần điền.
-          </Typography>
-        </Box>
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Đáp án đúng</ContentFieldLabel>
-          <InputBase
-            value={question.CorrectAnswer ?? ''}
-            onChange={(event) => handleFieldChange({ CorrectAnswer: event.target.value })}
-            disabled={disabled}
-            placeholder="Ví dụ: go"
-            fullWidth
-            sx={fieldInputSx(Boolean(errors.CorrectAnswer), accentColor)}
-          />
-          {errors.CorrectAnswer && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.CorrectAnswer}</Typography>
-          )}
-        </Box>
-      </Box>
+  const options = question.Options ?? [];
+  const allowMultiple = Boolean(question.AllowMultipleAnswers);
+
+  const updateOptions = (nextOptions) => handleFieldChange({ Options: nextOptions });
+
+  const handleOptionTextChange = (optionTempId, value) => {
+    updateOptions(
+      options.map((option) =>
+        option.tempId === optionTempId ? { ...option, OptionText: value } : option,
+      ),
     );
-  }
+  };
 
-  if (question.QuestionType === QUESTION_TYPE_MULTIPLE_CHOICE) {
-    const options = question.Options ?? [];
-    const allowMultiple = Boolean(question.AllowMultipleAnswers);
+  const handleSingleCorrectChange = (optionTempId) => {
+    updateOptions(
+      options.map((option) => ({
+        ...option,
+        IsCorrect: option.tempId === optionTempId,
+      })),
+    );
+  };
 
-    const updateOptions = (nextOptions) => handleFieldChange({ Options: nextOptions });
+  const handleMultipleCorrectToggle = (optionTempId) => {
+    updateOptions(
+      options.map((option) =>
+        option.tempId === optionTempId
+          ? { ...option, IsCorrect: !option.IsCorrect }
+          : option,
+      ),
+    );
+  };
 
-    const handleOptionTextChange = (optionTempId, value) => {
-      updateOptions(
-        options.map((option) =>
-          option.tempId === optionTempId ? { ...option, OptionText: value } : option,
-        ),
-      );
-    };
+  const handleAnswerModeChange = (nextAllowMultiple) => {
+    if (nextAllowMultiple === allowMultiple) return;
 
-    const handleSingleCorrectChange = (optionTempId) => {
-      updateOptions(
-        options.map((option) => ({
-          ...option,
-          IsCorrect: option.tempId === optionTempId,
-        })),
-      );
-    };
+    if (nextAllowMultiple) {
+      handleFieldChange({ AllowMultipleAnswers: true });
+      return;
+    }
 
-    const handleMultipleCorrectToggle = (optionTempId) => {
-      updateOptions(
-        options.map((option) =>
-          option.tempId === optionTempId
-            ? { ...option, IsCorrect: !option.IsCorrect }
-            : option,
-        ),
-      );
-    };
+    handleFieldChange({
+      AllowMultipleAnswers: false,
+      Options: normalizeSingleCorrectOption(options),
+    });
+  };
 
-    const handleAnswerModeChange = (nextAllowMultiple) => {
-      if (nextAllowMultiple === allowMultiple) return;
+  const handleAddOption = () => {
+    updateOptions([
+      ...options,
+      { tempId: createTestTempId('option'), OptionText: '', IsCorrect: false },
+    ]);
+  };
 
-      if (nextAllowMultiple) {
-        handleFieldChange({ AllowMultipleAnswers: true });
-        return;
-      }
+  const handleRemoveOption = (optionTempId) => {
+    if (options.length <= 2) return;
+    const next = options.filter((option) => option.tempId !== optionTempId);
+    updateOptions(allowMultiple ? next : normalizeSingleCorrectOption(next));
+  };
 
-      handleFieldChange({
-        AllowMultipleAnswers: false,
-        Options: normalizeSingleCorrectOption(options),
-      });
-    };
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+      <Box>
+        <ContentFieldLabel sx={fieldLabelSx}>Câu hỏi</ContentFieldLabel>
+        <InputBase
+          value={question.QuestionText ?? ''}
+          onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
+          disabled={disabled}
+          placeholder="Nhập nội dung câu hỏi trắc nghiệm"
+          fullWidth
+          multiline
+          minRows={2}
+          sx={multilineInputSx(Boolean(errors.QuestionText), accentColor)}
+        />
+        {errors.QuestionText && (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.QuestionText}</Typography>
+        )}
+      </Box>
 
-    const handleAddOption = () => {
-      updateOptions([
-        ...options,
-        { tempId: createTestTempId('option'), OptionText: '', IsCorrect: false },
-      ]);
-    };
-
-    const handleRemoveOption = (optionTempId) => {
-      if (options.length <= 2) return;
-      const next = options.filter((option) => option.tempId !== optionTempId);
-      updateOptions(allowMultiple ? next : normalizeSingleCorrectOption(next));
-    };
-
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Câu hỏi</ContentFieldLabel>
-          <InputBase
-            value={question.QuestionText ?? ''}
-            onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
+      <Box>
+        <ContentFieldLabel sx={fieldLabelSx}>Kiểu chọn đáp án</ContentFieldLabel>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 0.5,
+            p: 0.5,
+            mb: 1,
+            borderRadius: '12px',
+            bgcolor: '#F8FAFC',
+            border: '1px solid rgba(15,23,42,0.08)',
+          }}
+        >
+          <AnswerModeButton
+            label="Một đáp án"
+            selected={!allowMultiple}
             disabled={disabled}
-            placeholder="Nhập nội dung câu hỏi trắc nghiệm"
-            fullWidth
-            multiline
-            minRows={2}
-            sx={multilineInputSx(Boolean(errors.QuestionText), accentColor)}
+            accentColor={accentColor}
+            onSelect={() => handleAnswerModeChange(false)}
           />
-          {errors.QuestionText && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.QuestionText}</Typography>
-          )}
+          <AnswerModeButton
+            label="Nhiều đáp án"
+            selected={allowMultiple}
+            disabled={disabled}
+            accentColor={accentColor}
+            onSelect={() => handleAnswerModeChange(true)}
+          />
         </Box>
 
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Kiểu chọn đáp án</ContentFieldLabel>
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 0.5,
-              p: 0.5,
-              mb: 1,
-              borderRadius: '12px',
-              bgcolor: '#F8FAFC',
-              border: '1px solid rgba(15,23,42,0.08)',
-            }}
-          >
-            <AnswerModeButton
-              label="Một đáp án"
-              selected={!allowMultiple}
-              disabled={disabled}
-              accentColor={accentColor}
-              onSelect={() => handleAnswerModeChange(false)}
-            />
-            <AnswerModeButton
-              label="Nhiều đáp án"
-              selected={allowMultiple}
-              disabled={disabled}
-              accentColor={accentColor}
-              onSelect={() => handleAnswerModeChange(true)}
-            />
-          </Box>
+        <ContentFieldLabel sx={fieldLabelSx}>Đáp án</ContentFieldLabel>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+          {options.map((option, index) => {
+            const optionErrors = errors.Options?.[option.tempId] ?? {};
+            const CorrectControl = allowMultiple ? Checkbox : Radio;
 
-          <ContentFieldLabel sx={fieldLabelSx}>Đáp án</ContentFieldLabel>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {options.map((option, index) => {
-              const optionErrors = errors.Options?.[option.tempId] ?? {};
-              const CorrectControl = allowMultiple ? Checkbox : Radio;
-
-              return (
-                <Box
-                  key={option.tempId}
+            return (
+              <Box
+                key={option.tempId}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.75,
+                }}
+              >
+                <Typography sx={{ fontSize: 12, fontWeight: 700, color: MUTED, minWidth: 18 }}>
+                  {String.fromCharCode(65 + index)}
+                </Typography>
+                <CorrectControl
+                  checked={Boolean(option.IsCorrect)}
+                  onChange={() =>
+                    allowMultiple
+                      ? handleMultipleCorrectToggle(option.tempId)
+                      : handleSingleCorrectChange(option.tempId)
+                  }
+                  disabled={disabled}
+                  size="small"
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.75,
+                    p: 0.25,
+                    color: 'rgba(15,23,42,0.25)',
+                    '&.Mui-checked': { color: accentColor },
                   }}
-                >
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: MUTED, minWidth: 18 }}>
-                    {String.fromCharCode(65 + index)}
-                  </Typography>
-                  <CorrectControl
-                    checked={Boolean(option.IsCorrect)}
-                    onChange={() =>
-                      allowMultiple
-                        ? handleMultipleCorrectToggle(option.tempId)
-                        : handleSingleCorrectChange(option.tempId)
-                    }
-                    disabled={disabled}
-                    size="small"
-                    sx={{
-                      p: 0.25,
-                      color: 'rgba(15,23,42,0.25)',
-                      '&.Mui-checked': { color: accentColor },
-                    }}
-                    inputProps={{
-                      'aria-label': allowMultiple
-                        ? `Đáp án đúng ${String.fromCharCode(65 + index)}`
-                        : `Chọn đáp án ${String.fromCharCode(65 + index)}`,
-                    }}
-                  />
-                  <InputBase
-                    value={option.OptionText ?? ''}
-                    onChange={(event) => handleOptionTextChange(option.tempId, event.target.value)}
-                    disabled={disabled}
-                    placeholder={`Đáp án ${String.fromCharCode(65 + index)}`}
-                    fullWidth
-                    sx={fieldInputSx(Boolean(optionErrors.OptionText), accentColor)}
-                  />
-                  {options.length > 2 ? (
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRemoveOption(option.tempId)}
-                      disabled={disabled}
-                      aria-label="Xóa đáp án"
-                      sx={{
-                        color: MUTED,
-                        flexShrink: 0,
-                        '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
-                      }}
-                    >
-                      <DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  ) : (
-                    <Box sx={{ width: 28, flexShrink: 0 }} />
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
-          {errors._options && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors._options}</Typography>
-          )}
-          {errors._correctOption && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors._correctOption}</Typography>
-          )}
-          <AppButton
-            variant="text"
-            size="small"
-            startIcon={<AddRoundedIcon sx={{ fontSize: 16 }} />}
-            onClick={handleAddOption}
-            disabled={disabled}
-            sx={{
-              mt: 0.75,
-              px: 0.75,
-              minHeight: 32,
-              fontSize: 12,
-              fontWeight: 600,
-              color: accentColor,
-              '&:hover': { bgcolor: `${accentColor}14` },
-            }}
-          >
-            Thêm đáp án
-          </AppButton>
-        </Box>
-      </Box>
-    );
-  }
-
-  if (question.QuestionType === QUESTION_TYPE_TEXT_ANSWER) {
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Đề bài</ContentFieldLabel>
-          <InputBase
-            value={question.QuestionText ?? ''}
-            onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
-            disabled={disabled}
-            placeholder="Nhập đề bài tự luận"
-            fullWidth
-            multiline
-            minRows={3}
-            sx={multilineInputSx(Boolean(errors.QuestionText), accentColor)}
-          />
-          {errors.QuestionText && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.QuestionText}</Typography>
-          )}
-        </Box>
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Gợi ý đáp án / tiêu chí chấm</ContentFieldLabel>
-          <InputBase
-            value={question.ExpectedAnswer ?? ''}
-            onChange={(event) => handleFieldChange({ ExpectedAnswer: event.target.value })}
-            disabled={disabled}
-            placeholder="Tuỳ chọn — gợi ý nội dung hoặc tiêu chí chấm điểm"
-            fullWidth
-            multiline
-            minRows={2}
-            sx={multilineInputSx(false, accentColor)}
-          />
-        </Box>
-      </Box>
-    );
-  }
-
-  if (question.QuestionType === QUESTION_TYPE_MATCHING) {
-    const pairs = question.Pairs ?? createDefaultMatchingPairs();
-
-    const updatePairs = (nextPairs) => handleFieldChange({ Pairs: nextPairs });
-
-    const handlePairChange = (pairTempId, field, value) => {
-      updatePairs(
-        pairs.map((pair) => (pair.tempId === pairTempId ? { ...pair, [field]: value } : pair)),
-      );
-    };
-
-    const handleAddPair = () => {
-      updatePairs([...pairs, { tempId: createTestTempId('pair'), LeftText: '', RightText: '' }]);
-    };
-
-    const handleRemovePair = (pairTempId) => {
-      if (pairs.length <= 2) return;
-      updatePairs(pairs.filter((pair) => pair.tempId !== pairTempId));
-    };
-
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Nội dung câu hỏi</ContentFieldLabel>
-          <InputBase
-            value={question.QuestionText ?? ''}
-            onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
-            disabled={disabled}
-            placeholder="Ví dụ: Ghép từ với nghĩa phù hợp."
-            fullWidth
-            multiline
-            minRows={2}
-            sx={multilineInputSx(Boolean(errors.QuestionText), accentColor)}
-          />
-          {errors.QuestionText && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.QuestionText}</Typography>
-          )}
-        </Box>
-
-        <Box>
-          <ContentFieldLabel sx={fieldLabelSx}>Cặp ghép</ContentFieldLabel>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {pairs.map((pair) => {
-              const pairErrors = errors.Pairs?.[pair.tempId] ?? {};
-              return (
-                <Box
-                  key={pair.tempId}
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr auto' },
-                    gap: 0.75,
-                    alignItems: 'center',
+                  inputProps={{
+                    'aria-label': allowMultiple
+                      ? `Đáp án đúng ${String.fromCharCode(65 + index)}`
+                      : `Chọn đáp án ${String.fromCharCode(65 + index)}`,
                   }}
-                >
-                  <InputBase
-                    value={pair.LeftText ?? ''}
-                    onChange={(event) => handlePairChange(pair.tempId, 'LeftText', event.target.value)}
-                    disabled={disabled}
-                    placeholder="Ví dụ: apple"
-                    fullWidth
-                    sx={fieldInputSx(Boolean(pairErrors.LeftText), accentColor)}
-                  />
-                  <InputBase
-                    value={pair.RightText ?? ''}
-                    onChange={(event) => handlePairChange(pair.tempId, 'RightText', event.target.value)}
-                    disabled={disabled}
-                    placeholder="Ví dụ: quả táo"
-                    fullWidth
-                    sx={fieldInputSx(Boolean(pairErrors.RightText), accentColor)}
-                  />
+                />
+                <InputBase
+                  value={option.OptionText ?? ''}
+                  onChange={(event) => handleOptionTextChange(option.tempId, event.target.value)}
+                  disabled={disabled}
+                  placeholder={`Đáp án ${String.fromCharCode(65 + index)}`}
+                  fullWidth
+                  sx={fieldInputSx(Boolean(optionErrors.OptionText), accentColor)}
+                />
+                {options.length > 2 ? (
                   <IconButton
                     size="small"
-                    onClick={() => handleRemovePair(pair.tempId)}
-                    disabled={disabled || pairs.length <= 2}
-                    aria-label="Xóa cặp ghép"
+                    onClick={() => handleRemoveOption(option.tempId)}
+                    disabled={disabled}
+                    aria-label="Xóa đáp án"
                     sx={{
                       color: MUTED,
-                      justifySelf: { xs: 'flex-end', sm: 'center' },
+                      flexShrink: 0,
                       '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
                     }}
                   >
                     <DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />
                   </IconButton>
-                </Box>
-              );
-            })}
-          </Box>
-          {errors._pairs && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors._pairs}</Typography>
-          )}
-          <AppButton
-            variant="text"
-            size="small"
-            startIcon={<AddRoundedIcon sx={{ fontSize: 16 }} />}
-            onClick={handleAddPair}
-            disabled={disabled}
-            sx={{
-              mt: 0.75,
-              px: 0.75,
-              minHeight: 32,
-              fontSize: 12,
-              fontWeight: 600,
-              color: accentColor,
-              '&:hover': { bgcolor: `${accentColor}14` },
-            }}
-          >
-            Thêm cặp ghép
-          </AppButton>
+                ) : (
+                  <Box sx={{ width: 28, flexShrink: 0 }} />
+                )}
+              </Box>
+            );
+          })}
         </Box>
+        {errors._options && (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors._options}</Typography>
+        )}
+        {errors._correctOption && (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors._correctOption}</Typography>
+        )}
+        <AppButton
+          variant="text"
+          size="small"
+          startIcon={<AddRoundedIcon sx={{ fontSize: 16 }} />}
+          onClick={handleAddOption}
+          disabled={disabled}
+          sx={{
+            mt: 0.75,
+            px: 0.75,
+            minHeight: 32,
+            fontSize: 12,
+            fontWeight: 600,
+            color: accentColor,
+            '&:hover': { bgcolor: `${accentColor}14` },
+          }}
+        >
+          Thêm đáp án
+        </AppButton>
       </Box>
-    );
-  }
-
-  return null;
+    </Box>
+  );
 }
