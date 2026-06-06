@@ -347,11 +347,11 @@ export default function MentorCreateCourseContentPage() {
           nodes: (path.nodes ?? []).map((node) =>
             node.tempId === nodeTempId
               ? {
-                  ...node,
-                  materials: (node.materials ?? []).filter(
-                    (material) => material.tempId !== materialTempId,
-                  ),
-                }
+                ...node,
+                materials: (node.materials ?? []).filter(
+                  (material) => material.tempId !== materialTempId,
+                ),
+              }
               : node,
           ),
         };
@@ -500,6 +500,7 @@ export default function MentorCreateCourseContentPage() {
 
   const deleteDialogContent = getDeleteDialogContent(deleteConfirm);
 
+  //Contain BUTTON (Quay lại, Lưu nháp, Tiếp theo)
   const footerActions = (
     <Box
       sx={{
@@ -510,6 +511,7 @@ export default function MentorCreateCourseContentPage() {
         width: '100%',
       }}
     >
+      {/* Button Quay Lại */}
       <AppButton
         variant="outlined"
         startIcon={<ArrowBackRoundedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
@@ -527,6 +529,7 @@ export default function MentorCreateCourseContentPage() {
       >
         Quay lại
       </AppButton>
+      {/* Button Lưu nháp */}
       <AppButton
         variant="outlined"
         onClick={handleSaveDraftClick}
@@ -544,6 +547,7 @@ export default function MentorCreateCourseContentPage() {
       >
         Lưu nháp
       </AppButton>
+      {/* Button Tiếp Theo */}
       <AppButton
         onClick={handleNext}
         loading={submitting}

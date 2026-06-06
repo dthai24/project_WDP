@@ -388,6 +388,7 @@ export default function MentorCoursesToolbar({
         </Box>
       </Box>
 
+      {/* Status (Drafted or IsPUblished) */}
       <FilterMenu
         anchorEl={statusAnchor}
         open={Boolean(statusAnchor)}
@@ -396,6 +397,7 @@ export default function MentorCoursesToolbar({
         value={statusFilter}
         onSelect={onStatusChange}
       />
+      {/* Category */}
       <FilterMenu
         anchorEl={categoryAnchor}
         open={Boolean(categoryAnchor)}
@@ -404,6 +406,7 @@ export default function MentorCoursesToolbar({
         value={categoryFilter}
         onSelect={onCategoryChange}
       />
+      {/* Level */}
       <FilterMenu
         anchorEl={levelAnchor}
         open={Boolean(levelAnchor)}
@@ -412,6 +415,7 @@ export default function MentorCoursesToolbar({
         value={levelFilter}
         onSelect={onLevelChange}
       />
+      {/* Sort */}
       <FilterMenu
         anchorEl={sortAnchor}
         open={Boolean(sortAnchor)}

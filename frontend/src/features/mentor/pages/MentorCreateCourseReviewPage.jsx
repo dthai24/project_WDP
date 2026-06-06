@@ -101,10 +101,12 @@ export default function MentorCreateCourseReviewPage() {
     // TODO: replace with API call
     // await createCourseWithContent(payload)
     const result = await createCourseWithContent(payload.course, draft.paths ?? []);
-    if (!result.ok) {
-      throw new Error('Không thể lưu khóa học.');
-    }
 
+    if (!result.success) {
+      throw new Error('Không thể lưu khóa học.');
+
+    }
+    return;
     clearCreateCourseDraft();
   };
 

@@ -71,13 +71,15 @@ export default function MentorCourseDetailPage() {
     setLoading(true);
     setError(null);
 
+    //Course's detail
     const result = await fetchMentorCourseDetail(courseId);
-
-    if (!result.ok || !result.course) {
+    // Fetch data api return a array with 1 element is course => get first element to execute continue
+    //console.table(result.course)
+    if (!result.success || !result.course) {
       setCourse(null);
       setError(result.message ?? 'Không tìm thấy khóa học.');
     } else {
-      setCourse(result.course);
+      setCourse(result.course[0]);
     }
 
     setLoading(false);
@@ -129,7 +131,6 @@ export default function MentorCourseDetailPage() {
 
     // TODO: wire real API — updateCoursePublishStatus(courseId, isPublished)
     const result = await updateCoursePublishStatus(course.courseId, nextPublished);
-
     if (result.ok && result.course) {
       setCourse(result.course);
       toast.success(
@@ -186,6 +187,7 @@ export default function MentorCourseDetailPage() {
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
+      {/* Detail's header */}
       <MentorCourseDetailHeader
         course={course}
         activeTab={activeTab}
@@ -194,6 +196,7 @@ export default function MentorCourseDetailPage() {
         publishing={publishing}
       />
 
+      {/* ACTIVE Tab Panel (Khóa học, nội dung, học viên) */}
       <Box key={activeTab}>{renderActiveTabPanel()}</Box>
 
       <ConfirmDialog
