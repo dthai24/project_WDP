@@ -1,47 +1,62 @@
 import { Box, InputBase, Typography } from '@mui/material';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { contentAddButtonSx, MATERIAL_TYPE_THEME, TEST_ADD_SECTION_THEME } from './mentorCourseContentStyles';
-import MentorTestSectionCard from './MentorTestSectionCard';
+import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
+import MentorTestQuestionBankSelector from '@/features/mentor/components/questionBank/MentorTestQuestionBankSelector';
+import MentorFinalTestConfigEditor from '@/features/mentor/components/questionBank/MentorFinalTestConfigEditor';
 import {
   SCORING_MODE_AUTO,
   SCORING_MODE_LABELS,
   SCORING_MODE_MANUAL,
+  TEST_SOURCE_CHAPTER_QUIZ,
+  TEST_SOURCE_COURSE_FINAL,
   calculateAutoQuestionScore,
   calculateManualTotalScore,
   computeMaterialTestSummary,
-  createEmptyTestSection,
   DEFAULT_TEST_TOTAL_SCORE,
   formatScoreValue,
   getEffectiveScoringMode,
+  getFinalTestConfigTotal,
   getQuestionCount,
+  inferTestSource,
   scoresMatch,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
 
-function fieldInputSx(hasError, accentColor) {
+function multilineInputSx(hasError, accentColor) {
   return {
     fontSize: 13,
     color: TEXT,
     px: 1,
-    py: 0.65,
+    py: 0.75,
     borderRadius: '10px',
     border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
     bgcolor: '#fff',
     width: '100%',
+    alignItems: 'flex-start',
     '&:focus-within': { borderColor: hasError ? '#DC2626' : accentColor },
   };
 }
 
-function multilineInputSx(hasError, accentColor) {
-  return {
-    ...fieldInputSx(hasError, accentColor),
-    alignItems: 'flex-start',
-    py: 0.75,
-  };
+function SummaryPill({ children, color = MUTED, bgcolor = 'rgba(15,23,42,0.05)' }) {
+  return (
+    <Typography
+      component="span"
+      sx={{
+        fontSize: 11,
+        fontWeight: 600,
+        color,
+        px: 1,
+        py: 0.35,
+        borderRadius: '999px',
+        bgcolor,
+      }}
+    >
+      {children}
+    </Typography>
+  );
 }
 
 function ScoringModeButton({ label, selected, disabled, accentColor, onSelect }) {
@@ -78,22 +93,15 @@ function ScoringModeButton({ label, selected, disabled, accentColor, onSelect })
   );
 }
 
-function SummaryPill({ children, color = MUTED, bgcolor = 'rgba(15,23,42,0.05)' }) {
+function TestSourceButton({ label, selected, disabled, accentColor, onSelect }) {
   return (
-    <Typography
-      component="span"
-      sx={{
-        fontSize: 11,
-        fontWeight: 600,
-        color,
-        px: 1,
-        py: 0.35,
-        borderRadius: '999px',
-        bgcolor,
-      }}
-    >
-      {children}
-    </Typography>
+    <ScoringModeButton
+      label={label}
+      selected={selected}
+      disabled={disabled}
+      accentColor={accentColor}
+      onSelect={onSelect}
+    />
   );
 }
 
@@ -102,6 +110,8 @@ export default function MentorTestMaterialEditor({
   errors = {},
   onChange,
   disabled = false,
+  courseId = null,
+  chapterId = null,
 }) {
   const theme = MATERIAL_TYPE_THEME.TEST;
   const accentColor = theme.color;
@@ -109,38 +119,79 @@ export default function MentorTestMaterialEditor({
   const scoringMode = getEffectiveScoringMode(material);
   const isAuto = scoringMode === SCORING_MODE_AUTO;
   const totalScore = DEFAULT_TEST_TOTAL_SCORE;
+  const testSource = inferTestSource({ testSource: material.TestSource });
+  const isChapterQuiz = testSource === TEST_SOURCE_CHAPTER_QUIZ;
+  const isCourseFinal = testSource === TEST_SOURCE_COURSE_FINAL;
   const { sectionCount } = computeMaterialTestSummary(sections);
-  const questionCount = getQuestionCount(sections);
+  const questionCount = isCourseFinal
+    ? getFinalTestConfigTotal(material.FinalTestConfig ?? {})
+    : getQuestionCount(sections);
   const perQuestionScore = calculateAutoQuestionScore(totalScore, questionCount);
   const manualTotal = calculateManualTotalScore(sections);
+  const hasBank = Boolean(material.QuestionBankId);
 
-  const updateSections = (nextSections) => {
-    onChange(material.tempId, { Sections: nextSections });
+  const handleTestSourceChange = (nextSource) => {
+    if (nextSource === TEST_SOURCE_COURSE_FINAL) {
+      onChange(material.tempId, {
+        TestSource: TEST_SOURCE_COURSE_FINAL,
+        QuestionBankId: null,
+        QuestionBankTitle: null,
+        Sections: [],
+        ScoringMode: SCORING_MODE_AUTO,
+      });
+      return;
+    }
+    onChange(material.tempId, {
+      TestSource: TEST_SOURCE_CHAPTER_QUIZ,
+    });
   };
 
-  const handleAddSection = () => {
-    updateSections([...sections, createEmptyTestSection()]);
+  const handleBankChange = (patch) => {
+    if (!patch) {
+      onChange(material.tempId, {
+        QuestionBankId: null,
+        QuestionBankTitle: null,
+        Sections: [],
+      });
+      return;
+    }
+    onChange(material.tempId, patch);
   };
 
-  const handleSectionChange = (sectionTempId, nextSection) => {
-    updateSections(
-      sections.map((section) => (section.tempId === sectionTempId ? nextSection : section)),
-    );
-  };
-
-  const handleDeleteSection = (sectionTempId) => {
-    updateSections(sections.filter((section) => section.tempId !== sectionTempId));
+  const handleFinalConfigChange = (nextConfig) => {
+    onChange(material.tempId, {
+      FinalTestConfig: nextConfig,
+      Sections: [],
+      QuestionBankId: null,
+      QuestionBankTitle: null,
+    });
   };
 
   const renderScoreSummary = () => {
-    if (isAuto) {
-      if (questionCount === 0) {
+    if (isCourseFinal) {
+      if (questionCount <= 0) {
         return (
           <Typography sx={{ fontSize: 12, color: MUTED }}>
-            Thêm câu hỏi để hệ thống tự chia điểm.
+            Cấu hình số câu random từ bank các chương.
           </Typography>
         );
       }
+      return (
+        <SummaryPill>
+          Random {questionCount} câu · mỗi câu {formatScoreValue(perQuestionScore)} điểm
+        </SummaryPill>
+      );
+    }
+
+    if (!hasBank || questionCount === 0) {
+      return (
+        <Typography sx={{ fontSize: 12, color: MUTED }}>
+          Gắn bank chương để xem tổng số câu và điểm.
+        </Typography>
+      );
+    }
+
+    if (isAuto) {
       return (
         <SummaryPill>
           Tổng {questionCount} câu · mỗi câu {formatScoreValue(perQuestionScore)} điểm
@@ -171,16 +222,19 @@ export default function MentorTestMaterialEditor({
         <SummaryPill color={matched ? '#16A34A' : isOver ? '#DC2626' : '#EA580C'}>
           Tổng điểm hiện tại: {formatScoreValue(manualTotal)} / {formatScoreValue(totalScore)}
         </SummaryPill>
-        {questionCount > 0 && !matched ? (
+        {!matched ? (
           <Typography sx={{ fontSize: 12, color: statusColor, bgcolor: statusBg, px: 1, py: 0.5, borderRadius: '8px' }}>
             {statusText}
           </Typography>
-        ) : questionCount > 0 && matched ? (
+        ) : (
           <Typography sx={{ fontSize: 12, color: statusColor }}>{statusText}</Typography>
-        ) : null}
+        )}
       </Box>
     );
   };
+
+  const showConfigPanel =
+    courseId && (isCourseFinal || (isChapterQuiz && hasBank && questionCount > 0));
 
   return (
     <Box
@@ -211,141 +265,133 @@ export default function MentorTestMaterialEditor({
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
-            Tạo bài kiểm tra
+            Cấu hình bài kiểm tra
           </Typography>
           <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>
-            Tạo nhiều phần kiểm tra theo kỹ năng nghe, đọc, viết.
+            Quiz chương dùng bank chương · Cuối khóa random từ bank các chương.
           </Typography>
         </Box>
-        {sectionCount > 0 ? (
-          <SummaryPill>{sectionCount} phần</SummaryPill>
+        {isChapterQuiz && hasBank && sectionCount > 0 ? (
+          <SummaryPill>{sectionCount} bài · {questionCount} câu</SummaryPill>
+        ) : null}
+        {isCourseFinal && questionCount > 0 ? (
+          <SummaryPill>{questionCount} câu random</SummaryPill>
         ) : null}
       </Box>
 
-      <Box sx={{ mb: 1.25 }}>
-        <ContentFieldLabel sx={fieldLabelSx}>Cách tính điểm</ContentFieldLabel>
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 0.5,
-            p: 0.5,
-            borderRadius: '12px',
-            bgcolor: '#fff',
-            border: '1px solid rgba(15,23,42,0.08)',
-          }}
-        >
-          <ScoringModeButton
-            label={SCORING_MODE_LABELS[SCORING_MODE_AUTO]}
-            selected={isAuto}
-            disabled={disabled}
-            accentColor={accentColor}
-            onSelect={() => onChange(material.tempId, { ScoringMode: SCORING_MODE_AUTO })}
-          />
-          <ScoringModeButton
-            label={SCORING_MODE_LABELS[SCORING_MODE_MANUAL]}
-            selected={!isAuto}
-            disabled={disabled}
-            accentColor={accentColor}
-            onSelect={() => onChange(material.tempId, { ScoringMode: SCORING_MODE_MANUAL })}
-          />
+      {courseId && (
+        <Box sx={{ mb: 1.5 }}>
+          <ContentFieldLabel sx={fieldLabelSx}>Loại bài kiểm tra</ContentFieldLabel>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 0.5,
+              p: 0.5,
+              borderRadius: '12px',
+              bgcolor: '#fff',
+              border: '1px solid rgba(15,23,42,0.08)',
+            }}
+          >
+            <TestSourceButton
+              label="Quiz chương"
+              selected={isChapterQuiz}
+              disabled={disabled}
+              accentColor={accentColor}
+              onSelect={() => handleTestSourceChange(TEST_SOURCE_CHAPTER_QUIZ)}
+            />
+            <TestSourceButton
+              label="Kiểm tra cuối khóa"
+              selected={isCourseFinal}
+              disabled={disabled}
+              accentColor={accentColor}
+              onSelect={() => handleTestSourceChange(TEST_SOURCE_COURSE_FINAL)}
+            />
+          </Box>
         </Box>
-      </Box>
+      )}
 
-      <Box sx={{ mb: 1.5, p: 1, borderRadius: '12px', bgcolor: '#fff', border: '1px solid rgba(15,23,42,0.06)' }}>
-        {renderScoreSummary()}
-        {errors._scoreMismatch && (
-          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75 }}>{errors._scoreMismatch}</Typography>
+      <Box sx={{ mb: 1.5 }}>
+        {isChapterQuiz ? (
+          <MentorTestQuestionBankSelector
+            courseId={courseId}
+            chapterId={chapterId}
+            value={material.QuestionBankId}
+            onChange={handleBankChange}
+            disabled={disabled}
+            error={errors.QuestionBankId}
+          />
+        ) : (
+          <MentorFinalTestConfigEditor
+            courseId={courseId}
+            config={material.FinalTestConfig ?? {}}
+            errors={errors.FinalTestConfig ?? {}}
+            disabled={disabled}
+            onChange={handleFinalConfigChange}
+          />
         )}
       </Box>
 
-      <Box sx={{ mb: 1.5 }}>
-        <ContentFieldLabel sx={fieldLabelSx}>Mô tả bài kiểm tra</ContentFieldLabel>
-        <InputBase
-          value={material.Description ?? ''}
-          onChange={(event) => onChange(material.tempId, { Description: event.target.value })}
-          disabled={disabled}
-          placeholder="Mô tả ngắn cho toàn bộ bài kiểm tra (tuỳ chọn)"
-          fullWidth
-          multiline
-          minRows={2}
-          sx={multilineInputSx(false, accentColor)}
-        />
-      </Box>
+      {showConfigPanel && (
+        <>
+          <Box sx={{ mb: 1.25 }}>
+            <ContentFieldLabel sx={fieldLabelSx}>Cách tính điểm</ContentFieldLabel>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 0.5,
+                p: 0.5,
+                borderRadius: '12px',
+                bgcolor: '#fff',
+                border: '1px solid rgba(15,23,42,0.08)',
+              }}
+            >
+              <ScoringModeButton
+                label={SCORING_MODE_LABELS[SCORING_MODE_AUTO]}
+                selected={isAuto}
+                disabled={disabled}
+                accentColor={accentColor}
+                onSelect={() => onChange(material.tempId, { ScoringMode: SCORING_MODE_AUTO })}
+              />
+              <ScoringModeButton
+                label={SCORING_MODE_LABELS[SCORING_MODE_MANUAL]}
+                selected={!isAuto}
+                disabled={disabled || isCourseFinal}
+                accentColor={accentColor}
+                onSelect={() => onChange(material.tempId, { ScoringMode: SCORING_MODE_MANUAL })}
+              />
+            </Box>
+            {isCourseFinal && (
+              <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.5 }}>
+                Bài cuối khóa dùng tính điểm tự động khi random câu.
+              </Typography>
+            )}
+          </Box>
 
-      <Box sx={{ mb: 1 }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Phần kiểm tra</Typography>
-      </Box>
+          <Box sx={{ mb: 1.5, p: 1, borderRadius: '12px', bgcolor: '#fff', border: '1px solid rgba(15,23,42,0.06)' }}>
+            {renderScoreSummary()}
+            {errors._scoreMismatch && (
+              <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75 }}>{errors._scoreMismatch}</Typography>
+            )}
+          </Box>
 
-      {errors._sections && (
-        <Typography sx={{ fontSize: 11, color: '#DC2626', mb: 1 }}>{errors._sections}</Typography>
+          <Box sx={{ mb: 0 }}>
+            <ContentFieldLabel sx={fieldLabelSx}>Mô tả bài kiểm tra</ContentFieldLabel>
+            <InputBase
+              value={material.Description ?? ''}
+              onChange={(event) => onChange(material.tempId, { Description: event.target.value })}
+              disabled={disabled}
+              placeholder="Mô tả ngắn cho bài kiểm tra (tuỳ chọn)"
+              fullWidth
+              multiline
+              minRows={2}
+              sx={multilineInputSx(false, accentColor)}
+            />
+          </Box>
+        </>
       )}
 
-      {sections.length === 0 ? (
-        <Box
-          sx={{
-            p: 2,
-            borderRadius: '14px',
-            border: '1px dashed rgba(15,23,42,0.12)',
-            bgcolor: '#fff',
-            textAlign: 'center',
-          }}
-        >
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, mb: 0.5 }}>
-            Chưa có phần kiểm tra nào
-          </Typography>
-          <Typography sx={{ fontSize: 12, color: MUTED, mb: 1.25 }}>
-            Thêm phần Nghe, Đọc hoặc Viết để bắt đầu tạo câu hỏi.
-          </Typography>
-          <Box
-            component="button"
-            type="button"
-            onClick={handleAddSection}
-            disabled={disabled}
-            sx={{
-              ...contentAddButtonSx(TEST_ADD_SECTION_THEME),
-              cursor: disabled ? 'default' : 'pointer',
-              opacity: disabled ? 0.6 : 1,
-            }}
-          >
-            <AddRoundedIcon sx={{ fontSize: 16 }} />
-            Thêm phần
-          </Box>
-        </Box>
-      ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-          {sections.map((section, index) => (
-            <MentorTestSectionCard
-              key={section.tempId}
-              section={section}
-              index={index}
-              errors={errors.Sections?.[section.tempId] ?? {}}
-              accentColor={accentColor}
-              disabled={disabled}
-              scoringMode={scoringMode}
-              totalScore={totalScore}
-              questionCountAll={questionCount}
-              showScoreField={!isAuto}
-              defaultExpanded={index === sections.length - 1}
-              onChange={(nextSection) => handleSectionChange(section.tempId, nextSection)}
-              onDelete={() => handleDeleteSection(section.tempId)}
-            />
-          ))}
-          <Box
-            component="button"
-            type="button"
-            onClick={handleAddSection}
-            disabled={disabled}
-            sx={{
-              ...contentAddButtonSx(TEST_ADD_SECTION_THEME),
-              alignSelf: 'flex-start',
-              cursor: disabled ? 'default' : 'pointer',
-              opacity: disabled ? 0.6 : 1,
-            }}
-          >
-            <AddRoundedIcon sx={{ fontSize: 16 }} />
-            Thêm phần
-          </Box>
-        </Box>
+      {errors._sections && (
+        <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 1 }}>{errors._sections}</Typography>
       )}
     </Box>
   );

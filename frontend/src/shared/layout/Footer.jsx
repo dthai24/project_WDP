@@ -111,6 +111,7 @@ export default function Footer({
 
   return (
     <Box
+      id="app-site-footer"
       component="footer"
       sx={{
         width: "100%",

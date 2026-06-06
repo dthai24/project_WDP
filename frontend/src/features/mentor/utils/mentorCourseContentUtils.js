@@ -212,7 +212,7 @@ export function countContentStats(paths) {
   return { pathCount, nodeCount, materialCount };
 }
 
-export function validateCourseContent(paths) {
+export function validateCourseContent(paths, options = {}) {
   const errors = { root: [], paths: {} };
   const normalized = withNormalizedOrders(paths);
 
@@ -280,7 +280,13 @@ export function validateCourseContent(paths) {
             materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
           }
         } else if (material.MaterialType === 'TEST') {
-          Object.assign(materialErrors, validateTestMaterial(material));
+          Object.assign(
+            materialErrors,
+            validateTestMaterial(material, {
+              ...options,
+              chapterId: path.PathId ?? null,
+            }),
+          );
         } else {
           if (!String(material.Title ?? '').trim()) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';

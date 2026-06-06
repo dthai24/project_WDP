@@ -96,18 +96,20 @@ export default function Header({
   const isCoursePage = location.pathname === "/courses";
   const isMyCoursesPage = location.pathname === "/my-courses";
   const isMentorCoursesPage = location.pathname === "/mentor/courses";
-  const isCourseListSearchPage = isCoursePage || isMyCoursesPage || isMentorCoursesPage;
+  const isMentorQuestionBanksPage = location.pathname === "/mentor/question-banks";
+  const isMentorListSearchPage = isMentorCoursesPage || isMentorQuestionBanksPage;
+  const isCourseListSearchPage = isCoursePage || isMyCoursesPage || isMentorListSearchPage;
   const [search, setSearch] = useState("");
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const userMenuOpen = Boolean(userMenuAnchor);
 
   useEffect(() => {
-    if (isMentorCoursesPage) {
+    if (isMentorListSearchPage) {
       setSearch(searchParams.get("q") || "");
     } else if (isCourseListSearchPage) {
       setSearch(searchParams.get("keyword") || "");
     }
-  }, [isCourseListSearchPage, isMentorCoursesPage, searchParams]);
+  }, [isCourseListSearchPage, isMentorListSearchPage, searchParams]);
 
   useEffect(
     () => () => {
@@ -214,7 +216,7 @@ export default function Header({
   };
 
   const applySearchKeyword = (value) => {
-    if (isMentorCoursesPage) applyMentorCourseKeyword(value);
+    if (isMentorListSearchPage) applyMentorCourseKeyword(value);
     else applyCourseKeyword(value);
   };
 
@@ -309,13 +311,15 @@ export default function Header({
             onKeyDown={handleSearchKeyDown}
             showClear={!isCourseListSearchPage}
             placeholder={
-              isMentorCoursesPage
-                ? "Tìm khóa học..."
-                : isMyCoursesPage
-                  ? "Tìm trong khóa học của tôi..."
-                  : isCoursePage
-                    ? "Tìm khóa học..."
-                    : "Tìm kiếm khóa học, lộ trình..."
+              isMentorQuestionBanksPage
+                ? "Tìm khóa học trong ngân hàng câu hỏi..."
+                : isMentorCoursesPage
+                  ? "Tìm khóa học..."
+                  : isMyCoursesPage
+                    ? "Tìm trong khóa học của tôi..."
+                    : isCoursePage
+                      ? "Tìm khóa học..."
+                      : "Tìm kiếm khóa học, lộ trình..."
             }
             sx={{ width: "100%", maxWidth: 480 }}
           />

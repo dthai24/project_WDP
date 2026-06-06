@@ -18,8 +18,10 @@ export const TEST_SKILLS = [TEST_SKILL_LISTENING, TEST_SKILL_READING, TEST_SKILL
 export const TEST_SKILL_LABELS = {
   [TEST_SKILL_LISTENING]: 'Nghe',
   [TEST_SKILL_READING]: 'Đọc',
-  [TEST_SKILL_WRITING]: 'Viết',
+  [TEST_SKILL_WRITING]: 'Từ vựng / Ngữ pháp',
 };
+
+export const TEST_SKILL_QB_LABELS = TEST_SKILL_LABELS;
 
 export const TEST_SKILL_CHIP_COLORS = {
   [TEST_SKILL_LISTENING]: { color: '#7C3AED', bg: 'rgba(124,58,237,0.12)' },
@@ -55,24 +57,75 @@ function isSimpleUrl(value) {
   return /^https?:\/\/.+/i.test(trimmed);
 }
 
-export const QUESTION_TYPE_FILL_BLANK = 'FILL_BLANK';
 export const QUESTION_TYPE_MULTIPLE_CHOICE = 'MULTIPLE_CHOICE';
-export const QUESTION_TYPE_TEXT_ANSWER = 'TEXT_ANSWER';
-export const QUESTION_TYPE_MATCHING = 'MATCHING';
 
-export const QUESTION_TYPES = [
-  QUESTION_TYPE_FILL_BLANK,
-  QUESTION_TYPE_MULTIPLE_CHOICE,
-  QUESTION_TYPE_TEXT_ANSWER,
-  QUESTION_TYPE_MATCHING,
-];
+/** @deprecated Chỉ dùng khi đọc dữ liệu cũ — chuẩn hoá qua normalizeTestQuestion */
+export const LEGACY_QUESTION_TYPE_SINGLE_CHOICE = 'SINGLE_CHOICE';
+
+export const QUESTION_TYPES = [QUESTION_TYPE_MULTIPLE_CHOICE];
 
 export const QUESTION_TYPE_LABELS = {
-  [QUESTION_TYPE_FILL_BLANK]: 'Điền vào chỗ trống',
   [QUESTION_TYPE_MULTIPLE_CHOICE]: 'Trắc nghiệm',
-  [QUESTION_TYPE_TEXT_ANSWER]: 'Trả lời tự luận',
-  [QUESTION_TYPE_MATCHING]: 'Ghép nối',
 };
+
+export const ANSWER_MODE_SINGLE = 'single';
+export const ANSWER_MODE_MULTIPLE = 'multiple';
+
+export const ANSWER_MODE_LABELS = {
+  [ANSWER_MODE_SINGLE]: 'Một đáp án',
+  [ANSWER_MODE_MULTIPLE]: 'Nhiều đáp án',
+};
+
+export function isMultipleChoiceQuestion(question) {
+  const type = question?.QuestionType;
+  return (
+    type === QUESTION_TYPE_MULTIPLE_CHOICE || type === LEGACY_QUESTION_TYPE_SINGLE_CHOICE
+  );
+}
+
+export function normalizeTestQuestion(question) {
+  if (!question) return createEmptyTestQuestion();
+
+  const legacySingle = question.QuestionType === LEGACY_QUESTION_TYPE_SINGLE_CHOICE;
+  const isMc =
+    question.QuestionType === QUESTION_TYPE_MULTIPLE_CHOICE || legacySingle;
+
+  if (!isMc) {
+    return createEmptyTestQuestion();
+  }
+
+  const options =
+    (question.Options ?? []).length >= 2
+      ? question.Options
+      : createDefaultMultipleChoiceOptions();
+
+  return {
+    ...question,
+    QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
+    AllowMultipleAnswers: legacySingle ? false : Boolean(question.AllowMultipleAnswers),
+    Options: options,
+  };
+}
+
+function shuffleItems(items = []) {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+export function shuffleTestQuestionOptions(question) {
+  const normalized = normalizeTestQuestion(question);
+  const options = normalized.Options ?? [];
+  if (options.length < 2) return normalized;
+  return { ...normalized, Options: shuffleItems(options) };
+}
+
+export function canShuffleTestQuestionOptions(question) {
+  return (normalizeTestQuestion(question).Options ?? []).length >= 2;
+}
 
 export const SCORING_MODE_AUTO = 'AUTO';
 export const SCORING_MODE_MANUAL = 'MANUAL';
@@ -86,14 +139,80 @@ export const SCORING_MODE_LABELS = {
 
 export const DEFAULT_TEST_TOTAL_SCORE = 100;
 
+export const TEST_SOURCE_CHAPTER_QUIZ = 'CHAPTER_QUIZ';
+export const TEST_SOURCE_COURSE_FINAL = 'COURSE_FINAL';
+
+export function getDefaultFinalTestConfig() {
+  return {
+    totalQuestions: 30,
+    listeningCount: 10,
+    readingCount: 10,
+    writingCount: 10,
+  };
+}
+
 export function getTestDefaultFields() {
   return {
     Description: '',
     MaterialUrl: '',
     TotalScore: DEFAULT_TEST_TOTAL_SCORE,
     ScoringMode: SCORING_MODE_AUTO,
+    TestSource: TEST_SOURCE_CHAPTER_QUIZ,
+    FinalTestConfig: getDefaultFinalTestConfig(),
+    QuestionBankId: null,
+    QuestionBankTitle: null,
+    QuestionBankScope: null,
     Sections: [],
   };
+}
+
+export function inferTestSource({ testSource } = {}) {
+  return testSource === TEST_SOURCE_COURSE_FINAL ? TEST_SOURCE_COURSE_FINAL : TEST_SOURCE_CHAPTER_QUIZ;
+}
+
+export function getFinalTestConfigTotal(config = {}) {
+  return (
+    Number(config.listeningCount ?? 0) +
+    Number(config.readingCount ?? 0) +
+    Number(config.writingCount ?? 0)
+  );
+}
+
+export function validateFinalTestConfig(config = {}, stats = null) {
+  const errors = {};
+  const listening = Number(config.listeningCount ?? 0);
+  const reading = Number(config.readingCount ?? 0);
+  const writing = Number(config.writingCount ?? 0);
+  const total = getFinalTestConfigTotal(config);
+
+  if (!Number.isFinite(total) || total <= 0) {
+    errors._total = 'Vui lòng cấu hình ít nhất 1 câu hỏi cho bài kiểm tra cuối khóa';
+    return errors;
+  }
+
+  [listening, reading, writing].forEach((value, index) => {
+    const labels = ['Nghe', 'Đọc', 'Từ vựng / Ngữ pháp'];
+    if (!Number.isFinite(value) || value < 0) {
+      errors[`skill_${index}`] = `Số câu ${labels[index]} không hợp lệ`;
+    }
+  });
+
+  if (stats?.questionCountBySkill) {
+    if (listening > (stats.questionCountBySkill[TEST_SKILL_LISTENING] ?? 0)) {
+      errors.listeningCount = 'Không đủ câu hỏi Nghe trong các bank chương';
+    }
+    if (reading > (stats.questionCountBySkill[TEST_SKILL_READING] ?? 0)) {
+      errors.readingCount = 'Không đủ câu hỏi Đọc trong các bank chương';
+    }
+    if (writing > (stats.questionCountBySkill[TEST_SKILL_WRITING] ?? 0)) {
+      errors.writingCount = 'Không đủ câu hỏi Từ vựng / Ngữ pháp trong các bank chương';
+    }
+    if ((stats.chapterBankCount ?? 0) === 0) {
+      errors._banks = 'Khóa học chưa có ngân hàng câu hỏi theo chương';
+    }
+  }
+
+  return errors;
 }
 
 export function getEffectiveScoringMode(material) {
@@ -106,6 +225,21 @@ export function getAllQuestions(sections = []) {
 
 export function getQuestionCount(sections = []) {
   return getAllQuestions(sections).length;
+}
+
+export function isFilledTestQuestion(question) {
+  return Boolean(String(question?.QuestionText ?? '').trim());
+}
+
+export function getFilledTestQuestions(questions = []) {
+  return (questions ?? []).filter(isFilledTestQuestion);
+}
+
+export function getFilledQuestionCount(sections = []) {
+  return sections.reduce(
+    (sum, section) => sum + getFilledTestQuestions(section.Questions).length,
+    0,
+  );
 }
 
 export function formatScoreValue(value) {
@@ -173,11 +307,86 @@ export function createEmptyTestSection(skillType = TEST_SKILL_READING) {
   return {
     tempId: createTestTempId('section'),
     SectionTitle: '',
+    DisplayName: '',
     SkillType: skillType,
     Description: '',
     Questions: [],
     ...(skillType === TEST_SKILL_LISTENING ? getListeningSectionFields() : {}),
   };
+}
+
+/** Ba bài mặc định (mỗi kỹ năng một bài) cho ngân hàng câu hỏi. */
+export function createQuestionBankSkillSections() {
+  return TEST_SKILLS.map((skill) => createEmptyTestSection(skill));
+}
+
+/** Giữ dữ liệu bank hiện có, bổ sung bài trống cho kỹ năng còn thiếu. */
+export function ensureQuestionBankSkillSections(sections = []) {
+  const persistedSections = getNonEmptyQuestionBankSections(sections);
+  return TEST_SKILLS.flatMap((skill) => {
+    const skillSections = getSectionsBySkill(persistedSections, skill);
+    return skillSections.length > 0 ? skillSections : [createEmptyTestSection(skill)];
+  });
+}
+
+export function getSectionsBySkill(sections = [], skillType) {
+  return sections.filter((section) => section.SkillType === skillType);
+}
+
+export function getSectionBySkill(sections = [], skillType) {
+  return getSectionsBySkill(sections, skillType)[0] ?? null;
+}
+
+export function getSectionBaiNumber(section, sections = []) {
+  if (!section) return 1;
+  const skillSections = getSectionsBySkill(sections, section.SkillType);
+  const index = skillSections.findIndex((item) => item.tempId === section.tempId);
+  return index >= 0 ? index + 1 : skillSections.length + 1;
+}
+
+export function getQuestionBankSectionNameFallback(section, sections = []) {
+  const index = getSectionBaiNumber(section, sections);
+  if (section?.SkillType === TEST_SKILL_WRITING) {
+    return `Nhóm ${index}`;
+  }
+  return `Bài số ${index}`;
+}
+
+export function getQuestionBankSectionNamePlaceholder(section) {
+  if (section?.SkillType === TEST_SKILL_WRITING) {
+    return 'Chưa có tên nhóm';
+  }
+  return 'Chưa có tên bài';
+}
+
+/** @deprecated use getQuestionBankSectionNameFallback — kept for imports */
+export function getQuestionBankSectionDisplayTitle(section, sections = []) {
+  const name = String(section?.DisplayName ?? '').trim();
+  if (name) return name;
+  return getQuestionBankSectionNameFallback(section, sections);
+}
+
+export function getQuestionBankSectionTabLabel(section, sections = []) {
+  const name = String(section?.DisplayName ?? '').trim();
+  if (name) return name;
+  return getQuestionBankSectionNameFallback(section, sections);
+}
+
+export function isQuestionBankWritingSkill(skillType) {
+  return skillType === TEST_SKILL_WRITING;
+}
+
+export function createQuestionBankSection(skillType = TEST_SKILL_READING) {
+  return createEmptyTestSection(skillType);
+}
+
+export function getNonEmptyQuestionBankSections(sections = []) {
+  return sections
+    .map((section) => ({
+      ...section,
+      Questions: getFilledTestQuestions(section.Questions),
+    }))
+    .filter((section) => section.Questions.length > 0);
 }
 
 export function getSectionDisplayTitle(section) {
@@ -195,46 +404,14 @@ export function createDefaultMultipleChoiceOptions() {
   }));
 }
 
-export function createDefaultMatchingPairs() {
-  return [
-    { tempId: createTestTempId('pair'), LeftText: '', RightText: '' },
-    { tempId: createTestTempId('pair'), LeftText: '', RightText: '' },
-  ];
-}
-
-export function createEmptyTestQuestion(questionType = QUESTION_TYPE_MULTIPLE_CHOICE) {
-  const base = {
+export function createEmptyTestQuestion() {
+  return {
     tempId: createTestTempId('question'),
-    QuestionType: questionType,
+    QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     QuestionText: '',
     Score: 1,
-  };
-
-  switch (questionType) {
-    case QUESTION_TYPE_FILL_BLANK:
-      return { ...base, CorrectAnswer: '' };
-    case QUESTION_TYPE_MULTIPLE_CHOICE:
-      return { ...base, AllowMultipleAnswers: false, Options: createDefaultMultipleChoiceOptions() };
-    case QUESTION_TYPE_TEXT_ANSWER:
-      return { ...base, ExpectedAnswer: '' };
-    case QUESTION_TYPE_MATCHING:
-      return {
-        ...base,
-        QuestionText: 'Ghép từ với nghĩa phù hợp.',
-        Pairs: createDefaultMatchingPairs(),
-      };
-    default:
-      return base;
-  }
-}
-
-export function rebuildQuestionForType(question, nextType) {
-  const fresh = createEmptyTestQuestion(nextType);
-  return {
-    ...fresh,
-    tempId: question.tempId,
-    QuestionText: question.QuestionText ?? fresh.QuestionText,
-    Score: question.Score ?? 1,
+    AllowMultipleAnswers: false,
+    Options: createDefaultMultipleChoiceOptions(),
   };
 }
 
@@ -267,106 +444,88 @@ function isPositiveScore(value) {
 }
 
 export function validateTestQuestion(question, { validateScore = true } = {}) {
+  const normalized = normalizeTestQuestion(question);
   const qErrors = {};
 
-  if (!QUESTION_TYPES.includes(question.QuestionType)) {
-    qErrors.QuestionType = 'Vui lòng chọn kiểu câu hỏi';
-  }
-
-  if (!String(question.QuestionText ?? '').trim()) {
+  if (!String(normalized.QuestionText ?? '').trim()) {
     qErrors.QuestionText = 'Vui lòng nhập nội dung câu hỏi';
   }
 
-  if (validateScore && !isPositiveScore(question.Score)) {
+  if (validateScore && !isPositiveScore(normalized.Score)) {
     qErrors.Score = 'Vui lòng nhập điểm cho câu hỏi';
   }
 
-  switch (question.QuestionType) {
-    case QUESTION_TYPE_FILL_BLANK:
-      if (!String(question.CorrectAnswer ?? '').trim()) {
-        qErrors.CorrectAnswer = 'Vui lòng nhập đáp án đúng';
-      }
-      break;
-
-    case QUESTION_TYPE_MULTIPLE_CHOICE: {
-      const options = question.Options ?? [];
-      if (options.length < 2) {
-        qErrors._options = 'Cần ít nhất 2 đáp án';
-      }
-      const optionErrors = {};
-      options.forEach((option) => {
-        if (!String(option.OptionText ?? '').trim()) {
-          optionErrors[option.tempId] = { OptionText: 'Vui lòng nhập đáp án' };
-        }
-      });
-      if (Object.keys(optionErrors).length > 0) {
-        qErrors.Options = optionErrors;
-      }
-      const correctCount = options.filter((option) => option.IsCorrect).length;
-      const allowMultiple = Boolean(question.AllowMultipleAnswers);
-
-      if (options.length >= 2) {
-        if (allowMultiple) {
-          if (correctCount < 1) {
-            qErrors._correctOption = 'Vui lòng chọn ít nhất một đáp án đúng';
-          }
-        } else if (correctCount !== 1) {
-          qErrors._correctOption = 'Vui lòng chọn đáp án đúng';
-        }
-      }
-      break;
+  const options = normalized.Options ?? [];
+  if (options.length < 2) {
+    qErrors._options = 'Cần ít nhất 2 đáp án';
+  }
+  const optionErrors = {};
+  options.forEach((option) => {
+    if (!String(option.OptionText ?? '').trim()) {
+      optionErrors[option.tempId] = { OptionText: 'Vui lòng nhập đáp án' };
     }
+  });
+  if (Object.keys(optionErrors).length > 0) {
+    qErrors.Options = optionErrors;
+  }
+  const correctCount = options.filter((option) => option.IsCorrect).length;
+  const allowMultiple = Boolean(normalized.AllowMultipleAnswers);
 
-    case QUESTION_TYPE_MATCHING: {
-      const pairs = question.Pairs ?? [];
-      if (pairs.length < 2) {
-        qErrors._pairs = 'Vui lòng nhập đủ các cặp ghép';
+  if (options.length >= 2) {
+    if (allowMultiple) {
+      if (correctCount < 1) {
+        qErrors._correctOption = 'Vui lòng chọn ít nhất một đáp án đúng';
       }
-      const pairErrors = {};
-      pairs.forEach((pair) => {
-        const pairFieldErrors = {};
-        if (!String(pair.LeftText ?? '').trim()) {
-          pairFieldErrors.LeftText = 'Bắt buộc';
-        }
-        if (!String(pair.RightText ?? '').trim()) {
-          pairFieldErrors.RightText = 'Bắt buộc';
-        }
-        if (Object.keys(pairFieldErrors).length > 0) {
-          pairErrors[pair.tempId] = pairFieldErrors;
-        }
-      });
-      if (Object.keys(pairErrors).length > 0) {
-        qErrors.Pairs = pairErrors;
-      } else if (pairs.length < 2) {
-        qErrors._pairs = 'Vui lòng nhập đủ các cặp ghép';
-      }
-      break;
+    } else if (correctCount !== 1) {
+      qErrors._correctOption = 'Vui lòng chọn đáp án đúng';
     }
-
-    default:
-      break;
   }
 
   return qErrors;
 }
 
-export function validateTestMaterial(material) {
+export function validateTestMaterial(material, options = {}) {
   const materialErrors = {};
+  const { courseId, inlineSections = false, skipTitle = false, bankStats = null } = options;
 
-  if (!String(material.Title ?? '').trim()) {
+  if (!skipTitle && !String(material.Title ?? '').trim()) {
     materialErrors.Title = 'Vui lòng nhập tiêu đề bài kiểm tra';
   }
 
+  const testSource = inferTestSource({ testSource: material.TestSource });
+
   const scoringMode = getEffectiveScoringMode(material);
   const sections = material.Sections ?? [];
-  if (sections.length === 0) {
-    materialErrors._sections = 'Vui lòng thêm ít nhất 1 phần kiểm tra';
+
+  if (inlineSections) {
+    const filledSections = getNonEmptyQuestionBankSections(sections);
+    if (filledSections.length === 0) {
+      materialErrors._sections = 'Vui lòng thêm ít nhất 1 câu hỏi';
+      return materialErrors;
+    }
+  } else if (!courseId) {
+    return materialErrors;
+  } else if (testSource === TEST_SOURCE_COURSE_FINAL) {
+    const configErrors = validateFinalTestConfig(material.FinalTestConfig ?? {}, bankStats);
+    if (Object.keys(configErrors).length > 0) {
+      materialErrors.FinalTestConfig = configErrors;
+      if (configErrors._total) materialErrors._sections = configErrors._total;
+      if (configErrors._banks) materialErrors._sections = configErrors._banks;
+    }
+    return materialErrors;
+  } else if (!material.QuestionBankId) {
+    materialErrors.QuestionBankId = 'Chương này chưa có ngân hàng câu hỏi';
+    return materialErrors;
+  } else if (sections.length === 0) {
+    materialErrors._sections = 'Ngân hàng câu hỏi chương chưa có câu hỏi';
+    return materialErrors;
   }
 
   const sectionErrors = {};
   const validateScore = scoringMode === SCORING_MODE_MANUAL;
+  const sectionsToValidate = inlineSections ? getNonEmptyQuestionBankSections(sections) : sections;
 
-  sections.forEach((section) => {
+  sectionsToValidate.forEach((section) => {
     const sErrors = {};
 
     if (!TEST_SKILLS.includes(section.SkillType)) {
@@ -381,25 +540,20 @@ export function validateTestMaterial(material) {
     if (
       section.SkillType === TEST_SKILL_LISTENING
     ) {
-      const sourceType =
-        section.AudioSourceType === LISTENING_SOURCE_LINK
-          ? LISTENING_SOURCE_LINK
-          : LISTENING_SOURCE_UPLOAD;
+      const hasFile = Boolean(section.File || section.FileName);
+      const audioUrl = String(section.AudioUrl ?? '').trim();
+      const hasLink = Boolean(audioUrl);
 
-      if (sourceType === LISTENING_SOURCE_UPLOAD) {
-        if (!section.File) {
-          sErrors.File = 'Vui lòng chọn file audio';
-        }
-      } else {
-        const audioUrl = String(section.AudioUrl ?? '').trim();
-        if (!audioUrl || !isSimpleUrl(audioUrl)) {
-          sErrors.AudioUrl = 'Vui lòng nhập link audio hoặc video nghe hợp lệ';
-        }
+      if (!hasFile && !hasLink) {
+        sErrors._audio = 'Vui lòng tải file audio hoặc nhập link nghe';
+      } else if (hasLink && !isSimpleUrl(audioUrl)) {
+        sErrors.AudioUrl = 'Vui lòng nhập link audio hoặc video nghe hợp lệ';
       }
     }
 
     const questionErrors = {};
     questions.forEach((question) => {
+      if (!isFilledTestQuestion(question)) return;
       const qErrors = validateTestQuestion(question, { validateScore });
       if (Object.keys(qErrors).length > 0) {
         questionErrors[question.tempId] = qErrors;
@@ -435,57 +589,20 @@ export function validateTestMaterial(material) {
 }
 
 export function buildTestQuestionPayload(question) {
-  const {
-    tempId,
-    QuestionType,
-    QuestionText,
-    Score,
-    CorrectAnswer,
-    Options,
-    ExpectedAnswer,
-    Pairs,
-  } = question;
+  const normalized = normalizeTestQuestion(question);
+  const { tempId, QuestionText, Score, Options } = normalized;
 
-  const payload = {
+  return {
     tempId,
-    QuestionType,
+    QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     QuestionText: String(QuestionText ?? '').trim(),
     Score: Number(Score) || 1,
+    AllowMultipleAnswers: Boolean(normalized.AllowMultipleAnswers),
+    Options: (Options ?? []).map(({ OptionText, IsCorrect }) => ({
+      OptionText: String(OptionText ?? '').trim(),
+      IsCorrect: Boolean(IsCorrect),
+    })),
   };
-
-  if (QuestionType === QUESTION_TYPE_FILL_BLANK) {
-    return { ...payload, CorrectAnswer: String(CorrectAnswer ?? '').trim() };
-  }
-
-  if (QuestionType === QUESTION_TYPE_MULTIPLE_CHOICE) {
-    return {
-      ...payload,
-      AllowMultipleAnswers: Boolean(question.AllowMultipleAnswers),
-      Options: (Options ?? []).map(({ OptionText, IsCorrect }) => ({
-        OptionText: String(OptionText ?? '').trim(),
-        IsCorrect: Boolean(IsCorrect),
-      })),
-    };
-  }
-
-  if (QuestionType === QUESTION_TYPE_TEXT_ANSWER) {
-    return {
-      ...payload,
-      ExpectedAnswer: String(ExpectedAnswer ?? '').trim() || null,
-    };
-  }
-
-  if (QuestionType === QUESTION_TYPE_MATCHING) {
-    return {
-      ...payload,
-      Pairs: (Pairs ?? []).map(({ LeftText, RightText }) => ({
-        LeftText: String(LeftText ?? '').trim(),
-        RightText: String(RightText ?? '').trim(),
-      })),
-    };
-  }
-
-  return payload;
 }
 
 export function buildTestSectionPayload(section, sectionOrder) {
@@ -495,6 +612,7 @@ export function buildTestSectionPayload(section, sectionOrder) {
   const base = {
     tempId: section.tempId,
     SectionTitle: sectionTitle || getSectionDisplayTitle(section),
+    DisplayName: String(section.DisplayName ?? '').trim() || null,
     SkillType: skillType,
     Description: String(section.Description ?? '').trim() || null,
     SectionOrder: sectionOrder,
@@ -505,16 +623,25 @@ export function buildTestSectionPayload(section, sectionOrder) {
     return base;
   }
 
-  const sourceType =
-    section.AudioSourceType === LISTENING_SOURCE_LINK
-      ? LISTENING_SOURCE_LINK
-      : LISTENING_SOURCE_UPLOAD;
+  const audioUrl = String(section.AudioUrl ?? '').trim();
+  const hasFile = Boolean(section.File || section.FileName);
 
-  if (sourceType === LISTENING_SOURCE_LINK) {
+  if (hasFile) {
+    return {
+      ...base,
+      AudioSourceType: LISTENING_SOURCE_UPLOAD,
+      AudioUrl: null,
+      File: section.File ?? null,
+      FileName: section.FileName ?? null,
+      FileSize: section.FileSize ?? null,
+    };
+  }
+
+  if (audioUrl) {
     return {
       ...base,
       AudioSourceType: LISTENING_SOURCE_LINK,
-      AudioUrl: String(section.AudioUrl ?? '').trim() || null,
+      AudioUrl: audioUrl,
       File: null,
       FileName: null,
       FileSize: null,
@@ -525,9 +652,9 @@ export function buildTestSectionPayload(section, sectionOrder) {
     ...base,
     AudioSourceType: LISTENING_SOURCE_UPLOAD,
     AudioUrl: null,
-    File: section.File ?? null,
-    FileName: section.FileName ?? null,
-    FileSize: section.FileSize ?? null,
+    File: null,
+    FileName: null,
+    FileSize: null,
   };
 }
 
@@ -545,6 +672,10 @@ export function buildTestMaterialPayload(material, base) {
     MaterialUrl: null,
     TotalScore: totalScore,
     ScoringMode: scoringMode,
+    TestSource: material.TestSource ?? null,
+    FinalTestConfig: material.FinalTestConfig ?? null,
+    QuestionBankId: material.QuestionBankId ?? null,
+    QuestionBankTitle: material.QuestionBankTitle ?? null,
     Sections: sections.map((section, index) => buildTestSectionPayload(section, index + 1)),
   };
 }

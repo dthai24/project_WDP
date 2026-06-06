@@ -59,6 +59,14 @@ export function getMaterialReviewDetailSummary(material) {
       return sizeLabel ? `${typeLabel} · ${fileName} · ${sizeLabel}` : `${typeLabel} · ${fileName}`;
     }
     case 'TEST': {
+      if (material.QuestionBankTitle) {
+        const summary = computeMaterialTestSummary(material.Sections ?? []);
+        const scoringLabel =
+          getEffectiveScoringMode(material) === SCORING_MODE_MANUAL
+            ? 'Chấm tay'
+            : 'Tự động';
+        return `Ngân hàng: ${material.QuestionBankTitle} · ${summary.questionCount} câu · ${scoringLabel}`;
+      }
       const summary = computeMaterialTestSummary(material.Sections ?? []);
       const scoringLabel =
         getEffectiveScoringMode(material) === SCORING_MODE_MANUAL
@@ -362,7 +370,14 @@ export function validateCourseDraft(draft) {
     errors.push({ type: 'course', message: 'Vui lòng chọn trình độ khóa học.', targetId: 'LevelId' });
   }
 
-  errors.push(...flattenContentErrors(paths, validateCourseContent(paths)));
+  errors.push(
+    ...flattenContentErrors(
+      paths,
+      validateCourseContent(paths, {
+        courseId: draft?.courseId ?? course?.CourseId ?? null,
+      }),
+    ),
+  );
 
   paths.forEach((path, pathIndex) => {
     const chapterLabel = path.PathName || `Chương ${pathIndex + 1}`;
@@ -437,7 +452,10 @@ export function validateCourseDraft(draft) {
         }
 
         if (material.MaterialType === 'TEST') {
-          const testErrors = validateTestMaterial(material);
+          const reviewCourseId = draft?.courseId ?? course?.CourseId ?? null;
+          const testErrors = validateTestMaterial(material, {
+            courseId: reviewCourseId ? Number(reviewCourseId) : null,
+          });
           const sections = material.Sections ?? [];
           const summary = computeMaterialTestSummary(sections);
 
@@ -446,6 +464,7 @@ export function validateCourseDraft(draft) {
             if (!alreadyReported) {
               const firstMessage =
                 testErrors.Title ||
+                testErrors.QuestionBankId ||
                 testErrors._sections ||
                 testErrors._scoreMismatch ||
                 'Bài kiểm tra chưa hoàn thiện.';

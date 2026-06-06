@@ -40,6 +40,8 @@ export default function MentorChapterCard({
   isSaved = false,
   saving = false,
   onSave,
+  courseId = null,
+  chapterId = null,
 }) {
   const lessonCount = (path.nodes ?? []).length;
 
@@ -160,6 +162,8 @@ export default function MentorChapterCard({
                     key={node.tempId}
                     node={node}
                     nodeIndex={nodeIndex}
+                    courseId={courseId}
+                    chapterId={chapterId}
                     errors={errors.nodes?.[node.tempId] ?? {}}
                     expanded={expandedNodes[node.tempId] !== false}
                     onToggle={() => onToggleNode(node.tempId)}

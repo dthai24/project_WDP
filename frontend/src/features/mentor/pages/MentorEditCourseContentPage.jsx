@@ -374,7 +374,7 @@ export default function MentorEditCourseContentPage() {
   }, []);
 
   const handleSaveContent = async () => {
-    const errors = validateCourseContent(paths);
+    const errors = validateCourseContent(paths, { courseId: Number(courseId) });
     setValidationErrors(errors);
 
     if (hasContentValidationErrors(errors)) {
@@ -522,6 +522,7 @@ export default function MentorEditCourseContentPage() {
       >
         <MentorCourseContentBuilder
           paths={paths}
+          courseId={Number(courseId)}
           errors={validationErrors}
           expandedPaths={expandedPaths}
           expandedNodes={expandedNodes}

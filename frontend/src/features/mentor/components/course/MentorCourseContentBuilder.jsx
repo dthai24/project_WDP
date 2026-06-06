@@ -28,6 +28,7 @@ export default function MentorCourseContentBuilder({
   savedPathSnapshots = {},
   savingChapterId = null,
   onSaveChapter,
+  courseId = null,
 }) {
   return (
     <Box id="content-builder-root" data-content-error="content-builder-root">
@@ -104,6 +105,8 @@ export default function MentorCourseContentBuilder({
               key={path.tempId}
               path={path}
               pathIndex={pathIndex}
+              courseId={courseId}
+              chapterId={path.PathId ?? null}
               errors={errors.paths?.[path.tempId] ?? {}}
               expanded={expandedPaths[path.tempId] !== false}
               expandedNodes={expandedNodes}
