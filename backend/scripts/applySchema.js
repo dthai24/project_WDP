@@ -1,13 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const { sql } = require('../config/db');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env'), override: true });
 
 const dbConfig = {
   server: process.env.DB_SERVER || 'localhost',
   database: 'master',
   user: process.env.DB_USER || 'sa',
-  password: process.env.DB_PASSWORD || '', // Removed hardcoded 'sa123'
+  password: process.env.DB_PASSWORD || 'sa123',
   port: parseInt(process.env.DB_PORT || '1433', 10),
   options: { encrypt: false, trustServerCertificate: true },
 };
