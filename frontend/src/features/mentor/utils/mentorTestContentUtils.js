@@ -107,6 +107,26 @@ export function normalizeTestQuestion(question) {
   };
 }
 
+function shuffleItems(items = []) {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+export function shuffleTestQuestionOptions(question) {
+  const normalized = normalizeTestQuestion(question);
+  const options = normalized.Options ?? [];
+  if (options.length < 2) return normalized;
+  return { ...normalized, Options: shuffleItems(options) };
+}
+
+export function canShuffleTestQuestionOptions(question) {
+  return (normalizeTestQuestion(question).Options ?? []).length >= 2;
+}
+
 export const SCORING_MODE_AUTO = 'AUTO';
 export const SCORING_MODE_MANUAL = 'MANUAL';
 

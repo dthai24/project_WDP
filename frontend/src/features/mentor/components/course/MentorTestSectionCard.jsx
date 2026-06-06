@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Box, Collapse, IconButton, InputBase, Typography } from '@mui/material';
+import { Box, Collapse, IconButton, InputBase, Tooltip, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import ShuffleRoundedIcon from '@mui/icons-material/ShuffleRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
@@ -9,6 +10,7 @@ import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import MentorTestQuestionCard from './MentorTestQuestionCard';
 import MentorTestListeningSourceEditor from './MentorTestListeningSourceEditor';
 import {
@@ -20,6 +22,8 @@ import {
   createEmptyTestQuestion,
   getListeningSectionFields,
   getQuestionBankSectionNamePlaceholder,
+  canShuffleTestQuestionOptions,
+  shuffleTestQuestionOptions,
   getSectionDisplayTitle,
   getSectionScoreLabel,
   SCORING_MODE_AUTO,
@@ -137,6 +141,36 @@ function AddQuestionButton({ onClick, disabled, label = 'Thêm câu hỏi', vari
   );
 }
 
+function getDeleteConfirmContent(deleteConfirm, { questionBankMode, isWritingQuestionBank }) {
+  if (!deleteConfirm) {
+    return { title: 'Xác nhận', message: '' };
+  }
+
+  if (deleteConfirm.type === 'section') {
+    if (questionBankMode) {
+      if (isWritingQuestionBank) {
+        return {
+          title: 'Xóa nhóm này?',
+          message: 'Toàn bộ câu hỏi trong nhóm sẽ bị xóa. Bạn không thể hoàn tác.',
+        };
+      }
+      return {
+        title: 'Xóa bài này?',
+        message: 'Toàn bộ câu hỏi trong bài sẽ bị xóa. Bạn không thể hoàn tác.',
+      };
+    }
+    return {
+      title: 'Xóa phần này?',
+      message: 'Toàn bộ câu hỏi trong phần sẽ bị xóa. Bạn không thể hoàn tác.',
+    };
+  }
+
+  return {
+    title: 'Xóa câu hỏi?',
+    message: `Bạn có chắc muốn xóa câu ${deleteConfirm.index + 1}? Hành động này không thể hoàn tác.`,
+  };
+}
+
 export default function MentorTestSectionCard({
   section,
   index,
@@ -157,6 +191,7 @@ export default function MentorTestSectionCard({
   onDelete,
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const questions = section.Questions ?? [];
   const sectionScoreLabel = getSectionScoreLabel(section, scoringMode, totalScore, questionCountAll);
   const skillType = section.SkillType ?? TEST_SKILL_READING;
@@ -224,6 +259,27 @@ export default function MentorTestSectionCard({
     updateQuestions(questions.filter((question) => question.tempId !== questionTempId));
   };
 
+  const handleConfirmDelete = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === 'section') {
+      onDelete?.();
+    } else {
+      handleDeleteQuestion(deleteConfirm.tempId);
+    }
+    setDeleteConfirm(null);
+  };
+
+  const deleteDialogContent = getDeleteConfirmContent(deleteConfirm, {
+    questionBankMode,
+    isWritingQuestionBank,
+  });
+
+  const canShuffleSectionOptions = questions.some((question) => canShuffleTestQuestionOptions(question));
+
+  const handleShuffleAllOptions = () => {
+    updateQuestions(questions.map((question) => shuffleTestQuestionOptions(question)));
+  };
+
   const handleSkillChange = (nextSkill) => {
     if (nextSkill === skillType) return;
 
@@ -243,16 +299,17 @@ export default function MentorTestSectionCard({
   };
 
   return (
-    <Box
-      sx={{
-        borderRadius: '14px',
-        border: '1px solid rgba(15,23,42,0.08)',
-        borderLeft: `3px solid ${skillAccent}`,
-        bgcolor: '#fff',
-        overflow: 'hidden',
-        boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
-      }}
-    >
+    <>
+      <Box
+        sx={{
+          borderRadius: '14px',
+          border: '1px solid rgba(15,23,42,0.08)',
+          borderLeft: `3px solid ${skillAccent}`,
+          bgcolor: '#fff',
+          overflow: 'hidden',
+          boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
+        }}
+      >
       {/* ── Header ── */}
       <Box
         sx={{
@@ -380,7 +437,7 @@ export default function MentorTestSectionCard({
         {!hideDelete ? (
           <IconButton
             size="small"
-            onClick={onDelete}
+            onClick={() => setDeleteConfirm({ type: 'section' })}
             disabled={disabled}
             aria-label="Xóa bài"
             sx={{
@@ -515,7 +572,7 @@ export default function MentorTestSectionCard({
           ) : null}
 
           {/* ── Questions header ── */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 0.5 }}>
             <Typography
               sx={{
                 fontSize: 11,
@@ -528,6 +585,25 @@ export default function MentorTestSectionCard({
             >
               Câu hỏi
             </Typography>
+            {questions.length > 0 ? (
+              <Tooltip title="Xáo trộn đáp án toàn bài" arrow>
+                <span>
+                  <IconButton
+                    size="small"
+                    onClick={handleShuffleAllOptions}
+                    disabled={disabled || !canShuffleSectionOptions}
+                    aria-label="Xáo trộn đáp án toàn bài"
+                    sx={{
+                      p: 0.45,
+                      color: MUTED,
+                      '&:hover': { color: TEXT, bgcolor: 'rgba(15,23,42,0.06)' },
+                    }}
+                  >
+                    <ShuffleRoundedIcon sx={{ fontSize: 17 }} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : null}
           </Box>
 
           {errors._questions && (
@@ -565,7 +641,13 @@ export default function MentorTestSectionCard({
                   disabled={disabled}
                   showScoreField={showScoreField}
                   onChange={(nextQuestion) => handleQuestionChange(question.tempId, nextQuestion)}
-                  onDelete={() => handleDeleteQuestion(question.tempId)}
+                  onDelete={() =>
+                    setDeleteConfirm({
+                      type: 'question',
+                      tempId: question.tempId,
+                      index: questionIndex,
+                    })
+                  }
                 />
               ))}
 
@@ -579,6 +661,18 @@ export default function MentorTestSectionCard({
           )}
         </Box>
       </Collapse>
-    </Box>
+      </Box>
+
+      <ConfirmDialog
+      open={Boolean(deleteConfirm)}
+      onClose={() => setDeleteConfirm(null)}
+      onConfirm={handleConfirmDelete}
+      title={deleteDialogContent.title}
+      message={deleteDialogContent.message}
+      confirmLabel="Xóa"
+      cancelLabel="Hủy"
+      destructive
+    />
+  </>
   );
 }
