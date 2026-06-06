@@ -36,8 +36,8 @@ const getMentorCourses = async (userId) => {
     const request = new sql.Request();
     request.input('InstructorId', sql.Int, userId);
 
-    const result = await request.query`
-      Select crs.CourseId,
+    const result = await request.query(
+        `Select crs.CourseId,
    crs.CourseName,
    crs.Description, crs.CategoryId,
    crs.LevelId,
@@ -55,8 +55,8 @@ join Categories cate
 on crs.CategoryId = cate.CategoryId
 join Levels
 on Levels.LevelId = crs.LevelId
-  Where InstructorId = @InstructorId
-    `
+  Where InstructorId = @InstructorId`
+    );
     return await buildCourse(result.recordset);
 }
 
@@ -96,6 +96,96 @@ const getStudentCourses = async (userId) => {
 
 }
 
+
+// GET Course's Information by it's Id
+const getCourseById = async (courseId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, courseId);
+
+    const result = await request.query(`Select crs.CourseId,
+   crs.CourseName,
+   crs.Description, crs.CategoryId,
+   crs.LevelId,
+   Levels.LevelName as levelName,
+   Levels.Displayname as LevelDisplayName,
+   Levels.SortOrder as LevelSortOrder,
+   crs.Thumbnail,
+   crs.IsPublished,
+   crs.CreatedAt,
+   crs.UpdatedAt,
+    cate.DisplayName as CategoryDisplayName,
+    cate.CategoryName as CategoryName
+   from courses crs
+join Categories cate
+on crs.CategoryId = cate.CategoryId
+join Levels
+on Levels.LevelId = crs.LevelId
+  Where crs.CourseId = @courseId`);
+    return await buildCourse(result.recordset);
+}
+
+//create course step 1 (draft)
+const createCourseStepOne = async (course) => {
+    const request = new sql.Request();
+
+    request.input('CourseName', sql.NVarChar(200), course.CourseName);
+    request.input('Description', sql.NVarChar(sql.MAX), course.Description);
+    request.input('CategoryId', sql.Int, Number(course.CategoryId));
+    request.input('LevelId', sql.Int, Number(course.LevelId));
+    request.input('InstructorId', sql.Int, Number(course.InstructorId));
+    request.input('Thumbnail', sql.NVarChar(500), 'Chưa Fix Lỗi ẢNh'); //course.Thumbnail || null
+
+    request.input('Rating', sql.Decimal(3, 1), course.Rating ?? 0.0);
+    request.input('TotalLessons', sql.Int, course.TotalLessons ?? 0);
+    request.input('IsPublished', sql.Bit, course.IsPublished ?? false);
+
+    const result = await request.query(`
+    INSERT INTO Courses (
+      CourseName,
+      Description,
+      CategoryId,
+      LevelId,
+      InstructorId,
+      Thumbnail,
+      Rating,
+      TotalLessons,
+      CreatedAt,
+      UpdatedAt,
+      IsPublished
+    )
+    OUTPUT INSERTED.*
+    VALUES (
+      @CourseName,
+      @Description,
+      @CategoryId,
+      @LevelId,
+      @InstructorId,
+      @Thumbnail,
+      @Rating,
+      @TotalLessons,
+      GETDATE(),
+      GETDATE(),
+      @IsPublished
+    )
+  `);
+
+    return result.recordset[0].CourseId;
+};
+
+//
+
+// create new course (final step in create course process)
+const createFinalCourse = async (course, paths) => {
+    //create course (step one in create course process)
+    const newCourseId = await createCourseStepOne(course)
+    // insert paths into new course
+    // console.table(course);
+    // course's paths
+    // paths's nodes
+}
 module.exports = {
-    getCoursesByUserRole
+    getCoursesByUserRole,
+    getCourseById,
+    createCourseStepOne,
+    createFinalCourse
 }

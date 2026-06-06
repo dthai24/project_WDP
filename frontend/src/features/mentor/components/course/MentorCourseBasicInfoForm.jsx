@@ -1,6 +1,6 @@
 import { Box, InputBase, Typography } from '@mui/material';
 import { underlineFieldSx } from '@/shared/ui/UnderlineFieldPopup';
-import { MENTOR_COURSE_DESCRIPTION_MAX } from '@/features/mentor/utils/mentorCourseFormUtils';
+import { MENTOR_COURSE_DESCRIPTION_MAX, MENTOR_COURSE_NAME_MAX } from '@/features/mentor/utils/mentorCourseFormUtils';
 import { MUTED, PRIMARY, SECTION_TITLE_SX, TEXT } from './mentorCourseCreateStyles';
 
 function FormField({
@@ -26,6 +26,7 @@ function FormField({
       <Typography sx={{ fontSize: 11, color: MUTED, fontWeight: 500, mb: 0.4, lineHeight: 1.2 }}>
         {label}
       </Typography>
+
       <Box
         sx={{
           ...underlineFieldSx,
@@ -34,55 +35,65 @@ function FormField({
           opacity: disabled ? 0.6 : 1,
         }}
       >
-        <InputBase
-          name={name}
-          value={value ?? ''}
-          onChange={onChange}
-          disabled={disabled}
-          placeholder={placeholder}
-          fullWidth
-          multiline={multiline}
-          minRows={multiline ? rows : undefined}
-          inputProps={maxLength ? { maxLength } : undefined}
-          {...(isSelect ? { component: 'select' } : {})}
-          sx={{
-            fontSize: 13.5,
-            fontWeight: 600,
-            color: TEXT,
-            lineHeight: multiline ? 1.55 : 1.4,
-            alignItems: multiline ? 'flex-start' : 'center',
-            '& .MuiInputBase-input': {
+        {isSelect ? (
+          <Box
+            component="select"
+            name={name}
+            value={value ?? ''}
+            onChange={onChange}
+            disabled={disabled}
+            sx={{
+              width: '100%',
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: TEXT,
               p: 0,
-              height: multiline ? 'auto' : 'auto',
-            },
-            '& .MuiInputBase-input::placeholder': {
-              color: MUTED,
-              opacity: 0.7,
-              fontWeight: 500,
-            },
-            ...(isSelect && {
-              '& select': {
+              lineHeight: 1.4,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <option value="">{placeholder || 'Chọn...'}</option>
+
+            {(selectOptions ?? []).map((opt) => (
+              <option key={String(opt.value)} value={String(opt.value)}>
+                {opt.label}
+              </option>
+            ))}
+          </Box>
+        ) : (
+          <InputBase
+            name={name}
+            value={value ?? ''}
+            onChange={onChange}
+            disabled={disabled}
+            placeholder={placeholder}
+            fullWidth
+            multiline={multiline}
+            minRows={multiline ? rows : undefined}
+            inputProps={maxLength ? { maxLength } : undefined}
+            sx={{
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: TEXT,
+              lineHeight: multiline ? 1.55 : 1.4,
+              alignItems: multiline ? 'flex-start' : 'center',
+              '& .MuiInputBase-input': {
                 p: 0,
-                font: 'inherit',
-                color: 'inherit',
-                background: 'transparent',
-                width: '100%',
+                height: multiline ? 'auto' : 'auto',
               },
-            }),
-          }}
-        >
-          {isSelect && (
-            <>
-              <option value="">{placeholder || 'Chọn...'}</option>
-              {selectOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </>
-          )}
-        </InputBase>
+              '& .MuiInputBase-input::placeholder': {
+                color: MUTED,
+                opacity: 0.7,
+                fontWeight: 500,
+              },
+            }}
+          />
+        )}
       </Box>
+
       {showCharCount && maxLength && (
         <Typography
           sx={{
@@ -96,6 +107,7 @@ function FormField({
           {charCount}/{maxLength}
         </Typography>
       )}
+
       {error && (
         <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.5, lineHeight: 1.3 }}>
           {error}
@@ -125,6 +137,7 @@ export default function MentorCourseBasicInfoForm({
         error={errors.CourseName}
         onChange={onChange}
         disabled={disabled}
+        maxLength={MENTOR_COURSE_NAME_MAX}
         placeholder="Ví dụ: Tiếng Anh Giao Tiếp Đời Sống Hàng Ngày"
       />
 

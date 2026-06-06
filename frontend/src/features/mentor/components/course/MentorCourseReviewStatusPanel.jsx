@@ -94,7 +94,9 @@ export default function MentorCourseReviewStatusPanel({
             <Box key={item.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
               <StatusIcon status={item.status} />
               <Typography sx={{ fontSize: 13, color: TEXT, lineHeight: 1.45, fontWeight: 500 }}>
-                {item.label}
+                <div className='d-flex'>
+                  {item.label}
+                </div>
               </Typography>
             </Box>
           ))}

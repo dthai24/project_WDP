@@ -62,6 +62,7 @@ export function normalizeMentorCourseDetail(raw = {}) {
   };
 }
 
+// COURSE's DETAIL
 export const MENTOR_COURSE_DETAIL_TABS = {
   COURSE: 'course',
   CONTENT: 'content',

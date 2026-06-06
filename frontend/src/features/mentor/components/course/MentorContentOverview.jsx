@@ -185,6 +185,7 @@ export default function MentorContentOverview({
               mr: -0.25,
             }}
           >
+            {/* Update count (chapter, lesson, materials) */}
             {paths.map((path, pathIndex) => {
               const nodes = path.nodes ?? [];
               const chapterTitle = path.PathName || `Chương ${pathIndex + 1}`;
@@ -269,6 +270,7 @@ export default function MentorContentOverview({
         )}
       </Box>
 
+      {/* This content buttons */}
       {footer && (
         <Box sx={{ display: { xs: 'none', lg: 'block' }, width: '100%' }}>
           {footer}

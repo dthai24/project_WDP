@@ -201,15 +201,15 @@ export default function MentorEditCoursePage() {
     let cancelled = false;
 
     (async () => {
-      const [courseResult, categoryResult, levelResult] = await Promise.all([
-        fetchMentorCourseDetail(courseId),
+      const [categoryResult, levelResult] = await Promise.all([
         fetchCourseCategories(),
         fetchCourseLevels(),
       ]);
+      const courseResult = await fetchMentorCourseDetail(courseId);
 
       if (cancelled) return;
 
-      if (!courseResult.ok) {
+      if (!courseResult.success) {
         toast.error('Không thể tải thông tin khóa học.');
         navigate(`/mentor/courses/${courseId}`, { replace: true });
         return;

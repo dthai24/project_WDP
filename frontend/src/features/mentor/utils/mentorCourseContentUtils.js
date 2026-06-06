@@ -390,9 +390,10 @@ export function scrollToContentItem(
 
 export function buildCourseContentPayload(paths) {
   return {
-    paths: withNormalizedOrders(paths).map(({ tempId: _tempId, nodes, ...path }) => ({
+    paths: withNormalizedOrders(paths).map(({ tempId: _tempId, nodes, ...path }, index) => ({
       PathName: String(path.PathName ?? '').trim(),
       Description: trimShortDescription(path.Description),
+      PathOrder: Number(index + 1),
       nodes: (nodes ?? []).map(({ tempId: _nodeTempId, materials, ...node }) => ({
         NodeName: String(node.NodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
@@ -405,72 +406,72 @@ export function buildCourseContentPayload(paths) {
             EstimatedMinutes: _estimatedMinutes,
             ...material
           }) => {
-          const base = {
-            MaterialType: material.MaterialType,
-            Title: String(material.Title ?? '').trim(),
-            MaterialOrder: material.MaterialOrder,
-          };
-
-          if (material.MaterialType === 'TEXT') {
-            // TODO: backend should support Content for TEXT material
-            return {
-              ...base,
-              MaterialUrl: null,
-              Content: String(Content ?? '').trim(),
+            const base = {
+              MaterialType: material.MaterialType,
+              Title: String(material.Title ?? '').trim(),
+              MaterialOrder: material.MaterialOrder,
             };
-          }
 
-          if (material.MaterialType === 'DOC') {
-            // TODO: backend should support document upload and SourceType
-            const sourceType =
-              material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
-
-            if (sourceType === DOC_SOURCE_LINK) {
+            if (material.MaterialType === 'TEXT') {
+              // TODO: backend should support Content for TEXT material
               return {
                 ...base,
-                SourceType: DOC_SOURCE_LINK,
-                File: null,
-                FileName: null,
-                FileSize: null,
-                MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+                MaterialUrl: null,
+                Content: String(Content ?? '').trim(),
               };
+            }
+
+            if (material.MaterialType === 'DOC') {
+              // TODO: backend should support document upload and SourceType
+              const sourceType =
+                material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+
+              if (sourceType === DOC_SOURCE_LINK) {
+                return {
+                  ...base,
+                  SourceType: DOC_SOURCE_LINK,
+                  File: null,
+                  FileName: null,
+                  FileSize: null,
+                  MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+                };
+              }
+
+              return {
+                ...base,
+                SourceType: DOC_SOURCE_UPLOAD,
+                File: File ?? null,
+                FileName: material.FileName ?? null,
+                FileSize: material.FileSize ?? null,
+                MaterialUrl: null,
+              };
+            }
+
+            if (material.MaterialType === 'VIDEO') {
+              const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
+              const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
+              // TODO: backend should support EmbedUrl for VIDEO material
+              return {
+                ...base,
+                SourceType: VIDEO_SOURCE_LINK,
+                MaterialUrl: materialUrl,
+                EmbedUrl: embedUrl,
+              };
+            }
+
+            if (material.MaterialType === 'TEST') {
+              // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
+              return buildTestMaterialPayload(material, {
+                ...base,
+                Description: trimShortDescription(material.Description),
+              });
             }
 
             return {
               ...base,
-              SourceType: DOC_SOURCE_UPLOAD,
-              File: File ?? null,
-              FileName: material.FileName ?? null,
-              FileSize: material.FileSize ?? null,
-              MaterialUrl: null,
+              MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
             };
-          }
-
-          if (material.MaterialType === 'VIDEO') {
-            const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
-            const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
-            // TODO: backend should support EmbedUrl for VIDEO material
-            return {
-              ...base,
-              SourceType: VIDEO_SOURCE_LINK,
-              MaterialUrl: materialUrl,
-              EmbedUrl: embedUrl,
-            };
-          }
-
-          if (material.MaterialType === 'TEST') {
-            // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
-            return buildTestMaterialPayload(material, {
-              ...base,
-              Description: trimShortDescription(material.Description),
-            });
-          }
-
-          return {
-            ...base,
-            MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
-          };
-        }),
+          }),
       })),
     })),
   };
