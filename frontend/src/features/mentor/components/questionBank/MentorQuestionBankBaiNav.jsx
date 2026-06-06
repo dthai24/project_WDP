@@ -1,10 +1,13 @@
 /**
- * Chuyển / thêm bài trong một kỹ năng (Nghe, Đọc, Từ vựng–Ngữ pháp).
+ * Chuyển / thêm bài (Nghe, Đọc) hoặc nhóm câu hỏi (Từ vựng–Ngữ pháp).
  */
 import { Box, Typography, alpha } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
-import { getSectionBaiNumber } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  getQuestionBankSectionTabLabel,
+  isQuestionBankWritingSkill,
+} from '@/features/mentor/utils/mentorTestContentUtils';
 
 function BaiTab({ label, selected, disabled, accentColor, onClick }) {
   return (
@@ -25,6 +28,10 @@ function BaiTab({ label, selected, disabled, accentColor, onClick }) {
         fontFamily: 'inherit',
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.55 : 1,
+        maxWidth: { xs: '100%', sm: 220 },
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
         transition: 'background-color 0.15s, border-color 0.15s',
         '&:hover': disabled
           ? undefined
@@ -41,27 +48,29 @@ function BaiTab({ label, selected, disabled, accentColor, onClick }) {
 export default function MentorQuestionBankBaiNav({
   skillSections = [],
   allSections = [],
+  activeSkill,
   activeSectionId = '',
   accentColor = PRIMARY,
   disabled = false,
   onSelect,
   onAdd,
 }) {
+  const isWritingSkill = isQuestionBankWritingSkill(activeSkill);
+  const addLabel = isWritingSkill ? 'Thêm nhóm câu hỏi' : 'Thêm bài';
+  const countLabel = isWritingSkill ? 'nhóm' : 'bài';
+
   return (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mb: 2 }}>
-      {skillSections.map((section) => {
-        const baiNumber = getSectionBaiNumber(section, allSections);
-        return (
-          <BaiTab
-            key={section.tempId}
-            label={`Bài số ${baiNumber}`}
-            selected={section.tempId === activeSectionId}
-            disabled={disabled}
-            accentColor={accentColor}
-            onClick={() => onSelect?.(section.tempId)}
-          />
-        );
-      })}
+      {skillSections.map((section) => (
+        <BaiTab
+          key={section.tempId}
+          label={getQuestionBankSectionTabLabel(section, allSections)}
+          selected={section.tempId === activeSectionId}
+          disabled={disabled}
+          accentColor={accentColor}
+          onClick={() => onSelect?.(section.tempId)}
+        />
+      ))}
       <Box
         component="button"
         type="button"
@@ -86,11 +95,11 @@ export default function MentorQuestionBankBaiNav({
         }}
       >
         <AddRoundedIcon sx={{ fontSize: 15 }} />
-        Thêm bài
+        {addLabel}
       </Box>
       {skillSections.length > 0 && (
         <Typography sx={{ fontSize: 11, color: MUTED, ml: { xs: 0, sm: 0.25 } }}>
-          {skillSections.length} bài
+          {skillSections.length} {countLabel}
         </Typography>
       )}
     </Box>

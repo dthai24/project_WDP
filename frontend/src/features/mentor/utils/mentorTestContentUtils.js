@@ -18,13 +18,10 @@ export const TEST_SKILLS = [TEST_SKILL_LISTENING, TEST_SKILL_READING, TEST_SKILL
 export const TEST_SKILL_LABELS = {
   [TEST_SKILL_LISTENING]: 'Nghe',
   [TEST_SKILL_READING]: 'Đọc',
-  [TEST_SKILL_WRITING]: 'Viết',
-};
-
-export const TEST_SKILL_QB_LABELS = {
-  ...TEST_SKILL_LABELS,
   [TEST_SKILL_WRITING]: 'Từ vựng / Ngữ pháp',
 };
+
+export const TEST_SKILL_QB_LABELS = TEST_SKILL_LABELS;
 
 export const TEST_SKILL_CHIP_COLORS = {
   [TEST_SKILL_LISTENING]: { color: '#7C3AED', bg: 'rgba(124,58,237,0.12)' },
@@ -290,6 +287,7 @@ export function createEmptyTestSection(skillType = TEST_SKILL_READING) {
   return {
     tempId: createTestTempId('section'),
     SectionTitle: '',
+    DisplayName: '',
     SkillType: skillType,
     Description: '',
     Questions: [],
@@ -326,10 +324,36 @@ export function getSectionBaiNumber(section, sections = []) {
   return index >= 0 ? index + 1 : skillSections.length + 1;
 }
 
+export function getQuestionBankSectionNameFallback(section, sections = []) {
+  const index = getSectionBaiNumber(section, sections);
+  if (section?.SkillType === TEST_SKILL_WRITING) {
+    return `Nhóm ${index}`;
+  }
+  return `Bài số ${index}`;
+}
+
+export function getQuestionBankSectionNamePlaceholder(section) {
+  if (section?.SkillType === TEST_SKILL_WRITING) {
+    return 'Chưa có tên nhóm';
+  }
+  return 'Chưa có tên bài';
+}
+
+/** @deprecated use getQuestionBankSectionNameFallback — kept for imports */
 export function getQuestionBankSectionDisplayTitle(section, sections = []) {
-  const title = String(section?.SectionTitle ?? '').trim();
-  if (title) return title;
-  return `Bài số ${getSectionBaiNumber(section, sections)}`;
+  const name = String(section?.DisplayName ?? '').trim();
+  if (name) return name;
+  return getQuestionBankSectionNameFallback(section, sections);
+}
+
+export function getQuestionBankSectionTabLabel(section, sections = []) {
+  const name = String(section?.DisplayName ?? '').trim();
+  if (name) return name;
+  return getQuestionBankSectionNameFallback(section, sections);
+}
+
+export function isQuestionBankWritingSkill(skillType) {
+  return skillType === TEST_SKILL_WRITING;
 }
 
 export function createQuestionBankSection(skillType = TEST_SKILL_READING) {
@@ -568,6 +592,7 @@ export function buildTestSectionPayload(section, sectionOrder) {
   const base = {
     tempId: section.tempId,
     SectionTitle: sectionTitle || getSectionDisplayTitle(section),
+    DisplayName: String(section.DisplayName ?? '').trim() || null,
     SkillType: skillType,
     Description: String(section.Description ?? '').trim() || null,
     SectionOrder: sectionOrder,

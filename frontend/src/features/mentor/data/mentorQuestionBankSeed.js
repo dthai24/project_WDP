@@ -15,7 +15,8 @@ export const mentorQuestionBankSeed = [
     sections: [
       {
         tempId: 'seed-section-1',
-        SectionTitle: 'Bài đọc hiểu',
+        DisplayName: 'Bài đọc hiểu',
+        SectionTitle: '',
         SkillType: 'READING',
         Description: '',
         Questions: [

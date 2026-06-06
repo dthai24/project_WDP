@@ -18,6 +18,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import Loading from '@/shared/ui/Loading';
+import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
 import MentorTestSectionCard from '@/features/mentor/components/course/MentorTestSectionCard';
 import MentorQuestionBankBaiNav from '@/features/mentor/components/questionBank/MentorQuestionBankBaiNav';
 import MentorQuestionBankOverview from '@/features/mentor/components/questionBank/MentorQuestionBankOverview';
@@ -31,7 +32,7 @@ import {
   ensureQuestionBankSkillSections,
   getFilledQuestionCount,
   getNonEmptyQuestionBankSections,
-  getQuestionBankSectionDisplayTitle,
+  getQuestionBankSectionNameFallback,
   getSectionBaiNumber,
   getSectionsBySkill,
   validateTestMaterial,
@@ -140,9 +141,9 @@ export default function MentorQuestionBankCreatePage() {
   const mapSectionsForSave = (sourceSections) =>
     sourceSections.map((section) => ({
       ...section,
-      SectionTitle:
-        String(section.SectionTitle ?? '').trim() ||
-        getQuestionBankSectionDisplayTitle(section, sourceSections),
+      DisplayName:
+        String(section.DisplayName ?? '').trim() ||
+        getQuestionBankSectionNameFallback(section, sourceSections),
     }));
 
   const canUseBankInfo = useMemo(
@@ -504,20 +505,7 @@ export default function MentorQuestionBankCreatePage() {
         </Typography>
       </Breadcrumbs>
 
-      <Typography
-        component="h1"
-        sx={{
-          fontSize: { xs: 24, sm: 28 },
-          fontWeight: 800,
-          color: TEXT,
-          letterSpacing: '-0.02em',
-          mb: 0.5,
-          maxWidth: 720,
-        }}
-      >
-        {isEditing ? 'Ngân hàng câu hỏi' : 'Tạo ngân hàng câu hỏi'}
-      </Typography>
-      <Typography sx={{ fontSize: 14, color: MUTED, mb: 2, maxWidth: 720, lineHeight: 1.55 }}>
+      <Typography sx={{ fontSize: 14, color: MUTED, mb: 2, mt: 0.5, maxWidth: 720, lineHeight: 1.55 }}>
         Khóa học:{' '}
         <Box component="span" sx={{ fontWeight: 700, color: TEXT }}>
           {course?.courseName}
@@ -628,6 +616,7 @@ export default function MentorQuestionBankCreatePage() {
                     <MentorQuestionBankBaiNav
                       skillSections={skillSections}
                       allSections={sections}
+                      activeSkill={activeSkill}
                       activeSectionId={activeSection.tempId}
                       accentColor={TEST_SKILL_CHIP_COLORS[activeSkill]?.color ?? PRIMARY}
                       disabled={!canUseGenerator}
@@ -648,7 +637,7 @@ export default function MentorQuestionBankCreatePage() {
                         lockSkillType
                         hideDelete={!canDeleteActiveSection}
                         questionBankMode
-                        sectionBadgeLabel={`Bài số ${getSectionBaiNumber(activeSection, sections)}`}
+                        allSections={sections}
                         defaultExpanded
                         onChange={(nextSection) =>
                           handleSectionChange(activeSection.tempId, nextSection)
@@ -678,7 +667,11 @@ export default function MentorQuestionBankCreatePage() {
         </Box>
       </Box>
 
-      <Box sx={{ display: { xs: 'flex', lg: 'none' }, mt: 2.5, pb: 4 }}>{footerActions}</Box>
+      <Box id="qb-mobile-footer-actions" sx={{ display: { xs: 'flex', lg: 'none' }, mt: 2.5, pb: 4 }}>
+        {footerActions}
+      </Box>
+
+      <ScrollToTopButton avoidSelectors={['#app-site-footer', '#qb-mobile-footer-actions']} />
     </Box>
   );
 }

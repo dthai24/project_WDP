@@ -31,7 +31,7 @@ const SKILL_NAV_ITEMS = [
   },
   {
     skill: TEST_SKILL_WRITING,
-    label: 'Từ vựng / Ngữ pháp',
+    label: TEST_SKILL_LABELS[TEST_SKILL_WRITING],
     icon: EditNoteRoundedIcon,
   },
 ];
@@ -40,14 +40,15 @@ function SkillNavButton({
   label,
   icon: Icon,
   color,
-  baiCount = 0,
+  sectionCount = 0,
+  sectionUnit = 'bài',
   questionCount = 0,
   selected = false,
   disabled = false,
   hasError = false,
   onClick,
 }) {
-  const metaText = `${baiCount} bài · ${questionCount} câu hỏi`;
+  const metaText = `${sectionCount} ${sectionUnit} · ${questionCount} câu hỏi`;
   return (
     <Box
       component="button"
@@ -170,7 +171,8 @@ export default function MentorQuestionBankSkillNav({
               label={label}
               icon={icon}
               color={theme.color}
-              baiCount={baiCountBySkill[skill]}
+              sectionCount={baiCountBySkill[skill]}
+              sectionUnit={skill === TEST_SKILL_WRITING ? 'nhóm' : 'bài'}
               questionCount={countBySkill[skill]}
               selected={activeSkill === skill}
               disabled={disabled}
