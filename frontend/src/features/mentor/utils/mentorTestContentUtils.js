@@ -496,20 +496,14 @@ export function validateTestMaterial(material, options = {}) {
     if (
       section.SkillType === TEST_SKILL_LISTENING
     ) {
-      const sourceType =
-        section.AudioSourceType === LISTENING_SOURCE_LINK
-          ? LISTENING_SOURCE_LINK
-          : LISTENING_SOURCE_UPLOAD;
+      const hasFile = Boolean(section.File || section.FileName);
+      const audioUrl = String(section.AudioUrl ?? '').trim();
+      const hasLink = Boolean(audioUrl);
 
-      if (sourceType === LISTENING_SOURCE_UPLOAD) {
-        if (!section.File) {
-          sErrors.File = 'Vui lòng chọn file audio';
-        }
-      } else {
-        const audioUrl = String(section.AudioUrl ?? '').trim();
-        if (!audioUrl || !isSimpleUrl(audioUrl)) {
-          sErrors.AudioUrl = 'Vui lòng nhập link audio hoặc video nghe hợp lệ';
-        }
+      if (!hasFile && !hasLink) {
+        sErrors._audio = 'Vui lòng tải file audio hoặc nhập link nghe';
+      } else if (hasLink && !isSimpleUrl(audioUrl)) {
+        sErrors.AudioUrl = 'Vui lòng nhập link audio hoặc video nghe hợp lệ';
       }
     }
 
@@ -584,16 +578,25 @@ export function buildTestSectionPayload(section, sectionOrder) {
     return base;
   }
 
-  const sourceType =
-    section.AudioSourceType === LISTENING_SOURCE_LINK
-      ? LISTENING_SOURCE_LINK
-      : LISTENING_SOURCE_UPLOAD;
+  const audioUrl = String(section.AudioUrl ?? '').trim();
+  const hasFile = Boolean(section.File || section.FileName);
 
-  if (sourceType === LISTENING_SOURCE_LINK) {
+  if (hasFile) {
+    return {
+      ...base,
+      AudioSourceType: LISTENING_SOURCE_UPLOAD,
+      AudioUrl: null,
+      File: section.File ?? null,
+      FileName: section.FileName ?? null,
+      FileSize: section.FileSize ?? null,
+    };
+  }
+
+  if (audioUrl) {
     return {
       ...base,
       AudioSourceType: LISTENING_SOURCE_LINK,
-      AudioUrl: String(section.AudioUrl ?? '').trim() || null,
+      AudioUrl: audioUrl,
       File: null,
       FileName: null,
       FileSize: null,
@@ -604,9 +607,9 @@ export function buildTestSectionPayload(section, sectionOrder) {
     ...base,
     AudioSourceType: LISTENING_SOURCE_UPLOAD,
     AudioUrl: null,
-    File: section.File ?? null,
-    FileName: section.FileName ?? null,
-    FileSize: section.FileSize ?? null,
+    File: null,
+    FileName: null,
+    FileSize: null,
   };
 }
 

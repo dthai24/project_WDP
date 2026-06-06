@@ -9,7 +9,6 @@ import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { contentAddButtonSx, TEST_ADD_QUESTION_THEME } from './mentorCourseContentStyles';
 import MentorTestQuestionCard from './MentorTestQuestionCard';
 import MentorTestListeningSourceEditor from './MentorTestListeningSourceEditor';
 import {
@@ -49,27 +48,27 @@ function SkillOptionButton({ option, selected, disabled, accentColor, onSelect }
         alignItems: 'center',
         justifyContent: 'center',
         gap: 0.75,
-        minHeight: 40,
+        minHeight: 36,
         px: 1.25,
         border: 'none',
-        borderRadius: '10px',
+        borderRadius: '8px',
         cursor: disabled ? 'default' : 'pointer',
         fontSize: 13,
-        fontWeight: isSelected ? 700 : 600,
+        fontWeight: isSelected ? 700 : 500,
         fontFamily: 'inherit',
         color: isSelected ? accentColor : MUTED,
-        bgcolor: isSelected ? `${accentColor}18` : 'transparent',
+        bgcolor: isSelected ? `${accentColor}14` : 'transparent',
         transition: 'background-color 0.15s, color 0.15s',
         opacity: disabled ? 0.6 : 1,
         '&:hover': disabled
           ? {}
           : {
-              bgcolor: isSelected ? `${accentColor}22` : 'rgba(15,23,42,0.04)',
+              bgcolor: isSelected ? `${accentColor}1e` : 'rgba(15,23,42,0.04)',
               color: isSelected ? accentColor : TEXT,
             },
       }}
     >
-      <Icon sx={{ fontSize: 18 }} />
+      <Icon sx={{ fontSize: 16 }} />
       {option.label}
     </Box>
   );
@@ -81,8 +80,8 @@ function fieldInputSx(hasError, accentColor) {
     color: TEXT,
     px: 1,
     py: 0.65,
-    borderRadius: '10px',
-    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
+    borderRadius: '8px',
+    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
     bgcolor: '#fff',
     width: '100%',
     '&:focus-within': { borderColor: hasError ? '#DC2626' : accentColor },
@@ -97,28 +96,43 @@ function multilineInputSx(hasError, accentColor) {
   };
 }
 
-function SkillChip({ skillType }) {
-  const chip = TEST_SKILL_CHIP_COLORS[skillType] ?? TEST_SKILL_CHIP_COLORS[TEST_SKILL_READING];
-  const label = TEST_SKILL_LABELS[skillType] ?? '';
-
-  if (!label) return null;
-
+function AddQuestionButton({ onClick, disabled, label = 'Thêm câu hỏi', variant = 'inline' }) {
+  const isBlock = variant === 'block';
   return (
-    <Typography
-      component="span"
+    <Box
+      component="button"
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
       sx={{
-        fontSize: 11,
-        fontWeight: 700,
-        color: chip.color,
-        px: 0.85,
-        py: 0.25,
-        borderRadius: '999px',
-        bgcolor: chip.bg,
-        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: isBlock ? 'center' : 'flex-start',
+        gap: 0.5,
+        px: isBlock ? 1.75 : 1.25,
+        py: isBlock ? 0.75 : 0.55,
+        border: `1px ${isBlock ? 'solid' : 'dashed'} rgba(15,23,42,0.14)`,
+        borderRadius: '8px',
+        bgcolor: isBlock ? '#fff' : 'transparent',
+        color: '#64748B',
+        fontSize: 12,
+        fontWeight: 600,
+        fontFamily: 'inherit',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
+        '&:hover': disabled
+          ? undefined
+          : {
+              bgcolor: 'rgba(15,23,42,0.04)',
+              borderColor: 'rgba(15,23,42,0.22)',
+              color: TEXT,
+            },
       }}
     >
+      <AddRoundedIcon sx={{ fontSize: 15 }} />
       {label}
-    </Typography>
+    </Box>
   );
 }
 
@@ -147,6 +161,7 @@ export default function MentorTestSectionCard({
   const skillTheme = TEST_SKILL_CHIP_COLORS[skillType] ?? TEST_SKILL_CHIP_COLORS[TEST_SKILL_READING];
   const skillAccent = skillTheme.color;
   const showListeningSource = skillType === TEST_SKILL_LISTENING;
+  const isListeningQuestionBank = questionBankMode && showListeningSource;
   const displayTitle = getSectionDisplayTitle(section);
   const badgeLabel = sectionBadgeLabel ?? `Phần ${index + 1}`;
   const sectionTitleLabel = questionBankMode ? 'Tên bài' : 'Tên phần';
@@ -157,12 +172,17 @@ export default function MentorTestSectionCard({
   const sectionDescPlaceholder = questionBankMode
     ? 'Mô tả ngắn cho bài (tuỳ chọn)'
     : 'Mô tả ngắn cho phần kiểm tra (tuỳ chọn)';
+  const listeningPromptValue = (() => {
+    const title = String(section.SectionTitle ?? '').trim();
+    const desc = String(section.Description ?? '').trim();
+    if (title && desc) return `${title}\n\n${desc}`;
+    return title || desc;
+  })();
   const emptyQuestionsText = questionBankMode
     ? 'Chưa có câu hỏi trong bài này.'
     : 'Chưa có câu hỏi trong phần này.';
 
   const updateSection = (patch) => onChange({ ...section, ...patch });
-
   const updateQuestions = (nextQuestions) => updateSection({ Questions: nextQuestions });
 
   const handleAddQuestion = () => {
@@ -201,84 +221,116 @@ export default function MentorTestSectionCard({
     <Box
       sx={{
         borderRadius: '14px',
-        border: `1px solid ${skillAccent}28`,
-        borderLeft: `4px solid ${skillAccent}`,
+        border: '1px solid rgba(15,23,42,0.08)',
+        borderLeft: `3px solid ${skillAccent}`,
         bgcolor: '#fff',
-        boxShadow: `0 1px 4px ${skillAccent}14`,
         overflow: 'hidden',
+        boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
       }}
     >
+      {/* ── Header ── */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: 1,
-          px: { xs: 1.1, sm: 1.25 },
-          py: 1,
-          bgcolor: skillTheme.bg,
-          borderBottom: expanded ? `1px solid ${skillAccent}20` : 'none',
+          gap: 0.75,
+          px: { xs: 1.25, sm: 1.5 },
+          py: 0.9,
+          borderBottom: expanded ? '1px solid rgba(15,23,42,0.07)' : 'none',
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            <Typography
-              component="span"
-              sx={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: skillAccent,
-                px: 0.85,
-                py: 0.25,
-                borderRadius: '999px',
-                bgcolor: `${skillAccent}18`,
-              }}
-            >
-              {badgeLabel}
+        {/* Left info block */}
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            flexWrap: 'wrap',
+          }}
+        >
+          {/* Badge: Bài số N */}
+          <Typography
+            component="span"
+            sx={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: TEXT,
+              px: 0.85,
+              py: 0.2,
+              borderRadius: '999px',
+              bgcolor: 'rgba(15,23,42,0.06)',
+              flexShrink: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            {badgeLabel}
+          </Typography>
+
+          {/* Skill indicator: dot + name */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, flexShrink: 0 }}>
+            <Box
+              sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: skillAccent, flexShrink: 0 }}
+            />
+            <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED }}>
+              {TEST_SKILL_LABELS[skillType] ?? ''}
             </Typography>
-            <SkillChip skillType={skillType} />
+          </Box>
+
+          {/* Section display title */}
+          {displayTitle ? (
             <Typography
               sx={{
                 fontSize: 13,
-                fontWeight: 700,
+                fontWeight: 600,
                 color: TEXT,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-                maxWidth: { xs: '100%', sm: 280 },
+                maxWidth: { xs: '100%', sm: 240 },
               }}
             >
               {displayTitle}
             </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 0.75, mt: 0.5 }}>
-            <Typography component="span" sx={{ fontSize: 11, fontWeight: 600, color: MUTED }}>
-              {sectionScoreLabel}
-            </Typography>
-          </Box>
+          ) : null}
         </Box>
 
+        {/* Meta: score / question count */}
+        {sectionScoreLabel ? (
+          <Typography
+            component="span"
+            sx={{ fontSize: 11, color: MUTED, whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            {sectionScoreLabel}
+          </Typography>
+        ) : null}
+
+        {/* Collapse toggle */}
         <IconButton
           size="small"
           onClick={() => setExpanded((prev) => !prev)}
-          aria-label={expanded ? 'Thu gọn phần kiểm tra' : 'Mở rộng phần kiểm tra'}
-          sx={{ color: MUTED, flexShrink: 0 }}
+          aria-label={expanded ? 'Thu gọn' : 'Mở rộng'}
+          sx={{ color: MUTED, flexShrink: 0, p: 0.45 }}
         >
           {expanded ? (
-            <ExpandLessRoundedIcon sx={{ fontSize: 20 }} />
+            <ExpandLessRoundedIcon sx={{ fontSize: 19 }} />
           ) : (
-            <ExpandMoreRoundedIcon sx={{ fontSize: 20 }} />
+            <ExpandMoreRoundedIcon sx={{ fontSize: 19 }} />
           )}
         </IconButton>
 
+        {/* Delete */}
         {!hideDelete ? (
           <IconButton
             size="small"
             onClick={onDelete}
             disabled={disabled}
-            aria-label="Xóa phần kiểm tra"
+            aria-label="Xóa bài"
             sx={{
               color: MUTED,
               flexShrink: 0,
+              p: 0.45,
               '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
             }}
           >
@@ -287,66 +339,89 @@ export default function MentorTestSectionCard({
         ) : null}
       </Box>
 
+      {/* ── Body ── */}
       <Collapse in={expanded}>
-        <Box sx={{ p: { xs: 1.15, sm: 1.35 }, bgcolor: `${skillAccent}06` }}>
-          <Box sx={{ mb: 1.25 }}>
-            <ContentFieldLabel sx={fieldLabelSx}>{sectionTitleLabel}</ContentFieldLabel>
-            <InputBase
-              value={section.SectionTitle ?? ''}
-              onChange={(event) => updateSection({ SectionTitle: event.target.value })}
-              disabled={disabled}
-              placeholder={sectionTitlePlaceholder}
-              fullWidth
-              sx={fieldInputSx(false, skillAccent)}
-            />
-          </Box>
-
-          {!lockSkillType ? (
-            <Box sx={{ mb: 1.25 }}>
-              <ContentFieldLabel sx={fieldLabelSx}>Kỹ năng</ContentFieldLabel>
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 0.5,
-                  p: 0.5,
-                  borderRadius: '12px',
-                  bgcolor: '#F8FAFC',
-                  border: `1px solid ${errors.SkillType ? '#DC2626' : 'rgba(15,23,42,0.08)'}`,
-                }}
-              >
-                {SKILL_OPTIONS.map((option) => (
-                  <SkillOptionButton
-                    key={option.value}
-                    option={option}
-                    selected={skillType}
-                    disabled={disabled}
-                    accentColor={TEST_SKILL_CHIP_COLORS[option.value]?.color ?? accentColor}
-                    onSelect={handleSkillChange}
-                  />
-                ))}
-              </Box>
-              {errors.SkillType && (
-                <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>
-                  {errors.SkillType}
-                </Typography>
-              )}
+        <Box sx={{ p: { xs: 1.25, sm: 1.5 }, bgcolor: '#F8FAFC' }}>
+          {/* ── Basic info fields ── */}
+          {isListeningQuestionBank ? (
+            <Box sx={{ mb: 1.5 }}>
+              <ContentFieldLabel sx={fieldLabelSx}>Đề bài</ContentFieldLabel>
+              <InputBase
+                value={listeningPromptValue}
+                onChange={(event) =>
+                  updateSection({ SectionTitle: event.target.value, Description: '' })
+                }
+                disabled={disabled}
+                placeholder="Ví dụ: Nghe hội thoại giới thiệu bản thân tại văn phòng"
+                fullWidth
+                multiline
+                minRows={3}
+                sx={multilineInputSx(false, skillAccent)}
+              />
             </Box>
-          ) : null}
+          ) : (
+            <>
+              <Box sx={{ mb: 1.25 }}>
+                <ContentFieldLabel sx={fieldLabelSx}>{sectionTitleLabel}</ContentFieldLabel>
+                <InputBase
+                  value={section.SectionTitle ?? ''}
+                  onChange={(event) => updateSection({ SectionTitle: event.target.value })}
+                  disabled={disabled}
+                  placeholder={sectionTitlePlaceholder}
+                  fullWidth
+                  sx={fieldInputSx(false, skillAccent)}
+                />
+              </Box>
 
-          <Box sx={{ mb: showListeningSource ? 1.25 : 1.5 }}>
-            <ContentFieldLabel sx={fieldLabelSx}>{sectionDescLabel}</ContentFieldLabel>
-            <InputBase
-              value={section.Description ?? ''}
-              onChange={(event) => updateSection({ Description: event.target.value })}
-              disabled={disabled}
-              placeholder={sectionDescPlaceholder}
-              fullWidth
-              multiline
-              minRows={2}
-              sx={multilineInputSx(false, skillAccent)}
-            />
-          </Box>
+              {!lockSkillType ? (
+                <Box sx={{ mb: 1.25 }}>
+                  <ContentFieldLabel sx={fieldLabelSx}>Kỹ năng</ContentFieldLabel>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      gap: 0.5,
+                      p: 0.5,
+                      borderRadius: '10px',
+                      bgcolor: '#fff',
+                      border: `1px solid ${errors.SkillType ? '#DC2626' : 'rgba(15,23,42,0.08)'}`,
+                    }}
+                  >
+                    {SKILL_OPTIONS.map((option) => (
+                      <SkillOptionButton
+                        key={option.value}
+                        option={option}
+                        selected={skillType}
+                        disabled={disabled}
+                        accentColor={TEST_SKILL_CHIP_COLORS[option.value]?.color ?? accentColor}
+                        onSelect={handleSkillChange}
+                      />
+                    ))}
+                  </Box>
+                  {errors.SkillType && (
+                    <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>
+                      {errors.SkillType}
+                    </Typography>
+                  )}
+                </Box>
+              ) : null}
 
+              <Box sx={{ mb: showListeningSource ? 1.25 : 1.5 }}>
+                <ContentFieldLabel sx={fieldLabelSx}>{sectionDescLabel}</ContentFieldLabel>
+                <InputBase
+                  value={section.Description ?? ''}
+                  onChange={(event) => updateSection({ Description: event.target.value })}
+                  disabled={disabled}
+                  placeholder={sectionDescPlaceholder}
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  sx={multilineInputSx(false, skillAccent)}
+                />
+              </Box>
+            </>
+          )}
+
+          {/* ── Audio source (Listening) ── */}
           {showListeningSource ? (
             <MentorTestListeningSourceEditor
               section={section}
@@ -357,52 +432,47 @@ export default function MentorTestSectionCard({
             />
           ) : null}
 
-          <Box sx={{ mb: 1 }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Câu hỏi</Typography>
+          {/* ── Questions header ── */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Typography
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: MUTED,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                flex: 1,
+              }}
+            >
+              Câu hỏi
+            </Typography>
           </Box>
 
           {errors._questions && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mb: 1 }}>{errors._questions}</Typography>
+            <Typography sx={{ fontSize: 11, color: '#DC2626', mb: 1 }}>
+              {errors._questions}
+            </Typography>
           )}
 
+          {/* ── Questions list / empty state ── */}
           {questions.length === 0 ? (
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: '12px',
-                border: '1px dashed rgba(15,23,42,0.12)',
-                bgcolor: '#F8FAFC',
-                textAlign: 'center',
-              }}
-            >
-              <Typography sx={{ fontSize: 12, color: MUTED, mb: 1 }}>
+            <Box sx={{ py: 3.5, textAlign: 'center' }}>
+              <Typography sx={{ fontSize: 13, color: MUTED, mb: 1.5, lineHeight: 1.6 }}>
                 {emptyQuestionsText}
+                <br />
+                <Typography component="span" sx={{ fontSize: 12, color: MUTED }}>
+                  Thêm câu hỏi đầu tiên để bắt đầu.
+                </Typography>
               </Typography>
-              <Box
-                component="button"
-                type="button"
+              <AddQuestionButton
                 onClick={handleAddQuestion}
                 disabled={disabled}
-                sx={{
-                  ...contentAddButtonSx(TEST_ADD_QUESTION_THEME),
-                  cursor: disabled ? 'default' : 'pointer',
-                  opacity: disabled ? 0.6 : 1,
-                }}
-              >
-                <AddRoundedIcon sx={{ fontSize: 16 }} />
-                Thêm câu hỏi
-              </Box>
+                label="Thêm câu hỏi"
+                variant="block"
+              />
             </Box>
           ) : (
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
-                pl: { xs: 0, sm: 0.75 },
-                borderLeft: { xs: 'none', sm: `2px solid ${skillAccent}33` },
-              }}
-            >
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
               {questions.map((question, questionIndex) => (
                 <MentorTestQuestionCard
                   key={question.tempId}
@@ -416,21 +486,13 @@ export default function MentorTestSectionCard({
                   onDelete={() => handleDeleteQuestion(question.tempId)}
                 />
               ))}
-              <Box
-                component="button"
-                type="button"
+
+              <AddQuestionButton
                 onClick={handleAddQuestion}
                 disabled={disabled}
-                sx={{
-                  ...contentAddButtonSx(TEST_ADD_QUESTION_THEME),
-                  alignSelf: 'flex-start',
-                  cursor: disabled ? 'default' : 'pointer',
-                  opacity: disabled ? 0.6 : 1,
-                }}
-              >
-                <AddRoundedIcon sx={{ fontSize: 16 }} />
-                Thêm câu hỏi
-              </Box>
+                label="Thêm câu hỏi"
+                variant="inline"
+              />
             </Box>
           )}
         </Box>

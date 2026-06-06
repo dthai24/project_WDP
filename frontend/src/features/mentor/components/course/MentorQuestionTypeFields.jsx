@@ -1,75 +1,13 @@
 import { Box, Checkbox, IconButton, InputBase, Radio, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
-import AppButton from '@/shared/ui/AppButton';
-import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { createTestTempId } from '@/features/mentor/utils/mentorTestContentUtils';
-
-const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
-
-function fieldInputSx(hasError, accentColor) {
-  return {
-    fontSize: 13,
-    color: TEXT,
-    px: 1,
-    py: 0.65,
-    borderRadius: '10px',
-    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-    bgcolor: '#fff',
-    width: '100%',
-    '&:focus-within': { borderColor: hasError ? '#DC2626' : accentColor },
-  };
-}
-
-function multilineInputSx(hasError, accentColor) {
-  return {
-    ...fieldInputSx(hasError, accentColor),
-    alignItems: 'flex-start',
-    py: 0.75,
-  };
-}
 
 function normalizeSingleCorrectOption(options) {
   const firstCorrectIndex = options.findIndex((option) => option.IsCorrect);
   const keepIndex = firstCorrectIndex >= 0 ? firstCorrectIndex : 0;
-  return options.map((option, index) => ({
-    ...option,
-    IsCorrect: index === keepIndex,
-  }));
-}
-
-function AnswerModeButton({ label, selected, disabled, accentColor, onSelect }) {
-  return (
-    <Box
-      component="button"
-      type="button"
-      disabled={disabled}
-      onClick={onSelect}
-      sx={{
-        flex: 1,
-        minHeight: 36,
-        border: 'none',
-        borderRadius: '10px',
-        cursor: disabled ? 'default' : 'pointer',
-        fontSize: 12,
-        fontWeight: selected ? 700 : 600,
-        fontFamily: 'inherit',
-        color: selected ? accentColor : MUTED,
-        bgcolor: selected ? `${accentColor}18` : 'transparent',
-        transition: 'background-color 0.15s, color 0.15s',
-        opacity: disabled ? 0.6 : 1,
-        '&:hover': disabled
-          ? {}
-          : {
-              bgcolor: selected ? `${accentColor}22` : 'rgba(15,23,42,0.04)',
-              color: selected ? accentColor : TEXT,
-            },
-      }}
-    >
-      {label}
-    </Box>
-  );
+  return options.map((option, index) => ({ ...option, IsCorrect: index === keepIndex }));
 }
 
 export default function MentorQuestionTypeFields({
@@ -95,36 +33,15 @@ export default function MentorQuestionTypeFields({
   };
 
   const handleSingleCorrectChange = (optionTempId) => {
-    updateOptions(
-      options.map((option) => ({
-        ...option,
-        IsCorrect: option.tempId === optionTempId,
-      })),
-    );
+    updateOptions(options.map((option) => ({ ...option, IsCorrect: option.tempId === optionTempId })));
   };
 
   const handleMultipleCorrectToggle = (optionTempId) => {
     updateOptions(
       options.map((option) =>
-        option.tempId === optionTempId
-          ? { ...option, IsCorrect: !option.IsCorrect }
-          : option,
+        option.tempId === optionTempId ? { ...option, IsCorrect: !option.IsCorrect } : option,
       ),
     );
-  };
-
-  const handleAnswerModeChange = (nextAllowMultiple) => {
-    if (nextAllowMultiple === allowMultiple) return;
-
-    if (nextAllowMultiple) {
-      handleFieldChange({ AllowMultipleAnswers: true });
-      return;
-    }
-
-    handleFieldChange({
-      AllowMultipleAnswers: false,
-      Options: normalizeSingleCorrectOption(options),
-    });
   };
 
   const handleAddOption = () => {
@@ -141,58 +58,60 @@ export default function MentorQuestionTypeFields({
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.35 }}>
+      {/* Question text */}
       <Box>
-        <ContentFieldLabel sx={fieldLabelSx}>Câu hỏi</ContentFieldLabel>
         <InputBase
           value={question.QuestionText ?? ''}
           onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
           disabled={disabled}
-          placeholder="Nhập nội dung câu hỏi trắc nghiệm"
+          placeholder="Nhập nội dung câu hỏi..."
           fullWidth
           multiline
           minRows={2}
-          sx={multilineInputSx(Boolean(errors.QuestionText), accentColor)}
+          sx={{
+            fontSize: 13.5,
+            color: TEXT,
+            lineHeight: 1.6,
+            alignItems: 'flex-start',
+            px: 0.25,
+            py: 0.25,
+            width: '100%',
+            borderBottom: `1.5px solid ${errors.QuestionText ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
+            borderRadius: 0,
+            '&:focus-within': {
+              borderBottomColor: errors.QuestionText ? '#DC2626' : accentColor,
+            },
+          }}
         />
-        {errors.QuestionText && (
-          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.QuestionText}</Typography>
-        )}
+        {errors.QuestionText ? (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.3 }}>
+            {errors.QuestionText}
+          </Typography>
+        ) : null}
       </Box>
 
+      {/* Answer options */}
       <Box>
-        <ContentFieldLabel sx={fieldLabelSx}>Kiểu chọn đáp án</ContentFieldLabel>
-        <Box
+        <Typography
           sx={{
-            display: 'flex',
-            gap: 0.5,
-            p: 0.5,
-            mb: 1,
-            borderRadius: '12px',
-            bgcolor: '#F8FAFC',
-            border: '1px solid rgba(15,23,42,0.08)',
+            fontSize: 10.5,
+            fontWeight: 700,
+            color: MUTED,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            mb: 0.65,
           }}
         >
-          <AnswerModeButton
-            label="Một đáp án"
-            selected={!allowMultiple}
-            disabled={disabled}
-            accentColor={accentColor}
-            onSelect={() => handleAnswerModeChange(false)}
-          />
-          <AnswerModeButton
-            label="Nhiều đáp án"
-            selected={allowMultiple}
-            disabled={disabled}
-            accentColor={accentColor}
-            onSelect={() => handleAnswerModeChange(true)}
-          />
-        </Box>
+          Đáp án
+        </Typography>
 
-        <ContentFieldLabel sx={fieldLabelSx}>Đáp án</ContentFieldLabel>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.15 }}>
           {options.map((option, index) => {
             const optionErrors = errors.Options?.[option.tempId] ?? {};
+            const isCorrect = Boolean(option.IsCorrect);
             const CorrectControl = allowMultiple ? Checkbox : Radio;
+            const letter = String.fromCharCode(65 + index);
 
             return (
               <Box
@@ -200,14 +119,16 @@ export default function MentorQuestionTypeFields({
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 0.75,
+                  gap: 0.4,
+                  px: 0.35,
+                  py: 0.15,
+                  borderRadius: '8px',
+                  bgcolor: isCorrect ? 'rgba(22,163,74,0.05)' : 'transparent',
+                  transition: 'background-color 0.12s',
                 }}
               >
-                <Typography sx={{ fontSize: 12, fontWeight: 700, color: MUTED, minWidth: 18 }}>
-                  {String.fromCharCode(65 + index)}
-                </Typography>
                 <CorrectControl
-                  checked={Boolean(option.IsCorrect)}
+                  checked={isCorrect}
                   onChange={() =>
                     allowMultiple
                       ? handleMultipleCorrectToggle(option.tempId)
@@ -216,23 +137,37 @@ export default function MentorQuestionTypeFields({
                   disabled={disabled}
                   size="small"
                   sx={{
-                    p: 0.25,
-                    color: 'rgba(15,23,42,0.25)',
+                    p: 0.35,
+                    flexShrink: 0,
+                    color: 'rgba(15,23,42,0.2)',
                     '&.Mui-checked': { color: accentColor },
                   }}
-                  inputProps={{
-                    'aria-label': allowMultiple
-                      ? `Đáp án đúng ${String.fromCharCode(65 + index)}`
-                      : `Chọn đáp án ${String.fromCharCode(65 + index)}`,
-                  }}
+                  inputProps={{ 'aria-label': `Đáp án ${letter}` }}
                 />
                 <InputBase
                   value={option.OptionText ?? ''}
                   onChange={(event) => handleOptionTextChange(option.tempId, event.target.value)}
                   disabled={disabled}
-                  placeholder={`Đáp án ${String.fromCharCode(65 + index)}`}
+                  placeholder={`Đáp án ${letter}`}
                   fullWidth
-                  sx={fieldInputSx(Boolean(optionErrors.OptionText), accentColor)}
+                  sx={{
+                    fontSize: 13,
+                    color: TEXT,
+                    flex: 1,
+                    px: 0.25,
+                    py: 0.3,
+                    borderBottom: `1px solid ${
+                      optionErrors.OptionText
+                        ? '#DC2626'
+                        : isCorrect
+                          ? 'rgba(22,163,74,0.35)'
+                          : 'rgba(15,23,42,0.08)'
+                    }`,
+                    borderRadius: 0,
+                    '&:focus-within': {
+                      borderBottomColor: optionErrors.OptionText ? '#DC2626' : accentColor,
+                    },
+                  }}
                 />
                 {options.length > 2 ? (
                   <IconButton
@@ -241,44 +176,58 @@ export default function MentorQuestionTypeFields({
                     disabled={disabled}
                     aria-label="Xóa đáp án"
                     sx={{
-                      color: MUTED,
+                      p: 0.3,
                       flexShrink: 0,
+                      color: 'rgba(15,23,42,0.2)',
                       '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
                     }}
                   >
-                    <DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />
+                    <DeleteOutlineRoundedIcon sx={{ fontSize: 14 }} />
                   </IconButton>
                 ) : (
-                  <Box sx={{ width: 28, flexShrink: 0 }} />
+                  <Box sx={{ width: 24, flexShrink: 0 }} />
                 )}
               </Box>
             );
           })}
         </Box>
-        {errors._options && (
-          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors._options}</Typography>
-        )}
-        {errors._correctOption && (
-          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors._correctOption}</Typography>
-        )}
-        <AppButton
-          variant="text"
-          size="small"
-          startIcon={<AddRoundedIcon sx={{ fontSize: 16 }} />}
+
+        {errors._options ? (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.4 }}>{errors._options}</Typography>
+        ) : null}
+        {errors._correctOption ? (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.4 }}>
+            {errors._correctOption}
+          </Typography>
+        ) : null}
+
+        <Box
+          component="button"
+          type="button"
           onClick={handleAddOption}
           disabled={disabled}
           sx={{
-            mt: 0.75,
-            px: 0.75,
-            minHeight: 32,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.35,
+            mt: 0.85,
+            px: 0.65,
+            py: 0.4,
+            border: 'none',
+            background: 'none',
+            borderRadius: '8px',
+            cursor: disabled ? 'default' : 'pointer',
             fontSize: 12,
             fontWeight: 600,
-            color: accentColor,
-            '&:hover': { bgcolor: `${accentColor}14` },
+            fontFamily: 'inherit',
+            color: '#64748B',
+            opacity: disabled ? 0.5 : 1,
+            '&:hover': disabled ? undefined : { bgcolor: 'rgba(15,23,42,0.06)' },
           }}
         >
+          <AddRoundedIcon sx={{ fontSize: 14 }} />
           Thêm đáp án
-        </AppButton>
+        </Box>
       </Box>
     </Box>
   );
