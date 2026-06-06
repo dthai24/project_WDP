@@ -17,30 +17,6 @@ import {
   LESSON_THEME,
 } from '@/features/mentor/components/course/mentorCourseContentStyles';
 
-function StatPill({ label, value, color }) {
-  return (
-    <Box
-      sx={{
-        flex: 1,
-        minWidth: 0,
-        px: 1.25,
-        py: 1,
-        borderRadius: '12px',
-        bgcolor: 'rgba(15,23,42,0.03)',
-        border: '1px solid rgba(15,23,42,0.06)',
-        textAlign: 'center',
-      }}
-    >
-      <Typography sx={{ fontSize: 18, fontWeight: 800, color: TEXT, lineHeight: 1.2 }}>
-        {value}
-      </Typography>
-      <Typography sx={{ fontSize: 11, fontWeight: 600, color, mt: 0.25, lineHeight: 1.3 }}>
-        {label}
-      </Typography>
-    </Box>
-  );
-}
-
 function OutlineNavItem({
   label,
   meta,
@@ -133,8 +109,6 @@ function CourseOutlineSection({
   courseId = '',
   onChapterSelect,
 }) {
-  const lessonCount = courseChapters.reduce((sum, ch) => sum + (ch.lessons?.length ?? 0), 0);
-
   if (chaptersLoading) {
     return (
       <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
@@ -174,11 +148,6 @@ function CourseOutlineSection({
 
   return (
     <>
-      <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
-        <StatPill label="Chương" value={courseChapters.length} color={CHAPTER_THEME.color} />
-        <StatPill label="Bài học" value={lessonCount} color={LESSON_THEME.color} />
-      </Box>
-
       <Typography sx={{ fontSize: 12, color: MUTED, mb: 1, lineHeight: 1.45 }}>
         Chọn chương để tạo bộ câu hỏi. Danh sách bài học chỉ để tham khảo nội dung.
       </Typography>

@@ -25,7 +25,7 @@ import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBan
 import {
   SCORING_MODE_AUTO,
   TEST_SKILL_CHIP_COLORS,
-  TEST_SKILL_READING,
+  TEST_SKILL_LISTENING,
   createQuestionBankSection,
   createQuestionBankSkillSections,
   ensureQuestionBankSkillSections,
@@ -85,7 +85,7 @@ function resolveChapterEditorState(chapter, bankRes) {
       bank.sections?.length > 0 ? bank.sections : [],
     );
     const firstReading =
-      getSectionsBySkill(loadedSections, TEST_SKILL_READING)[0]?.tempId ??
+      getSectionsBySkill(loadedSections, TEST_SKILL_LISTENING)[0]?.tempId ??
       loadedSections[0]?.tempId ??
       '';
 
@@ -103,7 +103,7 @@ function resolveChapterEditorState(chapter, bankRes) {
     title: `Bộ câu hỏi – ${chapter.chapterTitle}`,
     sections: initialSections,
     activeSectionId:
-      initialSections.find((s) => s.SkillType === TEST_SKILL_READING)?.tempId ?? '',
+      initialSections.find((s) => s.SkillType === TEST_SKILL_LISTENING)?.tempId ?? '',
   };
 }
 
@@ -129,7 +129,7 @@ export default function MentorQuestionBankCreatePage() {
   const [chaptersLoading, setChaptersLoading] = useState(false);
   const [sections, setSections] = useState(() => createQuestionBankSkillSections());
   const [sectionErrors, setSectionErrors] = useState({});
-  const [activeSkill, setActiveSkill] = useState(TEST_SKILL_READING);
+  const [activeSkill, setActiveSkill] = useState(TEST_SKILL_LISTENING);
   const [activeSectionId, setActiveSectionId] = useState('');
   const [editingBankId, setEditingBankId] = useState(null);
 
@@ -191,7 +191,7 @@ export default function MentorQuestionBankCreatePage() {
     }));
     setSections(nextState.sections);
     setSectionErrors({});
-    setActiveSkill(TEST_SKILL_READING);
+    setActiveSkill(TEST_SKILL_LISTENING);
     setActiveSectionId(nextState.activeSectionId);
   }, []);
 
