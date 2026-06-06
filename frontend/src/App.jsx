@@ -24,6 +24,9 @@ import MentorEditCoursePage from '@/features/mentor/pages/MentorEditCoursePage';
 import MentorEditCourseContentPage from '@/features/mentor/pages/MentorEditCourseContentPage';
 import MentorEditCourseReviewPage from '@/features/mentor/pages/MentorEditCourseReviewPage';
 import MentorCourseDetailPage from '@/features/mentor/pages/MentorCourseDetailPage';
+import MentorQuestionBankListPage from '@/features/mentor/pages/MentorQuestionBankListPage';
+import MentorQuestionBankCreatePage from '@/features/mentor/pages/MentorQuestionBankCreatePage';
+import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuestionsPage';
 import MentorCoursePlaceholder from '@/features/mentor/components/MentorCoursePlaceholder';
 
 import MainLayout from '@/shared/layout/MainLayout';
@@ -148,8 +151,11 @@ export default function App() {
           <Route path="courses/:courseId/review" element={<MentorEditCourseReviewPage />} />
           <Route path="courses/:courseId/content/edit" element={<MentorEditCourseContentPage />} />
           <Route path="courses/:courseId/edit" element={<MentorEditCoursePage />} />
+          <Route path="courses/:courseId/questions" element={<MentorCourseQuestionsPage />} />
           <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
           <Route path="courses" element={<MentorCoursesPage />} />
+          <Route path="question-banks/create" element={<MentorQuestionBankCreatePage />} />
+          <Route path="question-banks" element={<MentorQuestionBankListPage />} />
           <Route path="news" element={<MentorNewsPage />} />
           <Route path="student-progress" element={<MentorStudentProgressPage />} />
           <Route path="paths" element={<Navigate to="/mentor/courses" replace />} />

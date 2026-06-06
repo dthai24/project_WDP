@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, IconButton, InputBase, Typography } from '@mui/material';
+import { Box, Divider, IconButton, InputBase, Typography } from '@mui/material';
 import AudiotrackRoundedIcon from '@mui/icons-material/AudiotrackRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
 import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
-import AppButton from '@/shared/ui/AppButton';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { formatFileSize } from '@/features/mentor/utils/mentorCourseContentUtils';
@@ -15,56 +14,8 @@ import {
   isAllowedAudioFile,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
-// TODO: backend should support listening section audio upload and AudioSourceType
-
 const INVALID_FILE_MESSAGE = 'Chỉ hỗ trợ file audio: MP3, WAV, M4A, AAC, OGG';
-
-const SOURCE_OPTIONS = [
-  { value: LISTENING_SOURCE_UPLOAD, label: 'Tải file lên', icon: CloudUploadRoundedIcon },
-  { value: LISTENING_SOURCE_LINK, label: 'Gắn link', icon: LinkRoundedIcon },
-];
-
-function SourceOptionButton({ option, selected, disabled, accentColor, onSelect }) {
-  const Icon = option.icon;
-  const isSelected = selected === option.value;
-
-  return (
-    <Box
-      component="button"
-      type="button"
-      disabled={disabled}
-      onClick={() => onSelect(option.value)}
-      sx={{
-        flex: 1,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 0.75,
-        minHeight: 40,
-        px: 1.25,
-        border: 'none',
-        borderRadius: '10px',
-        cursor: disabled ? 'default' : 'pointer',
-        fontSize: 13,
-        fontWeight: isSelected ? 700 : 600,
-        fontFamily: 'inherit',
-        color: isSelected ? accentColor : MUTED,
-        bgcolor: isSelected ? `${accentColor}18` : 'transparent',
-        transition: 'background-color 0.15s, color 0.15s',
-        opacity: disabled ? 0.6 : 1,
-        '&:hover': disabled
-          ? {}
-          : {
-              bgcolor: isSelected ? `${accentColor}22` : 'rgba(15,23,42,0.04)',
-              color: isSelected ? accentColor : TEXT,
-            },
-      }}
-    >
-      <Icon sx={{ fontSize: 18 }} />
-      {option.label}
-    </Box>
-  );
-}
+const FORMAT_HINT = AUDIO_ALLOWED_EXTENSIONS.join(', ').replace(/\./g, '').toUpperCase();
 
 function fieldInputSx(hasError, accentColor) {
   return {
@@ -72,8 +23,8 @@ function fieldInputSx(hasError, accentColor) {
     color: TEXT,
     px: 1,
     py: 0.65,
-    borderRadius: '10px',
-    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
+    borderRadius: '8px',
+    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
     bgcolor: '#fff',
     width: '100%',
     '&:focus-within': { borderColor: hasError ? '#DC2626' : accentColor },
@@ -91,11 +42,9 @@ export default function MentorTestListeningSourceEditor({
   const [dragOver, setDragOver] = useState(false);
   const [fileTypeError, setFileTypeError] = useState('');
 
-  const sourceType =
-    section.AudioSourceType === LISTENING_SOURCE_LINK
-      ? LISTENING_SOURCE_LINK
-      : LISTENING_SOURCE_UPLOAD;
-  const hasFile = Boolean(section.File);
+  const hasFile = Boolean(section.File || section.FileName);
+  const audioUrl = String(section.AudioUrl ?? '');
+  const hasLink = Boolean(audioUrl.trim());
 
   const previewUrl = useMemo(() => {
     if (!section.File) return null;
@@ -117,31 +66,15 @@ export default function MentorTestListeningSourceEditor({
       }
       setFileTypeError('');
       onChange({
+        AudioSourceType: LISTENING_SOURCE_UPLOAD,
         File: file,
         FileName: file.name,
         FileSize: file.size,
+        AudioUrl: '',
       });
     },
     [onChange],
   );
-
-  const handleSourceChange = (nextSource) => {
-    if (nextSource === sourceType) return;
-    setFileTypeError('');
-    if (nextSource === LISTENING_SOURCE_LINK) {
-      onChange({
-        AudioSourceType: LISTENING_SOURCE_LINK,
-        File: null,
-        FileName: null,
-        FileSize: null,
-      });
-      return;
-    }
-    onChange({
-      AudioSourceType: LISTENING_SOURCE_UPLOAD,
-      AudioUrl: '',
-    });
-  };
 
   const handleFileInputChange = (event) => {
     const file = event.target.files?.[0];
@@ -163,146 +96,81 @@ export default function MentorTestListeningSourceEditor({
       File: null,
       FileName: null,
       FileSize: null,
+      AudioSourceType: audioUrl.trim() ? LISTENING_SOURCE_LINK : LISTENING_SOURCE_UPLOAD,
+    });
+  };
+
+  const handleLinkChange = (event) => {
+    const nextUrl = event.target.value;
+    if (nextUrl.trim()) {
+      onChange({
+        AudioUrl: nextUrl,
+        AudioSourceType: LISTENING_SOURCE_LINK,
+        File: null,
+        FileName: null,
+        FileSize: null,
+      });
+      setFileTypeError('');
+      return;
+    }
+    onChange({
+      AudioUrl: '',
+      AudioSourceType: LISTENING_SOURCE_UPLOAD,
     });
   };
 
   const fileError = fileTypeError || errors.File;
+  const linkError = errors.AudioUrl;
+  const contextError = errors._audio;
+  const hasError = Boolean(fileError || linkError || contextError);
   const displayFileName = section.File?.name ?? section.FileName ?? '';
   const displayFileSize = section.File?.size ?? section.FileSize;
 
   return (
     <Box sx={{ mb: 1.5 }}>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 0.75 }}>
-        Nguồn audio
-      </Typography>
-
-      <ContentFieldLabel sx={{ mb: 0.75, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
-        Nguồn nghe
+      <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
+        File Audio
       </ContentFieldLabel>
+
       <Box
+        onDragEnter={(event) => {
+          event.preventDefault();
+          if (!disabled && !hasFile) setDragOver(true);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          if (!disabled && !hasFile) setDragOver(true);
+        }}
+        onDragLeave={(event) => {
+          event.preventDefault();
+          setDragOver(false);
+        }}
+        onDrop={handleDrop}
         sx={{
-          display: 'flex',
-          gap: 0.5,
-          p: 0.5,
-          mb: 1.25,
-          borderRadius: '12px',
-          bgcolor: '#F8FAFC',
-          border: '1px solid rgba(15,23,42,0.08)',
+          borderRadius: '10px',
+          border: `1.5px dashed ${
+            hasError ? '#DC2626' : dragOver ? accentColor : 'rgba(15,23,42,0.12)'
+          }`,
+          bgcolor: dragOver ? 'rgba(15,23,42,0.02)' : '#fff',
+          p: 1.15,
+          transition: 'border-color 0.15s, background-color 0.15s',
         }}
       >
-        {SOURCE_OPTIONS.map((option) => (
-          <SourceOptionButton
-            key={option.value}
-            option={option}
-            selected={sourceType}
-            disabled={disabled}
-            accentColor={accentColor}
-            onSelect={handleSourceChange}
-          />
-        ))}
-      </Box>
-
-      {sourceType === LISTENING_SOURCE_UPLOAD ? (
-        <>
-          {!hasFile && !displayFileName ? (
-            <Box
-              onDragEnter={(event) => {
-                event.preventDefault();
-                if (!disabled) setDragOver(true);
-              }}
-              onDragOver={(event) => {
-                event.preventDefault();
-                if (!disabled) setDragOver(true);
-              }}
-              onDragLeave={(event) => {
-                event.preventDefault();
-                setDragOver(false);
-              }}
-              onDrop={handleDrop}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 0.75,
-                py: 2,
-                px: 2,
-                borderRadius: '12px',
-                border: `1.5px dashed ${
-                  fileError ? '#DC2626' : dragOver ? accentColor : 'rgba(15,23,42,0.14)'
-                }`,
-                bgcolor: dragOver ? `${accentColor}08` : '#fff',
-                transition: 'border-color 0.15s, background-color 0.15s',
-              }}
-            >
+        {hasFile ? (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box
                 sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '10px',
-                  bgcolor: `${accentColor}14`,
-                  display: 'grid',
-                  placeItems: 'center',
-                }}
-              >
-                <AudiotrackRoundedIcon sx={{ fontSize: 22, color: accentColor }} />
-              </Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, textAlign: 'center' }}>
-                Kéo thả file audio vào đây hoặc chọn file
-              </Typography>
-              <Typography sx={{ fontSize: 12, color: MUTED, textAlign: 'center' }}>
-                Hỗ trợ {AUDIO_ALLOWED_EXTENSIONS.join(', ').replace(/\./g, '').toUpperCase()}
-              </Typography>
-              <AppButton
-                variant="outlined"
-                size="small"
-                startIcon={<CloudUploadRoundedIcon sx={{ fontSize: 16 }} />}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={disabled}
-                sx={{
-                  mt: 0.25,
-                  minHeight: 34,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  borderColor: `${accentColor}55`,
-                  color: accentColor,
-                  '&:hover': { borderColor: accentColor, bgcolor: `${accentColor}10` },
-                }}
-              >
-                Chọn file audio
-              </AppButton>
-              <input
-                ref={fileInputRef}
-                type="file"
-                hidden
-                accept={AUDIO_ALLOWED_EXTENSIONS.join(',')}
-                onChange={handleFileInputChange}
-              />
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                p: 1,
-                borderRadius: '12px',
-                border: '1px solid rgba(15,23,42,0.08)',
-                bgcolor: '#fff',
-              }}
-            >
-              <Box
-                sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '10px',
-                  bgcolor: `${accentColor}14`,
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  bgcolor: 'rgba(15,23,42,0.06)',
                   display: 'grid',
                   placeItems: 'center',
                   flexShrink: 0,
                 }}
               >
-                <AudiotrackRoundedIcon sx={{ fontSize: 20, color: accentColor }} />
+                <AudiotrackRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
@@ -318,7 +186,7 @@ export default function MentorTestListeningSourceEditor({
                   {displayFileName}
                 </Typography>
                 {displayFileSize != null ? (
-                  <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.25 }}>
+                  <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.1 }}>
                     {formatFileSize(displayFileSize)}
                   </Typography>
                 ) : null}
@@ -330,44 +198,119 @@ export default function MentorTestListeningSourceEditor({
                 aria-label="Xóa file audio"
                 sx={{ color: MUTED, '&:hover': { color: '#DC2626' } }}
               >
-                <CloseRoundedIcon sx={{ fontSize: 18 }} />
+                <CloseRoundedIcon sx={{ fontSize: 17 }} />
               </IconButton>
             </Box>
-          )}
-
-          {previewUrl ? (
+            {previewUrl ? (
+              <Box
+                component="audio"
+                controls
+                src={previewUrl}
+                sx={{ display: 'block', width: '100%', mt: 0.85 }}
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
+            {/* Upload row */}
             <Box
-              component="audio"
-              controls
-              src={previewUrl}
-              sx={{ display: 'block', width: '100%', mt: 1 }}
-            />
-          ) : null}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  bgcolor: 'rgba(15,23,42,0.05)',
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <CloudUploadRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 120 }}>
+                <Typography sx={{ fontSize: 12, fontWeight: 600, color: TEXT, lineHeight: 1.35 }}>
+                  Kéo thả hoặc chọn file audio
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.1 }}>{FORMAT_HINT}</Typography>
+              </Box>
+              <Box
+                component="button"
+                type="button"
+                disabled={disabled}
+                onClick={() => fileInputRef.current?.click()}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.4,
+                  px: 1.1,
+                  py: 0.55,
+                  borderRadius: '8px',
+                  border: '1px solid rgba(15,23,42,0.14)',
+                  bgcolor: '#fff',
+                  color: TEXT,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  cursor: disabled ? 'default' : 'pointer',
+                  opacity: disabled ? 0.6 : 1,
+                  flexShrink: 0,
+                  '&:hover': disabled ? undefined : { bgcolor: 'rgba(15,23,42,0.04)' },
+                }}
+              >
+                Chọn file
+              </Box>
+              <input
+                ref={fileInputRef}
+                type="file"
+                hidden
+                accept={AUDIO_ALLOWED_EXTENSIONS.join(',')}
+                onChange={handleFileInputChange}
+              />
+            </Box>
 
-          {fileError ? (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.5 }}>{fileError}</Typography>
-          ) : null}
-        </>
-      ) : (
-        <>
-          <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
-            Link audio hoặc video nghe
-          </ContentFieldLabel>
-          <InputBase
-            value={section.AudioUrl ?? ''}
-            onChange={(event) => onChange({ AudioUrl: event.target.value })}
-            disabled={disabled}
-            placeholder="https://youtube.com/... hoặc link audio"
-            fullWidth
-            sx={fieldInputSx(Boolean(errors.AudioUrl), accentColor)}
-          />
-          {errors.AudioUrl ? (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>
-              {errors.AudioUrl}
-            </Typography>
-          ) : null}
-        </>
-      )}
+            {/* Divider */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 0.85 }}>
+              <Divider sx={{ flex: 1, borderColor: 'rgba(15,23,42,0.08)' }} />
+              <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, flexShrink: 0 }}>
+                hoặc
+              </Typography>
+              <Divider sx={{ flex: 1, borderColor: 'rgba(15,23,42,0.08)' }} />
+            </Box>
+
+            {/* Link input row */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <LinkRoundedIcon
+                sx={{ fontSize: 16, color: hasLink ? accentColor : MUTED, flexShrink: 0 }}
+              />
+              <InputBase
+                value={audioUrl}
+                onChange={handleLinkChange}
+                disabled={disabled}
+                placeholder="Dán link audio / video nghe"
+                fullWidth
+                sx={fieldInputSx(Boolean(linkError), accentColor)}
+              />
+            </Box>
+          </>
+        )}
+
+        {fileError ? (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.65 }}>{fileError}</Typography>
+        ) : null}
+        {linkError ? (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.65 }}>{linkError}</Typography>
+        ) : null}
+        {contextError ? (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.65 }}>{contextError}</Typography>
+        ) : null}
+      </Box>
     </Box>
   );
 }
