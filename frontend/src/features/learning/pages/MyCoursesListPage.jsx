@@ -1,62 +1,18 @@
-/**
- * MyCoursesListPage  ─  Trang "Khóa học của tôi" (student)
- *
- * Props: không có (page component, route: /my-courses)
- *
- * URL params (useSearchParams):
- *   tab    : "learning" | "saved"
- *   q      : string  — tìm theo tên
- *   sort   : string  — "recent" | "progress" | "name"
- *   page   : number
- *
- * ── Hooks ────────────────────────────────────────────────────────────────
- *   useSavedCourses()  →  { savedIds: Set<number>, isSaved(id), toggleSave(id) }
- *   LocalStorage key: 'star_saved_courses'
- *
- * ── Data source (hiện đang dùng mock) ───────────────────────────────────
- *   getMyCoursesMock({ savedIds, isSaved }) từ myCoursesMock.js
- *
- *   TODO: khi BE sẵn sàng → thay bằng:
- *   GET /api/courses/my?userId=<id>
- *
- *   Response JSON mong đợi từ BE:
- *   {
- *     success: true,
- *     courses: [
- *       {
- *         courseId:           number,
- *         title:              string,
- *         thumbnail:          string,
- *         category:           string,
- *         level:              string,
- *         instructor:         string,
- *         progressPercentage: number,    // 0–100
- *         enrollmentStatus:   string,    // "in_progress" | "completed"
- *         enrolledAt:         string,
- *         lastActivity:       string,
- *         currentStage:       string,
- *         currentLesson:      string,
- *         lessonCount:        number,
- *         completedLessons:   number
- *       }
- *     ]
- *   }
- */
 import { useEffect, useMemo, useState } from "react";
 import { Box, Breadcrumbs, Link as MuiLink, Stack, Typography, alpha, useTheme } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import MyCourseRow from "@/features/courses/components/MyCourseRow";
-import MyCoursesToolbar from "@/features/courses/components/MyCoursesToolbar";
-import MyCourseContinueSection from "@/features/courses/components/MyCourseContinueSection";
+import MyCourseRow from "../components/course/MyCourseRow";
+import MyCoursesToolbar from "../components/course/MyCoursesToolbar";
+import MyCourseContinueSection from "../components/course/MyCourseContinueSection";
 import CourseListPagination, {
   COURSE_LIST_PAGE_SIZE,
-} from "@/features/courses/components/CourseListPagination";
-import EmptyState from "@/shared/ui/EmptyState";
-import useSavedCourses from "@/features/courses/hooks/useSavedCourses";
-import { buildActiveFilterChips, buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
-import { getMyCoursesMock } from '@/features/learning/data/myCoursesMock';
+} from "../components/course/CourseListPagination";
+import EmptyState from "../components/common/EmptyState";
+import useSavedCourses from "../hooks/useSavedCourses";
+import { buildActiveFilterChips, buildCourseDetailPath } from "../utils/courseListParams";
+import { getMyCoursesApi } from '../services/authService';
 
 const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 
@@ -136,11 +92,77 @@ export default function MyCoursesListPage() {
   const { savedIds, isSaved, unsave } = useSavedCourses();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const keyword = (searchParams.get("keyword") ?? "").trim();
+  const [allCourses, setAllCourses] = useState([]);
 
-  const allCourses = useMemo(
-    () => getMyCoursesMock({ savedIds, isSaved }),
-    [savedIds, isSaved],
-  );
+  //________________FETCH DATA______________________
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const rawUser = sessionStorage.getItem("user");
+
+        console.log("RAW USER:", rawUser);
+
+        if (!rawUser) {
+          console.error("Chưa có user trong sessionStorage");
+          return;
+        }
+
+        const user = JSON.parse(rawUser);
+
+        console.log("PARSED USER:", user);
+
+        const userId = user.userId || user.UserId || user.id || user.Id;
+
+        const roleName = Array.isArray(user.roles)
+          ? (
+            typeof user.roles[0] === "string"
+              ? user.roles[0]
+              : user.roles[0]?.roleName || user.roles[0]?.RoleName
+          )
+          : user.roles || user.roleName || user.RoleName || user.role;
+
+        console.log("SEND TO BACKEND:", {
+          userId,
+          roleName,
+        });
+
+        if (!userId || !roleName) {
+          console.error("Thiếu userId hoặc roleName sau khi đọc sessionStorage", {
+            userId,
+            roleName,
+            user,
+          });
+          return;
+        }
+
+        const res = await fetch("http://localhost:5000/api/courses/my-courses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: Number(userId),
+            roleName: String(roleName).toLowerCase(),
+          }),
+        });
+
+        const result = await res.json();
+
+        console.log("MY COURSES RESPONSE:", result);
+
+        if (!res.ok || !result.success) {
+          console.error(result.message || "Không thể lấy danh sách Courses");
+          return;
+        }
+
+        setAllCourses(result.data || []);
+      } catch (error) {
+        console.log("Fetch courses error:", error);
+      }
+    };
+
+    getData();
+  }, []);
 
   const showReset = hasActiveFilters(filters, keyword);
   const activeFilterChips = useMemo(

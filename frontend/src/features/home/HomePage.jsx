@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -30,10 +30,10 @@ import { getTopCoursesApi } from '@/features/auth/services/authService';
 
 /* ─── constants ─────────────────────────────────────────── */
 
-const PRIMARY   = "#0891B2";
-const TEXT      = "#0F172A";
-const MUTED     = "#64748B";
-const BORDER    = "rgba(8,145,178,0.08)";
+const PRIMARY = "#0891B2";
+const TEXT = "#0F172A";
+const MUTED = "#64748B";
+const BORDER = "rgba(8,145,178,0.08)";
 
 function getUser() {
   try { return JSON.parse(sessionStorage.getItem("user")) || {}; }
@@ -270,11 +270,11 @@ function SectionHeader({ label, title, action, onAction }) {
 
 function CategoryChip({ category }) {
   const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)",  color: "#2563EB" },
-    "IELTS":     { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    "TOEIC":     { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
-    "Ngữ pháp":  { bgcolor: "rgba(15,23,42,0.08)",   color: "#334155" },
-    "Phát âm":   { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
+    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
+    "IELTS": { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
+    "TOEIC": { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
+    "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
+    "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
     "Mẹo học tập": { bgcolor: "rgba(245,158,11,0.10)", color: "#D97706" },
     "Kỹ năng nghe": { bgcolor: "rgba(8,145,178,0.10)", color: PRIMARY },
   };
@@ -448,7 +448,7 @@ function HeroSection({ onExplore }) {
           </AppButton>
         </Box>
 
-       
+
 
         {/* Stats — no wrapper container, items laid out flat */}
         <Box
@@ -798,7 +798,7 @@ function PathsSection() {
 
 /* ─── Section 4: Suggested courses ──────────────────────── */
 
-function CoursesSection({ courses = MOCK_COURSES,onExplore, onNavigateCourse }) {
+function CoursesSection({ courses = MOCK_COURSES, onExplore, onNavigateCourse }) {
   const theme = useTheme();
 
   return (
@@ -831,9 +831,9 @@ function CoursesSection({ courses = MOCK_COURSES,onExplore, onNavigateCourse }) 
 function CourseHomeCard({ course, onClick }) {
   const theme = useTheme();
   const levelColors = {
-    "Cơ bản":   { bg: "rgba(56,189,248,0.10)", text: "#0284C7" },
+    "Cơ bản": { bg: "rgba(56,189,248,0.10)", text: "#0284C7" },
     "Trung cấp": { bg: "rgba(245,158,11,0.10)", text: "#D97706" },
-    "Nâng cao":  { bg: "rgba(234,88,12,0.10)", text: "#EA580C" },
+    "Nâng cao": { bg: "rgba(234,88,12,0.10)", text: "#EA580C" },
   };
   const lvl = levelColors[course.level] ?? { bg: "#F1F5F9", text: MUTED };
 
@@ -1190,30 +1190,46 @@ export default function HomePage() {
   const continueCourse = MOCK_CONTINUE_COURSE;
   const [topCourses, setTopCourses] = useState(MOCK_COURSES);
 
-useEffect(() => {
-  getTopCoursesApi(4).then(({ ok, data }) => {
-    if (ok && data.success && data.courses.length > 0) {
-      setTopCourses(
-        data.courses.map((c) => ({
-          courseId:     c.CourseId,
-          courseName:   c.CourseName,
-          category:     c.Category     ?? 'Giao tiếp',
-          level:        c.Level        ?? 'Cơ bản',
-          instructor:   c.Instructor   ?? '',
-          rating:       c.Rating       ?? 4.5,
-          studentCount: c.StudentCount ?? 0,
-          totalLessons: c.TotalLessons ?? 0,
-          thumbnail:    c.Thumbnail    ?? null,
-        }))
-      );
-    }
-  });
-}, []);
+  useEffect(() => {
+    getTopCoursesApi(4).then(({ ok, data }) => {
+      if (ok && data.success && data.courses.length > 0) {
+        setTopCourses(
+          data.courses.map((c) => ({
+            courseId: c.CourseId,
+            courseName: c.CourseName,
+            category: c.Category ?? 'Giao tiếp',
+            level: c.Level ?? 'Cơ bản',
+            instructor: c.Instructor ?? '',
+            rating: c.Rating ?? 4.5,
+            studentCount: c.StudentCount ?? 0,
+            totalLessons: c.TotalLessons ?? 0,
+            thumbnail: c.Thumbnail ?? null,
+          }))
+        );
+      }
+    });
+  }, []);
 
-  const handleExplore   = () => navigate("/courses");
+  const handleExplore = () => navigate("/courses");
   const handleMyCourses = () => navigate("/my-courses");
-  const handleContinue  = (course) => navigate(`/my-courses/${course.courseId}/learn`);
+  const handleContinue = (course) => navigate(`/my-courses/${course.courseId}/learn`);
   const handleCourseNav = (courseId) => navigate(`/courses/${courseId}`);
+
+  const [courses, setCourses] = useState([]);
+  useEffect(() => {
+    const getData = async () => {
+      const res = await fetch('http://localhost:5000/api/courses');
+      const result = await res.json();
+
+      if (!result.success) {
+        console.error(result.message);
+        return;
+      }
+
+      setCourses(result.data);
+    }
+    getData()
+  }, [])
 
   return (
     /* Wide root — hero can breathe at full width */
@@ -1238,7 +1254,7 @@ useEffect(() => {
         <Box component="span" sx={{ color: PRIMARY, fontWeight: 700 }}>
           {displayName}
         </Box>{" "}
-        
+
       </Typography>
 
       {/* Hero spans the full wide container */}
@@ -1255,7 +1271,7 @@ useEffect(() => {
         <PathsSection />
 
         <CoursesSection
-        courses={topCourses}
+          courses={courses}
           onExplore={handleExplore}
           onNavigateCourse={handleCourseNav}
         />

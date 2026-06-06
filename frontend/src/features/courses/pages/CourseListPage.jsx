@@ -84,6 +84,53 @@ const SORT_OPTIONS = [
   { value: "progress", label: "Tiến độ cao nhất" },
 ];
 
+async function fetchCourses(userId) {
+  try {
+    const url = userId
+      ? `http://localhost:5000/api/courses?userId=${userId}`
+      : "http://localhost:5000/api/courses";
+
+    const res = await fetch(url);
+
+    const result = await res.json();
+
+    console.log("ALL COURSES RESPONSE:", result);
+
+    if (!res.ok || !result.success) {
+      return [];
+    }
+
+    return result.data || [];
+  } catch (err) {
+    console.error("Error fetching courses:", err);
+    throw err;
+  }
+}
+
+function getUserId(user) {
+  return user.userId ?? user.UserId ?? user.id ?? user.Id;
+}
+
+function getUserRoleName(user) {
+  const role =
+    user?.roleName ??
+    user?.RoleName ??
+    user?.role ??
+    user?.Role ??
+    user?.roles?.[0] ??
+    user?.Roles?.[0];
+
+  return String(role || "").toLowerCase();
+}
+// async function fetchCourses(userId, roleName) {
+//   if (roleName !== "student") {
+//     return [];
+//   } catch (err) {
+//     console.error("Error fetching courses:", err);
+//     throw err;
+//   }
+// }
+
 export default function CourseListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -115,18 +162,10 @@ export default function CourseListPage() {
         const userRaw = sessionStorage.getItem('user');
         const currentUser = userRaw ? JSON.parse(userRaw) : null;
 
-        const { ok, data } = await getCoursesApi(currentUser?.userId);
-        if (!isMounted) return;
-
-        if (ok && data.success && Array.isArray(data.courses)) {
-          setCourses(data.courses);
-        } else {
-          toast.error('Không thể tải danh sách khóa học.');
-          setCourses([]);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('Không thể tải danh sách khóa học. Vui lòng thử lại.');
+        const data = await fetchCourses(currentUser?.userId);
+        if (isMounted) setCourses(Array.isArray(data) ? data : []);
+      } catch {
+        toast.error("Không thể tải danh sách khóa học. Vui lòng thử lại.");
         if (isMounted) setCourses([]);
       } finally {
         if (isMounted) setLoading(false);
@@ -213,26 +252,26 @@ export default function CourseListPage() {
   };
 
   const handleEnroll = async (course) => {
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-  if (!user.userId) {
-    toast.error('Vui lòng đăng nhập để đăng ký khóa học.');
-    return;
-  }
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+    if (!user.userId) {
+      toast.error('Vui lòng đăng nhập để đăng ký khóa học.');
+      return;
+    }
 
-  const { ok, data } = await enrollCourseApi(user.userId, course.courseId);
-  if (ok && data.success) {
-    setCourses((prev) =>
-      prev.map((item) =>
-        item.courseId === course.courseId
-          ? { ...item, isEnrolled: true, progressPercentage: 0 }
-          : item
-      )
-    );
-    toast.success(`Đã đăng ký khóa "${course.courseName}" thành công!`);
-  } else {
-    toast.error(data.message || 'Đăng ký thất bại. Vui lòng thử lại.');
-  }
-};
+    const { ok, data } = await enrollCourseApi(user.userId, course.courseId);
+    if (ok && data.success) {
+      setCourses((prev) =>
+        prev.map((item) =>
+          item.courseId === course.courseId
+            ? { ...item, isEnrolled: true, progressPercentage: 0 }
+            : item
+        )
+      );
+      toast.success(`Đã đăng ký khóa "${course.courseName}" thành công!`);
+    } else {
+      toast.error(data.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+    }
+  };
 
   const handleRemoveFilterChip = (chip) => {
     if (chip.type === "keyword") {

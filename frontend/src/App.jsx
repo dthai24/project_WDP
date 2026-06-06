@@ -38,12 +38,12 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
-        <Route path="/login"           element={<LoginPage />} />
-        <Route path="/register"        element={<RegisterPage />} />
-        <Route path="/verify-otp"      element={<OtpPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-otp" element={<OtpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password"  element={<ResetPasswordPage />} />
-        <Route path="/unauthorized"    element={<UnauthorizedPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/test-component" element={<TestPage />} />
 
         <Route
@@ -126,6 +126,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route index element={<Navigate to="/home" replace />} />
+        <Route path="home" element={<HomePage />} />
 
         {/* Mentor routes */}
         <Route
