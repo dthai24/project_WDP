@@ -3,16 +3,16 @@ import { Box, Breadcrumbs, Link as MuiLink, Stack, Typography, alpha, useTheme }
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import MyCourseRow from "../components/course/MyCourseRow";
-import MyCoursesToolbar from "../components/course/MyCoursesToolbar";
-import MyCourseContinueSection from "../components/course/MyCourseContinueSection";
+import MyCourseRow from "@/features/courses/components/MyCourseRow";
+import MyCoursesToolbar from "@/features/courses/components/MyCoursesToolbar";
+import MyCourseContinueSection from "@/features/courses/components/MyCourseContinueSection";
 import CourseListPagination, {
   COURSE_LIST_PAGE_SIZE,
-} from "../components/course/CourseListPagination";
-import EmptyState from "../components/common/EmptyState";
-import useSavedCourses from "../hooks/useSavedCourses";
-import { buildActiveFilterChips, buildCourseDetailPath } from "../utils/courseListParams";
-import { getMyCoursesApi } from '../services/authService';
+} from "@/features/courses/components/CourseListPagination";
+import EmptyState from "@/shared/ui/EmptyState";
+import useSavedCourses from "@/features/courses/hooks/useSavedCourses";
+import { buildActiveFilterChips, buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
+import { getMyCoursesApi } from "@/features/auth/services/authService";
 
 const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 

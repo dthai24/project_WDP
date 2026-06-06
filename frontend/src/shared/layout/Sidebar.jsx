@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { Box, Stack, Typography, Tooltip, useTheme } from "@mui/material";
 import { getUser } from "@/features/auth/utils/authUtils";
 import { getMentorMenuItems, getStudentMenuItems } from "./sidebarMenuConfig";
@@ -60,7 +60,9 @@ function SidebarItemContent({ label, Icon, active, disabled }) {
 }
 
 function SidebarItem({ item }) {
-  const { label, to, Icon, disabled, end = false } = item;
+  const location = useLocation();
+  const { label, to, Icon, disabled, end = false, isActiveMatch } = item;
+
   if (disabled) {
     return (
       <Tooltip title="Sắp ra mắt" placement="right" arrow>
@@ -70,6 +72,16 @@ function SidebarItem({ item }) {
       </Tooltip>
     );
   }
+
+  if (isActiveMatch) {
+    const active = isActiveMatch(location.pathname);
+    return (
+      <Link to={to} style={{ textDecoration: "none", width: "100%" }}>
+        <SidebarItemContent label={label} Icon={Icon} active={active} disabled={false} />
+      </Link>
+    );
+  }
+
   return (
     <NavLink to={to} end={end} style={{ textDecoration: "none", width: "100%" }}>
       {({ isActive }) => (
