@@ -150,6 +150,7 @@ export default function App() {
           <Route path="courses/create" element={<MentorCreateCoursePage />} />
           <Route path="courses/:courseId/review" element={<MentorEditCourseReviewPage />} />
           <Route path="courses/:courseId/content/edit" element={<MentorEditCourseContentPage />} />
+          <Route path="courses/:courseId/content" element={<MentorEditCourseContentPage />} />
           <Route path="courses/:courseId/edit" element={<MentorEditCoursePage />} />
           <Route path="courses/:courseId/questions" element={<MentorCourseQuestionsPage />} />
           <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />

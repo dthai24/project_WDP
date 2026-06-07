@@ -9,11 +9,12 @@ import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import MentorLessonBlock from './MentorLessonBlock';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
-import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import {
   CHAPTER_THEME,
-  CHAPTER_HEADER_BG,
-  LESSON_THEME,
+  CONTENT_SECTION_LABEL_SX,
+  DELETE_ICON_BTN_SX,
+  ICON_BTN_SX,
   chapterCardSx,
   contentAddButtonSx,
   contentFieldSx,
@@ -52,13 +53,12 @@ export default function MentorChapterCard({
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          px: 1.5,
-          py: 1.25,
-          bgcolor: CHAPTER_HEADER_BG,
-          borderBottom: expanded ? '1px solid rgba(15,23,42,0.06)' : 'none',
+          px: 2,
+          py: 1.5,
+          borderBottom: expanded ? `1px solid rgba(15,23,42,0.06)` : 'none',
         }}
       >
-        <IconButton size="small" onClick={onToggle} sx={{ color: CHAPTER_THEME.color, p: 0.5 }}>
+        <IconButton size="small" onClick={onToggle} sx={ICON_BTN_SX} aria-label="Thu gọn chương">
           {expanded ? (
             <ExpandLessRoundedIcon sx={{ fontSize: 20 }} />
           ) : (
@@ -66,20 +66,7 @@ export default function MentorChapterCard({
           )}
         </IconButton>
 
-        <Box
-          sx={{
-            width: 36,
-            height: 36,
-            borderRadius: '10px',
-            bgcolor: CHAPTER_THEME.bg,
-            border: `1px solid ${CHAPTER_THEME.border}`,
-            display: 'grid',
-            placeItems: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <MenuBookRoundedIcon sx={{ fontSize: 18, color: CHAPTER_THEME.color }} />
-        </Box>
+        <MenuBookRoundedIcon sx={{ fontSize: 20, color: PRIMARY, flexShrink: 0 }} />
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, lineHeight: 1.3 }}>
@@ -88,7 +75,7 @@ export default function MentorChapterCard({
           <Typography
             sx={{
               fontSize: 15,
-              fontWeight: 700,
+              fontWeight: 600,
               color: TEXT,
               lineHeight: 1.35,
               whiteSpace: 'nowrap',
@@ -100,7 +87,7 @@ export default function MentorChapterCard({
           </Typography>
         </Box>
 
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, flexShrink: 0 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: MUTED, flexShrink: 0 }}>
           {lessonCount} bài học
         </Typography>
 
@@ -109,14 +96,14 @@ export default function MentorChapterCard({
           onClick={onDelete}
           disabled={disabled}
           aria-label="Xóa chương"
-          sx={{ color: MUTED, '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' } }}
+          sx={DELETE_ICON_BTN_SX}
         >
           <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </Box>
 
       <Collapse in={expanded}>
-        <Box sx={{ px: 1.75, py: 1.5 }}>
+        <Box sx={{ px: 2, py: 2.5 }}>
           <ContentFieldLabel>Tên chương *</ContentFieldLabel>
           <Box sx={contentFieldSx(Boolean(errors.PathName), CHAPTER_THEME)}>
             <InputBase
@@ -125,11 +112,11 @@ export default function MentorChapterCard({
               disabled={disabled}
               placeholder="Ví dụ: TOEIC 900+: Chiến lược cao điểm"
               fullWidth
-              sx={{ fontSize: 15, fontWeight: 700, color: TEXT }}
+              sx={{ fontSize: 14, fontWeight: 500, color: TEXT, width: '100%' }}
             />
           </Box>
           {errors.PathName && (
-            <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.35 }}>
+            <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.5 }}>
               {errors.PathName}
             </Typography>
           )}
@@ -141,22 +128,24 @@ export default function MentorChapterCard({
             disabled={disabled}
             theme={CHAPTER_THEME}
             placeholder="Mô tả ngắn về nội dung chương (tuỳ chọn)"
-            labelSx={{ mt: 1.25 }}
+            labelSx={{ mt: 2 }}
           />
 
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 3 }}>
+            <Typography sx={CONTENT_SECTION_LABEL_SX}>Bài học</Typography>
+
             {errors._nodes && (
-              <Typography sx={{ fontSize: 12, color: '#DC2626', mb: 0.75 }}>
+              <Typography sx={{ fontSize: 12, color: '#DC2626', mb: 1 }}>
                 {errors._nodes}
               </Typography>
             )}
 
             {lessonCount === 0 ? (
-              <Typography sx={{ fontSize: 13, color: MUTED, mb: 1, lineHeight: 1.5 }}>
+              <Typography sx={{ fontSize: 13, color: MUTED, mb: 1.5, lineHeight: 1.55 }}>
                 Chương này chưa có bài học.
               </Typography>
             ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0, mb: 1.5 }}>
                 {(path.nodes ?? []).map((node, nodeIndex) => (
                   <MentorLessonBlock
                     key={node.tempId}
@@ -191,7 +180,7 @@ export default function MentorChapterCard({
               onClick={onAddNode}
               disabled={disabled}
               sx={{
-                ...contentAddButtonSx(LESSON_THEME),
+                ...contentAddButtonSx(),
                 cursor: disabled ? 'default' : 'pointer',
                 opacity: disabled ? 0.6 : 1,
               }}
@@ -202,8 +191,8 @@ export default function MentorChapterCard({
 
             <Box
               sx={{
-                mt: 2,
-                pt: 1.75,
+                mt: 2.5,
+                pt: 2,
                 borderTop: '1px solid rgba(15,23,42,0.06)',
                 display: 'flex',
                 alignItems: 'center',
@@ -214,19 +203,19 @@ export default function MentorChapterCard({
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                 {isSaved ? (
-                  <CheckCircleRoundedIcon sx={{ fontSize: 18, color: '#059669', flexShrink: 0 }} />
+                  <CheckCircleRoundedIcon sx={{ fontSize: 17, color: '#059669', flexShrink: 0 }} />
                 ) : (
-                  <CloudOffOutlinedIcon sx={{ fontSize: 18, color: '#D97706', flexShrink: 0 }} />
+                  <CloudOffOutlinedIcon sx={{ fontSize: 17, color: MUTED, flexShrink: 0 }} />
                 )}
                 <Typography
                   sx={{
                     fontSize: 13,
-                    fontWeight: 600,
-                    color: isSaved ? '#059669' : '#D97706',
+                    fontWeight: 500,
+                    color: isSaved ? '#059669' : MUTED,
                     lineHeight: 1.4,
                   }}
                 >
-                  {isSaved ? 'Chương đã lưu' : 'Chương chưa lưu'}
+                  {isSaved ? 'Chương đã lưu' : 'Chưa lưu'}
                 </Typography>
               </Box>
 
@@ -237,19 +226,19 @@ export default function MentorChapterCard({
                 disabled={disabled}
                 sx={{
                   height: 36,
-                  borderRadius: '999px',
-                  fontWeight: 700,
+                  borderRadius: '10px',
+                  fontWeight: 600,
                   fontSize: 13,
                   px: 2,
-                  borderColor: CHAPTER_THEME.border,
-                  color: CHAPTER_THEME.color,
+                  borderColor: 'rgba(15,23,42,0.12)',
+                  color: TEXT,
                   '&:hover': {
-                    borderColor: CHAPTER_THEME.color,
-                    bgcolor: CHAPTER_THEME.bg,
+                    borderColor: PRIMARY,
+                    bgcolor: 'rgba(8,145,178,0.04)',
                   },
                 }}
               >
-                Lưu
+                Lưu chương
               </AppButton>
             </Box>
           </Box>

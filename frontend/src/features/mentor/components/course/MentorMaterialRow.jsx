@@ -8,7 +8,12 @@ import {
   MATERIAL_URL_PLACEHOLDERS,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
+import {
+  CONTENT_FIELD_LABEL_SX,
+  DELETE_ICON_BTN_SX,
+  contentInputSx,
+  materialRowSx,
+} from './mentorCourseContentStyles';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import MentorMaterialTypeSelect from './MentorMaterialTypeSelect';
 import MentorTextMaterialEditor from './MentorTextMaterialEditor';
@@ -54,6 +59,7 @@ function buildTypeChangePatch(currentType, nextType) {
 
 export default function MentorMaterialRow({
   material,
+  materialIndex = 0,
   errors = {},
   onChange,
   onDelete,
@@ -72,10 +78,8 @@ export default function MentorMaterialRow({
   const isDoc = material.MaterialType === 'DOC';
   const isVideo = material.MaterialType === 'VIDEO';
   const showUrlField = !isText && !isDoc && !isVideo;
-  const typeTheme = MATERIAL_TYPE_THEME[material.MaterialType] ?? MATERIAL_TYPE_THEME.VIDEO;
   const placeholder = MATERIAL_URL_PLACEHOLDERS[material.MaterialType] ?? '';
   const urlLabel = MATERIAL_URL_LABELS[material.MaterialType] ?? 'Link';
-  const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
 
   return (
     <Box
@@ -83,60 +87,68 @@ export default function MentorMaterialRow({
       onDragOver={onDragOver}
       onDrop={onDrop}
       sx={{
-        py: 1.75,
-        px: { xs: 0.5, sm: 0.75 },
-        borderBottom: '1px dashed rgba(15,23,42,0.08)',
-        borderTop: isDragOver ? `2px solid ${typeTheme.color}` : '2px solid transparent',
+        ...materialRowSx(isDragOver),
         opacity: isDragging ? 0.45 : 1,
-        transition: 'opacity 0.15s ease, border-color 0.15s ease',
-        '&:last-of-type': { borderBottom: 'none' },
       }}
     >
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'stretch', sm: 'flex-start' },
-          gap: { xs: 1.25, sm: 1.25 },
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          mb: 1.25,
         }}
       >
-        {showDragHandle ? (
-          <Box
-            draggable
-            onDragStart={onDragHandleStart}
-            onDragEnd={onDragHandleEnd}
-            aria-label="Kéo để đổi thứ tự học liệu"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: { xs: '100%', sm: 28 },
-              minWidth: { sm: 28 },
-              flexShrink: 0,
-              alignSelf: { sm: 'flex-start' },
-              pt: { sm: 2.5 },
-              color: MUTED,
-              cursor: 'grab',
-              touchAction: 'none',
-              userSelect: 'none',
-              '&:active': { cursor: 'grabbing' },
-              '&:hover': { color: typeTheme.color },
-            }}
+        <Typography sx={{ ...CONTENT_FIELD_LABEL_SX, mb: 0, fontWeight: 700 }}>
+          Học liệu {materialIndex + 1}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+          {showDragHandle ? (
+            <Box
+              draggable
+              onDragStart={onDragHandleStart}
+              onDragEnd={onDragHandleEnd}
+              aria-label="Kéo để đổi thứ tự học liệu"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                color: MUTED,
+                cursor: 'grab',
+                touchAction: 'none',
+                userSelect: 'none',
+                '&:active': { cursor: 'grabbing' },
+                '&:hover': { color: TEXT },
+              }}
+            >
+              <DragIndicatorRoundedIcon sx={{ fontSize: 20 }} />
+            </Box>
+          ) : null}
+          <IconButton
+            size="small"
+            onClick={() => onDelete(material.tempId)}
+            disabled={disabled}
+            aria-label="Xóa học liệu"
+            sx={DELETE_ICON_BTN_SX}
           >
-            <DragIndicatorRoundedIcon sx={{ fontSize: 22 }} />
-          </Box>
-        ) : null}
-        <Box
-          sx={{
-            width: { xs: '100%', sm: 160 },
-            minWidth: { sm: 150 },
-            maxWidth: { sm: 170 },
-            flexShrink: 0,
-          }}
-        >
-          <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
-            Loại học liệu
-          </ContentFieldLabel>
+            <DeleteOutlineRoundedIcon sx={{ fontSize: 17 }} />
+          </IconButton>
+        </Box>
+      </Box>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'minmax(140px, 180px) minmax(0, 1fr)' },
+          gap: { xs: 1.5, sm: 1.75 },
+          alignItems: 'start',
+        }}
+      >
+        <Box>
+          <ContentFieldLabel>Loại học liệu</ContentFieldLabel>
           <MentorMaterialTypeSelect
             value={material.MaterialType}
             onChange={(event) =>
@@ -149,14 +161,14 @@ export default function MentorMaterialRow({
             error={Boolean(errors.MaterialType)}
           />
           {errors.MaterialType && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.MaterialType}</Typography>
+            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
+              {errors.MaterialType}
+            </Typography>
           )}
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <ContentFieldLabel sx={fieldLabelSx}>
-            Tiêu đề{isText ? '' : ' *'}
-          </ContentFieldLabel>
+        <Box>
+          <ContentFieldLabel>Tiêu đề{isText ? '' : ' *'}</ContentFieldLabel>
           <InputBase
             value={material.Title}
             onChange={(event) => onChange(material.tempId, { Title: event.target.value })}
@@ -169,104 +181,64 @@ export default function MentorMaterialRow({
                   : 'Ví dụ: Video giới thiệu bài học'
             }
             fullWidth
-            sx={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: TEXT,
-              px: 1,
-              py: 0.65,
-              borderRadius: '10px',
-              border: `1px solid ${errors.Title ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-              bgcolor: '#fff',
-              '&:focus-within': { borderColor: errors.Title ? '#DC2626' : typeTheme.color },
-            }}
+            sx={contentInputSx(Boolean(errors.Title))}
           />
           {errors.Title && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.Title}</Typography>
+            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>{errors.Title}</Typography>
           )}
-        </Box>
-
-        {showUrlField && (
-          <Box
-            sx={{
-              flex: { xs: 'none', sm: 1.2 },
-              minWidth: 0,
-              width: { xs: '100%', sm: 'auto' },
-            }}
-          >
-            <ContentFieldLabel sx={fieldLabelSx}>{urlLabel}</ContentFieldLabel>
-            <InputBase
-              value={material.MaterialUrl}
-              onChange={(event) => onChange(material.tempId, { MaterialUrl: event.target.value })}
-              disabled={disabled}
-              placeholder={placeholder}
-              fullWidth
-              sx={{
-                fontSize: 13,
-                color: TEXT,
-                px: 1,
-                py: 0.65,
-                borderRadius: '10px',
-                border: `1px solid ${errors.MaterialUrl ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-                bgcolor: '#fff',
-                '&:focus-within': { borderColor: errors.MaterialUrl ? '#DC2626' : typeTheme.color },
-              }}
-            />
-            {errors.MaterialUrl && (
-              <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>{errors.MaterialUrl}</Typography>
-            )}
-          </Box>
-        )}
-
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: { xs: 'flex-end', sm: 'center' },
-            alignItems: 'center',
-            width: { sm: 40 },
-            flexShrink: 0,
-            alignSelf: { sm: 'flex-start' },
-            pt: { sm: 2.5 },
-            mt: { xs: -0.25, sm: 0 },
-          }}
-        >
-          <IconButton
-            size="small"
-            onClick={() => onDelete(material.tempId)}
-            disabled={disabled}
-            aria-label="Xóa học liệu"
-            sx={{ color: MUTED, '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' } }}
-          >
-            <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
-          </IconButton>
         </Box>
       </Box>
 
+      {showUrlField && (
+        <Box sx={{ mt: 1.5 }}>
+          <ContentFieldLabel>{urlLabel}</ContentFieldLabel>
+          <InputBase
+            value={material.MaterialUrl}
+            onChange={(event) => onChange(material.tempId, { MaterialUrl: event.target.value })}
+            disabled={disabled}
+            placeholder={placeholder}
+            fullWidth
+            sx={contentInputSx(Boolean(errors.MaterialUrl))}
+          />
+          {errors.MaterialUrl && (
+            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
+              {errors.MaterialUrl}
+            </Typography>
+          )}
+        </Box>
+      )}
+
       {isVideo && (
-        <MentorVideoMaterialEditor
-          material={material}
-          errors={errors}
-          onChange={onChange}
-          disabled={disabled}
-        />
+        <Box sx={{ mt: 1.5 }}>
+          <MentorVideoMaterialEditor
+            material={material}
+            errors={errors}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        </Box>
       )}
 
       {isDoc && (
-        <MentorDocumentMaterialEditor
-          material={material}
-          errors={errors}
-          onChange={onChange}
-          disabled={disabled}
-        />
+        <Box sx={{ mt: 1.5 }}>
+          <MentorDocumentMaterialEditor
+            material={material}
+            errors={errors}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        </Box>
       )}
 
       {isText && (
-        <MentorTextMaterialEditor
-          material={material}
-          errors={errors}
-          onChange={onChange}
-          disabled={disabled}
-        />
+        <Box sx={{ mt: 1.5 }}>
+          <MentorTextMaterialEditor
+            material={material}
+            errors={errors}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        </Box>
       )}
     </Box>
   );

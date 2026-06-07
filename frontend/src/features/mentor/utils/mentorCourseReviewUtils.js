@@ -1,12 +1,14 @@
 import {
   buildFullCreateCoursePayload,
   countContentStats,
-  countLearningMaterials,
+  countMaterialsInPath,
   DOC_SOURCE_LINK,
   DOC_SOURCE_UPLOAD,
+  extractPlainTextFromHtml,
   filterLearningMaterials,
   formatFileSize,
   getDocFileTypeLabel,
+  isHtmlContentEmpty,
   isLearningMaterial,
   MATERIAL_TYPE_LABELS,
   validateCourseContent,
@@ -20,16 +22,9 @@ import {
   SCORING_MODE_MANUAL,
 } from './mentorTestContentUtils';
 
-export { MATERIAL_TYPE_LABELS };
+export { MATERIAL_TYPE_LABELS, countMaterialsInPath };
 
 export const REVIEW_OUTLINE_TYPE_LABELS = { ...MATERIAL_TYPE_LABELS };
-
-export function countMaterialsInPath(path = {}) {
-  return (path.nodes ?? []).reduce(
-    (sum, node) => sum + countLearningMaterials(node.materials),
-    0,
-  );
-}
 
 export function getMaterialReviewDetailSummary(material) {
   if (!material?.MaterialType) return '';
@@ -132,7 +127,7 @@ export function countTestQuestions(paths = []) {
 }
 
 function stripHtmlContent(html) {
-  return String(html ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return extractPlainTextFromHtml(html);
 }
 
 function truncatePreview(text, max = 80) {
@@ -255,7 +250,7 @@ export function collectTestMaterials(paths = []) {
 }
 
 function hasTextContent(html) {
-  return String(html ?? '').replace(/<[^>]*>/g, '').trim().length > 0;
+  return !isHtmlContentEmpty(html);
 }
 
 function isCourseBasicComplete(course) {
@@ -489,7 +484,7 @@ export function buildReviewChecklist(draft, validation) {
   const lessonCount = countLessons(paths);
   const allChaptersHaveLessons = paths.every((path) => (path.nodes ?? []).length > 0);
   const allLessonsHaveMaterials = paths.every((path) =>
-    (path.nodes ?? []).every((node) => countLearningMaterials(node.materials) > 0),
+    (path.nodes ?? []).every((node) => filterLearningMaterials(node.materials).length > 0),
   );
 
   const textOk = !validation.errors.some(

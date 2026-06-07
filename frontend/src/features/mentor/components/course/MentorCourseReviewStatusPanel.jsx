@@ -40,11 +40,8 @@ export default function MentorCourseReviewStatusPanel({
   checklist = [],
   validation,
   overview,
-  onBack,
-  onSaveDraft,
-  onPublish,
-  savingDraft = false,
-  publishing = false,
+  onCreate,
+  creating = false,
   showActions = true,
 }) {
   const errorCount = validation?.errors?.length ?? 0;
@@ -84,7 +81,7 @@ export default function MentorCourseReviewStatusPanel({
             }}
           >
             {isValid
-              ? 'Khóa học đã sẵn sàng để xuất bản.'
+              ? 'Khóa học đã sẵn sàng để tạo.'
               : `Còn ${errorCount} mục cần hoàn thiện`}
           </Typography>
         </Box>
@@ -143,14 +140,7 @@ export default function MentorCourseReviewStatusPanel({
 
       {showActions && (
         <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <MentorCourseReviewActions
-            onBack={onBack}
-            onSaveDraft={onSaveDraft}
-            onPublish={onPublish}
-            savingDraft={savingDraft}
-            publishing={publishing}
-            canPublish={isValid}
-          />
+          <MentorCourseReviewActions onCreate={onCreate} creating={creating} />
         </Box>
       )}
     </Box>
