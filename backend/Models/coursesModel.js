@@ -172,16 +172,114 @@ const createCourseStepOne = async (course) => {
     return result.recordset[0].CourseId;
 };
 
-//
+
+
+// insert nodes into path
+// insert nodes into path
+const insertNode = async (node, pathId) => {
+
+    const nodeIds = [];
+
+    const request = new sql.Request();
+
+    request.input('PathId', sql.Int, pathId);
+    request.input('NodeName', sql.NVarChar(255), node.NodeName);
+    request.input('NodeOrder', sql.Int, node.NodeOrder);
+    request.input('Description', sql.NVarChar(sql.MAX), node.Description ?? null);
+
+    const result = await request.query(`
+            INSERT INTO [dbo].[Path_Nodes]
+                ([PathId], [NodeName], [NodeOrder], [Description])
+            OUTPUT INSERTED.NodeId
+            VALUES
+                (@PathId, @NodeName, @NodeOrder, @Description)
+        `);
+
+    const nodeId = result.recordset[0].NodeId;
+
+    nodeIds.push(nodeId);
+
+    return nodeIds;
+};
+
+// insert path into course
+const insertPath = async (path, courseId) => {
+    const insertedPathIds = [];
+
+    const request = new sql.Request();
+
+    request.input('CourseId', sql.Int, Number(courseId));
+    request.input('PathName', sql.NVarChar(100), path.PathName);
+    request.input('Description', sql.NVarChar(sql.MAX), path.Description || null);
+    request.input('Order', sql.Int, Number(path.PathOrder ?? i + 1));
+
+    const result = await request.query(`
+      INSERT INTO [dbo].[Paths] (
+        [CourseId],
+        [PathName],
+        [Description],
+        [CreatedAt],
+        [Order]
+      )
+      OUTPUT INSERTED.PathId AS pathId
+      VALUES (
+        @CourseId,
+        @PathName,
+        @Description,
+        GETDATE(),
+        @Order
+      )
+    `);
+    insertedPathIds.push(result.recordset[0].pathId);
+    return insertedPathIds;
+}
+
+// insert material into node
+// insert 1 material into node
+const insertMaterial = async (material, nodeId) => {
+    const request = new sql.Request();
+
+    request.input('NodeId', sql.Int, Number(nodeId));
+    request.input('MaterialType', sql.NVarChar(20), material.MaterialType);
+    request.input('Title', sql.NVarChar(255), material.Title);
+    request.input('MaterialUrl', sql.NVarChar(sql.MAX), material.MaterialUrl ?? null);
+    request.input('MaterialOrder', sql.Int, Number(material.MaterialOrder));
+
+    const result = await request.query(`
+        INSERT INTO [dbo].[Node_Materials]
+            ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder])
+        OUTPUT INSERTED.MaterialId AS MaterialId
+        VALUES
+            (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder)
+    `);
+
+    return result.recordset[0].MaterialId;
+};
+
+// insert paths into course
+const buildPathsNodes = async (paths, courseId) => {
+    paths.map(async (p) => {
+        // insert path into course
+        const pathId = await insertPath(p, courseId);
+        // insert node into path
+        const nodes = p.nodes;
+        nodes.map(async (node) => {
+            const nodeId = await insertNode(node, pathId);
+            // insert materials into node
+            const materials = node.materials;
+            materials.map(async (m) => {
+                await insertMaterial(m, nodeId)
+            })
+        })
+    })
+
+};
 
 // create new course (final step in create course process)
 const createFinalCourse = async (course, paths) => {
     //create course (step one in create course process)
-    const newCourseId = await createCourseStepOne(course)
-    // insert paths into new course
-    // console.table(course);
-    // course's paths
-    // paths's nodes
+    const newCourseId = await createCourseStepOne(course);
+    await buildPathsNodes(paths, newCourseId);
 }
 module.exports = {
     getCoursesByUserRole,

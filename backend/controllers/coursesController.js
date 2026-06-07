@@ -203,7 +203,7 @@ const createFinalCourse = async (req, res) => {
     const newCoursePaths = req.body.paths;
     const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
 
-    console.log("newCourseId:" + newCourseId)
+
   } catch (error) {
     console.error(error.message)
   }
