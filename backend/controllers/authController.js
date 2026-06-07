@@ -14,11 +14,49 @@ const validateEmail = (email) => {
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+const isEmailConfigured = () =>
+  Boolean(process.env.EMAIL_USER?.trim() && process.env.EMAIL_PASS?.trim());
+
 const createTransporter = () =>
   nodemailer.createTransport({
     service: 'gmail',
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    auth: {
+      user: process.env.EMAIL_USER?.trim(),
+      pass: process.env.EMAIL_PASS?.replace(/\s/g, ''),
+    },
   });
+
+/** Gửi OTP qua email; dev fallback in OTP ra console khi chưa cấu hình hoặc SMTP lỗi. */
+const sendOtpEmail = async ({ to, subject, html, otpCode, label }) => {
+  if (!isEmailConfigured()) {
+    console.warn(`[Email] Chưa cấu hình EMAIL_USER/EMAIL_PASS — OTP ${label}: ${otpCode} → ${to}`);
+    return { emailSent: false };
+  }
+
+  try {
+    await createTransporter().sendMail({
+      from: `"S.T.A.R Learning Path" <${process.env.EMAIL_USER.trim()}>`,
+      to,
+      subject,
+      html,
+    });
+    return { emailSent: true };
+  } catch (err) {
+    console.error(`[Email Error] ${label}:`, err.message);
+    if (!isProduction) {
+      console.warn(`[Email Dev Fallback] OTP ${label}: ${otpCode} → ${to}`);
+      return { emailSent: false };
+    }
+    throw err;
+  }
+};
+
+const otpDeliveryMessage = (email, emailSent) =>
+  emailSent
+    ? `Mã OTP đã được gửi đến ${email}. Vui lòng kiểm tra hộp thư (kể cả Spam).`
+    : `Mã OTP đã được tạo. Môi trường dev: xem mã OTP trong terminal backend.`;
 
 /** Email OTP cho đăng ký tài khoản (gradient tím) */
 const buildRegisterOtpHtml = (fullName, otpCode) => `
@@ -182,21 +220,24 @@ const register = async (req, res) => {
       VALUES (@email, @fullName, @phone, @password, @dateOfBirth, @otpCode, @expiresAt)
     `);
 
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from:    `"S.T.A.R Learning Path" <${process.env.EMAIL_USER}>`,
+    const { emailSent } = await sendOtpEmail({
       to:      email,
       subject: '🔐 Mã xác thực OTP của bạn - S.T.A.R Learning Path',
       html:    buildRegisterOtpHtml(fullName, otpCode),
+      otpCode,
+      label:   'đăng ký',
     });
 
     return res.json({
       success: true,
-      message: `Mã OTP đã được gửi đến ${email}. Vui lòng kiểm tra hộp thư (kể cả Spam).`,
+      message: otpDeliveryMessage(email, emailSent),
     });
   } catch (err) {
     console.error('[Register Error]', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể gửi email OTP. Vui lòng thử lại sau.',
+    });
   }
 };
 
@@ -384,21 +425,24 @@ const forgotPassword = async (req, res) => {
       'UPDATE Users SET ResetOtpCode = @otpCode, ResetOtpExpires = @expiresAt WHERE Email = @email'
     );
 
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from:    `"S.T.A.R Learning Path" <${process.env.EMAIL_USER}>`,
+    const { emailSent } = await sendOtpEmail({
       to:      normalizedEmail,
       subject: '🔑 Mã OTP đặt lại mật khẩu - S.T.A.R Learning Path',
       html:    buildResetPasswordHtml(user.FullName, otpCode),
+      otpCode,
+      label:   'đặt lại mật khẩu',
     });
 
     return res.json({
       success: true,
-      message: `Mã OTP đã được gửi đến ${normalizedEmail}. Vui lòng kiểm tra hộp thư (kể cả Spam).`,
+      message: otpDeliveryMessage(normalizedEmail, emailSent),
     });
   } catch (err) {
     console.error('[ForgotPassword Error]', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể gửi email OTP. Vui lòng thử lại sau.',
+    });
   }
 };
 

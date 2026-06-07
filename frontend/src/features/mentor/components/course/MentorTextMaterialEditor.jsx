@@ -20,6 +20,7 @@ import FormatAlignCenterRoundedIcon from '@mui/icons-material/FormatAlignCenterR
 import FormatAlignRightRoundedIcon from '@mui/icons-material/FormatAlignRightRounded';
 import FormatClearRoundedIcon from '@mui/icons-material/FormatClearRounded';
 import AppButton from '@/shared/ui/AppButton';
+import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
@@ -41,14 +42,7 @@ const EMPTY_FORMATS = {
 
 /** Treat blank HTML as empty — covers <br>, <p><br></p>, tags-only, etc. */
 function isHtmlEmpty(html) {
-  if (!html || !String(html).trim()) return true;
-  const text = String(html)
-    .replace(/<br\s*\/?>/gi, '')
-    .replace(/&nbsp;|&#160;/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\u200B|\uFEFF/g, '')
-    .trim();
-  return !text;
+  return isHtmlContentEmpty(html);
 }
 
 function snapFontSize(px) {
@@ -202,6 +196,7 @@ const RICH_CONTENT_SX = {
   color: TEXT,
   wordBreak: 'break-word',
   fontSynthesis: 'style',
+  fontFamily: '"Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif',
   '& p': { margin: '0 0 6px' },
   '& ul, & ol': { paddingLeft: '1.5rem', marginBottom: '6px' },
   '& li': { marginBottom: '3px' },
@@ -233,22 +228,45 @@ export default function MentorTextMaterialEditor({
   const editorRef = useRef(null);
   const savedRangeRef = useRef(null);
   const lastHtmlRef = useRef('');
+  const isComposingRef = useRef(false);
+  const syncTimerRef = useRef(null);
+  const materialTempIdRef = useRef(material.tempId);
+  const onChangeRef = useRef(onChange);
   const [showPreview, setShowPreview] = useState(false);
   const [formats, setFormats] = useState({ ...EMPTY_FORMATS });
   const [editorEmpty, setEditorEmpty] = useState(true);
+  const [editorFocused, setEditorFocused] = useState(false);
   const theme = MATERIAL_TYPE_THEME.TEXT;
 
-  const syncFromDom = useCallback(() => {
-    if (!editorRef.current) return;
+  materialTempIdRef.current = material.tempId;
+  onChangeRef.current = onChange;
+
+  const updateEditorEmptyState = useCallback((html) => {
+    setEditorEmpty(isHtmlEmpty(html));
+  }, []);
+
+  const flushSyncFromDom = useCallback(() => {
+    if (!editorRef.current || isComposingRef.current) return;
+
     const html = cleanHtml(editorRef.current.innerHTML);
     if (html !== lastHtmlRef.current) {
       lastHtmlRef.current = html;
-      onChange(material.tempId, { Content: html });
+      onChangeRef.current(materialTempIdRef.current, { Content: html });
     }
-    setEditorEmpty(isHtmlEmpty(html));
-  }, [material.tempId, onChange]);
+    updateEditorEmptyState(html);
+  }, [updateEditorEmptyState]);
+
+  const scheduleSyncFromDom = useCallback(() => {
+    if (isComposingRef.current) return;
+    if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(() => {
+      syncTimerRef.current = null;
+      flushSyncFromDom();
+    }, 300);
+  }, [flushSyncFromDom]);
 
   const refreshFormats = useCallback(() => {
+    if (isComposingRef.current) return;
     setFormats(readFormats(editorRef.current));
   }, []);
 
@@ -262,13 +280,12 @@ export default function MentorTextMaterialEditor({
       if (!el || disabled) return;
       el.focus();
       restoreSelection(el, savedRangeRef);
-      document.execCommand('styleWithCSS', true, null);
       runner();
       saveSelection(el, savedRangeRef);
-      syncFromDom();
+      flushSyncFromDom();
       refreshFormats();
     },
-    [disabled, syncFromDom, refreshFormats],
+    [disabled, flushSyncFromDom, refreshFormats],
   );
 
   const handleExec = useCallback(
@@ -304,12 +321,45 @@ export default function MentorTextMaterialEditor({
   );
 
   const handleEditorInput = useCallback(() => {
-    syncFromDom();
-    captureSelection();
-    refreshFormats();
-  }, [syncFromDom, captureSelection, refreshFormats]);
+    if (isComposingRef.current) return;
+    scheduleSyncFromDom();
+  }, [scheduleSyncFromDom]);
 
-  const handleEditorInteraction = useCallback(() => {
+  const handleCompositionStart = useCallback(() => {
+    isComposingRef.current = true;
+    if (syncTimerRef.current) {
+      window.clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+  }, []);
+
+  const handleCompositionEnd = useCallback(() => {
+    isComposingRef.current = false;
+    window.requestAnimationFrame(() => {
+      flushSyncFromDom();
+      captureSelection();
+      refreshFormats();
+    });
+  }, [flushSyncFromDom, captureSelection, refreshFormats]);
+
+  const handleEditorFocus = useCallback(() => {
+    setEditorFocused(true);
+    captureSelection();
+  }, [captureSelection]);
+
+  const handleEditorBlur = useCallback(() => {
+    setEditorFocused(false);
+    if (syncTimerRef.current) {
+      window.clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+    window.requestAnimationFrame(() => {
+      flushSyncFromDom();
+    });
+  }, [flushSyncFromDom]);
+
+  const handleEditorMouseUp = useCallback(() => {
+    if (isComposingRef.current) return;
     captureSelection();
     refreshFormats();
   }, [captureSelection, refreshFormats]);
@@ -323,11 +373,17 @@ export default function MentorTextMaterialEditor({
   );
 
   useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     const html = material.Content || '';
     if (editorRef.current) {
       editorRef.current.innerHTML = html;
       lastHtmlRef.current = cleanHtml(html);
-      setEditorEmpty(isHtmlEmpty(html));
+      updateEditorEmptyState(html);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -336,23 +392,23 @@ export default function MentorTextMaterialEditor({
     if (material.Content === '' && lastHtmlRef.current !== '' && editorRef.current) {
       editorRef.current.innerHTML = '';
       lastHtmlRef.current = '';
-      setEditorEmpty(true);
+      updateEditorEmptyState('');
     }
-  }, [material.Content]);
+  }, [material.Content, updateEditorEmptyState]);
 
   useEffect(() => {
     const onSelectionChange = () => {
+      if (isComposingRef.current) return;
       const el = editorRef.current;
       if (!el) return;
       const sel = window.getSelection();
       if (sel?.anchorNode && el.contains(sel.anchorNode)) {
         saveSelection(el, savedRangeRef);
-        refreshFormats();
       }
     };
     document.addEventListener('selectionchange', onSelectionChange);
     return () => document.removeEventListener('selectionchange', onSelectionChange);
-  }, [refreshFormats]);
+  }, []);
 
   const editorSx = {
     minHeight: 320,
@@ -567,7 +623,7 @@ export default function MentorTextMaterialEditor({
           </ContentFieldLabel>
 
           <Box sx={{ position: 'relative' }}>
-            {editorEmpty && !disabled && (
+            {editorEmpty && !disabled && !editorFocused && (
               <Typography
                 sx={{
                   position: 'absolute',
@@ -589,10 +645,18 @@ export default function MentorTextMaterialEditor({
               component="div"
               contentEditable={!disabled}
               suppressContentEditableWarning
+              lang="vi"
+              role="textbox"
+              aria-multiline="true"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               onInput={handleEditorInput}
-              onKeyUp={handleEditorInteraction}
-              onMouseUp={handleEditorInteraction}
-              onFocus={handleEditorInteraction}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
+              onFocus={handleEditorFocus}
+              onBlur={handleEditorBlur}
+              onMouseUp={handleEditorMouseUp}
               onPaste={handlePaste}
               sx={editorSx}
             />

@@ -7,6 +7,7 @@ import MentorCourseInfoReview from '@/features/mentor/components/course/MentorCo
 import MentorCourseContentReview from '@/features/mentor/components/course/MentorCourseContentReview';
 import MentorCourseReviewActions from '@/features/mentor/components/course/MentorCourseReviewActions';
 import MentorCourseReviewStatusPanel from '@/features/mentor/components/course/MentorCourseReviewStatusPanel';
+import MentorCourseCreateSuccessDialog from '@/features/mentor/components/course/MentorCourseCreateSuccessDialog';
 import {
   createCourseWithContent,
   fetchCourseCategories,
@@ -30,8 +31,8 @@ export default function MentorCreateCourseReviewPage() {
   const [ready, setReady] = useState(false);
   const [categoryLabel, setCategoryLabel] = useState('');
   const [levelLabel, setLevelLabel] = useState('');
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [successCourseId, setSuccessCourseId] = useState(null);
 
   useEffect(() => {
     const saved = loadCreateCourseDraft();
@@ -89,8 +90,8 @@ export default function MentorCreateCourseReviewPage() {
     [draft],
   );
 
-  const persistDraft = async (isPublished) => {
-    const payload = buildCreateCoursePayload(draft, isPublished);
+  const persistDraft = async () => {
+    const payload = buildCreateCoursePayload(draft, false);
     const nextDraft = {
       ...draft,
       course: payload.course,
@@ -98,50 +99,43 @@ export default function MentorCreateCourseReviewPage() {
 
     saveCreateCourseDraft(nextDraft);
 
-    // TODO: replace with API call
-    // await createCourseWithContent(payload)
     const result = await createCourseWithContent(payload.course, draft.paths ?? []);
 
-    if (!result.success) {
-      throw new Error('Không thể lưu khóa học.');
-
+    if (!result.success || result.courseId == null) {
+      throw new Error(result.message ?? 'Không thể lưu khóa học.');
     }
+
     clearCreateCourseDraft();
+    return { courseId: result.courseId };
   };
 
-  const handleSaveDraft = async () => {
-    setSavingDraft(true);
+  const handleCreateCourse = async () => {
+    setCreating(true);
     try {
-      await persistDraft(false);
-      toast.success('Đã lưu bản nháp khóa học.');
-      navigate('/mentor/courses');
+      const { courseId } = await persistDraft();
+      setSuccessCourseId(courseId);
     } catch {
-      toast.error('Không thể lưu bản nháp. Vui lòng thử lại.');
+      toast.error('Không thể tạo khóa học. Vui lòng thử lại.');
     } finally {
-      setSavingDraft(false);
+      setCreating(false);
     }
   };
 
-  const handlePublish = async () => {
-    const latestValidation = validateCourseDraft(draft);
-    if (!latestValidation.isValid) {
-      toast.error('Vui lòng hoàn thiện các mục còn thiếu trước khi xuất bản.');
-      return;
-    }
+  const handleManageContent = () => {
+    if (successCourseId == null) return;
+    navigate(`/mentor/courses/${successCourseId}`);
+    setSuccessCourseId(null);
+  };
 
-    setPublishing(true);
-    try {
-      // Đoạn này thì đừng có await persisDraft
-      // lý do: tại persisDraft có call Api và xử lý một chuỗi insert vào database nên rất lâu
-      // nếu await => phải chờ lâu => crash frontend
-      persistDraft(true);
-      toast.success('Đã xuất bản khóa học.');
-      navigate('/mentor/courses');
-    } catch {
-      toast.error('Không thể xuất bản khóa học. Vui lòng thử lại.');
-    } finally {
-      setPublishing(false);
-    }
+  const handleCreateQuestionBank = () => {
+    if (successCourseId == null) return;
+    navigate(`/mentor/question-banks/create?courseId=${successCourseId}`);
+    setSuccessCourseId(null);
+  };
+
+  const handleBackToCourseList = () => {
+    navigate('/mentor/courses');
+    setSuccessCourseId(null);
   };
 
   if (!ready || !draft) return null;
@@ -172,24 +166,23 @@ export default function MentorCreateCourseReviewPage() {
           checklist={checklist}
           validation={validation}
           overview={overview}
-          onBack={() => navigate('/mentor/courses/create/content')}
-          onSaveDraft={handleSaveDraft}
-          onPublish={handlePublish}
-          savingDraft={savingDraft}
-          publishing={publishing}
+          onCreate={handleCreateCourse}
+          creating={creating}
         />
       </Box>
 
       <Box sx={{ display: { xs: 'block', lg: 'none' }, mt: 2.5 }}>
-        <MentorCourseReviewActions
-          onBack={() => navigate('/mentor/courses/create/content')}
-          onSaveDraft={handleSaveDraft}
-          onPublish={handlePublish}
-          savingDraft={savingDraft}
-          publishing={publishing}
-          canPublish={validation.isValid}
-        />
+        <MentorCourseReviewActions onCreate={handleCreateCourse} creating={creating} />
       </Box>
+
+      <MentorCourseCreateSuccessDialog
+        open={successCourseId != null}
+        courseId={successCourseId}
+        isPublished={false}
+        onManageContent={handleManageContent}
+        onCreateQuestionBank={handleCreateQuestionBank}
+        onBackToList={handleBackToCourseList}
+      />
     </Box>
   );
 }

@@ -1,11 +1,11 @@
 import { Box, InputBase, Typography } from '@mui/material';
 import { CONTENT_SHORT_DESCRIPTION_MAX } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { CONTENT_CARD_META_SX, CONTENT_CARD_TITLE_SX, contentFieldSx } from './mentorCourseContentStyles';
+import { CONTENT_CARD_META_SX, CONTENT_CARD_TITLE_SX, CONTENT_FIELD_LABEL_SX, contentFieldSx } from './mentorCourseContentStyles';
 
 export function ContentFieldLabel({ children, sx }) {
   return (
-    <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#64748B', mb: 0.5, lineHeight: 1.35, ...sx }}>
+    <Typography sx={{ ...CONTENT_FIELD_LABEL_SX, ...sx }}>
       {children}
     </Typography>
   );
@@ -46,7 +46,7 @@ export function ContentShortDescriptionField({
           multiline
           minRows={2}
           inputProps={{ maxLength }}
-          sx={{ fontSize: 13, color: TEXT, alignItems: 'flex-start' }}
+          sx={{ fontSize: 14, color: TEXT, alignItems: 'flex-start', width: '100%', py: 0.25 }}
         />
       </Box>
       <Typography
@@ -72,26 +72,13 @@ export default function MentorContentSectionHeading({
   action,
   compact = false,
 }) {
-  const iconSize = compact ? 32 : 36;
   const iconFontSize = compact ? 18 : 20;
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-      <Box
-        sx={{
-          width: iconSize,
-          height: iconSize,
-          borderRadius: compact ? '10px' : '12px',
-          bgcolor: theme.bg,
-          border: `1px solid ${theme.border}`,
-          display: 'grid',
-          placeItems: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon sx={{ fontSize: iconFontSize, color: theme.color }} />
-      </Box>
-
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+      {Icon ? (
+        <Icon sx={{ fontSize: iconFontSize, color: theme?.color ?? MUTED, flexShrink: 0 }} />
+      ) : null}
       <Box sx={{ flex: 1, minWidth: 0 }}>
         {meta && (
           <Typography sx={{ ...CONTENT_CARD_META_SX, fontSize: compact ? 11 : 12 }}>
@@ -118,22 +105,9 @@ export default function MentorContentSectionHeading({
 
 export function MentorContentBlockHeading({ Icon, label, theme, sx }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.85, mb: 1, ...sx }}>
-      <Box
-        sx={{
-          width: 28,
-          height: 28,
-          borderRadius: '8px',
-          bgcolor: theme.bg,
-          border: `1px solid ${theme.border}`,
-          display: 'grid',
-          placeItems: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon sx={{ fontSize: 16, color: theme.color }} />
-      </Box>
-      <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#0F172A', lineHeight: 1.35 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, ...sx }}>
+      <Icon sx={{ fontSize: 18, color: theme?.color ?? MUTED, flexShrink: 0 }} />
+      <Typography sx={{ fontSize: 14, fontWeight: 600, color: TEXT, lineHeight: 1.35 }}>
         {label}
       </Typography>
     </Box>

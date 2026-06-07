@@ -1,9 +1,9 @@
 export const CREATE_CARD_SX = {
   bgcolor: '#fff',
-  borderRadius: '20px',
+  borderRadius: '14px',
   border: '1px solid rgba(15,23,42,0.08)',
-  boxShadow: '0 1px 2px rgba(8,145,178,0.04)',
-  p: { xs: 2.25, sm: 2.5 },
+  boxShadow: 'none',
+  p: { xs: 2.25, sm: 3 },
 };
 
 export const PRIMARY = '#0891B2';

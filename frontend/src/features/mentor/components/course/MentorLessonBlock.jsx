@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Box, Collapse, IconButton, InputBase, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
@@ -13,10 +13,15 @@ import MentorMaterialRow from './MentorMaterialRow';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import {
+  CONTENT_SECTION_LABEL_SX,
+  DELETE_ICON_BTN_SX,
+  ICON_BTN_SX,
   LESSON_THEME,
   contentAddButtonSx,
   contentFieldSx,
   lessonBlockSx,
+  lessonBodySx,
+  lessonHeaderSx,
 } from './mentorCourseContentStyles';
 
 export default function MentorLessonBlock({
@@ -89,16 +94,8 @@ export default function MentorLessonBlock({
 
   return (
     <Box sx={lessonBlockSx()} data-content-error={`lesson-${node.tempId}`}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0.75,
-          py: 1,
-          pr: 0.5,
-        }}
-      >
-        <IconButton size="small" onClick={onToggle} sx={{ color: LESSON_THEME.color, p: 0.4 }}>
+      <Box sx={lessonHeaderSx(expanded)}>
+        <IconButton size="small" onClick={onToggle} sx={ICON_BTN_SX} aria-label="Thu gọn bài học">
           {expanded ? (
             <ExpandLessRoundedIcon sx={{ fontSize: 18 }} />
           ) : (
@@ -106,20 +103,7 @@ export default function MentorLessonBlock({
           )}
         </IconButton>
 
-        <Box
-          sx={{
-            width: 30,
-            height: 30,
-            borderRadius: '8px',
-            bgcolor: LESSON_THEME.bg,
-            border: `1px solid ${LESSON_THEME.border}`,
-            display: 'grid',
-            placeItems: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <AssignmentRoundedIcon sx={{ fontSize: 16, color: LESSON_THEME.color }} />
-        </Box>
+        <AssignmentOutlinedIcon sx={{ fontSize: 18, color: LESSON_THEME.color, flexShrink: 0 }} />
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, lineHeight: 1.3 }}>
@@ -128,7 +112,7 @@ export default function MentorLessonBlock({
           <Typography
             sx={{
               fontSize: 14,
-              fontWeight: 700,
+              fontWeight: 600,
               color: TEXT,
               lineHeight: 1.35,
               whiteSpace: 'nowrap',
@@ -140,7 +124,7 @@ export default function MentorLessonBlock({
           </Typography>
         </Box>
 
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, flexShrink: 0 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: MUTED, flexShrink: 0 }}>
           {materialCount} học liệu
         </Typography>
 
@@ -149,14 +133,14 @@ export default function MentorLessonBlock({
           onClick={onDelete}
           disabled={disabled}
           aria-label="Xóa bài học"
-          sx={{ color: MUTED, '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' } }}
+          sx={DELETE_ICON_BTN_SX}
         >
           <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </Box>
 
       <Collapse in={expanded}>
-        <Box sx={{ pb: 1.25, pr: { xs: 0.5, sm: 1 } }}>
+        <Box sx={lessonBodySx()}>
           <ContentFieldLabel>Tên bài học *</ContentFieldLabel>
           <Box sx={contentFieldSx(Boolean(errors.NodeName), LESSON_THEME)}>
             <InputBase
@@ -165,11 +149,11 @@ export default function MentorLessonBlock({
               disabled={disabled}
               placeholder="Ví dụ: Bài 1 — Giới thiệu"
               fullWidth
-              sx={{ fontSize: 14, fontWeight: 600, color: TEXT }}
+              sx={{ fontSize: 14, fontWeight: 500, color: TEXT, width: '100%' }}
             />
           </Box>
           {errors.NodeName && (
-            <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.35 }}>
+            <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.5 }}>
               {errors.NodeName}
             </Typography>
           )}
@@ -181,20 +165,23 @@ export default function MentorLessonBlock({
             disabled={disabled}
             theme={LESSON_THEME}
             placeholder="Mô tả ngắn về nội dung bài học (tuỳ chọn)"
-            labelSx={{ mt: 1.1 }}
+            labelSx={{ mt: 2 }}
           />
 
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 2.5 }}>
+            <Typography sx={{ ...CONTENT_SECTION_LABEL_SX, mt: 0 }}>Học liệu</Typography>
+
             {materialCount === 0 ? (
-              <Typography sx={{ fontSize: 13, color: MUTED, mb: 0.75, lineHeight: 1.5 }}>
+              <Typography sx={{ fontSize: 13, color: MUTED, mb: 1.25, lineHeight: 1.55 }}>
                 Bài học này chưa có học liệu.
               </Typography>
             ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', mb: 1.25 }}>
                 {materials.map((material, materialIndex) => (
                   <MentorMaterialRow
                     key={material.tempId}
                     material={material}
+                    materialIndex={materialIndex}
                     errors={errors.materials?.[material.tempId] ?? {}}
                     onChange={onMaterialChange}
                     onDelete={onMaterialDelete}
@@ -219,7 +206,7 @@ export default function MentorLessonBlock({
               onClick={onAddMaterial}
               disabled={disabled}
               sx={{
-                ...contentAddButtonSx(LESSON_THEME),
+                ...contentAddButtonSx(),
                 cursor: disabled ? 'default' : 'pointer',
                 opacity: disabled ? 0.6 : 1,
               }}

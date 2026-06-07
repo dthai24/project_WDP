@@ -4,9 +4,11 @@ import {
   countLearningMaterials,
   DOC_SOURCE_LINK,
   DOC_SOURCE_UPLOAD,
+  extractPlainTextFromHtml,
   filterLearningMaterials,
   formatFileSize,
   getDocFileTypeLabel,
+  isHtmlContentEmpty,
   isLearningMaterial,
   MATERIAL_TYPE_LABELS,
   validateCourseContent,
@@ -132,7 +134,7 @@ export function countTestQuestions(paths = []) {
 }
 
 function stripHtmlContent(html) {
-  return String(html ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return extractPlainTextFromHtml(html);
 }
 
 function truncatePreview(text, max = 80) {
@@ -255,7 +257,7 @@ export function collectTestMaterials(paths = []) {
 }
 
 function hasTextContent(html) {
-  return String(html ?? '').replace(/<[^>]*>/g, '').trim().length > 0;
+  return !isHtmlContentEmpty(html);
 }
 
 function isCourseBasicComplete(course) {
