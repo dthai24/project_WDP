@@ -1,157 +1,234 @@
-import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 
+export const BORDER = 'rgba(15,23,42,0.08)';
+export const BORDER_STRONG = 'rgba(15,23,42,0.12)';
+
+/** Accent colors — dùng cho line/icon/focus, không tô nền block. */
 export const CHAPTER_THEME = {
-  color: '#0891B2',
-  bg: 'rgba(8,145,178,0.12)',
-  border: 'rgba(8,145,178,0.22)',
+  color: PRIMARY,
+  bg: 'transparent',
+  border: BORDER,
   focus: 'rgba(8,145,178,0.35)',
+  accent: PRIMARY,
 };
 
 export const LESSON_THEME = {
-  color: '#6366F1',
-  bg: 'rgba(99,102,241,0.12)',
-  border: 'rgba(99,102,241,0.22)',
-  focus: 'rgba(99,102,241,0.35)',
+  color: '#475569',
+  bg: 'transparent',
+  border: BORDER,
+  focus: 'rgba(71,85,105,0.25)',
+  accent: '#94A3B8',
+  headerBg: 'rgba(241,245,249,0.95)',
 };
 
 export const MATERIAL_SECTION_THEME = {
-  color: '#D97706',
-  bg: 'rgba(217,119,6,0.12)',
-  border: 'rgba(217,119,6,0.22)',
-  focus: 'rgba(217,119,6,0.35)',
+  color: MUTED,
+  bg: 'transparent',
+  border: BORDER,
+  focus: 'rgba(100,116,139,0.25)',
+  accent: '#CBD5E1',
 };
 
 export const MATERIAL_TYPE_THEME = {
-  VIDEO: {
-    color: '#E11D48',
-    soft: 'rgba(225,29,72,0.1)',
-    border: 'rgba(225,29,72,0.16)',
-    bg: '#FFFFFF',
-  },
-  TEXT: {
-    color: '#0891B2',
-    soft: 'rgba(8,145,178,0.1)',
-    border: 'rgba(8,145,178,0.16)',
-    bg: '#FFFFFF',
-  },
-  DOC: {
-    color: '#2563EB',
-    soft: 'rgba(37,99,235,0.1)',
-    border: 'rgba(37,99,235,0.16)',
-    bg: '#FFFFFF',
-  },
-  TEST: {
-    color: '#7C3AED',
-    soft: 'rgba(124,58,237,0.1)',
-    border: 'rgba(124,58,237,0.16)',
-    bg: '#FFFFFF',
-  },
+  VIDEO: { color: '#E11D48', soft: 'transparent', border: BORDER, bg: '#FFFFFF' },
+  TEXT: { color: PRIMARY, soft: 'transparent', border: BORDER, bg: '#FFFFFF' },
+  DOC: { color: '#2563EB', soft: 'transparent', border: BORDER, bg: '#FFFFFF' },
+  TEST: { color: '#7C3AED', soft: 'transparent', border: BORDER, bg: '#FFFFFF' },
 };
 
 export const CONTENT_FIELD_LABEL_SX = {
   fontSize: 12,
   fontWeight: 600,
   color: MUTED,
-  mb: 0.5,
+  mb: 0.75,
   lineHeight: 1.35,
+};
+
+export const CONTENT_SECTION_LABEL_SX = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: MUTED,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  mb: 1.25,
+  mt: 0.5,
+  lineHeight: 1.3,
 };
 
 export const CONTENT_CARD_META_SX = {
   fontSize: 12,
-  fontWeight: 600,
+  fontWeight: 500,
   color: MUTED,
   lineHeight: 1.35,
 };
 
 export const CONTENT_CARD_TITLE_SX = {
   fontSize: 15,
-  fontWeight: 700,
+  fontWeight: 600,
   color: TEXT,
   lineHeight: 1.35,
 };
 
-export function contentFieldSx(hasError, theme = CHAPTER_THEME) {
+export function contentInputSx(hasError = false) {
   return {
-    borderBottom: `1px solid ${hasError ? '#DC2626' : theme.border}`,
-    pb: 0.45,
-    '&:focus-within': { borderBottomColor: hasError ? '#DC2626' : theme.color },
+    fontSize: 14,
+    fontWeight: 500,
+    color: TEXT,
+    px: 1.25,
+    py: 0.75,
+    minHeight: 40,
+    borderRadius: '10px',
+    border: `1px solid ${hasError ? '#DC2626' : BORDER_STRONG}`,
+    bgcolor: '#fff',
+    width: '100%',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s ease',
+    '&:focus-within': {
+      borderColor: hasError ? '#DC2626' : PRIMARY,
+    },
+    '& .MuiInputBase-input::placeholder': {
+      color: MUTED,
+      opacity: 0.65,
+      fontWeight: 400,
+    },
   };
+}
+
+export function contentFieldSx(hasError, _theme = CHAPTER_THEME) {
+  return contentInputSx(hasError);
 }
 
 export const TEST_ADD_QUESTION_THEME = {
   color: '#059669',
-  bg: 'rgba(5,150,105,0.12)',
-  border: 'rgba(5,150,105,0.22)',
+  bg: 'transparent',
+  border: BORDER,
   focus: 'rgba(5,150,105,0.22)',
 };
 
 export const TEST_ADD_SECTION_THEME = {
   color: '#7C3AED',
-  bg: 'rgba(124,58,237,0.12)',
-  border: 'rgba(124,58,237,0.22)',
+  bg: 'transparent',
+  border: BORDER,
   focus: 'rgba(124,58,237,0.22)',
 };
 
-export function contentAddButtonSx(theme = CHAPTER_THEME) {
+export function contentAddButtonSx(_theme = CHAPTER_THEME) {
   return {
-    border: 'none',
+    border: `1px dashed ${BORDER_STRONG}`,
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     gap: 0.5,
     fontSize: 13,
-    fontWeight: 700,
+    fontWeight: 600,
     fontFamily: 'inherit',
-    color: theme.color,
-    px: 1.25,
-    py: 0.65,
+    color: MUTED,
+    px: 1.5,
+    py: 0.85,
     borderRadius: '10px',
-    bgcolor: theme.bg,
-    transition: 'background-color 0.15s',
+    bgcolor: 'transparent',
+    transition: 'color 0.15s, border-color 0.15s, background-color 0.15s',
     '&:hover': {
-      bgcolor: theme.focus ?? theme.border,
+      color: PRIMARY,
+      borderColor: 'rgba(8,145,178,0.35)',
+      bgcolor: 'rgba(8,145,178,0.03)',
     },
   };
 }
 
 export const CONTENT_DIVIDER_SX = {
-  borderBottom: '1px solid rgba(15,23,42,0.08)',
+  borderBottom: `1px solid ${BORDER}`,
 };
 
-export function contentNestedSx(theme = LESSON_THEME) {
+export function contentNestedSx(_theme = LESSON_THEME) {
   return {
     pl: { xs: 1.25, sm: 2 },
     ml: { xs: 0.5, sm: 0.75 },
-    borderLeft: `2px solid ${theme.border}`,
   };
 }
 
 export const BUILDER_PANEL_SX = {
   bgcolor: '#fff',
-  borderRadius: '20px',
-  border: '1px solid rgba(15,23,42,0.08)',
-  boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
+  borderRadius: '14px',
+  border: `1px solid ${BORDER}`,
+  boxShadow: 'none',
 };
 
-export const CHAPTER_HEADER_BG = 'rgba(8,145,178,0.04)';
+/** @deprecated — không dùng nền header màu nữa */
+export const CHAPTER_HEADER_BG = 'transparent';
 
-export function chapterCardSx(expanded) {
+export function chapterCardSx(_expanded = true) {
   return {
-    ...BUILDER_PANEL_SX,
-    borderRadius: '20px',
+    bgcolor: '#fff',
+    borderRadius: '14px',
+    border: `1px solid ${BORDER}`,
     overflow: 'hidden',
-    borderColor: expanded ? 'rgba(8,145,178,0.28)' : 'rgba(15,23,42,0.08)',
-    boxShadow: expanded ? '0 2px 8px rgba(8,145,178,0.06)' : '0 1px 3px rgba(15,23,42,0.04)',
+    position: 'relative',
+    boxShadow: 'none',
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '3px',
+      bgcolor: CHAPTER_THEME.accent,
+      borderRadius: '14px 14px 0 0',
+    },
   };
 }
 
 export function lessonBlockSx() {
   return {
-    ml: { xs: 0.5, sm: 1 },
-    pl: { xs: 1.25, sm: 1.75 },
-    borderLeft: `2px solid ${LESSON_THEME.border}`,
+    bgcolor: '#fff',
     borderRadius: '12px',
-    bgcolor: 'rgba(99,102,241,0.03)',
-    mb: 1.75,
+    border: `1px solid ${BORDER}`,
+    mb: 2,
+    overflow: 'hidden',
   };
 }
+
+export function lessonHeaderSx(expanded = true) {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 0.75,
+    px: 1.75,
+    py: 1.1,
+    bgcolor: LESSON_THEME.headerBg,
+    borderBottom: expanded ? `1px solid ${BORDER}` : 'none',
+  };
+}
+
+export function lessonBodySx() {
+  return {
+    px: 1.75,
+    py: 2,
+    pb: 1.75,
+    bgcolor: '#fff',
+  };
+}
+
+export function materialRowSx(isDragOver = false) {
+  return {
+    py: 2,
+    px: { xs: 0, sm: 0.25 },
+    borderTop: `1px solid ${BORDER}`,
+    borderBottom: isDragOver ? `2px solid ${PRIMARY}` : 'none',
+    opacity: 1,
+    transition: 'border-color 0.15s ease, opacity 0.15s ease',
+    '&:first-of-type': { borderTop: 'none', pt: 1.5 },
+  };
+}
+
+export const ICON_BTN_SX = {
+  color: MUTED,
+  p: 0.5,
+  '&:hover': { color: TEXT, bgcolor: 'rgba(15,23,42,0.04)' },
+};
+
+export const DELETE_ICON_BTN_SX = {
+  color: MUTED,
+  p: 0.5,
+  '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.05)' },
+};

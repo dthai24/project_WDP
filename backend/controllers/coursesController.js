@@ -200,14 +200,31 @@ const saveCourseDraftStepOne = async (req, res) => {
 const createFinalCourse = async (req, res) => {
   try {
     const newCourse = req.body.course;
-    const newCoursePaths = req.body.paths;
+    const newCoursePaths = req.body.paths ?? [];
+
+    if (!newCourse?.CourseName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin khóa học.',
+      });
+    }
+
     const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
 
-
+    return res.status(201).json({
+      success: true,
+      message: 'Khóa học đã được tạo.',
+      courseId: newCourseId,
+      data: { courseId: newCourseId },
+    });
   } catch (error) {
-    console.error(error.message)
+    console.error('createFinalCourse error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi khi tạo khóa học.',
+    });
   }
-}
+};
 module.exports = {
   getMyCourses,
   getInformationCourse,

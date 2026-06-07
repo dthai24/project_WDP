@@ -268,15 +268,16 @@ export default function MentorCreateCoursePage() {
       <Typography
         component="h1"
         sx={{
-          fontSize: { xs: 24, sm: 28 },
-          fontWeight: 800,
+          fontSize: { xs: 22, sm: 26 },
+          fontWeight: 700,
           color: '#0F172A',
           letterSpacing: '-0.02em',
           mb: 2,
           maxWidth: 720,
+          lineHeight: 1.3,
         }}
       >
-        Bước 1: Thiết lập thông tin cơ bản cho khóa học.
+        Bước 1: Thiết lập thông tin cơ bản
       </Typography>
 
       <MentorCourseCreateStepIndicator currentStep={1} />

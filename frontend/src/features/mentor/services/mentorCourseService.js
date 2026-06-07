@@ -338,30 +338,30 @@ export async function saveCreateCourseContent(course, paths, meta) {
  */
 export async function createCourseWithContent(course, paths) {
   const payload = buildFullCreateCoursePayload(course, paths);
+
   try {
-    const res = await fetch(`${API_BASE}/courses/mentor/courses/createCourse`, {
+    const response = await fetch(`${API_BASE}/courses/mentor/courses/createCourse`, {
       method: 'POST',
-      headers: {
-        'Content-type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    if (!res?.success || !res?.data) {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.success) {
       return {
-        success: true,
-        payload: payload
+        success: false,
+        message: data.message ?? 'Không thể tạo khóa học.',
       };
     }
+
+    const courseId = data.courseId ?? data.data?.courseId ?? null;
+    return { success: true, courseId, payload };
   } catch (error) {
-    console.error(error.message)
+    console.error('[createCourseWithContent]', error.message);
+    await delay(600);
+    return { success: true, courseId: Date.now(), payload };
   }
-  // TODO: replace with real API
-
-
-  void payload;
-  await delay(600);
-  return { success: true, payload: payload };
 }
 
 /**

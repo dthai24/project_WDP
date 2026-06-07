@@ -46,7 +46,7 @@ export default function MentorCourseReviewHeader() {
           Tạo khóa học
         </BreadcrumbLink>
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
-          Xem lại & xuất bản
+          Xem lại & tạo
         </Typography>
       </Breadcrumbs>
 
@@ -60,10 +60,10 @@ export default function MentorCourseReviewHeader() {
           mb: 0.75,
         }}
       >
-        Xem lại & xuất bản
+        Xem lại & tạo khóa học
       </Typography>
       <Typography sx={{ fontSize: 15, color: MUTED, mb: 1.75, maxWidth: 720, lineHeight: 1.55 }}>
-        Bước 3: Kiểm tra thông tin khóa học trước khi lưu hoặc xuất bản.
+        Bước 3: Kiểm tra thông tin khóa học trước khi tạo (lưu dưới dạng bản nháp).
       </Typography>
 
       <MentorCourseCreateStepIndicator currentStep={3} />

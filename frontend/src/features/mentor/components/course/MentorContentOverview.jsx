@@ -8,32 +8,26 @@ import {
   MATERIAL_TYPE_LABELS,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-import {
-  BUILDER_PANEL_SX,
-  CHAPTER_THEME,
-  LESSON_THEME,
-  MATERIAL_SECTION_THEME,
-  MATERIAL_TYPE_THEME,
-} from './mentorCourseContentStyles';
+import { BUILDER_PANEL_SX, MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
 
-function StatPill({ label, value, color }) {
+function StatPill({ label, value }) {
   return (
     <Box
       sx={{
         flex: 1,
         minWidth: 0,
         px: 1.25,
-        py: 1,
-        borderRadius: '12px',
-        bgcolor: 'rgba(15,23,42,0.03)',
-        border: '1px solid rgba(15,23,42,0.06)',
+        py: 1.1,
+        borderRadius: '10px',
+        bgcolor: '#fff',
+        border: '1px solid rgba(15,23,42,0.08)',
         textAlign: 'center',
       }}
     >
-      <Typography sx={{ fontSize: 18, fontWeight: 800, color: TEXT, lineHeight: 1.2 }}>
+      <Typography sx={{ fontSize: 18, fontWeight: 700, color: TEXT, lineHeight: 1.2 }}>
         {value}
       </Typography>
-      <Typography sx={{ fontSize: 11, fontWeight: 600, color, mt: 0.25, lineHeight: 1.3 }}>
+      <Typography sx={{ fontSize: 11, fontWeight: 500, color: MUTED, mt: 0.25, lineHeight: 1.3 }}>
         {label}
       </Typography>
     </Box>
@@ -70,7 +64,7 @@ function OutlineNavItem({
         py: 0.55,
         borderRadius: '10px',
         transition: 'background-color 0.15s',
-        '&:hover': onClick && !disabled ? { bgcolor: 'rgba(8,145,178,0.06)' } : undefined,
+        '&:hover': onClick && !disabled ? { bgcolor: 'rgba(15,23,42,0.03)' } : undefined,
         '&:disabled': { opacity: 0.55, cursor: 'default' },
       }}
     >
@@ -137,20 +131,9 @@ export default function MentorContentOverview({
       }}
     >
       <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.85, mb: 1.5 }}>
-          <Box
-            sx={{
-              width: 32,
-              height: 32,
-              borderRadius: '10px',
-              bgcolor: 'rgba(8,145,178,0.08)',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <InsightsRoundedIcon sx={{ fontSize: 18, color: PRIMARY }} />
-          </Box>
-          <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.75 }}>
+          <InsightsRoundedIcon sx={{ fontSize: 20, color: PRIMARY, flexShrink: 0 }} />
+          <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEXT }}>
             Tổng quan nội dung
           </Typography>
         </Box>
@@ -165,9 +148,9 @@ export default function MentorContentOverview({
         )}
 
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          <StatPill label="Chương" value={pathCount} color={CHAPTER_THEME.color} />
-          <StatPill label="Bài học" value={nodeCount} color={LESSON_THEME.color} />
-          <StatPill label="Học liệu" value={materialCount} color={MATERIAL_SECTION_THEME.color} />
+          <StatPill label="Chương" value={pathCount} />
+          <StatPill label="Bài học" value={nodeCount} />
+          <StatPill label="Học liệu" value={materialCount} />
         </Box>
 
         {paths.length === 0 ? (
@@ -201,7 +184,7 @@ export default function MentorContentOverview({
                         : 'Chưa có bài học'
                     }
                     icon={MenuBookRoundedIcon}
-                    iconColor={CHAPTER_THEME.color}
+                    iconColor={MUTED}
                     indent={0}
                     onClick={() =>
                       handleNavigate({ type: 'chapter', pathTempId: path.tempId })
@@ -222,7 +205,7 @@ export default function MentorContentOverview({
                               : 'Chưa có học liệu'
                           }
                           icon={PlayLessonRoundedIcon}
-                          iconColor={LESSON_THEME.color}
+                          iconColor={MUTED}
                           indent={1}
                           onClick={() =>
                             handleNavigate({
