@@ -138,8 +138,6 @@ export default function MentorCourseReviewStatusPanel({
           <OverviewPill label="Chương" value={overview.chapters} />
           <OverviewPill label="Bài học" value={overview.lessons} />
           <OverviewPill label="Học liệu" value={overview.materials} />
-          <OverviewPill label="Bài kiểm tra" value={overview.tests} />
-          <OverviewPill label="Câu hỏi" value={overview.questions} />
         </Box>
       </Box>
 

@@ -1,7 +1,8 @@
 import {
   createTempId,
+  filterLearningMaterials,
   sanitizePathsForStorage,
-  withNormalizedOrders,
+  stripNonLearningMaterials,
 } from './mentorCourseContentUtils';
 
 const editKey = (courseId) => `mentor_course_edit_draft_${courseId}`;
@@ -12,14 +13,14 @@ const editKey = (courseId) => `mentor_course_edit_draft_${courseId}`;
  * Each level gets a fresh tempId while real IDs are preserved for update APIs.
  */
 export function mapDetailPathsToEditPaths(detailPaths = []) {
-  return withNormalizedOrders(
+  return stripNonLearningMaterials(
     (detailPaths ?? []).map((path) => ({
       ...path,
       tempId: createTempId('path'),
       nodes: (path.nodes ?? []).map((node) => ({
         ...node,
         tempId: createTempId('node'),
-        materials: (node.materials ?? []).map((material) => ({
+        materials: filterLearningMaterials(node.materials ?? []).map((material) => ({
           ...material,
           tempId: createTempId('material'),
         })),
