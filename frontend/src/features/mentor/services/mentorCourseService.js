@@ -649,19 +649,10 @@ export async function updateCoursePublishStatus(courseId, isPublished) {
  */
 export async function fetchCourseStudents(courseId, filters = {}) {
   // TODO: replace with real API
-  // const params = new URLSearchParams(filters);
-  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students?${params}`, {
-  //   headers: { 'x-user-id': String(getUser()?.userId) },
-  // });
-  // const data = await response.json();
-  // return { ok: response.ok, students: data.students.map(normalizeCourseStudent) };
+  const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students`);
+  const res = await response.json();
+  return { ok: response.ok, students: res.data.map(normalizeCourseStudent) };
 
-  void filters;
-  await delay(300);
-  const id = Number(courseId);
-  const rawStudents = mentorCourseStudentsByCourseId[id] ?? [];
-
-  return { ok: true, students: rawStudents.map(normalizeCourseStudent) };
 }
 
 /**
