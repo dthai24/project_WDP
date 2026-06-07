@@ -282,17 +282,8 @@ const createFinalCourse = async (course, paths) => {
     await buildPathsNodes(paths, newCourseId);
 }
 module.exports = {
-<<<<<<< HEAD
-    getCoursesByRole,
-    getStudentCourses,
-    getMentorCourses,
-    getAllCourses,
-    enrollCourse
-};
-=======
     getCoursesByUserRole,
     getCourseById,
     createCourseStepOne,
     createFinalCourse
 }
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4
