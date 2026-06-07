@@ -1,8 +1,4 @@
-/**
- * MentorQuestionBankOverview — panel tóm tắt bên phải (giống MentorContentOverview).
- */
 import { Box, Typography, alpha } from '@mui/material';
-import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import PlayLessonRoundedIcon from '@mui/icons-material/PlayLessonRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -101,12 +97,13 @@ function OutlineNavItem({
   );
 }
 
-function CourseOutlineSection({
+export default function MentorQuestionBankCourseOutline({
   courseChapters = [],
   chaptersLoading = false,
   selectedChapterId = '',
   chapterError = '',
   courseId = '',
+  hint = 'Chọn chương để tạo bộ câu hỏi. Danh sách bài học chỉ để tham khảo nội dung.',
   onChapterSelect,
 }) {
   if (chaptersLoading) {
@@ -149,14 +146,14 @@ function CourseOutlineSection({
   return (
     <>
       <Typography sx={{ fontSize: 12, color: MUTED, mb: 1, lineHeight: 1.45 }}>
-        Chọn chương để tạo bộ câu hỏi. Danh sách bài học chỉ để tham khảo nội dung.
+        {hint}
       </Typography>
 
-      {chapterError && (
+      {chapterError ? (
         <Typography sx={{ fontSize: 12, color: '#DC2626', mb: 1, lineHeight: 1.45 }}>
           {chapterError}
         </Typography>
-      )}
+      ) : null}
 
       <Box
         sx={{
@@ -177,9 +174,7 @@ function CourseOutlineSection({
             <Box key={chapter.chapterId} sx={{ mb: 0.35 }}>
               <OutlineNavItem
                 label={`Chương ${chapterIndex + 1}: ${chapter.chapterTitle}`}
-                meta={
-                  lessons.length > 0 ? `${lessons.length} bài học` : 'Chưa có bài học'
-                }
+                meta={lessons.length > 0 ? `${lessons.length} bài học` : 'Chưa có bài học'}
                 icon={MenuBookRoundedIcon}
                 iconColor={CHAPTER_THEME.color}
                 selected={isSelected}
@@ -204,92 +199,65 @@ function CourseOutlineSection({
   );
 }
 
-export default function MentorQuestionBankOverview({
+export function MentorQuestionBankCourseOutlinePanel({
   courseName = '',
   courseCategory = '',
   chapterTitle = '',
-  selectedChapterId = '',
   courseChapters = [],
   chaptersLoading = false,
+  selectedChapterId = '',
   chapterError = '',
   courseId = '',
-  footer = null,
+  hint,
   onChapterSelect,
 }) {
   return (
-    <Box
-      sx={{
-        position: { lg: 'sticky' },
-        top: { lg: 24 },
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-      }}
-    >
-      <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.85, mb: 1.5 }}>
-          <Box
-            sx={{
-              width: 32,
-              height: 32,
-              borderRadius: '10px',
-              bgcolor: 'rgba(8,145,178,0.08)',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <InsightsRoundedIcon sx={{ fontSize: 18, color: PRIMARY }} />
-          </Box>
-          <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
-            Mục lục khóa học
-          </Typography>
-        </Box>
+    <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
+      <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT, mb: 1.25 }}>
+        Mục lục khóa học
+      </Typography>
 
-        <Box
-          sx={{
-            p: 1.25,
-            mb: 1.5,
-            borderRadius: '12px',
-            bgcolor: 'rgba(8,145,178,0.05)',
-            border: '1px solid rgba(8,145,178,0.12)',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-            <MenuBookRoundedIcon sx={{ fontSize: 18, color: PRIMARY, mt: 0.15, flexShrink: 0 }} />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.25 }}>
-                Khóa học · Chương
+      <Box
+        sx={{
+          p: 1.25,
+          mb: 1.5,
+          borderRadius: '12px',
+          bgcolor: 'rgba(8,145,178,0.05)',
+          border: '1px solid rgba(8,145,178,0.12)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+          <MenuBookRoundedIcon sx={{ fontSize: 18, color: PRIMARY, mt: 0.15, flexShrink: 0 }} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.25 }}>
+              Khóa học · Chương
+            </Typography>
+            <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
+              {courseName || '—'}
+            </Typography>
+            {chapterTitle ? (
+              <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, mt: 0.35 }}>
+                {chapterTitle}
               </Typography>
-              <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
-                {courseName || '—'}
+            ) : null}
+            {courseCategory ? (
+              <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.35 }}>
+                {courseCategory}
               </Typography>
-              {chapterTitle ? (
-                <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, mt: 0.35 }}>
-                  {chapterTitle}
-                </Typography>
-              ) : null}
-              {courseCategory ? (
-                <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.35 }}>
-                  {courseCategory}
-                </Typography>
-              ) : null}
-            </Box>
+            ) : null}
           </Box>
         </Box>
-
-        <CourseOutlineSection
-          courseChapters={courseChapters}
-          chaptersLoading={chaptersLoading}
-          selectedChapterId={selectedChapterId}
-          chapterError={chapterError}
-          courseId={courseId}
-          onChapterSelect={onChapterSelect}
-        />
       </Box>
 
-      {footer && (
-        <Box sx={{ display: { xs: 'none', lg: 'block' }, width: '100%' }}>{footer}</Box>
-      )}
+      <MentorQuestionBankCourseOutline
+        courseChapters={courseChapters}
+        chaptersLoading={chaptersLoading}
+        selectedChapterId={selectedChapterId}
+        chapterError={chapterError}
+        courseId={courseId}
+        hint={hint}
+        onChapterSelect={onChapterSelect}
+      />
     </Box>
   );
 }

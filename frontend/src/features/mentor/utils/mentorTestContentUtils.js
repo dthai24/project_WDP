@@ -103,8 +103,71 @@ export function normalizeTestQuestion(question) {
     ...question,
     QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     AllowMultipleAnswers: legacySingle ? false : Boolean(question.AllowMultipleAnswers),
+    isActive: question.isActive !== false,
     Options: options,
   };
+}
+
+export function isQuestionActive(question) {
+  return question?.isActive !== false;
+}
+
+export function isPersistedQuestionLocked(question, persistedQuestionIds, coursePublished) {
+  if (!coursePublished || !question?.tempId) return false;
+  const ids = persistedQuestionIds instanceof Set
+    ? persistedQuestionIds
+    : new Set(persistedQuestionIds ?? []);
+  return ids.has(question.tempId) && isFilledTestQuestion(question);
+}
+
+export function collectPersistedQuestionIds(sections = []) {
+  const ids = new Set();
+  (sections ?? []).forEach((section) => {
+    getFilledTestQuestions(section?.Questions).forEach((question) => {
+      if (question.tempId) ids.add(question.tempId);
+    });
+  });
+  return ids;
+}
+
+export function buildQuestionContentSnapshot(question) {
+  const payload = buildTestQuestionPayload(question);
+  const { isActive: _isActive, ...content } = payload;
+  return JSON.stringify(content);
+}
+
+export function buildQuestionSnapshotMap(sections = []) {
+  const map = new Map();
+  (sections ?? []).forEach((section) => {
+    getFilledTestQuestions(section?.Questions).forEach((question) => {
+      if (question.tempId) {
+        map.set(question.tempId, buildQuestionContentSnapshot(question));
+      }
+    });
+  });
+  return map;
+}
+
+export function validatePublishedQuestionBankIntegrity(sections, snapshotMap) {
+  if (!snapshotMap?.size) return { ok: true };
+
+  for (const [tempId, snapshot] of snapshotMap.entries()) {
+    const current = getAllQuestions(sections).find((q) => q.tempId === tempId);
+    if (!current) {
+      return {
+        ok: false,
+        message: 'Không thể xóa câu hỏi khi khóa học đã xuất bản.',
+      };
+    }
+    if (buildQuestionContentSnapshot(current) !== snapshot) {
+      return {
+        ok: false,
+        message: 'Không thể sửa nội dung câu hỏi cũ khi khóa học đã xuất bản.',
+      };
+    }
+  }
+
+  return { ok: true };
 }
 
 function shuffleItems(items = []) {
@@ -233,6 +296,34 @@ export function isFilledTestQuestion(question) {
 
 export function getFilledTestQuestions(questions = []) {
   return (questions ?? []).filter(isFilledTestQuestion);
+}
+
+export function getActiveFilledTestQuestions(questions = []) {
+  return getFilledTestQuestions(questions).filter(isQuestionActive);
+}
+
+export function getActiveQuestionCount(sections = []) {
+  return sections.reduce(
+    (sum, section) => sum + getActiveFilledTestQuestions(section?.Questions).length,
+    0,
+  );
+}
+
+export function countActiveQuestionsBySkill(sections = []) {
+  return {
+    [TEST_SKILL_LISTENING]: getSectionsBySkill(sections, TEST_SKILL_LISTENING).reduce(
+      (sum, section) => sum + getActiveFilledTestQuestions(section?.Questions).length,
+      0,
+    ),
+    [TEST_SKILL_READING]: getSectionsBySkill(sections, TEST_SKILL_READING).reduce(
+      (sum, section) => sum + getActiveFilledTestQuestions(section?.Questions).length,
+      0,
+    ),
+    [TEST_SKILL_WRITING]: getSectionsBySkill(sections, TEST_SKILL_WRITING).reduce(
+      (sum, section) => sum + getActiveFilledTestQuestions(section?.Questions).length,
+      0,
+    ),
+  };
 }
 
 export function getFilledQuestionCount(sections = []) {
@@ -411,6 +502,7 @@ export function createEmptyTestQuestion() {
     QuestionText: '',
     Score: 1,
     AllowMultipleAnswers: false,
+    isActive: true,
     Options: createDefaultMultipleChoiceOptions(),
   };
 }
@@ -598,6 +690,7 @@ export function buildTestQuestionPayload(question) {
     QuestionText: String(QuestionText ?? '').trim(),
     Score: Number(Score) || 1,
     AllowMultipleAnswers: Boolean(normalized.AllowMultipleAnswers),
+    isActive: normalized.isActive !== false,
     Options: (Options ?? []).map(({ OptionText, IsCorrect }) => ({
       OptionText: String(OptionText ?? '').trim(),
       IsCorrect: Boolean(IsCorrect),
@@ -656,6 +749,28 @@ export function buildTestSectionPayload(section, sectionOrder) {
     FileName: null,
     FileSize: null,
   };
+}
+
+/**
+ * Scroll tới kỹ năng / bài / câu hỏi trong builder Question Bank.
+ */
+export function scrollToQuestionBankItem(target, { delayMs = 180 } = {}) {
+  window.setTimeout(() => {
+    if (target?.type === 'question' && target.questionTempId) {
+      document.getElementById(`qb-question-${target.questionTempId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      return;
+    }
+
+    if (target?.sectionTempId) {
+      document.getElementById(`qb-section-${target.sectionTempId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }, delayMs);
 }
 
 export function buildTestMaterialPayload(material, base) {

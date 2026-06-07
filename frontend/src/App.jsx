@@ -26,6 +26,7 @@ import MentorEditCourseReviewPage from '@/features/mentor/pages/MentorEditCourse
 import MentorCourseDetailPage from '@/features/mentor/pages/MentorCourseDetailPage';
 import MentorQuestionBankListPage from '@/features/mentor/pages/MentorQuestionBankListPage';
 import MentorQuestionBankCreatePage from '@/features/mentor/pages/MentorQuestionBankCreatePage';
+import MentorQuestionBankDetailPage from '@/features/mentor/pages/MentorQuestionBankDetailPage';
 import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuestionsPage';
 import MentorCoursePlaceholder from '@/features/mentor/components/MentorCoursePlaceholder';
 
@@ -156,6 +157,7 @@ export default function App() {
           <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
           <Route path="courses" element={<MentorCoursesPage />} />
           <Route path="question-banks/create" element={<MentorQuestionBankCreatePage />} />
+          <Route path="question-banks/:questionBankId" element={<MentorQuestionBankDetailPage />} />
           <Route path="question-banks" element={<MentorQuestionBankListPage />} />
           <Route path="news" element={<MentorNewsPage />} />
           <Route path="student-progress" element={<MentorStudentProgressPage />} />

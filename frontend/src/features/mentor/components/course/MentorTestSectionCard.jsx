@@ -26,6 +26,8 @@ import {
   shuffleTestQuestionOptions,
   getSectionDisplayTitle,
   getSectionScoreLabel,
+  isFilledTestQuestion,
+  isPersistedQuestionLocked,
   SCORING_MODE_AUTO,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
@@ -187,6 +189,8 @@ export default function MentorTestSectionCard({
   sectionBadgeLabel,
   questionBankMode = false,
   allSections = [],
+  coursePublished = false,
+  persistedQuestionIds = null,
   onChange,
   onDelete,
 }) {
@@ -250,12 +254,30 @@ export default function MentorTestSectionCard({
   };
 
   const handleQuestionChange = (questionTempId, nextQuestion) => {
+    const prev = questions.find((question) => question.tempId === questionTempId);
+    const locked = isPersistedQuestionLocked(prev, persistedQuestionIds, coursePublished);
+
+    if (locked) {
+      if (prev?.isActive !== nextQuestion.isActive) {
+        updateQuestions(
+          questions.map((question) =>
+            question.tempId === questionTempId
+              ? { ...question, isActive: nextQuestion.isActive }
+              : question,
+          ),
+        );
+      }
+      return;
+    }
+
     updateQuestions(
       questions.map((question) => (question.tempId === questionTempId ? nextQuestion : question)),
     );
   };
 
   const handleDeleteQuestion = (questionTempId) => {
+    const target = questions.find((question) => question.tempId === questionTempId);
+    if (isPersistedQuestionLocked(target, persistedQuestionIds, coursePublished)) return;
     updateQuestions(questions.filter((question) => question.tempId !== questionTempId));
   };
 
@@ -274,7 +296,16 @@ export default function MentorTestSectionCard({
     isWritingQuestionBank,
   });
 
-  const canShuffleSectionOptions = questions.some((question) => canShuffleTestQuestionOptions(question));
+  const sectionHasPersistedQuestions =
+    coursePublished &&
+    questions.some((question) =>
+      isPersistedQuestionLocked(question, persistedQuestionIds, coursePublished),
+    );
+
+  const effectiveHideDelete = hideDelete || (questionBankMode && sectionHasPersistedQuestions);
+
+  const canShuffleSectionOptions =
+    !coursePublished && questions.some((question) => canShuffleTestQuestionOptions(question));
 
   const handleShuffleAllOptions = () => {
     updateQuestions(questions.map((question) => shuffleTestQuestionOptions(question)));
@@ -434,7 +465,7 @@ export default function MentorTestSectionCard({
         </IconButton>
 
         {/* Delete */}
-        {!hideDelete ? (
+        {!effectiveHideDelete ? (
           <IconButton
             size="small"
             onClick={() => setDeleteConfirm({ type: 'section' })}
@@ -631,7 +662,13 @@ export default function MentorTestSectionCard({
             </Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-              {questions.map((question, questionIndex) => (
+              {questions.map((question, questionIndex) => {
+                const contentLocked = isPersistedQuestionLocked(
+                  question,
+                  persistedQuestionIds,
+                  coursePublished,
+                );
+                return (
                 <MentorTestQuestionCard
                   key={question.tempId}
                   question={question}
@@ -639,6 +676,8 @@ export default function MentorTestSectionCard({
                   errors={errors.Questions?.[question.tempId] ?? {}}
                   accentColor={skillAccent}
                   disabled={disabled}
+                  contentLocked={contentLocked}
+                  showActiveToggle={coursePublished && contentLocked}
                   showScoreField={showScoreField}
                   onChange={(nextQuestion) => handleQuestionChange(question.tempId, nextQuestion)}
                   onDelete={() =>
@@ -649,7 +688,8 @@ export default function MentorTestSectionCard({
                     })
                   }
                 />
-              ))}
+                );
+              })}
 
               <AddQuestionButton
                 onClick={handleAddQuestion}
