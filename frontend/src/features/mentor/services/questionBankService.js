@@ -76,7 +76,10 @@ function countQuestionsBySkill(sections = []) {
     (acc, section) => {
       const skill = section.SkillType;
       if (!skill) return acc;
-      acc[skill] = (acc[skill] ?? 0) + (section.Questions?.length ?? 0);
+      const activeCount = (section.Questions ?? []).filter(
+        (q) => String(q?.QuestionText ?? '').trim() && q?.isActive !== false,
+      ).length;
+      acc[skill] = (acc[skill] ?? 0) + activeCount;
       return acc;
     },
     {
@@ -231,7 +234,6 @@ export async function createQuestionBank(payload) {
     chapterTitle: payload.chapterTitle ?? '',
     title: payload.title?.trim() || payload.chapterTitle?.trim() || '',
     description: payload.description ?? '',
-    status: 'DRAFT',
     sections: payload.sections ?? [],
     totalQuestionCount: questionCount,
     publishedQuestionCount: 0,
