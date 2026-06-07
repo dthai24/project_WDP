@@ -21,6 +21,13 @@ export function countLearningMaterials(materials = []) {
   return filterLearningMaterials(materials).length;
 }
 
+export function countMaterialsInPath(path = {}) {
+  return (path.nodes ?? []).reduce(
+    (sum, node) => sum + countLearningMaterials(node.materials),
+    0,
+  );
+}
+
 export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
 
 export function trimShortDescription(value) {
