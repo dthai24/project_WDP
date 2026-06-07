@@ -8,7 +8,7 @@ const getCategories = async (_req, res) => {
       ORDER BY DisplayName
     `);
 
-    return res.json({ success: true, categories: result.recordset });
+    return res.json({ success: true, data: result.recordset });
   } catch (err) {
     console.error('[GetCategories Error]', err.message);
     return res.status(500).json({
@@ -23,10 +23,10 @@ const getLevels = async (_req, res) => {
     const result = await new sql.Request().query(`
       SELECT LevelId AS levelId, DisplayName AS displayName
       FROM Levels
-      ORDER BY LevelId
+      ORDER BY SortOrder ASC
     `);
 
-    return res.json({ success: true, levels: result.recordset });
+    return res.json({ success: true, data: result.recordset });
   } catch (err) {
     console.error('[GetLevels Error]', err.message);
     return res.status(500).json({
