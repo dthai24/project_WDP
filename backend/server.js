@@ -1,3 +1,9 @@
+// Node 21+ — ẩn DEP0040 punycode từ dependency (mssql/tedious, nodemailer…)
+process.on('warning', (warning) => {
+  if (warning.code === 'DEP0040') return;
+  console.warn(warning);
+});
+
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -5,7 +11,8 @@ require('dotenv').config();
 const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
-const courseRoutes = require('./routes/courses.router');
+const courseRoutes = require('./routes/coursesRoutes');
+const lookupRoutes = require('./routes/lookupRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -21,11 +28,22 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api', lookupRoutes);
 
 // ---- Health-check ----
 app.get('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running' }));
 
 // ---- Start ----
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} đang được dùng bởi process khác.`);
+    console.error(`   Chạy: netstat -ano | findstr :${PORT}`);
+    console.error('   Rồi:  taskkill /PID <PID> /F');
+    process.exit(1);
+  }
+  throw err;
 });

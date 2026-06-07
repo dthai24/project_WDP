@@ -3,9 +3,10 @@ import ReactDOM from 'react-dom/client';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App.jsx';
-import theme from './components/theme.js';
-import ToastProvider from './components/common/Toast.jsx';
+import theme from '@/shared/theme.js';
+import ToastProvider from '@/shared/ui/Toast.jsx';
 import './index.css';
+import 'bootstrap/dist/css/bootstrap.min.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

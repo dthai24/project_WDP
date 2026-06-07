@@ -1,27 +1,37 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import OtpPage from './pages/OtpPage';
-import HomePage from './pages/HomePage';
-import ProfilePage from './pages/ProfilePage';
-import SurveyPage from './pages/SurveyPage';
-import TestPage from './pages/Test';
-import CourseListPage from './pages/CourseListPage';
-import CourseDetailPage from './pages/CourseDetailPage';
-import CourseLearningPage from './pages/CourseLearningPage';
-import MyCoursesListPage from './pages/MyCoursesListPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import UnauthorizedPage from './pages/UnauthorizedPage';
-import MentorCoursesPage from './pages/mentor/MentorCoursesPage';
-import MentorNewsPage from './pages/mentor/MentorNewsPage';
-import MentorStudentProgressPage from './pages/mentor/MentorStudentProgressPage';
-import MentorCoursePlaceholder from './components/mentor/MentorCoursePlaceholder';
+import LoginPage from '@/features/auth/pages/LoginPage';
+import RegisterPage from '@/features/auth/pages/RegisterPage';
+import OtpPage from '@/features/auth/pages/OtpPage';
+import HomePage from '@/features/home/HomePage';
+import ProfilePage from '@/features/profile/pages/ProfilePage';
+import SurveyPage from '@/features/auth/pages/SurveyPage';
+import TestPage from '@/features/dev/Test';
+import CourseListPage from '@/features/courses/pages/CourseListPage';
+import CourseDetailPage from '@/features/courses/pages/CourseDetailPage';
+import CourseLearningPage from '@/features/learning/pages/CourseLearningPage';
+import MyCoursesListPage from '@/features/learning/pages/MyCoursesListPage';
+import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
+import UnauthorizedPage from '@/features/auth/pages/UnauthorizedPage';
+import MentorCoursesPage from '@/features/mentor/pages/MentorCoursesPage';
+import MentorNewsPage from '@/features/mentor/pages/MentorNewsPage';
+import MentorStudentProgressPage from '@/features/mentor/pages/MentorStudentProgressPage';
+import MentorCreateCoursePage from '@/features/mentor/pages/MentorCreateCoursePage';
+import MentorCreateCourseContentPage from '@/features/mentor/pages/MentorCreateCourseContentPage';
+import MentorCreateCourseReviewPage from '@/features/mentor/pages/MentorCreateCourseReviewPage';
+import MentorEditCoursePage from '@/features/mentor/pages/MentorEditCoursePage';
+import MentorEditCourseContentPage from '@/features/mentor/pages/MentorEditCourseContentPage';
+import MentorEditCourseReviewPage from '@/features/mentor/pages/MentorEditCourseReviewPage';
+import MentorCourseDetailPage from '@/features/mentor/pages/MentorCourseDetailPage';
+import MentorQuestionBankListPage from '@/features/mentor/pages/MentorQuestionBankListPage';
+import MentorQuestionBankCreatePage from '@/features/mentor/pages/MentorQuestionBankCreatePage';
+import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuestionsPage';
+import MentorCoursePlaceholder from '@/features/mentor/components/MentorCoursePlaceholder';
 
-import MainLayout from './components/layout/MainLayout';
-import MentorLayout from './components/layout/MentorLayout';
-import ProtectedRoute from './components/common/ProtectedRoute';
+import MainLayout from '@/shared/layout/MainLayout';
+import MentorLayout from '@/shared/layout/MentorLayout';
+import ProtectedRoute from '@/shared/ui/ProtectedRoute';
 
 const MENTOR_BLOCK_REDIRECTS = { Mentor: '/mentor/courses' };
 const STUDENT_MENTOR_ROUTE_REDIRECTS = { Student: '/courses' };
@@ -135,31 +145,17 @@ export default function App() {
           }
         >
           <Route index element={<Navigate to="/mentor/courses" replace />} />
-          <Route path="courses/create" element={
-            <MentorCoursePlaceholder
-              title="Tạo khóa học"
-              description="Tạo khóa học mới và thiết lập thông tin cơ bản."
-            />
-          } />
-          <Route path="courses/:courseId/edit" element={
-            <MentorCoursePlaceholder
-              title="Chỉnh sửa khóa học"
-              description="Cập nhật thông tin khóa học."
-            />
-          } />
-          <Route path="courses/:courseId/content" element={
-            <MentorCoursePlaceholder
-              title="Quản lý nội dung"
-              description="Quản lý chương, chặng, bài học và học liệu."
-            />
-          } />
-          <Route path="courses/:courseId" element={
-            <MentorCoursePlaceholder
-              title="Chi tiết khóa học"
-              description="Xem tổng quan khóa học."
-            />
-          } />
+          <Route path="courses/create/review" element={<MentorCreateCourseReviewPage />} />
+          <Route path="courses/create/content" element={<MentorCreateCourseContentPage />} />
+          <Route path="courses/create" element={<MentorCreateCoursePage />} />
+          <Route path="courses/:courseId/review" element={<MentorEditCourseReviewPage />} />
+          <Route path="courses/:courseId/content/edit" element={<MentorEditCourseContentPage />} />
+          <Route path="courses/:courseId/edit" element={<MentorEditCoursePage />} />
+          <Route path="courses/:courseId/questions" element={<MentorCourseQuestionsPage />} />
+          <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
           <Route path="courses" element={<MentorCoursesPage />} />
+          <Route path="question-banks/create" element={<MentorQuestionBankCreatePage />} />
+          <Route path="question-banks" element={<MentorQuestionBankListPage />} />
           <Route path="news" element={<MentorNewsPage />} />
           <Route path="student-progress" element={<MentorStudentProgressPage />} />
           <Route path="paths" element={<Navigate to="/mentor/courses" replace />} />
