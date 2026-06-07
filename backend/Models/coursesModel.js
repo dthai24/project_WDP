@@ -243,14 +243,15 @@ const insertMaterial = async (material, nodeId) => {
     request.input('MaterialType', sql.NVarChar(20), material.MaterialType);
     request.input('Title', sql.NVarChar(255), material.Title);
     request.input('MaterialUrl', sql.NVarChar(sql.MAX), material.MaterialUrl ?? null);
+    request.input('Content', sql.NVarChar(sql.MAX), material.Content ?? null);
     request.input('MaterialOrder', sql.Int, Number(material.MaterialOrder));
 
     const result = await request.query(`
         INSERT INTO [dbo].[Node_Materials]
-            ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder])
+            ([NodeId], [MaterialType], [Title], [MaterialUrl], [Content], [MaterialOrder])
         OUTPUT INSERTED.MaterialId AS MaterialId
         VALUES
-            (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder)
+            (@NodeId, @MaterialType, @Title, @MaterialUrl, @Content, @MaterialOrder)
     `);
 
     return result.recordset[0].MaterialId;
@@ -277,10 +278,10 @@ const buildPathsNodes = async (paths, courseId) => {
 
 // create new course (final step in create course process)
 const createFinalCourse = async (course, paths) => {
-    //create course (step one in create course process)
     const newCourseId = await createCourseStepOne(course);
     await buildPathsNodes(paths, newCourseId);
-}
+    return newCourseId;
+};
 module.exports = {
     getCoursesByUserRole,
     getCourseById,

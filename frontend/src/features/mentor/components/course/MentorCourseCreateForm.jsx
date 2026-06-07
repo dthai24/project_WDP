@@ -16,7 +16,7 @@ export default function MentorCourseCreateForm({
 }) {
   return (
     <Box component="form" noValidate onSubmit={onSubmit}>
-      <Box sx={{ ...CREATE_CARD_SX, mb: 2.5 }}>
+      <Box sx={{ ...CREATE_CARD_SX, mb: 3 }}>
         <Box
           sx={{
             display: 'grid',

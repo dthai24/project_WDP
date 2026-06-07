@@ -8,7 +8,7 @@ const MUTED = '#64748B';
 const STEPS = [
   { step: 1, label: 'Thông tin cơ bản' },
   { step: 2, label: 'Xây nội dung' },
-  { step: 3, label: 'Xem lại & xuất bản' },
+  { step: 3, label: 'Xem lại & tạo' },
 ];
 
 export default function MentorCourseCreateStepIndicator({ currentStep = 1 }) {

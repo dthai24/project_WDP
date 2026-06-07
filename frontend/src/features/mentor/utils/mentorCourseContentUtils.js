@@ -1,14 +1,32 @@
 // TODO: update backend/DB MaterialType to support TEXT
 import { resolveVideoEmbed } from '@/shared/utils/videoEmbedUtils';
-import {
-  buildTestMaterialPayload,
-  getTestDefaultFields,
-  validateTestMaterial,
-} from './mentorTestContentUtils';
+import { getTestDefaultFields } from './mentorTestContentUtils';
 
 export { getTestDefaultFields } from './mentorTestContentUtils';
 
-export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
+export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC'];
+
+/** Học liệu thực tế trong bài học — không gồm bài kiểm tra (quản lý riêng qua ngân hàng câu hỏi). */
+export const LEARNING_MATERIAL_TYPES = MATERIAL_TYPES;
+
+export function isLearningMaterial(material) {
+  return LEARNING_MATERIAL_TYPES.includes(material?.MaterialType);
+}
+
+export function filterLearningMaterials(materials = []) {
+  return (materials ?? []).filter(isLearningMaterial);
+}
+
+export function countLearningMaterials(materials = []) {
+  return filterLearningMaterials(materials).length;
+}
+
+export function countMaterialsInPath(path = {}) {
+  return (path.nodes ?? []).reduce(
+    (sum, node) => sum + countLearningMaterials(node.materials),
+    0,
+  );
+}
 
 export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
 
@@ -16,6 +34,35 @@ export function trimShortDescription(value) {
   const trimmed = String(value ?? '').trim();
   if (!trimmed) return null;
   return trimmed.slice(0, CONTENT_SHORT_DESCRIPTION_MAX);
+}
+
+/** Trích plain text từ HTML — dùng DOM khi có, hỗ trợ tiếng Việt & entity. */
+export function extractPlainTextFromHtml(html) {
+  const raw = String(html ?? '');
+  if (!raw.trim()) return '';
+
+  if (typeof document !== 'undefined') {
+    const el = document.createElement('div');
+    el.innerHTML = raw;
+    return (el.textContent || el.innerText || '')
+      .replace(/\u200B|\uFEFF/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  return raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&nbsp;|&#160;|&#xA0;/gi, ' ')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([\da-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/<[^>]+>/g, '')
+    .replace(/\u200B|\uFEFF/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function isHtmlContentEmpty(html) {
+  return extractPlainTextFromHtml(html).length === 0;
 }
 
 export const MATERIAL_TYPE_LABELS = {
@@ -102,21 +149,22 @@ export function validatePathForSave(path) {
   return {};
 }
 
-export function sanitizePathsForStorage(paths) {
+export function stripNonLearningMaterials(paths) {
   return withNormalizedOrders(paths).map((path) => ({
     ...path,
     nodes: (path.nodes ?? []).map((node) => ({
       ...node,
-      materials: (node.materials ?? []).map(({ File: _file, ...material }) => {
-        if (material.MaterialType !== 'TEST' || !(material.Sections ?? []).length) {
-          return material;
-        }
+      materials: filterLearningMaterials(node.materials),
+    })),
+  }));
+}
 
-        return {
-          ...material,
-          Sections: material.Sections.map(({ File: _sectionFile, ...section }) => section),
-        };
-      }),
+export function sanitizePathsForStorage(paths) {
+  return stripNonLearningMaterials(paths).map((path) => ({
+    ...path,
+    nodes: (path.nodes ?? []).map((node) => ({
+      ...node,
+      materials: (node.materials ?? []).map(({ File: _file, ...material }) => material),
     })),
   }));
 }
@@ -205,7 +253,11 @@ export function countContentStats(paths) {
   const nodeCount = normalized.reduce((sum, path) => sum + (path.nodes?.length ?? 0), 0);
   const materialCount = normalized.reduce(
     (sum, path) =>
-      sum + (path.nodes ?? []).reduce((nodeSum, node) => nodeSum + (node.materials?.length ?? 0), 0),
+      sum +
+      (path.nodes ?? []).reduce(
+        (nodeSum, node) => nodeSum + countLearningMaterials(node.materials),
+        0,
+      ),
     0,
   );
 
@@ -240,6 +292,8 @@ export function validateCourseContent(paths, options = {}) {
       }
 
       (node.materials ?? []).forEach((material) => {
+        if (!isLearningMaterial(material)) return;
+
         const materialErrors = {};
 
         if (!material.MaterialType) {
@@ -247,9 +301,7 @@ export function validateCourseContent(paths, options = {}) {
         }
 
         if (material.MaterialType === 'TEXT') {
-          const contentHtml = String(material.Content ?? '').trim();
-          const contentText = contentHtml.replace(/<[^>]*>/g, '').trim();
-          if (!contentText) {
+          if (isHtmlContentEmpty(material.Content)) {
             materialErrors.Content = 'Vui lòng nhập nội dung văn bản';
           }
         } else if (material.MaterialType === 'DOC') {
@@ -279,14 +331,6 @@ export function validateCourseContent(paths, options = {}) {
           if (materialUrl && !isSimpleUrl(materialUrl)) {
             materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
           }
-        } else if (material.MaterialType === 'TEST') {
-          Object.assign(
-            materialErrors,
-            validateTestMaterial(material, {
-              ...options,
-              chapterId: path.PathId ?? null,
-            }),
-          );
         } else {
           if (!String(material.Title ?? '').trim()) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
@@ -404,7 +448,7 @@ export function buildCourseContentPayload(paths) {
         NodeName: String(node.NodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
         Description: trimShortDescription(node.Description),
-        materials: (materials ?? []).map(
+        materials: filterLearningMaterials(materials ?? []).map(
           ({
             tempId: _materialTempId,
             Content,
@@ -463,14 +507,6 @@ export function buildCourseContentPayload(paths) {
                 MaterialUrl: materialUrl,
                 EmbedUrl: embedUrl,
               };
-            }
-
-            if (material.MaterialType === 'TEST') {
-              // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
-              return buildTestMaterialPayload(material, {
-                ...base,
-                Description: trimShortDescription(material.Description),
-              });
             }
 
             return {
