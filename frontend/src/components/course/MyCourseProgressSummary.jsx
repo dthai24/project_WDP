@@ -107,7 +107,7 @@ export default function MyCourseProgressSummary({ course }) {
     >
       <Box>
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, mb: 0.5, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-          Tiến độ theo chặng
+          Tiến độ theo chương
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "column" }}>
           {modules.map((mod, index) => (

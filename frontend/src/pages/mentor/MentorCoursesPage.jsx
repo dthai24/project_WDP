@@ -46,11 +46,44 @@ export default function MentorCoursesPage() {
   // TODO: replace mock with real API call — fetchMentorCourses(queryState)
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
-    fetchMentorCourses()
-      .then((res) => { if (isMounted && res.ok) setCourses(res.courses); })
-      .finally(() => { if (isMounted) setLoading(false); });
-    return () => { isMounted = false; };
+
+    const loadMentorCourses = async () => {
+      try {
+        setLoading(true);
+
+        // console.log("START FETCH MENTOR COURSES");
+
+        const res = await fetchMentorCourses();
+
+        // console.log("MENTOR COURSES SERVICE RESPONSE:", res);
+
+        if (!isMounted) return;
+
+        if (!res.ok) {
+          console.error(res.message || "Không lấy được khóa học mentor");
+          setCourses([]);
+          return;
+        }
+
+        setCourses(Array.isArray(res.courses) ? res.courses : []);
+      } catch (error) {
+        console.error("LOAD MENTOR COURSES ERROR:", error);
+
+        if (isMounted) {
+          setCourses([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadMentorCourses();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const updateQuery = (patch) => {
@@ -76,18 +109,18 @@ export default function MentorCoursesPage() {
     if (!loading && queryState.page !== pagination.page) {
       updateQuery({ page: pagination.page });
     }
-  });
+  }, [loading, queryState.page, pagination.page]);
 
   const handleCreateCourse = () => navigate('/mentor/courses/create');
-  const handleStatusChange  = (v) => updateQuery({ status: v, page: 1 });
+  const handleStatusChange = (v) => updateQuery({ status: v, page: 1 });
   const handleCategoryChange = (v) => updateQuery({ category: v, page: 1 });
-  const handleLevelChange   = (v) => updateQuery({ level: v, page: 1 });
-  const handleSortChange    = (v) => updateQuery({ sort: v, page: 1 });
-  const handlePageChange    = (page) => {
+  const handleLevelChange = (v) => updateQuery({ level: v, page: 1 });
+  const handleSortChange = (v) => updateQuery({ sort: v, page: 1 });
+  const handlePageChange = (page) => {
     updateQuery({ page });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handleResetFilters  = () =>
+  const handleResetFilters = () =>
     setSearchParams(resetMentorCourseListParams(searchParams), { replace: true });
 
   const handleRemoveFilterChip = ({ type }) => {

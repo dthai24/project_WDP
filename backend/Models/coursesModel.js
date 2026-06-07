@@ -7,7 +7,7 @@ const checkUserRole = async (userId, roleName) => {
     const request = new sql.Request();
 
     request.input('userId', sql.Int, Number(userId));
-    request.input('roleName', sql.NVarChar(50), roleName);
+    request.input('roleName', sql.NVarChar(50), String(roleName).trim().toLowerCase());
 
     const result = await request.query(`
         SELECT TOP 1
@@ -16,7 +16,7 @@ const checkUserRole = async (userId, roleName) => {
         INNER JOIN Roles r
             ON r.RoleId = ur.RoleId
         WHERE ur.UserId = @userId
-          AND r.RoleName = @roleName
+          AND LOWER(LTRIM(RTRIM(r.RoleName))) = @roleName
     `);
 
     return result.recordset.length > 0;
@@ -85,17 +85,14 @@ const getStudentCourseBase = async (userId) => {
             ON ca.CategoryId = c.CategoryId
         LEFT JOIN Levels lv
             ON lv.LevelId = c.LevelId
-        LEFT JOIN Instructors i
-            ON i.InstructorId = c.InstructorId
         LEFT JOIN Users instructorUser
-            ON instructorUser.UserId = i.UserId
+            ON instructorUser.UserId = c.InstructorId
         WHERE uc.UserId = @userId
         ORDER BY uc.EnrollmentDate DESC
     `);
 
     return result.recordset;
 };
-
 // ======================================================
 // Query: mentor courses
 // ======================================================
@@ -106,35 +103,38 @@ const getMentorCourseBase = async (userId) => {
 
     const result = await request.query(`
         SELECT
-            c.CourseId AS courseId,
-            c.CourseName AS courseName,
+    c.CourseId AS courseId,
+    c.CourseName AS courseName,
 
-            ca.DisplayName AS category,
-            lv.DisplayName AS level,
+    ca.DisplayName AS category,
+    lv.DisplayName AS level,
 
-            mentorUser.FullName AS instructor,
+    mentorUser.FullName AS instructor,
 
-            ISNULL(c.TotalLessons, 0) AS totalLessons,
-            c.Thumbnail AS thumbnail,
+    ISNULL(c.TotalLessons, 0) AS totalLessons,
+    c.Thumbnail AS thumbnail,
 
-            100 AS progressPercentage,
-            'teaching' AS enrollmentStatus,
+    100 AS progressPercentage,
+    'teaching' AS enrollmentStatus,
 
-            ISNULL(c.UpdatedAt, c.CreatedAt) AS activityDate,
+    ISNULL(c.UpdatedAt, c.CreatedAt) AS activityDate,
 
-            c.CreatedAt,
-            c.UpdatedAt
-        FROM Courses c
-        INNER JOIN Instructors i
-            ON i.InstructorId = c.InstructorId
-        INNER JOIN Users mentorUser
-            ON mentorUser.UserId = i.UserId
-        LEFT JOIN Categories ca
-            ON ca.CategoryId = c.CategoryId
-        LEFT JOIN Levels lv
-            ON lv.LevelId = c.LevelId
-        WHERE i.UserId = @userId
-        ORDER BY ISNULL(c.UpdatedAt, c.CreatedAt) DESC
+    c.CreatedAt,
+    c.UpdatedAt
+FROM Courses c
+
+LEFT JOIN Users mentorUser
+    ON mentorUser.UserId = c.InstructorId
+
+LEFT JOIN Categories ca
+    ON ca.CategoryId = c.CategoryId
+
+LEFT JOIN Levels lv
+    ON lv.LevelId = c.LevelId
+
+WHERE c.InstructorId = @userId
+
+ORDER BY ISNULL(c.UpdatedAt, c.CreatedAt) DESC;
     `);
 
     return result.recordset;
@@ -188,10 +188,8 @@ const getAllCourseBase = async (userId = null) => {
             ON ca.CategoryId = c.CategoryId
         LEFT JOIN Levels lv
             ON lv.LevelId = c.LevelId
-        LEFT JOIN Instructors i
-            ON i.InstructorId = c.InstructorId
         LEFT JOIN Users instructorUser
-            ON instructorUser.UserId = i.UserId
+            ON instructorUser.UserId = c.InstructorId
         ORDER BY ISNULL(c.UpdatedAt, c.CreatedAt) DESC
     `);
 
@@ -545,12 +543,6 @@ const getStudentCourses = async (userId) => {
 // Public: lấy courses của mentor
 // ======================================================
 const getMentorCourses = async (userId) => {
-    const isMentor = await checkUserRole(userId, 'mentor');
-
-    if (!isMentor) {
-        return [];
-    }
-
     const courses = await getMentorCourseBase(userId);
 
     const mappedCourses = await Promise.all(
