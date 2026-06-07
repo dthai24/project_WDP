@@ -10,6 +10,79 @@ const getCoursesByUserRole = (userId, userRole) => {
     return null;
 }
 
+const getStudentCoursesList = async (filters, userId) => {
+    const request = new sql.Request();
+    const { search, category, level, status, sort } = filters;
+
+    let baseQuery = `
+        FROM Courses crs
+        LEFT JOIN Categories cate ON crs.CategoryId = cate.CategoryId
+        LEFT JOIN Levels lv ON crs.LevelId = lv.LevelId
+        WHERE crs.IsPublished = 1
+    `;
+
+    if (search) {
+        baseQuery += ` AND crs.CourseName LIKE @Search`;
+        request.input('Search', sql.NVarChar(200), `%${search}%`);
+    }
+
+    if (category) {
+        // Nếu là mảng thì ép thành chuỗi , nếu là chuỗi đơn lẻ thì giữ nguyên
+        const catIds = Array.isArray(category) ? category.join(',') : category;
+
+        // Nếu chuỗi có dữ liệu thì mới nối vào câu SQL
+        if (catIds && String(catIds).trim() !== '') {
+            baseQuery += ` AND crs.CategoryId IN (${catIds})`;
+        }
+    }
+
+    if (level) {
+        const levIds = Array.isArray(level) ? level.join(',') : level;
+
+        if (levIds && String(levIds).trim() !== '') {
+            baseQuery += ` AND crs.LevelId IN (${levIds})`;
+        }
+    }
+
+    if (status && userId) {
+        if (status === 'enrolled') {
+            baseQuery += ` AND EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
+        } else if (status === 'not_enrolled') {
+            baseQuery += ` AND NOT EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
+        }
+        // we might need UserId input if it hasn't been added
+        if (!request.parameters.UserId) {
+            request.input('UserId', sql.Int, userId);
+        }
+    }
+
+    // Total count query
+    const countQuery = `SELECT COUNT(*) AS totalCount ${baseQuery}`;
+    const countResult = await request.query(countQuery);
+    const totalCount = countResult.recordset[0].totalCount;
+
+    // Main select query
+    let selectQuery = `
+        SELECT crs.CourseId, crs.CourseName, crs.Description, crs.CategoryId, crs.LevelId,
+               lv.LevelName as levelName, lv.DisplayName as LevelDisplayName, lv.SortOrder as LevelSortOrder,
+               crs.Thumbnail, crs.CreatedAt, crs.UpdatedAt,
+               cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName
+        ${baseQuery}
+    `;
+
+    // Sort
+    if (sort === 'newest') {
+        selectQuery += ` ORDER BY crs.CreatedAt DESC`;
+    } else {
+        selectQuery += ` ORDER BY crs.CourseId DESC`; // Default
+    }
+
+    const coursesResult = await request.query(selectQuery);
+
+    const coursesWithPaths = await buildCourse(coursesResult.recordset);
+    return { courses: coursesWithPaths, totalCount };
+};
+
 //  courseId, courseName, description, category, level,
 //  *         thumbnail, isPublished, createdAt, updatedAt,
 //  *         chapterCount, lessonCount, materialCount,
@@ -178,7 +251,30 @@ const getCoursePaths = async (courseId) => {
 const getStudentCourses = async (userId) => {
     const request = new sql.Request();
     request.input('userId', sql.Int, userId);
+    let query = `
+        SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail,
+               uc.ProgressPercentage, uc.EnrolledAt
+        FROM User_Courses uc
+        JOIN Courses crs ON uc.CourseId = crs.CourseId
+        WHERE uc.UserId = @UserId
+    `;
 
+    if (filterStatus === 'learning') {
+        // Đang học: Tiến độ lớn hơn 0 và nhỏ hơn 100%
+        query += ` AND uc.ProgressPercentage > 0 AND uc.ProgressPercentage < 100`;
+    } else if (filterStatus === 'completed') {
+        // Đã hoàn thành: Tiến độ đạt đúng 100%
+        query += ` AND uc.ProgressPercentage = 100`;
+    } else if (filterStatus === 'not_started') {
+        // Chưa học: Mới bấm đăng ký chứ chưa bấm vào học (0%)
+        query += ` AND uc.ProgressPercentage = 0`;
+    }
+
+    // Sắp xếp theo ngày đăng ký mới nhất lên đầu
+    query += ` ORDER BY uc.EnrolledAt DESC`;
+
+    const result = await request.query(query);
+    return result.recordset;
 }
 
 //___GET Path Node___
@@ -303,7 +399,7 @@ const insertNode = async (node, pathId) => {
 
     return nodeIds;
 };
-
+a
 // insert path into course
 const insertPath = async (path, courseId) => {
     const insertedPathIds = [];
@@ -403,10 +499,58 @@ const increaseCourseTotalLessons = async (courseId) => {
   `);
 }
 
+const getMyEnrolledCourses = async (userId, filterStatus = 'all') => {
+    const request = new sql.Request();
+    request.input('UserId', sql.Int, userId); // Biến truyền vào là @UserId (chữ U viết hoa)
 
+    // 1. Khởi tạo câu lệnh gốc (Chưa có ORDER BY ở đây để tí nữa nối chuỗi lọc cho chuẩn)
+    let query = `
+        SELECT 
+            crs.CourseId, 
+            crs.CourseName, 
+            crs.Description, 
+            crs.Thumbnail, 
+            uc.ProgressPercentage, 
+            uc.EnrolledAt
+        FROM User_Courses uc
+        INNER JOIN Courses crs ON uc.CourseId = crs.CourseId
+        WHERE uc.UserId = @UserId
+    `;
+
+    // 2. Nối các điều kiện lọc AND (Phải nằm trước ORDER BY)
+    if (filterStatus === 'learning') {
+        query += ` AND uc.ProgressPercentage > 0 AND uc.ProgressPercentage < 100`;
+    } else if (filterStatus === 'completed') {
+        query += ` AND uc.ProgressPercentage = 100`;
+    } else if (filterStatus === 'not_started') {
+        query += ` AND uc.ProgressPercentage = 0`;
+    }
+
+    // 3. Đút ORDER BY xuống cuối cùng của toàn bộ câu lệnh
+    query += ` ORDER BY uc.EnrolledAt DESC`;
+
+    const result = await request.query(query);
+    return result.recordset;
+}
+
+// Hàm đăng ký khóa học (Thêm vào Model để Controller gọi)
+const enrollCourse = async (userId, courseId) => {
+    const request = new sql.Request();
+    request.input('UserId', sql.Int, userId);
+    request.input('CourseId', sql.Int, courseId);
+
+    const result = await request.query(`
+        INSERT INTO User_Courses (UserId, CourseId, ProgressPercentage, EnrolledAt)
+        VALUES (@UserId, @CourseId, 0, GETDATE())
+    `);
+    return result.rowsAffected;
+};
 module.exports = {
     getCoursesByUserRole,
     getCourseById,
     createCourseStepOne,
-    createFinalCourse
+    createFinalCourse,
+    getStudentCoursesList,
+    getMyEnrolledCourses,
+    enrollCourse
 }
