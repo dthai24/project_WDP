@@ -1,5 +1,5 @@
 import { buildCreateCourseStep1Payload } from './mentorCourseFormUtils';
-import { sanitizePathsForStorage, withNormalizedOrders } from './mentorCourseContentUtils';
+import { sanitizePathsForStorage, stripNonLearningMaterials } from './mentorCourseContentUtils';
 
 export const MENTOR_COURSE_CREATE_STORAGE_KEY = 'mentor_course_create_draft';
 
@@ -19,7 +19,7 @@ export function normalizeCreateCourseDraft(data) {
 
   return {
     course: data.course ?? null,
-    paths: withNormalizedOrders(data.paths ?? []),
+    paths: stripNonLearningMaterials(data.paths ?? []),
     meta: {
       contentDraftSaved: Boolean(data.meta?.contentDraftSaved),
     },
