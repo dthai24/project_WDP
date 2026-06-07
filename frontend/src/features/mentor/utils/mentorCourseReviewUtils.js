@@ -1,7 +1,7 @@
 import {
   buildFullCreateCoursePayload,
   countContentStats,
-  countLearningMaterials,
+  countMaterialsInPath,
   DOC_SOURCE_LINK,
   DOC_SOURCE_UPLOAD,
   extractPlainTextFromHtml,
@@ -22,16 +22,9 @@ import {
   SCORING_MODE_MANUAL,
 } from './mentorTestContentUtils';
 
-export { MATERIAL_TYPE_LABELS };
+export { MATERIAL_TYPE_LABELS, countMaterialsInPath };
 
 export const REVIEW_OUTLINE_TYPE_LABELS = { ...MATERIAL_TYPE_LABELS };
-
-export function countMaterialsInPath(path = {}) {
-  return (path.nodes ?? []).reduce(
-    (sum, node) => sum + countLearningMaterials(node.materials),
-    0,
-  );
-}
 
 export function getMaterialReviewDetailSummary(material) {
   if (!material?.MaterialType) return '';
@@ -491,7 +484,7 @@ export function buildReviewChecklist(draft, validation) {
   const lessonCount = countLessons(paths);
   const allChaptersHaveLessons = paths.every((path) => (path.nodes ?? []).length > 0);
   const allLessonsHaveMaterials = paths.every((path) =>
-    (path.nodes ?? []).every((node) => countLearningMaterials(node.materials) > 0),
+    (path.nodes ?? []).every((node) => filterLearningMaterials(node.materials).length > 0),
   );
 
   const textOk = !validation.errors.some(

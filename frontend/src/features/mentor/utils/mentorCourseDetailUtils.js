@@ -1,5 +1,5 @@
 import { normalizeMentorCourse } from './mentorCourseUtils';
-import { countMaterialsInPath } from './mentorCourseReviewUtils';
+import { countMaterialsInPath } from './mentorCourseContentUtils';
 
 function normalizeMaterial(raw = {}) {
   return {
