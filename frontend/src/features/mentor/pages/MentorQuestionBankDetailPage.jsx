@@ -19,6 +19,11 @@ import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBan
 import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questionBank/MentorQuestionBankBuilderPanel';
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
 import MentorQuestionBankRightRail from '@/features/mentor/components/questionBank/MentorQuestionBankRightRail';
+import MentorChapterQuizSetupDialog from '@/features/mentor/components/course/MentorChapterQuizSetupDialog';
+import {
+  QUIZ_SETUP_SCOPE_CHAPTER,
+  QUIZ_SETUP_SCOPE_COURSE,
+} from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import useQuestionBankDetailBootstrap from '@/features/mentor/hooks/useQuestionBankDetailBootstrap';
 import { PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
@@ -57,6 +62,7 @@ function mapSectionsForSave(sourceSections) {
 export default function MentorQuestionBankDetailPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [quizSetupTarget, setQuizSetupTarget] = useState(null);
 
   const {
     loading,
@@ -269,17 +275,44 @@ export default function MentorQuestionBankDetailPage() {
       >
         Lưu thay đổi
       </AppButton>
-      <AppButton
-        variant="outlined"
-        startIcon={<ArrowBackRoundedIcon />}
-        onClick={() => navigate('/mentor/question-banks')}
-        fullWidth
-        sx={{ height: 44, fontSize: 14, fontWeight: 600, borderRadius: '999px' }}
-      >
-        Quay lại danh sách
-      </AppButton>
     </Box>
   );
+
+  const openQuizSetupForBank = () => {
+    if (!bank) return;
+    setQuizSetupTarget({
+      scope: QUIZ_SETUP_SCOPE_CHAPTER,
+      chapterId: bank.chapterId,
+      chapterTitle: bank.chapterTitle,
+      chapterIndex: Math.max(
+        0,
+        courseChapters.findIndex(
+          (chapter) => String(chapter.chapterId) === String(bank.chapterId),
+        ),
+      ),
+    });
+  };
+
+  const openQuizSetupForChapter = (chapter, chapterIndex) => {
+    setQuizSetupTarget({
+      scope: QUIZ_SETUP_SCOPE_CHAPTER,
+      chapterId: chapter.chapterId,
+      chapterTitle: chapter.chapterTitle,
+      chapterIndex,
+    });
+  };
+
+  const openCourseQuizSetup = () => {
+    setQuizSetupTarget({ scope: QUIZ_SETUP_SCOPE_COURSE });
+  };
+
+  const backToCourseQuestions = () => {
+    if (bank?.courseId) {
+      navigate(`/mentor/courses/${bank.courseId}/questions`);
+      return;
+    }
+    navigate('/mentor/question-banks');
+  };
 
   if (loading) {
     return (
@@ -292,6 +325,16 @@ export default function MentorQuestionBankDetailPage() {
   if (notFound || !bank) {
     return (
       <Box sx={{ width: '100%', maxWidth: 640, mx: 'auto', py: 4 }}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <AppButton
+            variant="outlined"
+            startIcon={<ArrowBackRoundedIcon />}
+            onClick={() => navigate('/mentor/question-banks')}
+            sx={{ height: 40, borderRadius: '999px', fontWeight: 600, fontSize: 13 }}
+          >
+            Quay lại danh sách
+          </AppButton>
+        </Box>
         <EmptyState
           icon={QuizOutlinedIcon}
           title="Không tìm thấy ngân hàng câu hỏi"
@@ -310,6 +353,7 @@ export default function MentorQuestionBankDetailPage() {
     <Box sx={{ width: '100%', maxWidth: { xs: '100%', lg: 1520 }, mx: 'auto' }}>
       <MentorQuestionBankDetailHeader
         bankTitle={bankTitle}
+        courseId={bank.courseId}
         courseName={bank.courseTitle || course?.courseName}
         courseCategory={courseCategory}
         chapterTitle={bank.chapterTitle}
@@ -320,6 +364,27 @@ export default function MentorQuestionBankDetailPage() {
         createdAt={bank.createdAt}
         updatedAt={bank.updatedAt ?? bank.questionBankUpdatedAt}
         actions={footerActions}
+        onBack={backToCourseQuestions}
+        onQuizSetup={openQuizSetupForBank}
+      />
+
+      <MentorChapterQuizSetupDialog
+        open={Boolean(quizSetupTarget)}
+        onClose={() => setQuizSetupTarget(null)}
+        scope={quizSetupTarget?.scope ?? QUIZ_SETUP_SCOPE_CHAPTER}
+        courseId={bank.courseId}
+        courseTitle={bank.courseTitle || course?.courseName}
+        chapterId={quizSetupTarget?.chapterId ?? bank.chapterId}
+        chapterTitle={quizSetupTarget?.chapterTitle ?? bank.chapterTitle}
+        chapterIndex={
+          quizSetupTarget?.chapterIndex ??
+          Math.max(
+            0,
+            courseChapters.findIndex(
+              (chapter) => String(chapter.chapterId) === String(bank.chapterId),
+            ),
+          )
+        }
       />
 
       <Box
@@ -394,6 +459,8 @@ export default function MentorQuestionBankDetailPage() {
             courseId={bank.courseId}
             courseOutlineHint="Chọn chương khác để mở ngân hàng câu hỏi tương ứng."
             onChapterSelect={selectChapter}
+            onChapterQuizSetup={openQuizSetupForChapter}
+            onCourseQuizSetup={openCourseQuizSetup}
           />
         </Box>
       </Box>

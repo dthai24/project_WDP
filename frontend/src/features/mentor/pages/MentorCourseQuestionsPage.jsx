@@ -143,21 +143,29 @@ export default function MentorCourseQuestionsPage() {
           </MuiLink>
           <MuiLink
             component={Link}
-            to="/mentor/question-banks"
+            to="/mentor/courses"
             underline="hover"
             sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
           >
-            Ngân hàng câu hỏi
+            Khóa học của tôi
+          </MuiLink>
+          <MuiLink
+            component={Link}
+            to={`/mentor/courses/${courseId}`}
+            underline="hover"
+            sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+          >
+            {courseName || `Khóa học #${courseId}`}
           </MuiLink>
           <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
-            {courseName}
+            Ngân hàng câu hỏi
           </Typography>
         </Breadcrumbs>
 
         <AppButton
           variant="outlined"
           startIcon={<ArrowBackRoundedIcon />}
-          onClick={() => navigate('/mentor/question-banks')}
+          onClick={() => navigate(`/mentor/courses/${courseId}`)}
           sx={{
             height: 40,
             px: 2,
@@ -168,7 +176,7 @@ export default function MentorCourseQuestionsPage() {
             width: { xs: '100%', sm: 'auto' },
           }}
         >
-          Quay lại
+          Quay lại khóa học
         </AppButton>
       </Box>
 

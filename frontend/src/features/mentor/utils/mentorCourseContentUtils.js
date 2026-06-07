@@ -185,6 +185,11 @@ export function createEmptyPath() {
   };
 }
 
+/** PathId từ server, hoặc thứ tự chương (1-based) khi chưa lưu. */
+export function resolveChapterId(path, pathIndex = 0) {
+  return path?.PathId ?? pathIndex + 1;
+}
+
 export function createEmptyNode() {
   return {
     tempId: createTempId('node'),
