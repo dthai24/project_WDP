@@ -359,9 +359,9 @@ export async function createCourseWithContent(course, paths) {
   // TODO: replace with real API
 
 
-  // void payload;
-  // await delay(600);
-  // return { ok: true, payload: payload };
+  void payload;
+  await delay(600);
+  return { success: true, payload: payload };
 }
 
 /**

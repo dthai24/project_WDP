@@ -106,7 +106,6 @@ export default function MentorCreateCourseReviewPage() {
       throw new Error('Không thể lưu khóa học.');
 
     }
-    return;
     clearCreateCourseDraft();
   };
 
@@ -132,7 +131,10 @@ export default function MentorCreateCourseReviewPage() {
 
     setPublishing(true);
     try {
-      await persistDraft(true);
+      // Đoạn này thì đừng có await persisDraft
+      // lý do: tại persisDraft có call Api và xử lý một chuỗi insert vào database nên rất lâu
+      // nếu await => phải chờ lâu => crash frontend
+      persistDraft(true);
       toast.success('Đã xuất bản khóa học.');
       navigate('/mentor/courses');
     } catch {
