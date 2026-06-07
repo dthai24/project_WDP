@@ -8,6 +8,7 @@ import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import { MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { BUILDER_PANEL_SX } from '@/features/mentor/components/course/mentorCourseContentStyles';
 import {
+  getActiveFilledTestQuestions,
   getFilledTestQuestions,
   getNonEmptyQuestionBankSections,
   getSectionsBySkill,
@@ -43,12 +44,16 @@ function SkillNavButton({
   sectionCount = 0,
   sectionUnit = 'bài',
   questionCount = 0,
+  activeQuestionCount = 0,
+  showActiveCounts = false,
   selected = false,
   disabled = false,
   hasError = false,
   onClick,
 }) {
-  const metaText = `${sectionCount} ${sectionUnit} · ${questionCount} câu hỏi`;
+  const metaText = showActiveCounts && questionCount !== activeQuestionCount
+    ? `${sectionCount} ${sectionUnit} · ${activeQuestionCount}/${questionCount} câu đang dùng`
+    : `${sectionCount} ${sectionUnit} · ${questionCount} câu hỏi`;
   return (
     <Box
       component="button"
@@ -118,6 +123,7 @@ export default function MentorQuestionBankSkillNav({
   activeSkill = TEST_SKILL_READING,
   disabled = false,
   sectionErrors = {},
+  showActiveCounts = false,
   onSkillChange,
 }) {
   const baiCountBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
@@ -128,6 +134,14 @@ export default function MentorQuestionBankSkillNav({
   const countBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
     acc[skill] = getSectionsBySkill(sections, skill).reduce(
       (sum, section) => sum + getFilledTestQuestions(section?.Questions).length,
+      0,
+    );
+    return acc;
+  }, {});
+
+  const activeCountBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
+    acc[skill] = getSectionsBySkill(sections, skill).reduce(
+      (sum, section) => sum + getActiveFilledTestQuestions(section?.Questions).length,
       0,
     );
     return acc;
@@ -172,6 +186,8 @@ export default function MentorQuestionBankSkillNav({
               sectionCount={baiCountBySkill[skill]}
               sectionUnit={skill === TEST_SKILL_WRITING ? 'nhóm' : 'bài'}
               questionCount={countBySkill[skill]}
+              activeQuestionCount={activeCountBySkill[skill]}
+              showActiveCounts={showActiveCounts}
               selected={activeSkill === skill}
               disabled={disabled}
               hasError={errorBySkill[skill]}

@@ -1,19 +1,121 @@
 /**
- * MentorCourseQuestionsPage — Placeholder
+ * MentorCourseQuestionsPage — danh sách ngân hàng câu hỏi theo chương của một khóa học.
  * Route: /mentor/courses/:courseId/questions
  */
-import { Box, Breadcrumbs, Link as MuiLink, Typography, alpha } from '@mui/material';
+import { useEffect, useState } from 'react';
+import {
+  Box,
+  Breadcrumbs,
+  Link as MuiLink,
+  Typography,
+  alpha,
+} from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
+import Loading from '@/shared/ui/Loading';
+import EmptyState from '@/shared/ui/EmptyState';
 import { mentorQuestionBankMock } from '@/features/mentor/data/mentorQuestionBankMock';
+import {
+  fetchCourseForQB,
+  getQuestionBanksByCourse,
+} from '@/features/mentor/services/questionBankService';
+import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
+
+const TEXT = '#0F172A';
+const MUTED = '#64748B';
+const PRIMARY = '#0891B2';
+
+function BankRow({ bank, onManage }) {
+  const questionCount = bank.totalQuestionCount ?? 0;
+
+  return (
+    <Box
+      sx={{
+        p: 2,
+        borderRadius: '16px',
+        bgcolor: '#FFFFFF',
+        border: `1px solid ${alpha('#0F172A', 0.08)}`,
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: { xs: 'stretch', sm: 'center' },
+        gap: 1.5,
+      }}
+    >
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT, mb: 0.35 }}>
+          {bank.chapterTitle || bank.title || `Chương #${bank.chapterId}`}
+        </Typography>
+        <Typography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
+          {questionCount} câu hỏi · Cập nhật {formatMentorCourseDate(bank.updatedAt ?? bank.questionBankUpdatedAt)}
+        </Typography>
+      </Box>
+      <AppButton
+        onClick={() => onManage(bank.id)}
+        sx={{
+          height: 40,
+          px: 2.5,
+          fontSize: 13,
+          fontWeight: 700,
+          borderRadius: '999px',
+          bgcolor: PRIMARY,
+          color: '#fff',
+          flexShrink: 0,
+          width: { xs: '100%', sm: 'auto' },
+          boxShadow: 'none',
+          '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+        }}
+      >
+        Quản lý câu hỏi
+      </AppButton>
+    </Box>
+  );
+}
 
 export default function MentorCourseQuestionsPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const course = mentorQuestionBankMock.find((c) => String(c.courseId) === String(courseId));
-  const courseName = course?.courseName ?? `Khóa học #${courseId}`;
+  const [loading, setLoading] = useState(true);
+  const [banks, setBanks] = useState([]);
+  const [courseName, setCourseName] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      setLoading(true);
+      try {
+        const [courseRes, banksRes] = await Promise.all([
+          fetchCourseForQB(courseId),
+          getQuestionBanksByCourse(courseId),
+        ]);
+
+        if (!mounted) return;
+
+        const mockCourse = mentorQuestionBankMock.find(
+          (c) => String(c.courseId) === String(courseId),
+        );
+        setCourseName(
+          courseRes.ok
+            ? courseRes.course?.courseName
+            : mockCourse?.courseName ?? `Khóa học #${courseId}`,
+        );
+        setBanks(banksRes.ok ? banksRes.banks : []);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [courseId]);
+
+  const handleManage = (bankId) => {
+    navigate(`/mentor/question-banks/${bankId}`);
+  };
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
@@ -29,13 +131,13 @@ export default function MentorCourseQuestionsPage() {
       >
         <Breadcrumbs
           separator="/"
-          sx={{ '& .MuiBreadcrumbs-separator': { color: '#64748B', mx: 0.5 } }}
+          sx={{ '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 } }}
         >
           <MuiLink
             component={Link}
             to="/home"
             underline="hover"
-            sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
+            sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
           >
             Trang chủ
           </MuiLink>
@@ -43,11 +145,11 @@ export default function MentorCourseQuestionsPage() {
             component={Link}
             to="/mentor/question-banks"
             underline="hover"
-            sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
+            sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
           >
             Ngân hàng câu hỏi
           </MuiLink>
-          <Typography sx={{ fontSize: 13, color: '#0F172A', fontWeight: 600 }}>
+          <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
             {courseName}
           </Typography>
         </Breadcrumbs>
@@ -70,24 +172,68 @@ export default function MentorCourseQuestionsPage() {
         </AppButton>
       </Box>
 
-      <Box
+      <Typography
+        component="h1"
         sx={{
-          py: 5,
-          px: 3,
-          textAlign: 'center',
-          borderRadius: '20px',
-          bgcolor: '#FFFFFF',
-          border: `1px solid ${alpha('#0F172A', 0.08)}`,
+          fontSize: { xs: 22, sm: 26 },
+          fontWeight: 800,
+          color: TEXT,
+          letterSpacing: '-0.02em',
+          mb: 0.75,
         }}
       >
-        <QuizOutlinedIcon sx={{ fontSize: 48, color: '#0891B2', opacity: 0.35, mb: 1.5 }} />
-        <Typography sx={{ fontSize: { xs: 18, sm: 20 }, fontWeight: 700, color: '#0F172A', mb: 1 }}>
-          Ngân hàng câu hỏi — {courseName}
-        </Typography>
-        <Typography sx={{ fontSize: 15, color: '#64748B' }}>
-          Màn quản lý câu hỏi theo chương sẽ được phát triển sau.
-        </Typography>
-      </Box>
+        Ngân hàng câu hỏi theo chương
+      </Typography>
+      <Typography sx={{ fontSize: 14, color: MUTED, mb: 2.5, maxWidth: 720, lineHeight: 1.55 }}>
+        Khóa học:{' '}
+        <Box component="span" sx={{ fontWeight: 700, color: TEXT }}>
+          {courseName}
+        </Box>
+      </Typography>
+
+      {loading ? (
+        <Loading message="Đang tải ngân hàng câu hỏi..." />
+      ) : banks.length === 0 ? (
+        <Box
+          sx={{
+            borderRadius: '20px',
+            bgcolor: '#FFFFFF',
+            border: `1px solid ${alpha('#0F172A', 0.08)}`,
+          }}
+        >
+          <EmptyState
+            embedded
+            icon={QuizOutlinedIcon}
+            title="Chưa có ngân hàng câu hỏi"
+            description="Tạo bộ câu hỏi cho từng chương để bắt đầu quản lý."
+            actionLabel="Tạo bộ câu hỏi"
+            onAction={() =>
+              navigate(`/mentor/question-banks/create?courseId=${courseId}`)
+            }
+          />
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+          {banks.map((bank) => (
+            <BankRow key={bank.id} bank={bank} onManage={handleManage} />
+          ))}
+        </Box>
+      )}
+
+      {!loading && banks.length > 0 && (
+        <Box sx={{ mt: 2.5 }}>
+          <AppButton
+            variant="outlined"
+            startIcon={<MenuBookOutlinedIcon />}
+            onClick={() =>
+              navigate(`/mentor/question-banks/create?courseId=${courseId}`)
+            }
+            sx={{ height: 40, borderRadius: '999px', fontWeight: 600 }}
+          >
+            Tạo bộ câu hỏi mới
+          </AppButton>
+        </Box>
+      )}
     </Box>
   );
 }
