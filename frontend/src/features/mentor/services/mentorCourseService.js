@@ -162,13 +162,13 @@ export async function fetchCourseCategories() {
 
     return {
       ok: true,
-      categories: data.categories.map((item) => ({
+      categories: data.data.map((item) => ({
         value: item.categoryId,
         label: item.displayName,
       })),
     };
-  } catch {
-    return { ok: false, categories: [], message: 'Không thể kết nối máy chủ.' };
+  } catch (error) {
+    return { ok: false, categories: [], message: error.message };
   }
 }
 
@@ -195,13 +195,14 @@ export async function fetchCourseLevels() {
 
     return {
       ok: true,
-      levels: (data.levels ?? []).map((item) => ({
+      levels: (data.data ?? []).map((item) => ({
         value: item.levelId,
         label: item.displayName,
       })),
     };
-  } catch {
-    return { ok: false, levels: [], message: 'Không thể kết nối máy chủ.' };
+  } catch (err) {
+    console.error(err.message);
+    return { ok: false, levels: [], message: 'Lỗi fetchCourseLevels' };
   }
 }
 
