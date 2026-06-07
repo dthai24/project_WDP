@@ -3,7 +3,6 @@ import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownR
 import PlayCircleRoundedIcon from '@mui/icons-material/PlayCircleRounded';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
-import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import { TEXT } from './mentorCourseCreateStyles';
 
 const PRIMARY = '#0891B2';
@@ -14,7 +13,6 @@ export const MATERIAL_TYPE_SELECT_OPTIONS = [
   { value: 'VIDEO', label: 'Video', icon: PlayCircleRoundedIcon, color: '#E11D48', soft: 'rgba(225,29,72,0.10)' },
   { value: 'TEXT', label: 'Văn bản', icon: ArticleRoundedIcon, color: '#0891B2', soft: 'rgba(8,145,178,0.10)' },
   { value: 'DOC', label: 'Tài liệu', icon: DescriptionRoundedIcon, color: '#2563EB', soft: 'rgba(37,99,235,0.10)' },
-  { value: 'TEST', label: 'Bài kiểm tra', icon: QuizRoundedIcon, color: '#7C3AED', soft: 'rgba(124,58,237,0.10)' },
 ];
 
 function getOption(value) {

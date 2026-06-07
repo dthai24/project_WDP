@@ -5,6 +5,10 @@ import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
+import {
+  countLearningMaterials,
+  filterLearningMaterials,
+} from '@/features/mentor/utils/mentorCourseContentUtils';
 import MentorMaterialRow from './MentorMaterialRow';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
@@ -31,8 +35,8 @@ export default function MentorLessonBlock({
   courseId = null,
   chapterId = null,
 }) {
-  const materials = node.materials ?? [];
-  const materialCount = materials.length;
+  const materials = filterLearningMaterials(node.materials ?? []);
+  const materialCount = countLearningMaterials(node.materials);
   const canReorder = materialCount > 1 && !disabled;
 
   const [dragIndex, setDragIndex] = useState(null);

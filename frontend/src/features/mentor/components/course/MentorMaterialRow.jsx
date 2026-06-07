@@ -3,12 +3,10 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
 import {
   getDocDefaultFields,
-  getTestDefaultFields,
   getVideoDefaultFields,
   MATERIAL_URL_LABELS,
   MATERIAL_URL_PLACEHOLDERS,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
-import MentorTestMaterialEditor from './MentorTestMaterialEditor';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
@@ -37,14 +35,6 @@ function buildTypeChangePatch(currentType, nextType) {
     patch.FileName = null;
     patch.FileSize = null;
     Object.assign(patch, getVideoDefaultFields());
-  } else if (nextType === 'TEST') {
-    patch.Content = '';
-    patch.File = null;
-    patch.FileName = null;
-    patch.FileSize = null;
-    patch.EmbedUrl = null;
-    patch.SourceType = undefined;
-    Object.assign(patch, getTestDefaultFields());
   } else if (currentType === 'TEXT') {
     patch.Content = '';
   } else if (currentType === 'DOC') {
@@ -56,20 +46,6 @@ function buildTypeChangePatch(currentType, nextType) {
     patch.EmbedUrl = null;
   } else if (currentType === 'VIDEO') {
     patch.EmbedUrl = null;
-    patch.MaterialUrl = '';
-  } else if (currentType === 'TEST') {
-    patch.Description = undefined;
-    patch.Sections = undefined;
-    patch.TotalScore = undefined;
-    patch.ScoringMode = undefined;
-    patch.QuestionBankId = undefined;
-    patch.QuestionBankTitle = undefined;
-    patch.QuestionBankScope = undefined;
-    patch.TestSource = undefined;
-    patch.FinalTestConfig = undefined;
-    patch.TestSkill = undefined;
-    patch.AudioUrl = undefined;
-    patch.Questions = undefined;
     patch.MaterialUrl = '';
   }
 
@@ -95,8 +71,7 @@ export default function MentorMaterialRow({
   const isText = material.MaterialType === 'TEXT';
   const isDoc = material.MaterialType === 'DOC';
   const isVideo = material.MaterialType === 'VIDEO';
-  const isTest = material.MaterialType === 'TEST';
-  const showUrlField = !isText && !isDoc && !isVideo && !isTest;
+  const showUrlField = !isText && !isDoc && !isVideo;
   const typeTheme = MATERIAL_TYPE_THEME[material.MaterialType] ?? MATERIAL_TYPE_THEME.VIDEO;
   const placeholder = MATERIAL_URL_PLACEHOLDERS[material.MaterialType] ?? '';
   const urlLabel = MATERIAL_URL_LABELS[material.MaterialType] ?? 'Link';
@@ -191,9 +166,7 @@ export default function MentorMaterialRow({
                 ? 'Ví dụ: Đoạn văn về chủ đề du lịch (tuỳ chọn)'
                 : isDoc
                   ? 'Ví dụ: Slide bài giảng tuần 1'
-                  : isTest
-                    ? 'Ví dụ: Bài kiểm tra đọc hiểu tuần 1'
-                    : 'Ví dụ: Video giới thiệu bài học'
+                  : 'Ví dụ: Video giới thiệu bài học'
             }
             fullWidth
             sx={{
@@ -293,17 +266,6 @@ export default function MentorMaterialRow({
           errors={errors}
           onChange={onChange}
           disabled={disabled}
-        />
-      )}
-
-      {isTest && (
-        <MentorTestMaterialEditor
-          material={material}
-          errors={errors}
-          onChange={onChange}
-          disabled={disabled}
-          courseId={courseId}
-          chapterId={chapterId}
         />
       )}
     </Box>

@@ -4,6 +4,7 @@ import PlayLessonRoundedIcon from '@mui/icons-material/PlayLessonRounded';
 import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
 import {
   countContentStats,
+  filterLearningMaterials,
   MATERIAL_TYPE_LABELS,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
@@ -208,7 +209,7 @@ export default function MentorContentOverview({
                   />
 
                   {nodes.map((node, nodeIndex) => {
-                    const materials = node.materials ?? [];
+                    const materials = filterLearningMaterials(node.materials ?? []);
                     const lessonTitle = node.NodeName || `Bài ${nodeIndex + 1}`;
 
                     return (
