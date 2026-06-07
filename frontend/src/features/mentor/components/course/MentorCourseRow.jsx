@@ -67,8 +67,8 @@ const PILL_CHIP_SX = {
   },
 };
 
-function getStatusChip(status) {
-  if (status === 'published') {
+function getStatusChip(IsPublished) {
+  if (IsPublished === true) {
     return {
       label: 'Đã xuất bản',
       sx: {
@@ -88,41 +88,53 @@ function getStatusChip(status) {
   };
 }
 
-function getLevelChipStyle(level = '') {
-  const l = level.toLowerCase();
-  if (l.includes('cơ bản') || l.includes('sơ cấp')) {
+function getLevelChipStyle(levelId) {
+  // beginner
+  if (levelId === 1) {
     return {
       bgcolor: 'rgba(56,189,248,0.12)',
       color: '#0284C7',
       border: '1px solid rgba(56,189,248,0.22)',
     };
   }
-  if (l.includes('trung cấp')) {
+  //elementary
+  if (levelId === 2) {
+    return {
+      bgcolor: 'rgba(56,189,248,0.12)',
+      color: '#0284C7',
+      border: '1px solid rgba(56,189,248,0.22)',
+    };
+  }
+  //intermediate
+  if (levelId === 3) {
     return {
       bgcolor: 'rgba(245,158,11,0.12)',
       color: '#D97706',
       border: '1px solid rgba(245,158,11,0.22)',
     };
   }
-  if (l.includes('nâng cao')) {
+  //advanced
+  if (levelId === 4) {
     return {
       bgcolor: 'rgba(234,88,12,0.12)',
       color: '#EA580C',
       border: '1px solid rgba(234,88,12,0.22)',
     };
   }
+  //if not receive value of levelId 
   return { bgcolor: '#F1F5F9', color: '#64748B' };
 }
 
-function getCategoryChipStyle(category = '') {
-  const map = {
-    'Giao tiếp': { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' },
-    IELTS: { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' },
-    TOEIC: { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' },
-    'Ngữ pháp': { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' },
-    'Phát âm': { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' },
-  };
-  return map[category] ?? { bgcolor: '#F1F5F9', color: '#64748B' };
+function getCategoryChipStyle(categoryId) {
+
+  switch (Number(categoryId)) {
+    case 1: return { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' };
+    case 2: return { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' };
+    case 3: return { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' };
+    case 4: return { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' };
+    case 5: return { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' };
+  }
+  return { bgcolor: '#F1F5F9', color: '#64748B' };
 }
 
 function CourseThumbnail({ thumbnail, courseName }) {
@@ -165,12 +177,12 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
 
 export default function MentorCourseRow({ course }) {
   const theme = useTheme();
-  const statusChip = getStatusChip(course.status);
-  const detailPath = `/mentor/courses/${course.courseId}?tab=course`;
-  const totalChapters = course.totalChapters ?? course.totalNodes ?? 0;
-  const totalLessons = course.totalLessons ?? 0;
+  const statusChip = getStatusChip(course.IsPublished);
+  const detailPath = `/mentor/courses/${course.CourseId}?tab=course`;
+  const totalChapters = course.Paths.length;
+  const totalLessons = 0;
   const totalMaterials = course.totalMaterials ?? 0;
-
+  console.log(totalLessons)
   return (
     <Box
       sx={{
@@ -186,7 +198,7 @@ export default function MentorCourseRow({ course }) {
         gap: { xs: 1.75, md: 2.5 },
       }}
     >
-      <CourseThumbnail thumbnail={course.thumbnail} courseName={course.courseName} />
+      <CourseThumbnail thumbnail={course.Thumbnail} courseName={course.courseName} />
 
       <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
         <MuiLink
@@ -203,7 +215,7 @@ export default function MentorCourseRow({ course }) {
             '&:hover': { color: PRIMARY },
           }}
         >
-          {course.courseName}
+          {course.CourseName}
         </MuiLink>
 
         <Typography
@@ -218,22 +230,22 @@ export default function MentorCourseRow({ course }) {
             overflow: 'hidden',
           }}
         >
-          {truncateText(course.description, 140)}
+          {truncateText(course.Description, 140)}
         </Typography>
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.25 }}>
-          {course.categoryName && (
+          {course.CategoryId && (
             <Chip
               size="small"
-              label={course.categoryName}
-              sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.categoryName) }}
+              label={course.CategoryDisplayName}
+              sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.CategoryId) }}
             />
           )}
-          {course.levelName && (
+          {course.LevelDisplayName && (
             <Chip
               size="small"
-              label={course.levelName}
-              sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.levelName) }}
+              label={course.LevelDisplayName}
+              sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.LevelId) }}
             />
           )}
         </Box>
@@ -260,7 +272,7 @@ export default function MentorCourseRow({ course }) {
           <MetricItem
             icon={MenuBookRoundedIcon}
             label="Bài"
-            value={totalLessons}
+            value={totalLessons.length}
             iconColor={METRIC_COLORS.lessons}
           />
           <MetricItem
@@ -276,7 +288,7 @@ export default function MentorCourseRow({ course }) {
             <Typography sx={{ fontSize: 12, color: MUTED }}>
               Cập nhật:{' '}
               <Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>
-                {formatMentorCourseDate(course.updatedAt)}
+                {formatMentorCourseDate(course.UpdatedAt)}
               </Box>
             </Typography>
           </Box>

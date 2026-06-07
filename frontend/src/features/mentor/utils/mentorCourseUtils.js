@@ -53,19 +53,21 @@ export function filterAndSortMentorCourses(courses, query = {}) {
   } = query;
   const keyword = q.trim().toLowerCase();
 
+  // return true => course is retained
+  // return false => course is removed 
   let result = courses.filter((course) => {
-    if (status !== 'all' && course.status !== status) return false;
-
+    if (status === 'published' && !course.IsPublished) return false;
+    if (status === 'draft' && course.IsPublished) return false;
     if (category !== 'all') {
       const categoryMatch =
-        String(course.categoryId) === String(category) ||
-        course.categoryName === category;
+        String(course.CategoryId) === String(category) ||
+        course.CategoryName === category;
       if (!categoryMatch) return false;
     }
 
     if (level !== 'all') {
       const levelMatch =
-        String(course.levelId) === String(level) || course.levelName === level;
+        String(course.LevelId) === String(level) || course.levelName === level;
       if (!levelMatch) return false;
     }
 

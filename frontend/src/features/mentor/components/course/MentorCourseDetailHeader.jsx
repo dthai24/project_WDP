@@ -34,7 +34,7 @@ const PILL_CHIP_SX = {
 };
 
 function getStatusChip(status) {
-  if (status === 'published') {
+  if (status) {
     return {
       label: 'Đã xuất bản',
       sx: {
@@ -54,41 +54,52 @@ function getStatusChip(status) {
   };
 }
 
-function getLevelChipStyle(level = '') {
-  const l = level.toLowerCase();
-  if (l.includes('cơ bản') || l.includes('sơ cấp')) {
+function getLevelChipStyle(level) {
+  //người mới bắt đầu
+  if (level === 'beginner') {
     return {
       bgcolor: 'rgba(56,189,248,0.12)',
       color: '#0284C7',
       border: '1px solid rgba(56,189,248,0.22)',
     };
   }
-  if (l.includes('trung cấp')) {
+  //cơ bản
+  if (level === 'elementary') {
     return {
       bgcolor: 'rgba(245,158,11,0.12)',
       color: '#D97706',
       border: '1px solid rgba(245,158,11,0.22)',
     };
   }
-  if (l.includes('nâng cao')) {
+  //trung cấp
+  if (level === 'intermediate') {
     return {
       bgcolor: 'rgba(234,88,12,0.12)',
       color: '#EA580C',
       border: '1px solid rgba(234,88,12,0.22)',
     };
   }
+  //cao cấp và phần còn lại =)) 
   return { bgcolor: '#F1F5F9', color: '#64748B' };
 }
 
 function getCategoryChipStyle(category = '') {
-  const map = {
-    'Giao tiếp': { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' },
-    IELTS: { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' },
-    TOEIC: { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' },
-    'Ngữ pháp': { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' },
-    'Phát âm': { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' },
-  };
-  return map[category] ?? { bgcolor: '#F1F5F9', color: '#64748B' };
+  switch (category.toLowerCase()) {
+    case 'business': return { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' };
+    case 'finance': return { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' };
+    case 'communication': return { bgcolor: 'rgba(236,72,153,0.10)', color: 'hsl(315, 76%, 43%)' };
+    case 'technology': return { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' };
+    case 'lifestyle': return { bgcolor: '#F1F5F9', color: '#64748B' };
+  }
+  return { bgcolor: '#F1F5F9', color: 'hsl(0, 87%, 34%)' }
+  // const map = {
+  //   'Giao tiếp': ,
+  //   IELTS: { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' },
+  //   TOEIC: { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' },
+  //   'Ngữ pháp': { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' },
+  //   'Phát âm': { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' },
+  // };
+  // return map[category] ?? { bgcolor: '#F1F5F9', color: '#64748B' };
 }
 
 function CourseThumbnail({ thumbnail, courseName }) {
@@ -125,10 +136,11 @@ export default function MentorCourseDetailHeader({
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
-  const statusChip = getStatusChip(course.status);
-  const isPublished = course.status === 'published';
-  const editPath = `/mentor/courses/${course.courseId}/edit`;
+  const statusChip = getStatusChip(course.IsPublished);
+  const isPublished = course.IsPublished;
+  const editPath = `/mentor/courses/${course.CourseId}/edit`;
 
+  // console.log(course)
   return (
     <Box sx={{ mb: 2.5 }}>
       <Box
@@ -162,7 +174,7 @@ export default function MentorCourseDetailHeader({
             Khóa học của tôi
           </MuiLink>
           <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600, maxWidth: 280 }} noWrap>
-            {course.courseName}
+            {course.CourseName}
           </Typography>
         </Breadcrumbs>
 
@@ -202,7 +214,7 @@ export default function MentorCourseDetailHeader({
             gap: 2,
           }}
         >
-          <CourseThumbnail thumbnail={course.thumbnail} courseName={course.courseName} />
+          <CourseThumbnail thumbnail={course.Thumbnail} courseName={course.CourseName} />
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.75 }}>
@@ -214,12 +226,12 @@ export default function MentorCourseDetailHeader({
                   lineHeight: 1.35,
                 }}
               >
-                {course.courseName}
+                {course.CourseName}
               </Typography>
               <Chip size="small" label={statusChip.label} sx={{ ...PILL_CHIP_SX, ...statusChip.sx }} />
             </Box>
 
-            {course.description && (
+            {course.Description && (
               <Typography
                 sx={{
                   fontSize: 14,
@@ -232,27 +244,27 @@ export default function MentorCourseDetailHeader({
                   overflow: 'hidden',
                 }}
               >
-                {course.description}
+                {course.Description}
               </Typography>
             )}
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 0.5 }}>
-              {course.categoryName && (
+              {course.CategoryDisplayName && (
                 <Chip
                   size="small"
-                  label={course.categoryName}
-                  sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.categoryName) }}
+                  label={course.CategoryDisplayName}
+                  sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.CategoryName) }}
                 />
               )}
-              {course.levelName && (
+              {course.LevelDisplayName && (
                 <Chip
                   size="small"
-                  label={course.levelName}
+                  label={course.LevelDisplayName}
                   sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.levelName) }}
                 />
               )}
             </Box>
-
+            {/* Metric (total {student, paths, node, materials, rate,...}) */}
             <MentorCourseMetricsInline course={course} />
           </Box>
 

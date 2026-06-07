@@ -1,25 +1,14 @@
 // TODO: update backend/DB MaterialType to support TEXT
 import { resolveVideoEmbed } from '@/shared/utils/videoEmbedUtils';
-import { getTestDefaultFields } from './mentorTestContentUtils';
+import {
+  buildTestMaterialPayload,
+  getTestDefaultFields,
+  validateTestMaterial,
+} from './mentorTestContentUtils';
 
 export { getTestDefaultFields } from './mentorTestContentUtils';
 
-export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC'];
-
-/** Học liệu thực tế trong bài học — không gồm bài kiểm tra (quản lý riêng qua ngân hàng câu hỏi). */
-export const LEARNING_MATERIAL_TYPES = MATERIAL_TYPES;
-
-export function isLearningMaterial(material) {
-  return LEARNING_MATERIAL_TYPES.includes(material?.MaterialType);
-}
-
-export function filterLearningMaterials(materials = []) {
-  return (materials ?? []).filter(isLearningMaterial);
-}
-
-export function countLearningMaterials(materials = []) {
-  return filterLearningMaterials(materials).length;
-}
+export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
 
 export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
 
@@ -113,22 +102,21 @@ export function validatePathForSave(path) {
   return {};
 }
 
-export function stripNonLearningMaterials(paths) {
+export function sanitizePathsForStorage(paths) {
   return withNormalizedOrders(paths).map((path) => ({
     ...path,
     nodes: (path.nodes ?? []).map((node) => ({
       ...node,
-      materials: filterLearningMaterials(node.materials),
-    })),
-  }));
-}
+      materials: (node.materials ?? []).map(({ File: _file, ...material }) => {
+        if (material.MaterialType !== 'TEST' || !(material.Sections ?? []).length) {
+          return material;
+        }
 
-export function sanitizePathsForStorage(paths) {
-  return stripNonLearningMaterials(paths).map((path) => ({
-    ...path,
-    nodes: (path.nodes ?? []).map((node) => ({
-      ...node,
-      materials: (node.materials ?? []).map(({ File: _file, ...material }) => material),
+        return {
+          ...material,
+          Sections: material.Sections.map(({ File: _sectionFile, ...section }) => section),
+        };
+      }),
     })),
   }));
 }
@@ -217,11 +205,7 @@ export function countContentStats(paths) {
   const nodeCount = normalized.reduce((sum, path) => sum + (path.nodes?.length ?? 0), 0);
   const materialCount = normalized.reduce(
     (sum, path) =>
-      sum +
-      (path.nodes ?? []).reduce(
-        (nodeSum, node) => nodeSum + countLearningMaterials(node.materials),
-        0,
-      ),
+      sum + (path.nodes ?? []).reduce((nodeSum, node) => nodeSum + (node.materials?.length ?? 0), 0),
     0,
   );
 
@@ -256,8 +240,6 @@ export function validateCourseContent(paths, options = {}) {
       }
 
       (node.materials ?? []).forEach((material) => {
-        if (!isLearningMaterial(material)) return;
-
         const materialErrors = {};
 
         if (!material.MaterialType) {
@@ -297,6 +279,14 @@ export function validateCourseContent(paths, options = {}) {
           if (materialUrl && !isSimpleUrl(materialUrl)) {
             materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
           }
+        } else if (material.MaterialType === 'TEST') {
+          Object.assign(
+            materialErrors,
+            validateTestMaterial(material, {
+              ...options,
+              chapterId: path.PathId ?? null,
+            }),
+          );
         } else {
           if (!String(material.Title ?? '').trim()) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
@@ -406,14 +396,15 @@ export function scrollToContentItem(
 
 export function buildCourseContentPayload(paths) {
   return {
-    paths: withNormalizedOrders(paths).map(({ tempId: _tempId, nodes, ...path }) => ({
+    paths: withNormalizedOrders(paths).map(({ tempId: _tempId, nodes, ...path }, index) => ({
       PathName: String(path.PathName ?? '').trim(),
       Description: trimShortDescription(path.Description),
+      PathOrder: Number(index + 1),
       nodes: (nodes ?? []).map(({ tempId: _nodeTempId, materials, ...node }) => ({
         NodeName: String(node.NodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
         Description: trimShortDescription(node.Description),
-        materials: filterLearningMaterials(materials ?? []).map(
+        materials: (materials ?? []).map(
           ({
             tempId: _materialTempId,
             Content,
@@ -421,64 +412,72 @@ export function buildCourseContentPayload(paths) {
             EstimatedMinutes: _estimatedMinutes,
             ...material
           }) => {
-          const base = {
-            MaterialType: material.MaterialType,
-            Title: String(material.Title ?? '').trim(),
-            MaterialOrder: material.MaterialOrder,
-          };
-
-          if (material.MaterialType === 'TEXT') {
-            // TODO: backend should support Content for TEXT material
-            return {
-              ...base,
-              MaterialUrl: null,
-              Content: String(Content ?? '').trim(),
+            const base = {
+              MaterialType: material.MaterialType,
+              Title: String(material.Title ?? '').trim(),
+              MaterialOrder: material.MaterialOrder,
             };
-          }
 
-          if (material.MaterialType === 'DOC') {
-            // TODO: backend should support document upload and SourceType
-            const sourceType =
-              material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
-
-            if (sourceType === DOC_SOURCE_LINK) {
+            if (material.MaterialType === 'TEXT') {
+              // TODO: backend should support Content for TEXT material
               return {
                 ...base,
-                SourceType: DOC_SOURCE_LINK,
-                File: null,
-                FileName: null,
-                FileSize: null,
-                MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+                MaterialUrl: null,
+                Content: String(Content ?? '').trim(),
               };
+            }
+
+            if (material.MaterialType === 'DOC') {
+              // TODO: backend should support document upload and SourceType
+              const sourceType =
+                material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+
+              if (sourceType === DOC_SOURCE_LINK) {
+                return {
+                  ...base,
+                  SourceType: DOC_SOURCE_LINK,
+                  File: null,
+                  FileName: null,
+                  FileSize: null,
+                  MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+                };
+              }
+
+              return {
+                ...base,
+                SourceType: DOC_SOURCE_UPLOAD,
+                File: File ?? null,
+                FileName: material.FileName ?? null,
+                FileSize: material.FileSize ?? null,
+                MaterialUrl: null,
+              };
+            }
+
+            if (material.MaterialType === 'VIDEO') {
+              const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
+              const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
+              // TODO: backend should support EmbedUrl for VIDEO material
+              return {
+                ...base,
+                SourceType: VIDEO_SOURCE_LINK,
+                MaterialUrl: materialUrl,
+                EmbedUrl: embedUrl,
+              };
+            }
+
+            if (material.MaterialType === 'TEST') {
+              // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
+              return buildTestMaterialPayload(material, {
+                ...base,
+                Description: trimShortDescription(material.Description),
+              });
             }
 
             return {
               ...base,
-              SourceType: DOC_SOURCE_UPLOAD,
-              File: File ?? null,
-              FileName: material.FileName ?? null,
-              FileSize: material.FileSize ?? null,
-              MaterialUrl: null,
+              MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
             };
-          }
-
-          if (material.MaterialType === 'VIDEO') {
-            const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
-            const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
-            // TODO: backend should support EmbedUrl for VIDEO material
-            return {
-              ...base,
-              SourceType: VIDEO_SOURCE_LINK,
-              MaterialUrl: materialUrl,
-              EmbedUrl: embedUrl,
-            };
-          }
-
-          return {
-            ...base,
-            MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
-          };
-        }),
+          }),
       })),
     })),
   };

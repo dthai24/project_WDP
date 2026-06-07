@@ -6,6 +6,7 @@ import App from './App.jsx';
 import theme from '@/shared/theme.js';
 import ToastProvider from '@/shared/ui/Toast.jsx';
 import './index.css';
+import 'bootstrap/dist/css/bootstrap.min.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

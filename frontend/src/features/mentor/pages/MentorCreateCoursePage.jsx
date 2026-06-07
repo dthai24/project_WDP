@@ -81,6 +81,14 @@ function LeaveAwareBreadcrumbLink({ to, children, onNavigate, sx }) {
 
 export default function MentorCreateCoursePage() {
   const navigate = useNavigate();
+  //   export const MENTOR_COURSE_FORM_INITIAL = {
+  //   CourseName: '',
+  //   Description: '',
+  //   CategoryId: '',
+  //   LevelId: '',
+  //   Thumbnail: '',
+  //   IsPublished: false,
+  // };
   const [form, setForm] = useState(MENTOR_COURSE_FORM_INITIAL);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -105,7 +113,7 @@ export default function MentorCreateCoursePage() {
     const restored = formFromStep1Payload(saved);
     if (restored) setForm(restored);
   }, []);
-
+  //fetch Category & Level
   useEffect(() => {
     let cancelled = false;
 
@@ -138,6 +146,7 @@ export default function MentorCreateCoursePage() {
     };
   }, []);
 
+  //console.log(levelOptions);
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -156,7 +165,10 @@ export default function MentorCreateCoursePage() {
   };
 
   const handleNext = async () => {
+    // console.log(form);
     const validationErrors = validateMentorCourseForm(form);
+    // console.log("cccc" + Object.keys(validationErrors).length)
+    // console.table(validationErrors)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -169,9 +181,15 @@ export default function MentorCreateCoursePage() {
 
     setSubmitting(true);
     try {
+      //* TO DO Fetch Api to save draft
+      // Hiện tại đang lưu step 1 vào session 
+      // (thực tế là lưu all bước vào session, tới lúc tạo và public thì mới xóa sesion và lưu vào database)
       const result = await saveCreateCourseStep1(form, instructorId);
-      if (!result.ok) return;
-
+      if (!result.ok) {
+        console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+        return
+      };
+      // console.log(result);
       navigate('/mentor/courses/create/content');
     } finally {
       setSubmitting(false);
@@ -183,6 +201,7 @@ export default function MentorCreateCoursePage() {
     handleNext();
   };
 
+  // Button (Hủy, Tiếp theo)
   const formFooter = (
     <Box
       sx={{
@@ -193,6 +212,7 @@ export default function MentorCreateCoursePage() {
         pt: 0.5,
       }}
     >
+      {/* Button Hủy */}
       <AppButton
         variant="outlined"
         onClick={() => requestLeave('/mentor/courses')}
@@ -201,6 +221,7 @@ export default function MentorCreateCoursePage() {
       >
         Hủy
       </AppButton>
+      {/* Button Tiếp theo */}
       <AppButton
         type="submit"
         loading={submitting}
@@ -261,6 +282,14 @@ export default function MentorCreateCoursePage() {
       <MentorCourseCreateStepIndicator currentStep={1} />
 
       <MentorCourseCreateForm
+        //   STATE form = MENTOR_COURSE_FORM_INITIAL = {
+        //   CourseName: '',
+        //   Description: '',
+        //   CategoryId: '',
+        //   LevelId: '',
+        //   Thumbnail: '',
+        //   IsPublished: false,
+        // };
         form={form}
         errors={errors}
         onChange={handleChange}
@@ -271,7 +300,7 @@ export default function MentorCreateCoursePage() {
         optionsLoading={optionsLoading}
         footer={formFooter}
       />
-
+      {/* Modal appear when click Cancel (Create Course Process) */}
       <MentorCourseLeaveDialog
         open={dialogOpen}
         onStay={handleStay}
