@@ -61,18 +61,18 @@ function normalizeCourse(course = {}) {
   const progress = course.progressPercentage ?? course.progress ?? 0;
   const isEnrolled = course.isEnrolled ?? progress > 0;
   return {
-    courseId:          course.courseId ?? course.id,
-    courseName:        course.courseName ?? course.title ?? "Khóa học",
-    thumbnail:         course.thumbnail ?? null,
-    category:          course.category ?? "",
-    level:             course.level ?? "",
-    instructor:        course.instructor ?? "",
-    rating:            course.rating ?? null,
-    reviewCount:       course.reviewCount ?? 0,
-    studentCount:      course.studentCount ?? 0,
-    totalLessons:      course.totalLessons ?? course.totalNodes ?? 0,
-    totalNodes:        course.totalNodes ?? 0,
-    totalMaterials:    course.totalMaterials ?? 0,
+    courseId: course.CourseId ?? course.id,
+    courseName: course.CourseName ?? course.title ?? "Khóa học",
+    thumbnail: course.Thumbnail ?? null,
+    category: course.Category ?? "",
+    level: course.Level ?? "",
+    instructor: course.Instructor ?? "",
+    rating: course.Rating ?? null,
+    reviewCount: course.ReviewCount ?? 0,
+    studentCount: course.StudentCount ?? 0,
+    totalLessons: course.TotalLessons ?? course.totalNodes ?? 0,
+    totalNodes: course.TotalNodes ?? 0,
+    totalMaterials: course.TotalMaterials ?? 0,
     progressPercentage: progress,
     isEnrolled,
   };
@@ -166,11 +166,11 @@ function getLevelChipStyle(level = "") {
 
 function getCategoryChipStyle(category = "") {
   const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)",  color: "#2563EB" },
-    "IELTS":     { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    "TOEIC":     { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
-    "Ngữ pháp":  { bgcolor: "rgba(15,23,42,0.08)",   color: "#334155" },
-    "Phát âm":   { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
+    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
+    "IELTS": { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
+    "TOEIC": { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
+    "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
+    "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
   };
   return map[category] ?? { bgcolor: "#F1F5F9", color: "#64748B" };
 }
@@ -238,17 +238,17 @@ export default function CourseCard({
   onStartLearning,
   onClick,
 }) {
-  const theme   = useTheme();
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const isCatalog = variant === "catalog";
   const isMyCourses = variant === "myCourses";
-  const data         = normalizeCourse(course);
-  const statusChip   = isMyCourses
+  const data = normalizeCourse(course);
+  const statusChip = isMyCourses
     ? getMyCoursesStatusChip(data.progressPercentage)
     : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
-  const levelStyle   = getLevelChipStyle(data.level);
+  const levelStyle = getLevelChipStyle(data.level);
   const categoryStyle = getCategoryChipStyle(data.category);
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const progressTextColor = getProgressColor(progressValue);
