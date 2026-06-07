@@ -1,6 +1,8 @@
 /**
- * MentorQuestionBankCreatePage
- * Route: /mentor/question-banks/create?courseId=1[&chapterId=2]
+ * MentorQuestionBankDetailPage
+ * Route: /mentor/question-banks/:questionBankId
+ *
+ * Xem và chỉnh sửa ngân hàng câu hỏi đã tạo.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Box } from '@mui/material';
@@ -11,52 +13,59 @@ import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import Loading from '@/shared/ui/Loading';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
+import EmptyState from '@/shared/ui/EmptyState';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBank/MentorQuestionBankSkillNav';
 import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questionBank/MentorQuestionBankBuilderPanel';
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
 import MentorQuestionBankRightRail from '@/features/mentor/components/questionBank/MentorQuestionBankRightRail';
-import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBank/MentorQuestionBankSkillNav';
-import useQuestionBankCreateBootstrap, {
-  clearQuestionBankCreateDraft,
-} from '@/features/mentor/hooks/useQuestionBankCreateBootstrap';
+import useQuestionBankDetailBootstrap from '@/features/mentor/hooks/useQuestionBankDetailBootstrap';
+import { PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
+import { isMentorCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
 import {
   SCORING_MODE_AUTO,
+  buildQuestionSnapshotMap,
+  collectPersistedQuestionIds,
   countActiveQuestionsBySkill,
   createQuestionBankSection,
+  ensureQuestionBankSkillSections,
+  getActiveQuestionCount,
   getFilledQuestionCount,
   getNonEmptyQuestionBankSections,
   getQuestionBankSectionNameFallback,
   getSectionBaiNumber,
   getSectionsBySkill,
   scrollToQuestionBankItem,
+  validatePublishedQuestionBankIntegrity,
   validateTestMaterial,
 } from '@/features/mentor/utils/mentorTestContentUtils';
-import { isMentorCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
-import { PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateStyles';
-import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
-import { createQuestionBank } from '@/features/mentor/services/questionBankService';
+import { updateQuestionBank } from '@/features/mentor/services/questionBankService';
 
-function validateForm(chapterId, chaptersCount = 0) {
-  const errors = {};
-  if (chaptersCount === 0) {
-    errors.chapterId = 'Khóa học chưa có chương';
-  } else if (!chapterId) {
-    errors.chapterId = 'Vui lòng chọn chương từ mục lục bên phải';
-  }
-  return errors;
+const PUBLISHED_COURSE_QB_HINT =
+  'Khóa học đã xuất bản: chỉ thêm câu hỏi mới, không sửa/xóa câu hỏi cũ. Có thể tắt "Dùng cho quiz" để ẩn câu cũ khỏi quiz/test mới — lịch sử học viên không bị ảnh hưởng.';
+
+function mapSectionsForSave(sourceSections) {
+  return sourceSections.map((section) => ({
+    ...section,
+    DisplayName:
+      String(section.DisplayName ?? '').trim() ||
+      getQuestionBankSectionNameFallback(section, sourceSections),
+  }));
 }
 
-export default function MentorQuestionBankCreatePage() {
+export default function MentorQuestionBankDetailPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
 
   const {
-    courseId,
-    chapterId,
+    loading,
+    notFound,
+    bank,
+    setBank,
     course,
     courseChapters,
-    loading,
-    workspaceKey,
+    chaptersLoading,
     sections,
     setSections,
     sectionErrors,
@@ -65,22 +74,18 @@ export default function MentorQuestionBankCreatePage() {
     setActiveSkill,
     activeSectionId,
     setActiveSectionId,
-    selectedChapter,
-    hasChapters,
-    canUseGenerator,
+    persistedQuestionIds,
+    setPersistedQuestionIds,
+    questionSnapshotRef,
+    workspaceKey,
     selectChapter,
-  } = useQuestionBankCreateBootstrap();
+  } = useQuestionBankDetailBootstrap();
 
   const coursePublished = isMentorCoursePublished(course);
-  const bankTitle = selectedChapter?.chapterTitle?.trim() ?? '';
-
-  const courseCategory = useMemo(
-    () => [course?.categoryName, course?.levelName].filter(Boolean).join(' · '),
-    [course],
-  );
 
   const questionCount = useMemo(() => getFilledQuestionCount(sections), [sections]);
-  const questionCountBySkill = useMemo(
+  const activeQuestionCount = useMemo(() => getActiveQuestionCount(sections), [sections]);
+  const activeQuestionCountBySkill = useMemo(
     () => countActiveQuestionsBySkill(sections),
     [sections],
   );
@@ -110,19 +115,6 @@ export default function MentorQuestionBankCreatePage() {
       setActiveSectionId(skillSections[0].tempId);
     }
   }, [activeSection, skillSections, setActiveSectionId]);
-
-  const mapSectionsForSave = (sourceSections) =>
-    sourceSections.map((section) => ({
-      ...section,
-      DisplayName:
-        String(section.DisplayName ?? '').trim() ||
-        getQuestionBankSectionNameFallback(section, sourceSections),
-    }));
-
-  const handleChapterSelect = (nextChapterId) => {
-    if (errors.chapterId) setErrors((prev) => ({ ...prev, chapterId: undefined }));
-    selectChapter(nextChapterId);
-  };
 
   const handleSectionChange = (tempId, nextSection) => {
     setSections((prev) => prev.map((s) => (s.tempId === tempId ? nextSection : s)));
@@ -193,13 +185,7 @@ export default function MentorQuestionBankCreatePage() {
   };
 
   const validateSections = () => {
-    if (!canUseGenerator) {
-      return {
-        _context: hasChapters
-          ? 'Chọn chương từ mục lục bên phải trước khi tạo câu hỏi'
-          : 'Khóa học chưa có chương để tạo câu hỏi',
-      };
-    }
+    const bankTitle = bank?.title?.trim() || bank?.chapterTitle?.trim() || '';
     const materialErrors = validateTestMaterial(
       { Title: bankTitle, Sections: sections, ScoringMode: SCORING_MODE_AUTO },
       { inlineSections: true, skipTitle: true },
@@ -213,50 +199,49 @@ export default function MentorQuestionBankCreatePage() {
     return {};
   };
 
-  const handleSubmit = async () => {
-    const formErrors = validateForm(chapterId, courseChapters.length);
-    const sectionValidation = validateSections();
+  const handleSave = async () => {
+    if (!bank) return;
 
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
-      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc.');
-      return;
-    }
-
-    if (!bankTitle) {
-      toast.error('Không tìm thấy tên chương.');
-      return;
-    }
-
-    if (sectionValidation._context || sectionValidation._sections) {
-      if (sectionValidation.sections) setSectionErrors(sectionValidation.sections);
-      toast.error(
-        sectionValidation._context ?? sectionValidation._sections ?? 'Vui lòng thêm câu hỏi.',
+    if (coursePublished) {
+      const integrity = validatePublishedQuestionBankIntegrity(
+        sections,
+        questionSnapshotRef.current,
       );
+      if (!integrity.ok) {
+        toast.error(integrity.message);
+        return;
+      }
+    }
+
+    const sectionValidation = validateSections();
+    if (sectionValidation._sections) {
+      if (sectionValidation.sections) setSectionErrors(sectionValidation.sections);
+      toast.error(sectionValidation._sections ?? 'Vui lòng kiểm tra lại câu hỏi.');
       return;
     }
 
     setSubmitting(true);
     try {
+      const bankTitle = bank.title?.trim() || bank.chapterTitle?.trim() || '';
       const sectionsPayload = mapSectionsForSave(getNonEmptyQuestionBankSections(sections));
 
-      const res = await createQuestionBank({
+      const res = await updateQuestionBank(bank.id, {
         title: bankTitle,
-        courseId: Number(courseId),
-        courseTitle: course?.courseName ?? '',
-        chapterId: Number(chapterId),
-        chapterTitle: bankTitle,
+        chapterTitle: bank.chapterTitle ?? bankTitle,
         sections: sectionsPayload,
       });
 
       if (!res.ok) {
-        toast.error(res.message ?? 'Tạo ngân hàng câu hỏi thất bại.');
+        toast.error(res.message ?? 'Lưu thay đổi thất bại.');
         return;
       }
 
-      clearQuestionBankCreateDraft(courseId, chapterId);
-      toast.success('Tạo ngân hàng câu hỏi thành công!');
-      navigate(`/mentor/question-banks/${res.bank.id}`);
+      const nextSections = ensureQuestionBankSkillSections(res.bank.sections ?? sectionsPayload);
+      setBank(res.bank);
+      setSections(nextSections);
+      setPersistedQuestionIds(collectPersistedQuestionIds(nextSections));
+      questionSnapshotRef.current = buildQuestionSnapshotMap(nextSections);
+      toast.success('Đã lưu thay đổi.');
     } catch {
       toast.error('Đã xảy ra lỗi. Vui lòng thử lại.');
     } finally {
@@ -269,7 +254,7 @@ export default function MentorQuestionBankCreatePage() {
       <AppButton
         loading={submitting}
         startIcon={<SaveOutlinedIcon />}
-        onClick={handleSubmit}
+        onClick={handleSave}
         fullWidth
         sx={{
           height: 44,
@@ -282,7 +267,7 @@ export default function MentorQuestionBankCreatePage() {
           '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
         }}
       >
-        Lưu ngân hàng
+        Lưu thay đổi
       </AppButton>
       <AppButton
         variant="outlined"
@@ -291,7 +276,7 @@ export default function MentorQuestionBankCreatePage() {
         fullWidth
         sx={{ height: 44, fontSize: 14, fontWeight: 600, borderRadius: '999px' }}
       >
-        Huỷ
+        Quay lại danh sách
       </AppButton>
     </Box>
   );
@@ -299,22 +284,41 @@ export default function MentorQuestionBankCreatePage() {
   if (loading) {
     return (
       <Box sx={{ py: 8, display: 'flex', justifyContent: 'center' }}>
-        <Loading message="Đang tải dữ liệu khóa học..." />
+        <Loading message="Đang tải ngân hàng câu hỏi..." />
       </Box>
     );
   }
 
+  if (notFound || !bank) {
+    return (
+      <Box sx={{ width: '100%', maxWidth: 640, mx: 'auto', py: 4 }}>
+        <EmptyState
+          icon={QuizOutlinedIcon}
+          title="Không tìm thấy ngân hàng câu hỏi"
+          description="Ngân hàng câu hỏi có thể đã bị xóa hoặc không tồn tại."
+          actionLabel="Quay lại danh sách"
+          onAction={() => navigate('/mentor/question-banks')}
+        />
+      </Box>
+    );
+  }
+
+  const bankTitle = bank.title?.trim() || bank.chapterTitle?.trim() || 'Ngân hàng câu hỏi';
+  const courseCategory = [course?.categoryName, course?.levelName].filter(Boolean).join(' · ');
+
   return (
     <Box sx={{ width: '100%', maxWidth: { xs: '100%', lg: 1520 }, mx: 'auto' }}>
       <MentorQuestionBankDetailHeader
-        isCreateMode
         bankTitle={bankTitle}
-        courseName={course?.courseName}
+        courseName={bank.courseTitle || course?.courseName}
         courseCategory={courseCategory}
-        chapterTitle={selectedChapter?.chapterTitle}
+        chapterTitle={bank.chapterTitle}
         coursePublished={coursePublished}
         totalQuestionCount={questionCount}
-        questionCountBySkill={questionCountBySkill}
+        activeQuestionCount={activeQuestionCount}
+        questionCountBySkill={activeQuestionCountBySkill}
+        createdAt={bank.createdAt}
+        updatedAt={bank.updatedAt ?? bank.questionBankUpdatedAt}
         actions={footerActions}
       />
 
@@ -340,8 +344,8 @@ export default function MentorQuestionBankCreatePage() {
           <MentorQuestionBankSkillNav
             sections={sections}
             activeSkill={activeSkill}
-            disabled={!canUseGenerator}
             sectionErrors={sectionErrors}
+            showActiveCounts={coursePublished}
             onSkillChange={handleSkillSelect}
           />
         </Box>
@@ -366,14 +370,9 @@ export default function MentorQuestionBankCreatePage() {
             skillSections={skillSections}
             sectionErrors={sectionErrors}
             questionCount={questionCount}
-            disabled={!canUseGenerator}
-            emptyHint={
-              !canUseGenerator
-                ? hasChapters
-                  ? 'Chọn chương từ mục lục khóa học ở cột bên phải để bắt đầu tạo bộ câu hỏi.'
-                  : 'Khóa học chưa có chương để tạo bộ câu hỏi.'
-                : null
-            }
+            publishedHint={coursePublished ? PUBLISHED_COURSE_QB_HINT : null}
+            coursePublished={coursePublished}
+            persistedQuestionIds={persistedQuestionIds}
             canDeleteActiveSection={canDeleteActiveSection}
             onSectionSelect={handleSectionSelect}
             onAddBai={handleAddBai}
@@ -386,25 +385,24 @@ export default function MentorQuestionBankCreatePage() {
             activeSkill={activeSkill}
             activeSectionId={activeSectionId}
             onNavigateToItem={handleOutlineNavigate}
-            courseName={course?.courseName}
+            courseName={bank.courseTitle || course?.courseName}
             courseCategory={courseCategory}
-            chapterTitle={selectedChapter?.chapterTitle}
+            chapterTitle={bank.chapterTitle}
             courseChapters={courseChapters}
-            chaptersLoading={false}
-            selectedChapterId={chapterId}
-            chapterError={errors.chapterId}
-            courseId={courseId}
-            courseOutlineHint="Chọn chương để tạo hoặc mở ngân hàng câu hỏi tương ứng."
-            onChapterSelect={handleChapterSelect}
+            chaptersLoading={chaptersLoading}
+            selectedChapterId={bank.chapterId}
+            courseId={bank.courseId}
+            courseOutlineHint="Chọn chương khác để mở ngân hàng câu hỏi tương ứng."
+            onChapterSelect={selectChapter}
           />
         </Box>
       </Box>
 
-      <Box id="qb-mobile-footer-actions" sx={{ display: { xs: 'flex', lg: 'none' }, mt: 2.5, pb: 4 }}>
+      <Box id="qb-detail-mobile-footer" sx={{ display: { xs: 'flex', lg: 'none' }, mt: 2.5, pb: 4 }}>
         {footerActions}
       </Box>
 
-      <ScrollToTopButton avoidSelectors={['#app-site-footer', '#qb-mobile-footer-actions']} />
+      <ScrollToTopButton avoidSelectors={['#app-site-footer', '#qb-detail-mobile-footer']} />
     </Box>
   );
 }

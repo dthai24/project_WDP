@@ -17,10 +17,12 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import { useNavigate } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
+import { toast } from '@/shared/ui/Toast';
 import {
   formatMentorCourseDate,
   truncateText,
 } from '@/features/mentor/utils/mentorCourseUtils';
+import { getQuestionBanksByCourse } from '@/features/mentor/services/questionBankService';
 
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
@@ -104,6 +106,24 @@ export default function MentorQuestionBankRow({ item }) {
   const theme = useTheme();
   const navigate = useNavigate();
   const statusChip = getStatusChip(item.status);
+
+  const handleManageQuestions = async () => {
+    const res = await getQuestionBanksByCourse(item.courseId);
+    const banks = res.ok ? res.banks : [];
+
+    if (banks.length === 0) {
+      toast.info('Chưa có ngân hàng câu hỏi cho khóa học này.');
+      navigate(`/mentor/question-banks/create?courseId=${item.courseId}`);
+      return;
+    }
+
+    if (banks.length === 1) {
+      navigate(`/mentor/question-banks/${banks[0].id}`);
+      return;
+    }
+
+    navigate(`/mentor/courses/${item.courseId}/questions`);
+  };
 
   return (
     <Box
@@ -196,7 +216,7 @@ export default function MentorQuestionBankRow({ item }) {
         </Box>
 
         <AppButton
-          onClick={() => navigate(`/mentor/courses/${item.courseId}/questions`)}
+          onClick={handleManageQuestions}
           sx={{
             height: 40,
             px: 2.5,

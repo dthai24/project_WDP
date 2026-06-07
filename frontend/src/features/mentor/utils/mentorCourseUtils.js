@@ -30,6 +30,11 @@ export function normalizeMentorCourse(raw = {}) {
   };
 }
 
+export function isMentorCoursePublished(course) {
+  if (!course) return false;
+  return normalizeMentorCourse(course).status === 'published';
+}
+
 export function computeCourseStats(courses = []) {
   const publishedCount = courses.filter((c) => c.status === 'published').length;
   const draftCount = courses.filter((c) => c.status === 'draft').length;

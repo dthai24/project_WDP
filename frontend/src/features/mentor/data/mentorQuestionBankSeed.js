@@ -11,7 +11,6 @@ export const mentorQuestionBankSeed = [
     courseTitle: 'Tiếng Anh Thương Mại & Giao Tiếp Công Sở',
     chapterId: 1,
     chapterTitle: 'Khởi động & Làm quen thuật ngữ',
-    status: 'DRAFT',
     sections: [
       {
         tempId: 'seed-section-1',
@@ -26,6 +25,7 @@ export const mentorQuestionBankSeed = [
             AllowMultipleAnswers: false,
             QuestionText: 'Chọn từ phù hợp: Good ___ , everyone.',
             Score: 10,
+            isActive: true,
             Options: [
               { tempId: 'seed-o-1', OptionText: 'morning', IsCorrect: true },
               { tempId: 'seed-o-2', OptionText: 'night', IsCorrect: false },
