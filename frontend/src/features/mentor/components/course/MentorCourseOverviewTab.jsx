@@ -22,7 +22,7 @@ function InfoRow({ label, value }) {
 }
 
 export default function MentorCourseOverviewTab({ course }) {
-  const isPublished = course.status === 'published';
+  const isPublished = Number(course.IsPublished) === 1;
 
   return (
     <Box sx={CREATE_CARD_SX}>
@@ -60,11 +60,11 @@ export default function MentorCourseOverviewTab({ course }) {
             placeItems: 'center',
           }}
         >
-          {course.thumbnail ? (
+          {course.Thumbnail ? (
             <Box
               component="img"
-              src={course.thumbnail}
-              alt={course.courseName}
+              src={course.Thumbnail}
+              alt={course.CourseName}
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
@@ -73,8 +73,8 @@ export default function MentorCourseOverviewTab({ course }) {
         </Box>
 
         <Box>
-          <InfoRow label="Tên khóa học" value={course.courseName} />
-          <InfoRow label="Mô tả" value={course.description || '—'} />
+          <InfoRow label="Tên khóa học" value={course.CourseName} />
+          <InfoRow label="Mô tả" value={course.Description || '—'} />
           <Box
             sx={{
               display: 'grid',
@@ -82,15 +82,15 @@ export default function MentorCourseOverviewTab({ course }) {
               gap: 0,
             }}
           >
-            <InfoRow label="Danh mục" value={course.categoryName} />
-            <InfoRow label="Trình độ" value={course.levelName} />
-            <InfoRow label="Giảng viên" value={course.instructorName} />
+            <InfoRow label="Danh mục" value={course.CategoryDisplayName} />
+            <InfoRow label="Trình độ" value={course.LevelDisplayName} />
+            <InfoRow label="Giảng viên" value={course.InstructorName} />
             <InfoRow
               label="Trạng thái"
               value={isPublished ? 'Đã xuất bản' : 'Bản nháp'}
             />
-            <InfoRow label="Ngày tạo" value={formatMentorCourseDate(course.createdAt)} />
-            <InfoRow label="Cập nhật gần nhất" value={formatMentorCourseDate(course.updatedAt)} />
+            <InfoRow label="Ngày tạo" value={formatMentorCourseDate(course.CreatedAt)} />
+            <InfoRow label="Cập nhật gần nhất" value={formatMentorCourseDate(course.UpdatedAt)} />
           </Box>
         </Box>
       </Box>

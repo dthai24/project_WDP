@@ -510,7 +510,7 @@ export function buildReviewChecklist(draft, validation) {
     },
     {
       id: 'lessons-per-chapter',
-      label: 'Mỗi chương có ít nhất 1 bài học',
+      label: 'Mỗi chương có ít nhất 1 bài học * ',
       status: chapterCount > 0 && allChaptersHaveLessons ? 'ok' : 'error',
     },
     {
