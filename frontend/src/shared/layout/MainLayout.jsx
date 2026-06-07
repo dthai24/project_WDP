@@ -1,3 +1,4 @@
+
 import { Box } from "@mui/material";
 import { Navigate, Outlet } from "react-router-dom";
 import Header from "./Header";
@@ -57,3 +58,4 @@ export default function MainLayout({ children }) {
     </>
   );
 }
+

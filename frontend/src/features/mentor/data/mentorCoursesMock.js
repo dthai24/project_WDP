@@ -139,19 +139,19 @@ export const mentorCourseFilterOptionsMock = {
     { value: 'published', label: 'Đã xuất bản' },
     { value: 'draft', label: 'Bản nháp' },
   ],
-  categoryOptions: [
-    { value: 'all', label: 'Tất cả danh mục' },
-    { value: '1', label: 'Giao tiếp' },
-    { value: '2', label: 'TOEIC' },
-    { value: '3', label: 'IELTS' },
-    { value: '4', label: 'Ngữ pháp' },
-  ],
-  levelOptions: [
-    { value: 'all', label: 'Tất cả trình độ' },
-    { value: '1', label: 'Cơ bản' },
-    { value: '2', label: 'Trung cấp' },
-    { value: '3', label: 'Nâng cao' },
-  ],
+  // categoryOptions: [
+  //   { value: 'all', label: 'Tất cả danh mục' },
+  //   { value: '1', label: 'Giao tiếp' },
+  //   { value: '2', label: 'TOEIC' },
+  //   { value: '3', label: 'IELTS' },
+  //   { value: '4', label: 'Ngữ pháp' },
+  // ],
+  // levelOptions: [
+  //   { value: 'all', label: 'Tất cả trình độ' },
+  //   { value: '1', label: 'Cơ bản' },
+  //   { value: '2', label: 'Trung cấp' },
+  //   { value: '3', label: 'Nâng cao' },
+  // ],
   sortOptions: [
     { value: 'updated_desc', label: 'Mới cập nhật' },
     { value: 'created_desc', label: 'Mới tạo' },

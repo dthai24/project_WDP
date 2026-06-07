@@ -5,7 +5,7 @@ import EmptyState from '@/shared/ui/EmptyState';
 import Loading from '@/shared/ui/Loading';
 
 export default function MentorCourseList({
-  courses = [],
+  courses,
   loading = false,
   hasAnyCourses = true,
   showReset = false,
@@ -41,10 +41,12 @@ export default function MentorCourseList({
     );
   }
 
+  //console.log("adsfadsf" + courses.map((c) => console.log(c)));
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       {courses.map((course) => (
-        <MentorCourseRow key={course.courseId} course={course} />
+        <MentorCourseRow key={course.CourseId} course={course} />
       ))}
     </Box>
   );

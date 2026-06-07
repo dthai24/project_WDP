@@ -127,6 +127,7 @@ export default function MentorCoursesPage() {
     setSearchParams(next, { replace: true });
   };
 
+  //Filter Courses
   const filteredCourses = useMemo(
     () => filterAndSortMentorCourses(courses, queryState),
     [courses, queryState]

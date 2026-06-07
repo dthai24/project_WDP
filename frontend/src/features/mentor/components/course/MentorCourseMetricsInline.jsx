@@ -5,7 +5,7 @@ import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import FolderRoundedIcon from '@mui/icons-material/FolderRounded';
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-
+//Metric (total {student, paths, node, materials, rate,...})
 function MetricInline({ icon: Icon, label, value, iconColor }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
@@ -20,6 +20,7 @@ function MetricInline({ icon: Icon, label, value, iconColor }) {
   );
 }
 
+//Metric (total {student, paths, node, materials, rate,...})
 export default function MentorCourseMetricsInline({ course }) {
   const metrics = [
     {
@@ -43,7 +44,7 @@ export default function MentorCourseMetricsInline({ course }) {
     {
       icon: FolderRoundedIcon,
       label: 'Chương',
-      value: course.totalChapters ?? 0,
+      value: course.Paths.length,
       iconColor: '#7C3AED',
     },
     {
