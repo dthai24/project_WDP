@@ -12,6 +12,7 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import UnpublishedRoundedIcon from '@mui/icons-material/UnpublishedRounded';
 import { Link, useNavigate } from 'react-router-dom';
@@ -139,6 +140,7 @@ export default function MentorCourseDetailHeader({
   const statusChip = getStatusChip(course.IsPublished);
   const isPublished = course.IsPublished;
   const editPath = `/mentor/courses/${course.CourseId}/edit`;
+  const questionsPath = `/mentor/courses/${course.CourseId ?? course.courseId}/questions`;
 
   // console.log(course)
   return (
@@ -291,6 +293,27 @@ export default function MentorCourseDetailHeader({
               }}
             >
               Chỉnh sửa
+            </AppButton>
+            <AppButton
+              variant="outlined"
+              startIcon={<QuizOutlinedIcon sx={{ fontSize: 16 }} />}
+              onClick={() => navigate(questionsPath)}
+              sx={{
+                height: 38,
+                borderRadius: '999px',
+                fontSize: 13,
+                fontWeight: 700,
+                px: 2,
+                flex: { xs: 1, md: 'unset' },
+                color: '#7C3AED',
+                borderColor: 'rgba(124,58,237,0.28)',
+                '&:hover': {
+                  borderColor: 'rgba(124,58,237,0.45)',
+                  bgcolor: 'rgba(124,58,237,0.04)',
+                },
+              }}
+            >
+              Ngân hàng câu hỏi
             </AppButton>
             <AppButton
               startIcon={

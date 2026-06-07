@@ -523,6 +523,7 @@ export default function MentorEditCourseContentPage() {
         <MentorCourseContentBuilder
           paths={paths}
           courseId={Number(courseId)}
+          courseTitle={courseName}
           errors={validationErrors}
           expandedPaths={expandedPaths}
           expandedNodes={expandedNodes}
@@ -550,6 +551,7 @@ export default function MentorEditCourseContentPage() {
 
         <MentorContentOverview
           paths={paths}
+          courseId={Number(courseId)}
           courseName={courseName}
           footer={footerActions}
           onNavigateToItem={handleNavigateToContent}

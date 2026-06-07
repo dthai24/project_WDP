@@ -6,6 +6,7 @@ import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import { Link } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import Loading from '@/shared/ui/Loading';
+import MentorChapterCardMenu from '@/features/mentor/components/course/MentorChapterCardMenu';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
   BUILDER_PANEL_SX,
@@ -22,77 +23,93 @@ function OutlineNavItem({
   onClick,
   disabled = false,
   selected = false,
+  trailing = null,
 }) {
   return (
     <Box
-      component="button"
-      type="button"
-      onClick={onClick}
-      disabled={disabled || !onClick}
       sx={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 0.65,
+        gap: 0.25,
         width: '100%',
-        textAlign: 'left',
-        border: selected ? `1px solid ${alpha(PRIMARY, 0.35)}` : '1px solid transparent',
-        background: 'none',
-        cursor: onClick && !disabled ? 'pointer' : 'default',
-        font: 'inherit',
-        pl: indent * 1.5 + 0.5,
-        pr: 0.5,
-        py: 0.55,
-        borderRadius: '10px',
-        bgcolor: selected ? alpha(PRIMARY, 0.08) : 'transparent',
-        transition: 'background-color 0.15s, border-color 0.15s',
-        '&:hover':
-          onClick && !disabled && !selected
-            ? { bgcolor: 'rgba(8,145,178,0.06)' }
-            : onClick && !disabled && selected
-              ? { bgcolor: alpha(PRIMARY, 0.12) }
-              : undefined,
-        '&:disabled': { opacity: 0.55, cursor: 'default' },
       }}
     >
-      {Icon ? (
-        <Icon sx={{ fontSize: 15, color: selected ? PRIMARY : iconColor, mt: 0.15, flexShrink: 0 }} />
-      ) : (
-        <Box
-          sx={{
-            width: 6,
-            height: 6,
-            borderRadius: '999px',
-            bgcolor: iconColor,
-            mt: 0.55,
-            flexShrink: 0,
-            ml: 0.45,
-          }}
-        />
-      )}
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography
-          sx={{
-            fontSize: indent >= 1 ? 12 : 13,
-            fontWeight: indent === 0 ? 700 : 600,
-            color: selected ? PRIMARY : TEXT,
-            lineHeight: 1.4,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {label}
-        </Typography>
-        {meta && (
-          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.15, lineHeight: 1.35 }}>
-            {meta}
-          </Typography>
+      <Box
+        component="button"
+        type="button"
+        onClick={onClick}
+        disabled={disabled || !onClick}
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 0.65,
+          flex: 1,
+          minWidth: 0,
+          textAlign: 'left',
+          border: selected ? `1px solid ${alpha(PRIMARY, 0.35)}` : '1px solid transparent',
+          background: 'none',
+          cursor: onClick && !disabled ? 'pointer' : 'default',
+          font: 'inherit',
+          pl: indent * 1.5 + 0.5,
+          pr: 0.5,
+          py: 0.55,
+          borderRadius: '10px',
+          bgcolor: selected ? alpha(PRIMARY, 0.08) : 'transparent',
+          transition: 'background-color 0.15s, border-color 0.15s',
+          '&:hover':
+            onClick && !disabled && !selected
+              ? { bgcolor: 'rgba(8,145,178,0.06)' }
+              : onClick && !disabled && selected
+                ? { bgcolor: alpha(PRIMARY, 0.12) }
+                : undefined,
+          '&:disabled': { opacity: 0.55, cursor: 'default' },
+        }}
+      >
+        {Icon ? (
+          <Icon sx={{ fontSize: 15, color: selected ? PRIMARY : iconColor, mt: 0.15, flexShrink: 0 }} />
+        ) : (
+          <Box
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: '999px',
+              bgcolor: iconColor,
+              mt: 0.55,
+              flexShrink: 0,
+              ml: 0.45,
+            }}
+          />
         )}
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            sx={{
+              fontSize: indent >= 1 ? 12 : 13,
+              fontWeight: indent === 0 ? 700 : 600,
+              color: selected ? PRIMARY : TEXT,
+              lineHeight: 1.4,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {label}
+          </Typography>
+          {meta && (
+            <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.15, lineHeight: 1.35 }}>
+              {meta}
+            </Typography>
+          )}
+        </Box>
+        {selected && !trailing ? (
+          <CheckCircleRoundedIcon sx={{ fontSize: 16, color: PRIMARY, mt: 0.1, flexShrink: 0 }} />
+        ) : null}
       </Box>
-      {selected && (
-        <CheckCircleRoundedIcon sx={{ fontSize: 16, color: PRIMARY, mt: 0.1, flexShrink: 0 }} />
-      )}
+      {trailing ? (
+        <Box sx={{ flexShrink: 0, mt: 0.15 }} onClick={(e) => e.stopPropagation()}>
+          {trailing}
+        </Box>
+      ) : null}
     </Box>
   );
 }
@@ -105,6 +122,7 @@ export default function MentorQuestionBankCourseOutline({
   courseId = '',
   hint = 'Chọn chương để tạo bộ câu hỏi. Danh sách bài học chỉ để tham khảo nội dung.',
   onChapterSelect,
+  onChapterQuizSetup,
 }) {
   if (chaptersLoading) {
     return (
@@ -179,6 +197,15 @@ export default function MentorQuestionBankCourseOutline({
                 iconColor={CHAPTER_THEME.color}
                 selected={isSelected}
                 onClick={() => onChapterSelect?.(String(chapter.chapterId))}
+                trailing={
+                  onChapterQuizSetup ? (
+                    <MentorChapterCardMenu
+                      onQuizSetup={() =>
+                        onChapterQuizSetup(chapter, chapterIndex)
+                      }
+                    />
+                  ) : null
+                }
               />
 
               {lessons.map((lesson, lessonIndex) => (
@@ -210,12 +237,19 @@ export function MentorQuestionBankCourseOutlinePanel({
   courseId = '',
   hint,
   onChapterSelect,
+  onChapterQuizSetup,
+  onCourseQuizSetup,
 }) {
   return (
     <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
-      <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT, mb: 1.25 }}>
-        Mục lục khóa học
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.75, mb: 1.25 }}>
+        <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
+          Mục lục khóa học
+        </Typography>
+        {onCourseQuizSetup && courseId ? (
+          <MentorChapterCardMenu variant="course" onQuizSetup={onCourseQuizSetup} />
+        ) : null}
+      </Box>
 
       <Box
         sx={{
@@ -257,6 +291,7 @@ export function MentorQuestionBankCourseOutlinePanel({
         courseId={courseId}
         hint={hint}
         onChapterSelect={onChapterSelect}
+        onChapterQuizSetup={onChapterQuizSetup}
       />
     </Box>
   );

@@ -1,11 +1,13 @@
 import { Box, Typography } from '@mui/material';
+import { useState } from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCard from './MentorChapterCard';
+import MentorChapterQuizSetupDialog from './MentorChapterQuizSetupDialog';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import { BUILDER_PANEL_SX, contentAddButtonSx } from './mentorCourseContentStyles';
-import { isPathSnapshotSaved } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { isPathSnapshotSaved, resolveChapterId } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentBuilder({
   paths,
@@ -29,9 +31,24 @@ export default function MentorCourseContentBuilder({
   savingChapterId = null,
   onSaveChapter,
   courseId = null,
+  courseTitle = '',
 }) {
+  const [quizSetupTarget, setQuizSetupTarget] = useState(null);
+
+  const canConfigureQuiz = courseId != null && courseId !== '';
+
+  const openQuizSetup = (path, pathIndex) => {
+    if (!canConfigureQuiz) return;
+    setQuizSetupTarget({
+      chapterId: resolveChapterId(path, pathIndex),
+      chapterTitle: path.PathName?.trim() || `Chương ${pathIndex + 1}`,
+      chapterIndex: pathIndex,
+    });
+  };
+
   return (
-    <Box id="content-builder-root" data-content-error="content-builder-root">
+    <>
+      <Box id="content-builder-root" data-content-error="content-builder-root">
       <Box sx={{ mb: 3 }}>
         <Typography sx={{ fontSize: 17, fontWeight: 600, color: TEXT, lineHeight: 1.35 }}>
           Nội dung khóa học
@@ -92,7 +109,7 @@ export default function MentorCourseContentBuilder({
               path={path}
               pathIndex={pathIndex}
               courseId={courseId}
-              chapterId={path.PathId ?? null}
+              chapterId={resolveChapterId(path, pathIndex)}
               errors={errors.paths?.[path.tempId] ?? {}}
               expanded={expandedPaths[path.tempId] !== false}
               expandedNodes={expandedNodes}
@@ -111,6 +128,11 @@ export default function MentorCourseContentBuilder({
               isSaved={isPathSnapshotSaved(path, savedPathSnapshots[path.tempId])}
               saving={savingChapterId === path.tempId}
               onSave={() => onSaveChapter?.(path.tempId)}
+              onQuizSetup={() => openQuizSetup(path, pathIndex)}
+              quizSetupDisabled={!canConfigureQuiz}
+              quizSetupDisabledReason={
+                canConfigureQuiz ? '' : 'Lưu khóa học trước khi thiết lập kiểm tra'
+              }
             />
           ))}
 
@@ -133,5 +155,16 @@ export default function MentorCourseContentBuilder({
         </Box>
       )}
     </Box>
+
+      <MentorChapterQuizSetupDialog
+        open={Boolean(quizSetupTarget)}
+        onClose={() => setQuizSetupTarget(null)}
+        courseId={courseId}
+        courseTitle={courseTitle}
+        chapterId={quizSetupTarget?.chapterId}
+        chapterTitle={quizSetupTarget?.chapterTitle}
+        chapterIndex={quizSetupTarget?.chapterIndex ?? 0}
+      />
+    </>
   );
 }

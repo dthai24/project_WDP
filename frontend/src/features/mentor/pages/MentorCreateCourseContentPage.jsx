@@ -629,6 +629,7 @@ export default function MentorCreateCourseContentPage() {
       >
         <MentorCourseContentBuilder
           paths={paths}
+          courseTitle={courseName}
           errors={validationErrors}
           expandedPaths={expandedPaths}
           expandedNodes={expandedNodes}
