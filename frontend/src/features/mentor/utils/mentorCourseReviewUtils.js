@@ -1,10 +1,13 @@
 import {
   buildFullCreateCoursePayload,
   countContentStats,
+  countLearningMaterials,
   DOC_SOURCE_LINK,
   DOC_SOURCE_UPLOAD,
+  filterLearningMaterials,
   formatFileSize,
   getDocFileTypeLabel,
+  isLearningMaterial,
   MATERIAL_TYPE_LABELS,
   validateCourseContent,
   withNormalizedOrders,
@@ -15,7 +18,6 @@ import {
   DEFAULT_TEST_TOTAL_SCORE,
   getEffectiveScoringMode,
   SCORING_MODE_MANUAL,
-  validateTestMaterial,
 } from './mentorTestContentUtils';
 
 export { MATERIAL_TYPE_LABELS };
@@ -23,7 +25,10 @@ export { MATERIAL_TYPE_LABELS };
 export const REVIEW_OUTLINE_TYPE_LABELS = { ...MATERIAL_TYPE_LABELS };
 
 export function countMaterialsInPath(path = {}) {
-  return (path.nodes ?? []).reduce((sum, node) => sum + (node.materials ?? []).length, 0);
+  return (path.nodes ?? []).reduce(
+    (sum, node) => sum + countLearningMaterials(node.materials),
+    0,
+  );
 }
 
 export function getMaterialReviewDetailSummary(material) {
@@ -92,11 +97,11 @@ export function countMaterials(paths = []) {
 }
 
 export function countMaterialsByType(paths = []) {
-  const counts = { VIDEO: 0, TEXT: 0, DOC: 0, TEST: 0 };
+  const counts = { VIDEO: 0, TEXT: 0, DOC: 0 };
 
   (paths ?? []).forEach((path) => {
     (path.nodes ?? []).forEach((node) => {
-      (node.materials ?? []).forEach((material) => {
+      filterLearningMaterials(node.materials).forEach((material) => {
         const type = material.MaterialType;
         if (type in counts) counts[type] += 1;
       });
@@ -302,6 +307,8 @@ function flattenContentErrors(paths, contentErrors) {
       }
 
       (node.materials ?? []).forEach((material) => {
+        if (!isLearningMaterial(material)) return;
+
         const materialErrors = nodeErrors.materials?.[material.tempId];
         if (!materialErrors) return;
 
@@ -311,7 +318,7 @@ function flattenContentErrors(paths, contentErrors) {
         Object.entries(materialErrors).forEach(([key, value]) => {
           if (key.startsWith('_')) {
             errors.push({
-              type: material.MaterialType === 'TEST' ? 'test' : 'material',
+              type: 'material',
               message: `${materialLabel}: ${value}`,
               targetId: material.tempId,
             });
@@ -320,7 +327,7 @@ function flattenContentErrors(paths, contentErrors) {
 
           if (typeof value === 'string') {
             errors.push({
-              type: material.MaterialType === 'TEST' ? 'test' : 'material',
+              type: 'material',
               message: `${materialLabel}: ${value}`,
               targetId: material.tempId,
             });
@@ -384,7 +391,7 @@ export function validateCourseDraft(draft) {
 
     (path.nodes ?? []).forEach((node, nodeIndex) => {
       const lessonLabel = node.NodeName || `Bài ${nodeIndex + 1}`;
-      const materials = node.materials ?? [];
+      const materials = filterLearningMaterials(node.materials ?? []);
 
       if (materials.length === 0) {
         warnings.push({
@@ -451,59 +458,6 @@ export function validateCourseDraft(draft) {
           }
         }
 
-        if (material.MaterialType === 'TEST') {
-          const reviewCourseId = draft?.courseId ?? course?.CourseId ?? null;
-          const testErrors = validateTestMaterial(material, {
-            courseId: reviewCourseId ? Number(reviewCourseId) : null,
-          });
-          const sections = material.Sections ?? [];
-          const summary = computeMaterialTestSummary(sections);
-
-          if (Object.keys(testErrors).length > 0) {
-            const alreadyReported = errors.some((item) => item.targetId === material.tempId);
-            if (!alreadyReported) {
-              const firstMessage =
-                testErrors.Title ||
-                testErrors.QuestionBankId ||
-                testErrors._sections ||
-                testErrors._scoreMismatch ||
-                'Bài kiểm tra chưa hoàn thiện.';
-              errors.push({
-                type: 'test',
-                message: `${materialLabel}: ${firstMessage}`,
-                targetId: material.tempId,
-              });
-            }
-          }
-
-          if (sections.length === 0 || summary.questionCount === 0) {
-            const alreadyReported = errors.some(
-              (item) => item.targetId === material.tempId && item.type === 'test',
-            );
-            if (!alreadyReported) {
-              errors.push({
-                type: 'test',
-                message: `${materialLabel}: Cần ít nhất 1 phần và 1 câu hỏi.`,
-                targetId: material.tempId,
-              });
-            }
-          }
-
-          if (
-            getEffectiveScoringMode(material) === SCORING_MODE_MANUAL &&
-            summary.questionCount > 0 &&
-            testErrors._scoreMismatch
-          ) {
-            const alreadyReported = errors.some((item) => item.message.includes('Tổng điểm'));
-            if (!alreadyReported) {
-              errors.push({
-                type: 'test',
-                message: `${materialLabel}: Tổng điểm câu hỏi chưa khớp 100 điểm.`,
-                targetId: material.tempId,
-              });
-            }
-          }
-        }
       });
     });
   });
@@ -535,7 +489,7 @@ export function buildReviewChecklist(draft, validation) {
   const lessonCount = countLessons(paths);
   const allChaptersHaveLessons = paths.every((path) => (path.nodes ?? []).length > 0);
   const allLessonsHaveMaterials = paths.every((path) =>
-    (path.nodes ?? []).every((node) => (node.materials ?? []).length > 0),
+    (path.nodes ?? []).every((node) => countLearningMaterials(node.materials) > 0),
   );
 
   const textOk = !validation.errors.some(
@@ -547,8 +501,6 @@ export function buildReviewChecklist(draft, validation) {
   const videoOk = !validation.errors.some(
     (item) => item.type === 'material' && item.message.includes('Video'),
   );
-  const testOk = !validation.errors.some((item) => item.type === 'test');
-  const testScoreOk = !validation.errors.some((item) => item.message.includes('Tổng điểm'));
 
   return [
     {
@@ -590,16 +542,6 @@ export function buildReviewChecklist(draft, validation) {
       label: 'Video có link hoặc mã nhúng',
       status: materialCounts.VIDEO === 0 ? 'ok' : videoOk ? 'ok' : 'error',
     },
-    {
-      id: 'test-structure',
-      label: 'Bài kiểm tra có phần và câu hỏi',
-      status: materialCounts.TEST === 0 ? 'ok' : testOk ? 'ok' : 'error',
-    },
-    {
-      id: 'test-score',
-      label: 'Tổng điểm bài kiểm tra hợp lệ',
-      status: materialCounts.TEST === 0 ? 'ok' : testScoreOk ? 'ok' : 'error',
-    },
   ];
 }
 
@@ -617,8 +559,6 @@ export function getReviewOverviewStats(paths = []) {
     chapters: countChapters(paths),
     lessons: countLessons(paths),
     materials: countMaterials(paths),
-    tests: countTests(paths),
-    questions: countTestQuestions(paths),
     materialCounts: countMaterialsByType(paths),
   };
 }

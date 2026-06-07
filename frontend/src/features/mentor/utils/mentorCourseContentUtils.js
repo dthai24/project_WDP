@@ -1,14 +1,25 @@
 // TODO: update backend/DB MaterialType to support TEXT
 import { resolveVideoEmbed } from '@/shared/utils/videoEmbedUtils';
-import {
-  buildTestMaterialPayload,
-  getTestDefaultFields,
-  validateTestMaterial,
-} from './mentorTestContentUtils';
+import { getTestDefaultFields } from './mentorTestContentUtils';
 
 export { getTestDefaultFields } from './mentorTestContentUtils';
 
-export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
+export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC'];
+
+/** Học liệu thực tế trong bài học — không gồm bài kiểm tra (quản lý riêng qua ngân hàng câu hỏi). */
+export const LEARNING_MATERIAL_TYPES = MATERIAL_TYPES;
+
+export function isLearningMaterial(material) {
+  return LEARNING_MATERIAL_TYPES.includes(material?.MaterialType);
+}
+
+export function filterLearningMaterials(materials = []) {
+  return (materials ?? []).filter(isLearningMaterial);
+}
+
+export function countLearningMaterials(materials = []) {
+  return filterLearningMaterials(materials).length;
+}
 
 export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
 
@@ -102,21 +113,22 @@ export function validatePathForSave(path) {
   return {};
 }
 
-export function sanitizePathsForStorage(paths) {
+export function stripNonLearningMaterials(paths) {
   return withNormalizedOrders(paths).map((path) => ({
     ...path,
     nodes: (path.nodes ?? []).map((node) => ({
       ...node,
-      materials: (node.materials ?? []).map(({ File: _file, ...material }) => {
-        if (material.MaterialType !== 'TEST' || !(material.Sections ?? []).length) {
-          return material;
-        }
+      materials: filterLearningMaterials(node.materials),
+    })),
+  }));
+}
 
-        return {
-          ...material,
-          Sections: material.Sections.map(({ File: _sectionFile, ...section }) => section),
-        };
-      }),
+export function sanitizePathsForStorage(paths) {
+  return stripNonLearningMaterials(paths).map((path) => ({
+    ...path,
+    nodes: (path.nodes ?? []).map((node) => ({
+      ...node,
+      materials: (node.materials ?? []).map(({ File: _file, ...material }) => material),
     })),
   }));
 }
@@ -205,7 +217,11 @@ export function countContentStats(paths) {
   const nodeCount = normalized.reduce((sum, path) => sum + (path.nodes?.length ?? 0), 0);
   const materialCount = normalized.reduce(
     (sum, path) =>
-      sum + (path.nodes ?? []).reduce((nodeSum, node) => nodeSum + (node.materials?.length ?? 0), 0),
+      sum +
+      (path.nodes ?? []).reduce(
+        (nodeSum, node) => nodeSum + countLearningMaterials(node.materials),
+        0,
+      ),
     0,
   );
 
@@ -240,6 +256,8 @@ export function validateCourseContent(paths, options = {}) {
       }
 
       (node.materials ?? []).forEach((material) => {
+        if (!isLearningMaterial(material)) return;
+
         const materialErrors = {};
 
         if (!material.MaterialType) {
@@ -279,14 +297,6 @@ export function validateCourseContent(paths, options = {}) {
           if (materialUrl && !isSimpleUrl(materialUrl)) {
             materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
           }
-        } else if (material.MaterialType === 'TEST') {
-          Object.assign(
-            materialErrors,
-            validateTestMaterial(material, {
-              ...options,
-              chapterId: path.PathId ?? null,
-            }),
-          );
         } else {
           if (!String(material.Title ?? '').trim()) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
@@ -403,7 +413,7 @@ export function buildCourseContentPayload(paths) {
         NodeName: String(node.NodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
         Description: trimShortDescription(node.Description),
-        materials: (materials ?? []).map(
+        materials: filterLearningMaterials(materials ?? []).map(
           ({
             tempId: _materialTempId,
             Content,
@@ -462,14 +472,6 @@ export function buildCourseContentPayload(paths) {
               MaterialUrl: materialUrl,
               EmbedUrl: embedUrl,
             };
-          }
-
-          if (material.MaterialType === 'TEST') {
-            // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
-            return buildTestMaterialPayload(material, {
-              ...base,
-              Description: trimShortDescription(material.Description),
-            });
           }
 
           return {
