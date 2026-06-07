@@ -1,18 +1,35 @@
 const express = require('express');
 const router = express.Router();
-const { getCourses, getTopCourses, getMyCourses, enrollCourse } = require('../controllers/courseController');
+
+const {
+    getMyCourses,
+    getInformationCourse,
+    saveCourseDraftStepOne,
+    createFinalCourse
+} = require('../controllers/coursesController');
+
 
 const optionalAuth = (req, res, next) => {
-    const userId = req.headers['x-user-id'];
+    const userId = req.headers['x-user-id'] || req.query.userId;
+
     if (userId) {
-        req.user = { userId: parseInt(userId, 10) };
+        req.user = {
+            userId: Number(userId),
+        };
     }
+
     next();
 };
 
-router.get('/', optionalAuth, getCourses);
-router.get('/top', getTopCourses);
-router.get('/my', getMyCourses);
-router.post('/enroll', enrollCourse);
+// GET /api/courses
+// Lấy tất cả khóa học
+// Nếu có userId thì lấy kèm progress của user đó
 
+
+// POST /api/courses/my-courses
+// Lấy khóa học theo role student / mentor
+router.post('/my-courses', getMyCourses);
+router.get('/my-courses/:courseId', getInformationCourse);
+router.post('/mentor/courses/save/draft', saveCourseDraftStepOne)
+router.post('/mentor/courses/createCourse', createFinalCourse)
 module.exports = router;

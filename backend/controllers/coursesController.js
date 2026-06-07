@@ -1,189 +1,216 @@
-const { sql } = require('../config/db');
+const courseModel = require('../models/coursesModel');
 
-// ============================================================
-// GET /api/courses
-// ============================================================
-const getCourses = async (req, res) => {
-  const userId = req.user ? req.user.userId : null;
-
-  try {
-    const reqSql = new sql.Request();
-    reqSql.input('userId', sql.Int, userId || 0);
-
-    const result = await reqSql.query(`
-      SELECT 
-        c.CourseId AS courseId,
-        c.CourseName AS courseName,
-        c.Description AS description,
-        cat.DisplayName AS category,
-        lvl.DisplayName AS level,
-        u.FullName AS instructor,
-        c.TotalLessons AS totalLessons,
-        0 AS totalNodes,
-        0 AS totalMaterials,
-        ISNULL(uc.ProgressPercentage, 0) AS progressPercentage,
-        CAST(CASE WHEN uc.UserId IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS isEnrolled,
-        COUNT(DISTINCT uc2.UserId) AS popularity,
-        ISNULL(c.Rating, 4.5) AS rating,
-        150 AS reviewCount,
-        COUNT(DISTINCT uc2.UserId) AS studentCount,
-        c.CreatedAt AS createdAt,
-        c.Thumbnail AS thumbnail
-      FROM Courses c
-      LEFT JOIN Categories cat ON c.CategoryId = cat.CategoryId
-      LEFT JOIN Levels lvl ON c.LevelId = lvl.LevelId
-      LEFT JOIN Instructors i ON c.InstructorId = i.InstructorId
-      LEFT JOIN Users u ON i.UserId = u.UserId
-      LEFT JOIN User_Courses uc ON c.CourseId = uc.CourseId AND uc.UserId = @userId
-      LEFT JOIN User_Courses uc2 ON c.CourseId = uc2.CourseId
-      GROUP BY
-        c.CourseId, c.CourseName, c.Description, cat.DisplayName, lvl.DisplayName,
-        u.FullName, c.TotalLessons, uc.ProgressPercentage, uc.UserId,
-        c.Rating, c.CreatedAt, c.Thumbnail
-      ORDER BY c.CreatedAt DESC
-    `);
-
-    const courses = result.recordset.map((c) => {
-      let cat = c.category;
-      if (cat === 'Giao tiếp & Kỹ năng mềm') cat = 'Giao tiếp';
-      if (cat === 'Công nghệ thông tin') cat = 'IELTS';
-      if (cat === 'Kinh doanh & Quản lý') cat = 'TOEIC';
-      if (cat === 'Đời sống & Sở thích') cat = 'Ngữ pháp';
-
-      let lvl = c.level;
-      if (lvl === 'Người mới bắt đầu') lvl = 'Cơ bản';
-      if (lvl === 'Cơ bản') lvl = 'Cơ bản';
-      if (lvl === 'Trung cấp') lvl = 'Trung cấp';
-      if (lvl === 'Cao cấp') lvl = 'Nâng cao';
-
-      return {
-        ...c,
-        category: cat,
-        level: lvl,
-        isEnrolled: !!c.isEnrolled,
-      };
-    });
-
-    return res.json({ success: true, courses });
-  } catch (err) {
-    console.error('[GetCourses Error]', err.message);
-    return res.status(500).json({ success: false, message: 'Không thể lấy danh sách khóa học.' });
-  }
-};
-
-// ============================================================
-// GET /api/courses/top
-// ============================================================
-const getTopCourses = async (req, res) => {
-  const limit = parseInt(req.query.limit, 10) || 4;
-
-  try {
-    const request = new sql.Request();
-    request.input('limit', sql.Int, limit);
-    const result = await request.query(`
-      SELECT TOP (@limit)
-        c.CourseId,
-        c.CourseName,
-        c.Description,
-        c.Thumbnail,
-        c.Rating,
-        c.TotalLessons,
-        cat.DisplayName AS Category,
-        lv.DisplayName  AS Level,
-        ins.FullName    AS Instructor,
-        COUNT(DISTINCT uc.UserId) AS StudentCount
-      FROM Courses c
-      LEFT JOIN Categories  cat ON cat.CategoryId   = c.CategoryId
-      LEFT JOIN Levels      lv  ON lv.LevelId       = c.LevelId
-      LEFT JOIN Instructors ins ON ins.InstructorId = c.InstructorId
-      LEFT JOIN User_Courses uc  ON uc.CourseId      = c.CourseId
-      GROUP BY
-        c.CourseId, c.CourseName, c.Description,
-        c.Thumbnail, c.Rating, c.TotalLessons,
-        cat.DisplayName, lv.DisplayName, ins.FullName
-      ORDER BY StudentCount DESC
-    `);
-
-    return res.json({ success: true, courses: result.recordset });
-  } catch (err) {
-    console.error('[GetTopCourses Error]', err.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Không thể lấy danh sách khóa học nổi bật.',
-    });
-  }
-};
-
-// ============================================================
-// GET /api/courses/my
-// ============================================================
 const getMyCourses = async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) return res.status(400).json({ success: false, message: 'Thiếu userId' });
-
   try {
-    const request = new sql.Request();
-    request.input('userId', sql.Int, parseInt(userId, 10));
-    const result = await request.query(`
-      SELECT
-        c.CourseId, c.CourseName, c.Description,
-        c.Thumbnail, c.Rating, c.TotalLessons,
-        cat.DisplayName AS Category,
-        lv.DisplayName  AS Level,
-        ins.FullName    AS Instructor,
-        uc.ProgressPercentage,
-        uc.EnrollmentDate
-      FROM User_Courses uc
-      JOIN Courses c      ON c.CourseId      = uc.CourseId
-      LEFT JOIN Categories  cat ON cat.CategoryId   = c.CategoryId
-      LEFT JOIN Levels      lv  ON lv.LevelId       = c.LevelId
-      LEFT JOIN Instructors ins ON ins.InstructorId = c.InstructorId
-      WHERE uc.UserId = @userId
-      ORDER BY uc.EnrollmentDate DESC
-    `);
+    const { userId, roleName } = req.body;
 
-    return res.json({ success: true, courses: result.recordset });
-  } catch (err) {
-    console.error('[GetMyCourses Error]', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi server' });
-  }
-};
-
-// ============================================================
-// POST /api/courses/enroll
-// ============================================================
-const enrollCourse = async (req, res) => {
-  const { userId, courseId } = req.body;
-  if (!userId || !courseId) {
-    return res.status(400).json({ success: false, message: 'Thiếu userId hoặc courseId' });
-  }
-
-  try {
-    const request = new sql.Request();
-    request.input('userId', sql.Int, parseInt(userId, 10));
-    request.input('courseId', sql.Int, parseInt(courseId, 10));
-
-    const check = await request.query(`
-      SELECT UserId FROM User_Courses
-      WHERE UserId = @userId AND CourseId = @courseId
-    `);
-    if (check.recordset.length > 0) {
-      return res.status(409).json({ success: false, message: 'Bạn đã đăng ký khóa học này rồi.' });
+    if (!userId || !roleName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu userId hoặc roleName',
+      });
     }
 
-    const insertReq = new sql.Request();
-    insertReq.input('userId', sql.Int, parseInt(userId, 10));
-    insertReq.input('courseId', sql.Int, parseInt(courseId, 10));
-    await insertReq.query(`
-      INSERT INTO User_Courses (UserId, CourseId, ProgressPercentage, EnrollmentDate)
-      VALUES (@userId, @courseId, 0, GETDATE())
-    `);
+    const courses = await courseModel.getCoursesByUserRole(userId, roleName);
 
-    return res.json({ success: true, message: 'Đăng ký khóa học thành công!' });
-  } catch (err) {
-    console.error('[EnrollCourse Error]', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi server' });
+    return res.status(200).json({
+      success: true,
+      message: `Lấy khóa học của ${roleName} thành công`,
+      data: courses,
+    });
+  } catch (error) {
+    console.error('Get my courses error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy khóa học',
+    });
   }
 };
 
-module.exports = { getCourses, getTopCourses, getMyCourses, enrollCourse };
+//Get course's by Id
+const getInformationCourse = async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const tab = req.query.tab;
+    //valid courseId (req.params.courseId) and tab (req.query.tab)
+    if (!courseId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu courseId',
+        data: [],
+      })
+    } else if (!tab) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu hoặc sai query tab trên url',
+        data: []
+      })
+    }
+    // Tab=course
+    if (tab.toLowerCase() === 'course') {
+      const courses = await courseModel.getCourseById(courseId);
+      //404
+      if (courses.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy khóa học này trong Databse',
+          data: []
+        })
+      }
+      //200
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy thông tin khóa học thành công',
+        data: courses
+      })
+    }
+
+    // tab = content
+    // if (tab.toLowerCase() === 'content') {
+    //   const content
+    // }
+    // tab = students
+  } catch (error) {
+    console.error(error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi connect server'
+    });
+  }
+};
+
+//Save Course Draft at Step 1
+const saveCourseDraftStepOne = async (req, res) => {
+  try {
+    const body = req.body;
+
+    // req.body có thể là {} nên không được chỉ check !req.body
+    if (!body || Object.keys(body).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Step 1: Không có dữ liệu gửi lên.',
+      });
+    }
+
+    const {
+      CourseName,
+      Description,
+      Thumbnail,
+      CategoryId,
+      LevelId,
+      InstructorId,
+      IsPublished,
+    } = body;
+
+    // Validate CourseName
+    if (!CourseName || String(CourseName).trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Step 1: Thiếu tên khóa học.',
+      });
+    }
+
+    // Validate Description
+    if (!Description || String(Description).trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Step 1: Thiếu mô tả khóa học.',
+      });
+    }
+
+    // Validate CategoryId
+    if (!CategoryId || Number.isNaN(Number(CategoryId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Step 1: Thiếu hoặc sai CategoryId.',
+      });
+    }
+
+    // Validate LevelId
+    if (!LevelId || Number.isNaN(Number(LevelId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Step 1: Thiếu hoặc sai LevelId.',
+      });
+    }
+
+    // Validate InstructorId
+    if (!InstructorId || Number.isNaN(Number(InstructorId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Step 1: Thiếu hoặc sai InstructorId.',
+      });
+    }
+
+    const courseData = {
+      CourseName: String(CourseName).trim(),
+      Description: String(Description).trim(),
+      Thumbnail: Thumbnail || null,
+      CategoryId: Number(CategoryId),
+      LevelId: Number(LevelId),
+      InstructorId: Number(InstructorId),
+      IsPublished: Boolean(IsPublished),
+      Rating: 0,
+      TotalLessons: 0,
+    };
+
+    const newCourse = await courseModel.createCourseStepOne(courseData);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Step 1: Lưu nháp khóa học thành công.',
+      data: newCourse,
+    });
+  } catch (error) {
+    console.error('saveCourseDraftStepOne error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Step 1: Lỗi khi lưu khóa học.',
+    });
+  }
+};
+
+//create node
+
+//Save Course (Final step in create course process)
+// at this step => course must be have full information about course
+// req.body : {
+//   course: {
+//     CourseName: 'adsf',
+//     Description: 'adsfadsf',
+//     Thumbnail:
+//     CategoryId: 4,
+//     LevelId: 1,
+//     InstructorId: 2,
+//     IsPublished: true
+//   },
+//   paths: [
+//     {
+//       PathName: 'adsf',
+//       Description: 'adf',
+//       PathOrder: 1,
+//       nodes: [{}]
+//     }
+//   ]
+// }
+
+
+const createFinalCourse = async (req, res) => {
+  try {
+    const newCourse = req.body.course;
+    const newCoursePaths = req.body.paths;
+    const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
+
+
+  } catch (error) {
+    console.error(error.message)
+  }
+}
+module.exports = {
+  getMyCourses,
+  getInformationCourse,
+  saveCourseDraftStepOne,
+  createFinalCourse
+};
