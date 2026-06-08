@@ -4,23 +4,27 @@ import { useNavigate } from 'react-router-dom';
 import EmptyState from '@/shared/ui/EmptyState';
 import MentorCourseContentOutline from './MentorCourseContentOutline';
 import { CREATE_CARD_SX, MUTED, TEXT } from './mentorCourseCreateStyles';
+import { countMaterialsInPath } from '../../utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentTab({ course }) {
   const navigate = useNavigate();
-  const paths = course.paths ?? [];
-  const courseId = course.courseId;
+  const paths = course.Paths ?? [];
+  const courseId = course.CourseId;
   const editPath = `/mentor/courses/${courseId}/edit`;
-
+  const materialCount = paths.reduce((sum, path) => {
+    return sum + countMaterialsInPath(path);
+  }, 0);
   return (
     <Box sx={CREATE_CARD_SX}>
-      <Box sx={{ mb: paths.length > 0 ? 3 : 0 }}>
+      <Box sx={{ mb: paths.length }}>
         <Typography sx={{ fontSize: 17, fontWeight: 800, color: TEXT }}>
           Nội dung khóa học
         </Typography>
-        {paths.length > 0 && (
+        {console.log("course", course)}
+        {paths.length >= 0 && (
           <Typography sx={{ fontSize: 13, color: MUTED, mt: 0.35 }}>
-            {paths.length} chương · {course.totalLessons ?? 0} bài học ·{' '}
-            {course.totalMaterials ?? 0} học liệu
+            {paths.length} chương · {course.TotalLessons ?? 0} bài học ·{' '}
+            {materialCount ?? 0} học liệu
           </Typography>
         )}
       </Box>

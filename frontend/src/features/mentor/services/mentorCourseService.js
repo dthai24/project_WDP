@@ -162,13 +162,13 @@ export async function fetchCourseCategories() {
 
     return {
       ok: true,
-      categories: data.categories.map((item) => ({
+      categories: data.data.map((item) => ({
         value: item.categoryId,
         label: item.displayName,
       })),
     };
-  } catch {
-    return { ok: false, categories: [], message: 'Không thể kết nối máy chủ.' };
+  } catch (error) {
+    return { ok: false, categories: [], message: error.message };
   }
 }
 
@@ -195,13 +195,14 @@ export async function fetchCourseLevels() {
 
     return {
       ok: true,
-      levels: (data.levels ?? []).map((item) => ({
+      levels: (data.data ?? []).map((item) => ({
         value: item.levelId,
         label: item.displayName,
       })),
     };
-  } catch {
-    return { ok: false, levels: [], message: 'Không thể kết nối máy chủ.' };
+  } catch (err) {
+    console.error(err.message);
+    return { ok: false, levels: [], message: 'Lỗi fetchCourseLevels' };
   }
 }
 
@@ -649,19 +650,10 @@ export async function updateCoursePublishStatus(courseId, isPublished) {
  */
 export async function fetchCourseStudents(courseId, filters = {}) {
   // TODO: replace with real API
-  // const params = new URLSearchParams(filters);
-  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students?${params}`, {
-  //   headers: { 'x-user-id': String(getUser()?.userId) },
-  // });
-  // const data = await response.json();
-  // return { ok: response.ok, students: data.students.map(normalizeCourseStudent) };
+  const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students`);
+  const res = await response.json();
+  return { ok: response.ok, students: res.data.map(normalizeCourseStudent) };
 
-  void filters;
-  await delay(300);
-  const id = Number(courseId);
-  const rawStudents = mentorCourseStudentsByCourseId[id] ?? [];
-
-  return { ok: true, students: rawStudents.map(normalizeCourseStudent) };
 }
 
 /**
