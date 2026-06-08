@@ -5,7 +5,10 @@ const {
     getMyCourses,
     getInformationCourse,
     saveCourseDraftStepOne,
-    createFinalCourse
+    createFinalCourse,
+    getFeaturedCourses,
+    getFeaturedPaths,
+    getContinueCourse
 } = require('../controllers/coursesController');
 
 
@@ -29,6 +32,9 @@ const optionalAuth = (req, res, next) => {
 // POST /api/courses/my-courses
 // Lấy khóa học theo role student / mentor
 router.post('/my-courses', getMyCourses);
+router.get('/featured', getFeaturedCourses);
+router.get('/featured-paths', getFeaturedPaths);
+router.get('/continue/:userId', getContinueCourse);
 router.get('/my-courses/:courseId', getInformationCourse);
 router.post('/mentor/courses/save/draft', saveCourseDraftStepOne)
 router.post('/mentor/courses/createCourse', createFinalCourse)

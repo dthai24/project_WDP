@@ -9,23 +9,88 @@ const getCoursesByUserRole = (userId, userRole) => {
     }
     return null;
 }
+// lay khoa hoc noi bat theo so luong nguoi tham gia
+const getFeaturedCourses = async () => {
+  const request = new sql.Request();
+  const result = await request.query(`
+    SELECT TOP 4
+      c.CourseId,
+      c.CourseName,
+      c.Description,
+      c.Thumbnail,
+      c.Rating,
+      c.TotalLessons,
+      cat.DisplayName AS CategoryName,
+      lv.DisplayName  AS LevelName,
+      u.FullName      AS InstructorName,
+      COUNT(uc.UserId) AS TotalStudents
+    FROM Courses c
+    LEFT JOIN Categories  cat ON c.CategoryId  = cat.CategoryId
+    LEFT JOIN Levels      lv  ON c.LevelId     = lv.LevelId
+    LEFT JOIN Users       u   ON c.InstructorId = u.UserId
+    LEFT JOIN User_Courses uc ON c.CourseId    = uc.CourseId
+    WHERE c.IsPublished = 1
+    GROUP BY
+      c.CourseId, c.CourseName, c.Description,
+      c.Thumbnail, c.Rating, c.TotalLessons,
+      cat.DisplayName, lv.DisplayName, u.FullName
+    ORDER BY TotalStudents DESC
+  `);
+  return result.recordset;
+};
 
-//  courseId, courseName, description, category, level,
-//  *         thumbnail, isPublished, createdAt, updatedAt,
-//  *         chapterCount, lessonCount, materialCount,
-//  *         studentCount, rating
+// lay lo trinh noi bat theo rating
+const getFeaturedPaths = async () => {
+  const request = new sql.Request();
+  const result = await request.query(`
+    SELECT TOP 4
+      p.PathId,
+      p.PathName,
+      p.Description,
+      p.[Order],
+      c.CourseId,
+      c.CourseName,
+      c.Thumbnail,
+      c.Rating,
+      cat.DisplayName AS CategoryName,
+      COUNT(pn.NodeId) AS TotalNodes
+    FROM Paths p
+    JOIN Courses c ON p.CourseId = c.CourseId
+    LEFT JOIN Categories cat ON c.CategoryId = cat.CategoryId
+    LEFT JOIN Path_Nodes pn ON p.PathId = pn.PathId
+    WHERE c.IsPublished = 1
+    GROUP BY
+      p.PathId, p.PathName, p.Description, p.[Order],
+      c.CourseId, c.CourseName, c.Thumbnail,
+      c.Rating, cat.DisplayName
+    ORDER BY c.Rating DESC  
+  `);
+  return result.recordset;
+};
 
-
-//Courses : courseId, courseName, description, category, createAt, updateAt, isPublished
-// Category: categoryName (courseId)
-//Paths : chapterCount (courseId)
-//Path_Nodes: lessonCount (pathId)
-//Node_Materials: materialCount (nodeId)
-//User_Courses: studentCount (userId)
-//Rating: rating
-
-
-// Get Information Course Base 
+// lay khoa hoc dang hoc dua theo date
+const getContinueCourse = async (userId) => {
+  const request = new sql.Request();
+  request.input('userId', sql.Int, userId);
+  const result = await request.query(`
+    SELECT TOP 1
+      c.CourseId,
+      c.CourseName,
+      c.Thumbnail,
+      cat.DisplayName AS CategoryName,
+      lv.DisplayName  AS LevelName,
+      uc.ProgressPercentage,
+      uc.EnrollmentDate
+    FROM User_Courses uc
+    JOIN Courses c   ON uc.CourseId  = c.CourseId
+    LEFT JOIN Categories cat ON c.CategoryId = cat.CategoryId
+    LEFT JOIN Levels     lv  ON c.LevelId    = lv.LevelId
+    WHERE uc.UserId = @userId
+      AND uc.ProgressPercentage < 100
+    ORDER BY uc.EnrollmentDate DESC
+  `);
+  return result.recordset[0] ?? null;
+};
 
 
 
@@ -286,5 +351,8 @@ module.exports = {
     getCoursesByUserRole,
     getCourseById,
     createCourseStepOne,
-    createFinalCourse
+    createFinalCourse,
+    getFeaturedCourses,
+    getFeaturedPaths,
+    getContinueCourse
 }

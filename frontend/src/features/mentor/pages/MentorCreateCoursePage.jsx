@@ -36,20 +36,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD:frontend/src/pages/mentor/MentorCreateCoursePage.jsx
-import AppButton from '../../components/common/AppButton';
-import { toast } from '../../components/common/Toast';
-import MentorCourseCreateForm from '../../components/mentor/course/MentorCourseCreateForm';
-import MentorCourseCreateStepIndicator from '../../components/mentor/course/MentorCourseCreateStepIndicator';
-import MentorCourseLeaveDialog from '../../components/mentor/course/MentorCourseLeaveDialog';
-import { useMentorCourseLeaveGuard } from '../../hooks/useMentorCourseLeaveGuard';
-// import {
-//   //fetchCourseCategories,
-//   //fetchCourseLevels,
-//   saveCreateCourseStep1,
-// } from '../../services/mentorCourseService';
-import { getUser } from '../../utils/authUtils';
-=======
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseCreateForm from '@/features/mentor/components/course/MentorCourseCreateForm';
@@ -62,7 +48,6 @@ import {
   saveCreateCourseStep1,
 } from '@/features/mentor/services/mentorCourseService';
 import { getUser } from '@/features/auth/utils/authUtils';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/pages/MentorCreateCoursePage.jsx
 import {
   formFromStep1Payload,
   loadCreateCourseStep1FromStorage,

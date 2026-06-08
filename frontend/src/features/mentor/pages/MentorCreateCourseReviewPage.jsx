@@ -1,19 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD:frontend/src/pages/mentor/MentorCreateCourseReviewPage.jsx
-import { toast } from '../../components/common/Toast';
-import MentorCourseReviewHeader from '../../components/mentor/course/MentorCourseReviewHeader';
-import MentorCourseInfoReview from '../../components/mentor/course/MentorCourseInfoReview';
-import MentorCourseContentReview from '../../components/mentor/course/MentorCourseContentReview';
-import MentorCourseReviewActions from '../../components/mentor/course/MentorCourseReviewActions';
-import MentorCourseReviewStatusPanel from '../../components/mentor/course/MentorCourseReviewStatusPanel';
-// import {
-//   createCourseWithContent,
-//   fetchCourseCategories,
-//   fetchCourseLevels,
-// } from '../../services/mentorCourseService';
-=======
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseReviewHeader from '@/features/mentor/components/course/MentorCourseReviewHeader';
 import MentorCourseInfoReview from '@/features/mentor/components/course/MentorCourseInfoReview';
@@ -26,7 +13,6 @@ import {
   fetchCourseCategories,
   fetchCourseLevels,
 } from '@/features/mentor/services/mentorCourseService';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/pages/MentorCreateCourseReviewPage.jsx
 import {
   clearCreateCourseDraft,
   loadCreateCourseDraft,

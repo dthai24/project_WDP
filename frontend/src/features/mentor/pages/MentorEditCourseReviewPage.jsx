@@ -3,19 +3,6 @@ import { Box, Breadcrumbs, CircularProgress, Divider, Link as MuiLink, Typograph
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-<<<<<<< HEAD:frontend/src/pages/mentor/MentorEditCourseReviewPage.jsx
-import AppButton from '../../components/common/AppButton';
-import { toast } from '../../components/common/Toast';
-import MentorCourseInfoReview from '../../components/mentor/course/MentorCourseInfoReview';
-import MentorCourseContentReview from '../../components/mentor/course/MentorCourseContentReview';
-import { MUTED, PRIMARY, TEXT } from '../../components/mentor/course/mentorCourseCreateStyles';
-// import {
-//   fetchCourseCategories,
-//   fetchCourseLevels,
-//   updateCourseBasicInfo,
-//   updateCourseContent,
-// } from '../../services/mentorCourseService';
-=======
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseInfoReview from '@/features/mentor/components/course/MentorCourseInfoReview';
@@ -27,7 +14,6 @@ import {
   updateCourseBasicInfo,
   updateCourseContent,
 } from '@/features/mentor/services/mentorCourseService';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/pages/MentorEditCourseReviewPage.jsx
 import {
   clearEditCourseDraft,
   loadEditCourseDraft,

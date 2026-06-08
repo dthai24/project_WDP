@@ -677,7 +677,30 @@ function ContinueSection({ course, onContinue, onExplore }) {
 /* ─── Section 3: Learning paths ──────────────────────────── */
 
 function PathsSection() {
-  const theme = useTheme();
+  const [paths, setPaths] = useState([]);
+
+  useEffect(() => {
+    const fetchFeaturedPaths = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/courses/featured-paths');
+        const data = await res.json();
+        setPaths(data.data.map(p => ({
+        id:          p.PathId,
+        title:       p.PathName,
+        description: p.Description  ?? '',
+        nodeCount:   p.TotalNodes   ?? 0,
+        courseName:  p.CourseName   ?? '',
+        rating:      p.Rating       ?? 0,
+        thumbnail:   p.Thumbnail    ?? null,
+        accent:      '#0891B2',
+        })));
+      } catch (error) {
+        console.error('Error fetching featured paths:', error);
+      }
+    };
+
+    fetchFeaturedPaths();
+  }, []);
 
   return (
     <Box sx={{ mb: { xs: 7, md: 9 } }}>
@@ -692,7 +715,7 @@ function PathsSection() {
           gap: 2.5,
         }}
       >
-        {MOCK_PATHS.map((path) => (
+        {paths.map((path) => (
           <Box
             key={path.id}
             sx={{
@@ -798,7 +821,7 @@ function PathsSection() {
 
 /* ─── Section 4: Suggested courses ──────────────────────── */
 
-function CoursesSection({ courses = MOCK_COURSES, onExplore, onNavigateCourse }) {
+function CoursesSection({ courses = [], onExplore, onNavigateCourse }) {
   const theme = useTheme();
 
   return (
@@ -1187,28 +1210,37 @@ export default function HomePage() {
   const displayName = user.fullName || "Học viên";
 
   // TODO: replace with real API call
-  const continueCourse = MOCK_CONTINUE_COURSE;
-  const [topCourses, setTopCourses] = useState(MOCK_COURSES);
 
-  useEffect(() => {
-    getTopCoursesApi(4).then(({ ok, data }) => {
-      if (ok && data.success && data.courses.length > 0) {
-        setTopCourses(
-          data.courses.map((c) => ({
-            courseId: c.CourseId,
-            courseName: c.CourseName,
-            category: c.Category ?? 'Giao tiếp',
-            level: c.Level ?? 'Cơ bản',
-            instructor: c.Instructor ?? '',
-            rating: c.Rating ?? 4.5,
-            studentCount: c.StudentCount ?? 0,
-            totalLessons: c.TotalLessons ?? 0,
-            thumbnail: c.Thumbnail ?? null,
-          }))
-        );
+ const [continueCourseData, setContinueCourseData] = useState(null);
+
+useEffect(() => {
+  if (!user.userId) return;
+  const getData = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/courses/continue/${user.userId}`);
+      const result = await res.json();
+      if (result.success && result.data) {
+        setContinueCourseData({
+          courseId:           result.data.CourseId,
+          courseName:         result.data.CourseName,
+          category:           result.data.CategoryName ?? '',
+          level:              result.data.LevelName    ?? '',
+          progressPercentage: result.data.ProgressPercentage ?? 0,
+          thumbnail:          result.data.Thumbnail    ?? null,
+          currentStage:       null,
+          currentLesson:      null,
+          lastActivity:       null,
+          currentLessonDetail: null,
+        });
+      } else {
+        setContinueCourseData(null);
       }
-    });
-  }, []);
+    } catch (error) {
+      console.error('getContinueCourse error:', error);
+    }
+  };
+  getData();
+}, [user.userId]);
 
   const handleExplore = () => navigate("/courses");
   const handleMyCourses = () => navigate("/my-courses");
@@ -1218,7 +1250,7 @@ export default function HomePage() {
   const [courses, setCourses] = useState([]);
   useEffect(() => {
     const getData = async () => {
-      const res = await fetch('http://localhost:5000/api/courses');
+      const res = await fetch('http://localhost:5000/api/courses/featured');
       const result = await res.json();
 
       if (!result.success) {
@@ -1226,10 +1258,20 @@ export default function HomePage() {
         return;
       }
 
-      setCourses(result.data);
-    }
-    getData()
-  }, [])
+      setCourses(result.data.map((c) => ({
+        courseId: c.CourseId,
+        courseName: c.CourseName,
+        category: c.CategoryName ?? 'Giao tiếp',
+        level: c.LevelName ?? 'Cơ bản',
+        instructor: c.InstructorName ?? '',
+        rating: c.Rating ?? 4.5,
+        studentCount: c.TotalStudents ?? 0,
+        totalLessons: c.TotalLessons ?? 0,
+        thumbnail: c.Thumbnail ?? null,
+      })));
+    };
+    getData();
+  }, []);
 
   return (
     /* Wide root — hero can breathe at full width */
@@ -1263,7 +1305,7 @@ export default function HomePage() {
       {/* Remaining sections sit in a tighter content column */}
       <Box sx={{ maxWidth: 1360, mx: "auto", width: "100%" }}>
         <ContinueSection
-          course={continueCourse}
+          course={continueCourseData}
           onContinue={handleContinue}
           onExplore={handleExplore}
         />
