@@ -59,20 +59,6 @@ import {
 import { getCoursesApi, enrollCourseApi } from '@/features/auth/services/authService';
 const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 
-const CATEGORY_OPTIONS = [
-  { value: "Giao tiếp", label: "Giao tiếp" },
-  { value: "IELTS", label: "IELTS" },
-  { value: "TOEIC", label: "TOEIC" },
-  { value: "Ngữ pháp", label: "Ngữ pháp" },
-  { value: "Phát âm", label: "Phát âm" },
-];
-
-const LEVEL_OPTIONS = [
-  { value: "Cơ bản", label: "Cơ bản" },
-  { value: "Trung cấp", label: "Trung cấp" },
-  { value: "Nâng cao", label: "Nâng cao" },
-];
-
 const STATUS_OPTIONS = [
   { value: "enrolled", label: "Đã đăng ký" },
   { value: "not_enrolled", label: "Chưa đăng ký" },
@@ -84,23 +70,37 @@ const SORT_OPTIONS = [
   { value: "progress", label: "Tiến độ cao nhất" },
 ];
 
-async function fetchCourses(userId) {
+async function fetchCourses(userId, filters) {
   try {
-    const url = userId
-      ? `http://localhost:5000/api/courses?userId=${userId}`
-      : "http://localhost:5000/api/courses";
+    const params = new URLSearchParams();
+    if (filters.keyword) params.append('search', filters.keyword);
+    if (filters.categories && filters.categories.length > 0) {
+      filters.categories.forEach(cat => params.append('category', cat));
+    }
+    if (filters.levels && filters.levels.length > 0) {
+      filters.levels.forEach(lvl => params.append('level', lvl));
+    }
+    if (filters.statuses?.length > 0) params.append('status', filters.statuses[0]);
+    if (filters.sort) params.append('sort', filters.sort);
 
-    const res = await fetch(url);
+    const url = `http://localhost:5000/api/courses/student?${params.toString()}`;
 
+    // Add user id in headers or query if needed
+    const headers = {};
+    if (userId) {
+      headers['x-user-id'] = userId;
+    }
+
+    const res = await fetch(url, { headers });
     const result = await res.json();
 
     console.log("ALL COURSES RESPONSE:", result);
 
     if (!res.ok || !result.success) {
-      return [];
+      return { data: [], totalCount: 0 };
     }
 
-    return result.data || [];
+    return { data: result.data || [], totalCount: result.totalCount || 0 };
   } catch (err) {
     console.error("Error fetching courses:", err);
     throw err;
@@ -137,6 +137,9 @@ export default function CourseListPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState([]);
+  const [totalCourses, setTotalCourses] = useState(0);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [levelsList, setLevelsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const { isSaved, toggleSave } = useSavedCourses();
 
@@ -146,12 +149,33 @@ export default function CourseListPage() {
   );
 
   const showReset = hasActiveCourseFilters(filters);
-  const activeFilterChips = useMemo(() => buildActiveFilterChips(filters), [filters]);
-
-  const updateFilters = (patch, options = {}) => {
+  const activeFilterChips = useMemo(() => buildActiveFilterChips(filters, undefined, categoriesList, levelsList), [filters, categoriesList, levelsList]); const updateFilters = (patch, options = {}) => {
     const next = buildCourseListSearchParams({ ...filters, ...patch }, searchParams);
     setSearchParams(next, { replace: options.replace ?? true });
   };
+
+  useEffect(() => {
+    async function fetchLookups() {
+      try {
+        const [catRes, levRes] = await Promise.all([
+          fetch('http://localhost:5000/api/categories'),
+          fetch('http://localhost:5000/api/levels')
+        ]);
+        const catData = await catRes.json();
+        const levData = await levRes.json();
+
+        if (catData.success) {
+          setCategoriesList(catData.data.map(c => ({ value: String(c.CategoryId || c.categoryId || c.categoryid || ''), label: c.DisplayName || c.displayName || c.CategoryName || c.categoryName || 'Lỗi hiển thị' })));
+        }
+        if (levData.success) {
+          setLevelsList(levData.data.map(l => ({ value: String(l.LevelId || l.levelId || l.levelid || ''), label: l.DisplayName || l.displayName || l.LevelName || l.levelName || 'Lỗi hiển thị' })));
+        }
+      } catch (error) {
+        console.error("Error fetching lookups:", error);
+      }
+    }
+    fetchLookups();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -162,11 +186,17 @@ export default function CourseListPage() {
         const userRaw = sessionStorage.getItem('user');
         const currentUser = userRaw ? JSON.parse(userRaw) : null;
 
-        const data = await fetchCourses(currentUser?.userId);
-        if (isMounted) setCourses(Array.isArray(data) ? data : []);
+        const result = await fetchCourses(currentUser?.userId, filters);
+        if (isMounted) {
+          setCourses(Array.isArray(result.data) ? result.data : []);
+          setTotalCourses(result.totalCount || 0);
+        }
       } catch {
         toast.error("Không thể tải danh sách khóa học. Vui lòng thử lại.");
-        if (isMounted) setCourses([]);
+        if (isMounted) {
+          setCourses([]);
+          setTotalCourses(0);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -176,49 +206,13 @@ export default function CourseListPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [filters]);
 
-  const filteredCourses = useMemo(() => {
-    const keyword = filters.keyword.toLowerCase();
-    const filtered = courses.filter((course) => {
-      if (keyword) {
-        const matchSearch =
-          course.courseName.toLowerCase().includes(keyword) ||
-          course.description.toLowerCase().includes(keyword) ||
-          course.category.toLowerCase().includes(keyword);
-        if (!matchSearch) return false;
-      }
-      if (filters.categories.length > 0 && !filters.categories.includes(course.category)) {
-        return false;
-      }
-      if (filters.levels.length > 0 && !filters.levels.includes(course.level)) {
-        return false;
-      }
-      if (filters.statuses.length > 0) {
-        const matchesStatus = filters.statuses.some((status) => {
-          if (status === "enrolled") return course.isEnrolled;
-          if (status === "not_enrolled") return !course.isEnrolled;
-          return false;
-        });
-        if (!matchesStatus) return false;
-      }
-      return true;
-    });
-
-    return [...filtered].sort((a, b) => {
-      if (filters.sort === "popular") {
-        return (b.popularity ?? 0) - (a.popularity ?? 0);
-      }
-      if (filters.sort === "progress") {
-        return (b.progressPercentage ?? 0) - (a.progressPercentage ?? 0);
-      }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [courses, filters]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCourses / PAGE_SIZE));
   const currentPage = Math.min(filters.page, totalPages);
-  const pageCourses = filteredCourses.slice(
+  // Optional: Server-side pagination is recommended, but if you return all matching records from server, 
+  // you can still slice it here, or implement server-side LIMIT/OFFSET later.
+  const pageCourses = courses.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
@@ -258,18 +252,25 @@ export default function CourseListPage() {
       return;
     }
 
-    const { ok, data } = await enrollCourseApi(user.userId, course.courseId);
-    if (ok && data.success) {
-      setCourses((prev) =>
-        prev.map((item) =>
-          item.courseId === course.courseId
-            ? { ...item, isEnrolled: true, progressPercentage: 0 }
-            : item
-        )
-      );
-      toast.success(`Đã đăng ký khóa "${course.courseName}" thành công!`);
-    } else {
-      toast.error(data.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+    // Lấy ID và Tên khóa học theo chữ Viết Hoa từ Database gửi lên
+    const cId = course.CourseId || course.courseId;
+    const cName = course.CourseName || course.courseName || "Khóa học";
+
+    try {
+      // Gọi hàm apiPostBase của ông (không dùng bốc tách { ok, data } nữa)
+      const res = await enrollCourseApi(user.userId, cId);
+
+      // Kiểm tra trực tiếp xem res có success hay không
+      if (res && (res.success === true || res.ok === true)) {
+        toast.success(`Đã đăng ký khóa "${cName}" thành công!`);
+
+        window.location.reload();
+      } else {
+        toast.error(res?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
+    } catch (error) {
+      console.error("Lỗi khi đăng ký:", error);
+      toast.error("Hệ thống gặp lỗi khi xử lý đăng ký.");
     }
   };
 
@@ -331,17 +332,17 @@ export default function CourseListPage() {
       <CourseCatalogToolbar
         categories={filters.categories}
         onCategoriesChange={handleCategoriesChange}
-        categoryOptions={CATEGORY_OPTIONS}
+        categoryOptions={categoriesList}
         levels={filters.levels}
         onLevelsChange={handleLevelsChange}
-        levelOptions={LEVEL_OPTIONS}
+        levelOptions={levelsList}
         statuses={filters.statuses}
         onStatusesChange={handleStatusesChange}
         statusOptions={STATUS_OPTIONS}
         sortBy={filters.sort}
         onSortChange={handleSortChange}
         sortOptions={SORT_OPTIONS}
-        totalCount={filteredCourses.length}
+        totalCount={totalCourses}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
         showReset={showReset}
@@ -350,7 +351,7 @@ export default function CourseListPage() {
 
       {loading ? (
         <Loading message="Đang tải danh sách khóa học..." />
-      ) : filteredCourses.length === 0 ? (
+      ) : courses.length === 0 ? (
         <Box
           sx={{
             py: 7,
@@ -378,12 +379,12 @@ export default function CourseListPage() {
       ) : (
         <>
           <Grid container spacing={2.5}>
-            {pageCourses.map((course) => (
-              <Grid key={course.courseId} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+            {pageCourses.map((course, index) => (
+              <Grid key={course.CourseId || course.courseId || index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                 <CourseCard
                   course={course}
-                  isSaved={isSaved(course.courseId)}
-                  onToggleSave={() => toggleSave(course.courseId)}
+                  isSaved={isSaved(course.CourseId || course.courseId)}
+                  onToggleSave={() => toggleSave(course.CourseId || course.courseId)}
                   onEnroll={handleEnroll}
                   onContinueLearning={handleContinueLearning}
                 />

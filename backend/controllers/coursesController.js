@@ -1,8 +1,39 @@
 const courseModel = require('../models/coursesModel');
 
+const getStudentCourses = async (req, res) => {
+  try {
+    const filters = {
+      search: req.query.search || '',
+      category: req.query.category || '',
+      level: req.query.level || '',
+      status: req.query.status || '',
+      sort: req.query.sort || 'newest'
+    };
+    const userId = req.user?.userId || null;
+
+    const { courses, totalCount } = await courseModel.getStudentCoursesList(filters, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy danh sách khóa học thành công',
+      data: courses,
+      totalCount: totalCount
+    });
+  } catch (error) {
+    console.error('getStudentCourses error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy khóa học',
+      data: [],
+      totalCount: 0
+    });
+  }
+};
+
 const getMyCourses = async (req, res) => {
   try {
     const { userId, roleName } = req.body;
+    const filterStatus = req.query.status || 'all';
 
     if (!userId || !roleName) {
       return res.status(400).json({
@@ -11,8 +42,12 @@ const getMyCourses = async (req, res) => {
       });
     }
 
-    const courses = await courseModel.getCoursesByUserRole(userId, roleName);
-
+    let courses;
+    if (roleName.toLowerCase() === 'student') {
+      courses = await courseModel.getMyEnrolledCourses(userId, filterStatus);
+    } else {
+      courses = await courseModel.getCoursesByUserRole(userId, roleName);
+    }
     return res.status(200).json({
       success: true,
       message: `Lấy khóa học của ${roleName} thành công`,
@@ -200,34 +235,33 @@ const saveCourseDraftStepOne = async (req, res) => {
 const createFinalCourse = async (req, res) => {
   try {
     const newCourse = req.body.course;
-    const newCoursePaths = req.body.paths ?? [];
-
-    if (!newCourse?.CourseName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Thiếu thông tin khóa học.',
-      });
-    }
-
+    const newCoursePaths = req.body.paths;
     const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Khóa học đã được tạo.',
-      courseId: newCourseId,
-      data: { courseId: newCourseId },
-    });
+
   } catch (error) {
-    console.error('createFinalCourse error:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi khi tạo khóa học.',
-    });
+    console.error(error.message)
+  }
+}
+const enrollCourse = async (req, res) => {
+  try {
+    const { userId, courseId } = req.body;
+    if (!userId || !courseId) {
+      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc courseId' });
+    }
+    // Gọi xuống hàm ở file Model mà anh em mình đã viết lúc nãy
+    const result = await courseModel.enrollCourse(userId, courseId);
+    return res.status(200).json({ success: true, message: 'Đăng ký khóa học thành công!', data: result });
+  } catch (error) {
+    console.error('Lỗi tại enrollCourse Controller:', error.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi đăng ký khóa học' });
   }
 };
 module.exports = {
   getMyCourses,
   getInformationCourse,
   saveCourseDraftStepOne,
-  createFinalCourse
+  createFinalCourse,
+  getStudentCourses,
+  enrollCourse
 };

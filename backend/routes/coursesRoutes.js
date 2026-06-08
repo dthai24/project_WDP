@@ -5,7 +5,9 @@ const {
     getMyCourses,
     getInformationCourse,
     saveCourseDraftStepOne,
-    createFinalCourse
+    createFinalCourse,
+    getStudentCourses,
+    enrollCourse
 } = require('../controllers/coursesController');
 
 
@@ -22,14 +24,20 @@ const optionalAuth = (req, res, next) => {
 };
 
 // GET /api/courses
-// Lấy tất cả khóa học
-// Nếu có userId thì lấy kèm progress của user đó
+// Lấy tất cả khóa học ngoài trang tổng (Catalog)
+router.get('/student', optionalAuth, getStudentCourses);
 
-
-// POST /api/courses/my-courses
-// Lấy khóa học theo role student / mentor
+// Lấy danh sách khóa học của tôi (Trang My Courses)
 router.post('/my-courses', getMyCourses);
+
+// Chi tiết khóa học
 router.get('/my-courses/:courseId', getInformationCourse);
-router.post('/mentor/courses/save/draft', saveCourseDraftStepOne)
-router.post('/mentor/courses/createCourse', createFinalCourse)
+
+// Lưu nháp và tạo khóa học (Role Mentor)
+router.post('/mentor/courses/save/draft', saveCourseDraftStepOne);
+router.post('/mentor/courses/createCourse', createFinalCourse);
+
+// CHỖ THIẾU CHÍ MẠNG: Khai báo đường dẫn cho nút Đăng ký khóa học!
+router.post('/enroll', enrollCourse); 
+
 module.exports = router;

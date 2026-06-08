@@ -74,15 +74,6 @@ export function buildCourseDetailPath(courseId, searchParams, fromUrl) {
   return qs ? `${base}?${qs}` : base;
 }
 
-const VALID_CATEGORIES = new Set([
-  "Giao tiếp",
-  "IELTS",
-  "TOEIC",
-  "Ngữ pháp",
-  "Phát âm",
-]);
-
-const VALID_LEVELS = new Set(["Cơ bản", "Trung cấp", "Nâng cao"]);
 const VALID_STATUSES = new Set(["enrolled", "not_enrolled"]);
 const VALID_SORT = new Set(["newest", "popular", "progress"]);
 
@@ -95,14 +86,14 @@ function parseMultiValues(searchParams, key, validSet) {
   const fromAll = searchParams
     .getAll(key)
     .map((value) => value.trim())
-    .filter((value) => validSet.has(value));
+    .filter((value) => validSet ? validSet.has(value) : value !== "");
 
   if (fromAll.length > 0) {
     return [...new Set(fromAll)];
   }
 
   const single = searchParams.get(key);
-  if (single && single !== "all" && validSet.has(single)) {
+  if (single && single !== "all" && (validSet ? validSet.has(single) : true)) {
     return [single];
   }
 
@@ -112,8 +103,8 @@ function parseMultiValues(searchParams, key, validSet) {
 export function parseCourseListParams(searchParams) {
   const sort = searchParams.get("sort");
   return {
-    categories: parseMultiValues(searchParams, "category", VALID_CATEGORIES),
-    levels: parseMultiValues(searchParams, "level", VALID_LEVELS),
+    categories: parseMultiValues(searchParams, "category", null),
+    levels: parseMultiValues(searchParams, "level", null),
     statuses: parseMultiValues(searchParams, "status", VALID_STATUSES),
     sort: VALID_SORT.has(sort) ? sort : COURSE_LIST_DEFAULTS.sort,
     page: parsePage(searchParams.get("page")),
@@ -139,10 +130,8 @@ export function buildCourseListSearchParams(filters, currentSearchParams) {
   const normalized = {
     ...COURSE_LIST_DEFAULTS,
     ...filters,
-    categories: [...new Set(filters.categories ?? [])].filter((value) =>
-      VALID_CATEGORIES.has(value)
-    ),
-    levels: [...new Set(filters.levels ?? [])].filter((value) => VALID_LEVELS.has(value)),
+    categories: [...new Set(filters.categories ?? [])].filter((value) => value !== ""),
+    levels: [...new Set(filters.levels ?? [])].filter((value) => value !== ""),
     statuses: [...new Set(filters.statuses ?? [])].filter((value) =>
       VALID_STATUSES.has(value)
     ),
@@ -191,7 +180,7 @@ export function hasActiveFilterSelections(filters) {
   );
 }
 
-export function buildActiveFilterChips(filters, statusLabels = STATUS_FILTER_LABELS) {
+export function buildActiveFilterChips(filters, statusLabels = STATUS_FILTER_LABELS, categoriesList = [], levelsList = []) {
   const chips = [];
 
   if (filters.keyword) {
@@ -204,20 +193,25 @@ export function buildActiveFilterChips(filters, statusLabels = STATUS_FILTER_LAB
   }
 
   filters.categories.forEach((value) => {
+    const matchedCategory = categoriesList.find((cat) => String(cat.value) === String(value));
+    const categoryName = matchedCategory ? matchedCategory.label : value;
     chips.push({
       key: `category:${value}`,
       type: "category",
       value,
-      label: value,
+      // Temporarily use ID or generic label. CourseListPage or a context can provide the real display name if needed.
+      label: `Danh mục: ${categoryName}`,
     });
   });
 
   filters.levels.forEach((value) => {
+    const matchedLevel = levelsList.find((lvl) => String(lvl.value) === String(value));
+    const levelName = matchedLevel ? matchedLevel.label : value;
     chips.push({
       key: `level:${value}`,
       type: "level",
       value,
-      label: value,
+      label: `Trình độ: ${levelName}`,
     });
   });
 
