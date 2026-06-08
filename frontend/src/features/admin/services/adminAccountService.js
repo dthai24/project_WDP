@@ -50,9 +50,14 @@ export async function createAccount(payload) {
   await simulateDelay();
   const accounts = getAllAccounts();
   const email = String(payload.email ?? '').trim().toLowerCase();
+  const username = String(payload.username ?? '').trim().toLowerCase();
 
   if (accounts.some((item) => item.email.toLowerCase() === email)) {
     return { ok: false, message: 'Email đã tồn tại trong hệ thống' };
+  }
+
+  if (username && accounts.some((item) => item.username?.toLowerCase() === username)) {
+    return { ok: false, message: 'Username đã được sử dụng' };
   }
 
   const now = new Date().toISOString();
@@ -62,6 +67,7 @@ export async function createAccount(payload) {
     username: payload.username || email.split('@')[0],
     email: payload.email,
     phone: payload.phone ?? '',
+    dateOfBirth: payload.dateOfBirth ?? '',
     role: payload.role,
     status: payload.status ?? 'ACTIVE',
     createdAt: now,

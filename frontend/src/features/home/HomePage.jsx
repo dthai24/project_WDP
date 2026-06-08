@@ -22,6 +22,7 @@ import CollectionsBookmarkRoundedIcon from "@mui/icons-material/CollectionsBookm
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 const heroImg = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80';
@@ -269,16 +270,7 @@ function SectionHeader({ label, title, action, onAction }) {
 }
 
 function CategoryChip({ category }) {
-  const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
-    "IELTS": { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    "TOEIC": { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
-    "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
-    "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
-    "Mẹo học tập": { bgcolor: "rgba(245,158,11,0.10)", color: "#D97706" },
-    "Kỹ năng nghe": { bgcolor: "rgba(8,145,178,0.10)", color: PRIMARY },
-  };
-  const style = map[category] ?? { bgcolor: "#F1F5F9", color: MUTED };
+  const style = resolveCategoryChipSx({ displayName: category }, { withBorder: false });
   return (
     <Chip
       label={category}
@@ -830,12 +822,8 @@ function CoursesSection({ courses = MOCK_COURSES, onExplore, onNavigateCourse })
 
 function CourseHomeCard({ course, onClick }) {
   const theme = useTheme();
-  const levelColors = {
-    "Cơ bản": { bg: "rgba(56,189,248,0.10)", text: "#0284C7" },
-    "Trung cấp": { bg: "rgba(245,158,11,0.10)", text: "#D97706" },
-    "Nâng cao": { bg: "rgba(234,88,12,0.10)", text: "#EA580C" },
-  };
-  const lvl = levelColors[course.level] ?? { bg: "#F1F5F9", text: MUTED };
+  const levelSx = resolveLevelChipSx({ displayName: course.level }, { withBorder: false });
+  const lvl = { bg: levelSx.bgcolor, text: levelSx.color };
 
   return (
     <Box

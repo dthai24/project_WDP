@@ -28,6 +28,8 @@ import MentorQuestionBankCreatePage from '@/features/mentor/pages/MentorQuestion
 import MentorQuestionBankDetailPage from '@/features/mentor/pages/MentorQuestionBankDetailPage';
 import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuestionsPage';
 import AdminAccountManagementPage from '@/features/admin/pages/AdminAccountManagementPage';
+import AdminCategoryManagementPage from '@/features/admin/pages/AdminCategoryManagementPage';
+import AdminLevelManagementPage from '@/features/admin/pages/AdminLevelManagementPage';
 
 import MainLayout from '@/shared/layout/MainLayout';
 import MentorLayout from '@/shared/layout/MentorLayout';
@@ -143,6 +145,8 @@ export default function App() {
         >
           <Route index element={<AdminShellIndexRedirect />} />
           <Route path="accounts" element={<AdminAccountManagementPage />} />
+          <Route path="categories" element={<AdminCategoryManagementPage />} />
+          <Route path="levels" element={<AdminLevelManagementPage />} />
           <Route path="*" element={<AdminShellFallbackRedirect />} />
         </Route>
 

@@ -46,6 +46,7 @@ import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import CourseBookmarkButton from "./CourseBookmarkButton";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
+import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
 
 /* ─── helpers ─── */
 
@@ -144,37 +145,6 @@ function getMyCoursesStatusChip(progress) {
   };
 }
 
-function getLevelChipStyle(level = "") {
-  const l = level.toLowerCase();
-  if (l.includes("cơ bản") || l.includes("sơ cấp")) return {
-    bgcolor: "rgba(56,189,248,0.12)",
-    color: "#0284C7",
-    border: "1px solid rgba(56,189,248,0.22)",
-  };
-  if (l.includes("trung cấp")) return {
-    bgcolor: "rgba(245,158,11,0.12)",
-    color: "#D97706",
-    border: "1px solid rgba(245,158,11,0.22)",
-  };
-  if (l.includes("nâng cao")) return {
-    bgcolor: "rgba(234,88,12,0.12)",
-    color: "#EA580C",
-    border: "1px solid rgba(234,88,12,0.22)",
-  };
-  return { bgcolor: "#F1F5F9", color: "#64748B" };
-}
-
-function getCategoryChipStyle(category = "") {
-  const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)",  color: "#2563EB" },
-    "IELTS":     { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    "TOEIC":     { bgcolor: "rgba(14,116,144,0.10)", color: "#0E7490" },
-    "Ngữ pháp":  { bgcolor: "rgba(15,23,42,0.08)",   color: "#334155" },
-    "Phát âm":   { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
-  };
-  return map[category] ?? { bgcolor: "#F1F5F9", color: "#64748B" };
-}
-
 /* ─── sub-components ─── */
 
 function CourseThumbnail({ thumbnail }) {
@@ -248,8 +218,8 @@ export default function CourseCard({
   const statusChip   = isMyCourses
     ? getMyCoursesStatusChip(data.progressPercentage)
     : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
-  const levelStyle   = getLevelChipStyle(data.level);
-  const categoryStyle = getCategoryChipStyle(data.category);
+  const levelStyle   = resolveLevelChipSx({ displayName: data.level });
+  const categoryStyle = resolveCategoryChipSx({ displayName: data.category }, { withBorder: false });
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const progressTextColor = getProgressColor(progressValue);
   const isCompleted = progressValue >= 100;
