@@ -5,17 +5,10 @@ import MentorCourseStudentsSummary from './MentorCourseStudentsSummary';
 import MentorCourseStudentsToolbar from './MentorCourseStudentsToolbar';
 import MentorCourseStudentsList from './MentorCourseStudentsList';
 import MentorCourseStudentsPagination from './MentorCourseStudentsPagination';
-<<<<<<< HEAD:frontend/src/components/mentor/course/MentorCourseStudentsTab.jsx
-// import {
-//   fetchCourseStudents,
-//   fetchCourseStudentStats,
-// } from '../../../services/mentorCourseService';
-=======
 import {
   fetchCourseStudents,
   fetchCourseStudentStats,
 } from '@/features/mentor/services/mentorCourseService';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/components/course/MentorCourseStudentsTab.jsx
 import {
   filterAndSortCourseStudents,
   hasActiveCourseStudentFilters,

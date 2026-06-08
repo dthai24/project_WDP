@@ -225,9 +225,82 @@ const createFinalCourse = async (req, res) => {
     });
   }
 };
+
+const getFeaturedCourses = async (req, res) => {
+  try {
+    const courses = await courseModel.getFeaturedCourses();
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy khoá học nổi bật thành công',
+      data: courses
+    });
+  } catch (error) {
+    console.error('getFeaturedCourses error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy khoá học nổi bật'
+    });
+  }
+};
+
+const getFeaturedPaths = async (req, res) => {
+  try {
+    const paths = await courseModel.getFeaturedPaths();
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy lộ trình nổi bật thành công',
+      data: paths
+    });
+  } catch (error) {
+    console.error('getFeaturedPaths error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy lộ trình nổi bật'
+    });
+  }
+};
+
+// hien thi khoa hoc dang hoc theo date
+const getContinueCourse = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    if (!userId || Number.isNaN(Number(userId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu hoặc sai userId.',
+      });
+    }
+
+    const continueCourse = await courseModel.getContinueCourse(userId);
+
+    if (!continueCourse) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy khóa học đang học.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy khóa học đang học thành công.',
+      data: continueCourse
+    });
+  } catch (error) {
+    console.error('getContinueCourse error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy khóa học đang học.'
+    });
+  }
+};
+
 module.exports = {
   getMyCourses,
   getInformationCourse,
   saveCourseDraftStepOne,
-  createFinalCourse
+  createFinalCourse,
+  getFeaturedCourses,
+  getFeaturedPaths,
+  getContinueCourse
 };

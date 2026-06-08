@@ -40,13 +40,8 @@ import MentorCoursesToolbar from '@/features/mentor/components/course/MentorCour
 import MentorCourseList from '@/features/mentor/components/course/MentorCourseList';
 import MentorCourseListPagination, {
   MENTOR_COURSE_LIST_PAGE_SIZE,
-<<<<<<< HEAD:frontend/src/pages/mentor/MentorCoursesPage.jsx
-} from '../../components/mentor/course/MentorCourseListPagination';
-//import { fetchMentorCourses } from '../../services/mentorCourseService';
-=======
 } from '@/features/mentor/components/course/MentorCourseListPagination';
 import { fetchMentorCourses } from '@/features/mentor/services/mentorCourseService';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/pages/MentorCoursesPage.jsx
 import {
   filterAndSortMentorCourses,
   paginateMentorCourses,

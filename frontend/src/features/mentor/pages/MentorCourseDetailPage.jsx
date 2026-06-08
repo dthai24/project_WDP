@@ -38,20 +38,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Box } from '@mui/material';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-<<<<<<< HEAD:frontend/src/pages/mentor/MentorCourseDetailPage.jsx
-import ConfirmDialog from '../../components/common/ConfirmDialog';
-import EmptyState from '../../components/common/EmptyState';
-import Loading from '../../components/common/Loading';
-import { toast } from '../../components/common/Toast';
-import MentorCourseDetailHeader from '../../components/mentor/course/MentorCourseDetailHeader';
-import MentorCourseOverviewTab from '../../components/mentor/course/MentorCourseOverviewTab';
-import MentorCourseContentTab from '../../components/mentor/course/MentorCourseContentTab';
-import MentorCourseStudentsTab from '../../components/mentor/course/MentorCourseStudentsTab';
-// import {
-//   fetchMentorCourseDetail,
-//   updateCoursePublishStatus,
-// } from '../../services/mentorCourseService';
-=======
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import EmptyState from '@/shared/ui/EmptyState';
 import Loading from '@/shared/ui/Loading';
@@ -64,7 +50,6 @@ import {
   fetchMentorCourseDetail,
   updateCoursePublishStatus,
 } from '@/features/mentor/services/mentorCourseService';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/pages/MentorCourseDetailPage.jsx
 import {
   MENTOR_COURSE_DETAIL_TABS,
   parseMentorCourseDetailTab,

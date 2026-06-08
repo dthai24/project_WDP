@@ -11,22 +11,6 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-<<<<<<< HEAD:frontend/src/pages/mentor/MentorEditCoursePage.jsx
-import AppButton from '../../components/common/AppButton';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { toast } from '../../components/common/Toast';
-import MentorCourseCreateForm from '../../components/mentor/course/MentorCourseCreateForm';
-import MentorCourseContentBuilder from '../../components/mentor/course/MentorCourseContentBuilder';
-import MentorContentOverview from '../../components/mentor/course/MentorContentOverview';
-import MentorChapterDraftDialog from '../../components/mentor/course/MentorChapterDraftDialog';
-import { MUTED, PRIMARY, TEXT } from '../../components/mentor/course/mentorCourseCreateStyles';
-// import {
-//   fetchCourseCategories,
-//   fetchCourseLevels,
-//   fetchMentorCourseDetail,
-// } from '../../services/mentorCourseService';
-import { getUser } from '../../utils/authUtils';
-=======
 import AppButton from '@/shared/ui/AppButton';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import { toast } from '@/shared/ui/Toast';
@@ -41,7 +25,6 @@ import {
   fetchMentorCourseDetail,
 } from '@/features/mentor/services/mentorCourseService';
 import { getUser } from '@/features/auth/utils/authUtils';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/pages/MentorEditCoursePage.jsx
 import {
   buildCreateCourseStep1Payload,
   MENTOR_COURSE_FORM_INITIAL,

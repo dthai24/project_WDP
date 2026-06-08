@@ -3,19 +3,6 @@ import { Box, Breadcrumbs, CircularProgress, Link as MuiLink, Typography } from 
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-<<<<<<< HEAD:frontend/src/pages/mentor/MentorEditCourseContentPage.jsx
-import AppButton from '../../components/common/AppButton';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { toast } from '../../components/common/Toast';
-import MentorCourseContentBuilder from '../../components/mentor/course/MentorCourseContentBuilder';
-import MentorContentOverview from '../../components/mentor/course/MentorContentOverview';
-import MentorCourseLeaveDialog from '../../components/mentor/course/MentorCourseLeaveDialog';
-import MentorChapterDraftDialog from '../../components/mentor/course/MentorChapterDraftDialog';
-import { MUTED, PRIMARY, TEXT } from '../../components/mentor/course/mentorCourseCreateStyles';
-import { useMentorCourseLeaveGuard } from '../../hooks/useMentorCourseLeaveGuard';
-//import { fetchMentorCourseDetail } from '../../services/mentorCourseService';
-import { getUser } from '../../utils/authUtils';
-=======
 import AppButton from '@/shared/ui/AppButton';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import { toast } from '@/shared/ui/Toast';
@@ -27,7 +14,6 @@ import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentor
 import { useMentorCourseLeaveGuard } from '@/features/mentor/hooks/useMentorCourseLeaveGuard';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
 import { getUser } from '@/features/auth/utils/authUtils';
->>>>>>> 6899305ef9da9713cfeed4287282a46f8cd986b4:frontend/src/features/mentor/pages/MentorEditCourseContentPage.jsx
 import {
   courseDetailToEditCourse,
   loadEditCourseDraft,
