@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button } from '@mui/material';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import { getRoleDefaultPath } from '@/features/auth/utils/authUtils';
 
 /**
  * Minimal "403 – Unauthorized" page.
@@ -32,7 +33,7 @@ export default function UnauthorizedPage() {
       </Typography>
       <Button
         variant="contained"
-        onClick={() => navigate('/')}
+        onClick={() => navigate(getRoleDefaultPath())}
         sx={{
           textTransform: 'none',
           fontWeight: 600,
