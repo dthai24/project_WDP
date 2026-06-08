@@ -297,7 +297,7 @@ const insertNode = async (node, pathId) => {
 
     return nodeIds;
 };
-a
+
 // insert path into course
 const insertPath = async (path, courseId) => {
     const insertedPathIds = [];

@@ -1,14 +1,16 @@
 import { Box } from '@mui/material';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
-import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
+import Sidebar from './Sidebar';
+import { SIDEBAR_WIDTH } from './Sidebar';
 import { pageContentSx } from './MainLayout';
-import { MentorLayoutGuard } from '@/shared/routing/RoleShellRedirects';
+import { HEADER_HEIGHT } from './MainLayout';
+import { AdminLayoutGuard } from '@/shared/routing/RoleShellRedirects';
 
-export default function MentorLayout() {
+export default function AdminLayout() {
   return (
-    <MentorLayoutGuard>
+    <AdminLayoutGuard>
       <Box
         sx={{
           minHeight: '100vh',
@@ -17,8 +19,12 @@ export default function MentorLayout() {
           bgcolor: '#FFFFFF',
         }}
       >
-        <Header logoTo="/mentor/courses" profilePath="/mentor/courses" showMyCoursesButton={false} />
-        <Sidebar variant="mentor" />
+        <Header
+          logoTo="/admin/accounts"
+          profilePath="/profile"
+          showMyCoursesButton={false}
+        />
+        <Sidebar variant="admin" />
 
         <Box
           component="main"
@@ -26,6 +32,7 @@ export default function MentorLayout() {
             ml: `${SIDEBAR_WIDTH}px`,
             flex: 1,
             bgcolor: '#FFFFFF',
+            minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
           }}
         >
           <Box sx={pageContentSx}>
@@ -35,6 +42,6 @@ export default function MentorLayout() {
       </Box>
 
       <Footer />
-    </MentorLayoutGuard>
+    </AdminLayoutGuard>
   );
 }

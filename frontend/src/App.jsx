@@ -1,9 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import LoginPage from '@/features/auth/pages/LoginPage';
 import RegisterPage from '@/features/auth/pages/RegisterPage';
 import OtpPage from '@/features/auth/pages/OtpPage';
-import HomePage from '@/features/home/HomePage';
 import ProfilePage from '@/features/profile/pages/ProfilePage';
 import SurveyPage from '@/features/auth/pages/SurveyPage';
 import TestPage from '@/features/dev/Test';
@@ -28,14 +27,26 @@ import MentorQuestionBankListPage from '@/features/mentor/pages/MentorQuestionBa
 import MentorQuestionBankCreatePage from '@/features/mentor/pages/MentorQuestionBankCreatePage';
 import MentorQuestionBankDetailPage from '@/features/mentor/pages/MentorQuestionBankDetailPage';
 import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuestionsPage';
-import MentorCoursePlaceholder from '@/features/mentor/components/MentorCoursePlaceholder';
+import AdminAccountManagementPage from '@/features/admin/pages/AdminAccountManagementPage';
 
 import MainLayout from '@/shared/layout/MainLayout';
 import MentorLayout from '@/shared/layout/MentorLayout';
+import AdminLayout from '@/shared/layout/AdminLayout';
 import ProtectedRoute from '@/shared/ui/ProtectedRoute';
-
-const MENTOR_BLOCK_REDIRECTS = { Mentor: '/mentor/courses' };
-const STUDENT_MENTOR_ROUTE_REDIRECTS = { Student: '/courses' };
+import RoleAwareHome, { AppRootRedirect } from '@/shared/routing/RoleAwareHome';
+import {
+  AdminShellFallbackRedirect,
+  AdminShellIndexRedirect,
+  MentorShellFallbackRedirect,
+  MentorShellIndexRedirect,
+  StudentShellIndexRedirect,
+} from '@/shared/routing/RoleShellRedirects';
+import {
+  ADMIN_SHELL_BLOCK_REDIRECTS,
+  MENTOR_SHELL_BLOCK_REDIRECTS,
+  STUDENT_SHELL_BLOCK_REDIRECTS,
+  STUDENT_SHARED_ROUTE_REDIRECTS,
+} from '@/shared/routing/routeAccess';
 
 export default function App() {
   return (
@@ -53,7 +64,7 @@ export default function App() {
         <Route
           path="/survey"
           element={
-            <ProtectedRoute allowedRoles={['Student', 'Admin', 'Mentor']}>
+            <ProtectedRoute allowedRoles={['Student']}>
               <SurveyPage />
             </ProtectedRoute>
           }
@@ -61,15 +72,15 @@ export default function App() {
 
         {/* Student app shell */}
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<HomePage />} />
-          <Route path="home" element={<HomePage />} />
+          <Route index element={<RoleAwareHome />} />
+          <Route path="home" element={<RoleAwareHome />} />
 
           <Route
             path="courses"
             element={
               <ProtectedRoute
                 allowedRoles={['Student', 'Admin']}
-                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+                roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
               >
                 <CourseListPage />
               </ProtectedRoute>
@@ -80,7 +91,7 @@ export default function App() {
             element={
               <ProtectedRoute
                 allowedRoles={['Student', 'Admin']}
-                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+                roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
               >
                 <CourseDetailPage />
               </ProtectedRoute>
@@ -91,7 +102,7 @@ export default function App() {
             element={
               <ProtectedRoute
                 allowedRoles={['Student']}
-                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+                roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
               >
                 <MyCoursesListPage />
               </ProtectedRoute>
@@ -102,7 +113,7 @@ export default function App() {
             element={
               <ProtectedRoute
                 allowedRoles={['Student']}
-                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+                roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
               >
                 <CourseLearningPage />
               </ProtectedRoute>
@@ -113,7 +124,7 @@ export default function App() {
             element={
               <ProtectedRoute
                 allowedRoles={['Student', 'Admin']}
-                roleRedirects={MENTOR_BLOCK_REDIRECTS}
+                roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
               >
                 <ProfilePage />
               </ProtectedRoute>
@@ -123,29 +134,28 @@ export default function App() {
 
         {/* Admin routes */}
         <Route
-          path="/admin/*"
+          path="/admin"
           element={
-            <ProtectedRoute allowedRoles={['Admin']}>
-              <Navigate to="/" replace />
+            <ProtectedRoute allowedRoles={['Admin']} roleRedirects={ADMIN_SHELL_BLOCK_REDIRECTS}>
+              <AdminLayout />
             </ProtectedRoute>
           }
-        />
-        <Route index element={<Navigate to="/home" replace />} />
-        <Route path="home" element={<HomePage />} />
+        >
+          <Route index element={<AdminShellIndexRedirect />} />
+          <Route path="accounts" element={<AdminAccountManagementPage />} />
+          <Route path="*" element={<AdminShellFallbackRedirect />} />
+        </Route>
 
         {/* Mentor routes */}
         <Route
           path="/mentor"
           element={
-            <ProtectedRoute
-              allowedRoles={['Mentor']}
-              roleRedirects={STUDENT_MENTOR_ROUTE_REDIRECTS}
-            >
+            <ProtectedRoute allowedRoles={['Mentor']} roleRedirects={MENTOR_SHELL_BLOCK_REDIRECTS}>
               <MentorLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/mentor/courses" replace />} />
+          <Route index element={<MentorShellIndexRedirect />} />
           <Route path="courses/create/review" element={<MentorCreateCourseReviewPage />} />
           <Route path="courses/create/content" element={<MentorCreateCourseContentPage />} />
           <Route path="courses/create" element={<MentorCreateCoursePage />} />
@@ -161,21 +171,23 @@ export default function App() {
           <Route path="question-banks" element={<MentorQuestionBankListPage />} />
           <Route path="news" element={<MentorNewsPage />} />
           <Route path="student-progress" element={<MentorStudentProgressPage />} />
-          <Route path="paths" element={<Navigate to="/mentor/courses" replace />} />
-          <Route path="*" element={<Navigate to="/mentor/courses" replace />} />
+          <Route path="paths" element={<MentorShellFallbackRedirect />} />
+          <Route path="*" element={<MentorShellFallbackRedirect />} />
         </Route>
 
-        {/* Student-specific routes placeholder */}
         <Route
           path="/student/*"
           element={
-            <ProtectedRoute allowedRoles={['Student']}>
-              <Navigate to="/" replace />
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <StudentShellIndexRedirect />
             </ProtectedRoute>
           }
         />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<AppRootRedirect />} />
       </Routes>
     </BrowserRouter>
   );

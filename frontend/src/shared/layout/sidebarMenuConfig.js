@@ -6,7 +6,12 @@ import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
+import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
 import { isStudent } from "@/features/auth/utils/authUtils";
+
+export function isAdminAccountsActive(pathname) {
+  return pathname === "/admin/accounts" || /^\/admin\/accounts\/\d+/.test(pathname);
+}
 
 export function isMentorQuestionBankActive(pathname) {
   return (
@@ -79,6 +84,19 @@ export function getMentorMenuItems() {
       to: "/mentor/student-progress",
       Icon: InsightsRoundedIcon,
       disabled: false,
+    },
+  ];
+}
+
+export function getAdminMenuItems() {
+  return [
+    {
+      id: "admin-accounts",
+      label: "Tài khoản",
+      to: "/admin/accounts",
+      Icon: ManageAccountsOutlinedIcon,
+      disabled: false,
+      isActiveMatch: isAdminAccountsActive,
     },
   ];
 }

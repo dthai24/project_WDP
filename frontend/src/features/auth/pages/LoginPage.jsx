@@ -30,14 +30,16 @@
  *   Sau đăng nhập thành công:
  *   - Lưu user vào localStorage['star_user']
  *   - isFirstLogin === true  → navigate('/survey')
- *   - role === 'Mentor'      → navigate('/mentor/courses')
- *   - otherwise              → navigate('/')
+ *   - Admin                  → navigate('/admin/accounts')
+ *   - Mentor                 → navigate('/mentor/courses')
+ *   - otherwise              → navigate('/home')
  */
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { loginApi } from '@/features/auth/services/authService';
+import { getPostLoginPath, isAuthenticatedUser } from '@/features/auth/utils/authUtils';
 import Logo from '@/shared/ui/Logo';
 import AuthPasswordField from '@/shared/ui/AuthPasswordField';
 import { toast } from '@/shared/ui/Toast';
@@ -66,6 +68,12 @@ export default function LoginPage() {
       setRemember(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticatedUser()) {
+      navigate(getPostLoginPath(), { replace: true });
+    }
+  }, [navigate]);
 
   const validate = () => {
     const errs = {};
@@ -103,8 +111,7 @@ export default function LoginPage() {
         }
         sessionStorage.setItem('user', JSON.stringify(data.user));
         toast.success(data.message);
-        // Navigate ngay — không setTimeout, button vẫn disabled cho đến khi unmount
-        navigate(data.user.isFirstLogin ? '/survey' : '/home');
+        navigate(getPostLoginPath(data.user, { isFirstLogin: data.user.isFirstLogin }));
       } else {
         toast.error(data.message || 'Đăng nhập thất bại.');
         submittingRef.current = false;
