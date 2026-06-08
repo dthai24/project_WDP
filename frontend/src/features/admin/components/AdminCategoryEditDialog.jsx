@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Avatar,
   Box,
   Dialog,
   DialogActions,
@@ -9,26 +8,23 @@ import {
   Typography,
   alpha,
 } from '@mui/material';
-import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import { toast } from '@/shared/ui/Toast';
-import { FormFieldSelect } from '@/features/admin/components/AdminAccountFormFields';
+import { FormFieldSelect, FormFieldText } from '@/features/admin/components/AdminAccountFormFields';
 import {
-  ADMIN_ACCOUNT_FORM_ROLE_OPTIONS,
-  ADMIN_ACCOUNT_FORM_STATUS_OPTIONS,
-} from '@/features/admin/data/adminAccountsMock';
+  ADMIN_CATALOG_STATUS_CHIP_SX,
+  ADMIN_CATALOG_STATUS_LABELS,
+} from '@/features/admin/data/adminCatalogConstants';
 import {
-  ADMIN_ACCOUNT_ROLE_CHIP_SX,
-  ADMIN_ACCOUNT_ROLE_LABELS,
-  ADMIN_ACCOUNT_STATUS_CHIP_SX,
-  ADMIN_ACCOUNT_STATUS_LABELS,
-  formatAccountDateOfBirth,
-  getAccountInitials,
-  hasAccountEditErrors,
-  validateAccountEditForm,
-} from '@/features/admin/utils/adminAccountUtils';
+  ADMIN_CATEGORY_FORM_STATUS_OPTIONS,
+  formatCategoryDate,
+  hasCategoryFormErrors,
+  validateCategoryForm,
+} from '@/features/admin/utils/adminCategoryUtils';
+import { CategoryNameChip } from '@/shared/catalog/CatalogNameChip';
 import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 function SummaryField({ label, value }) {
@@ -52,7 +48,7 @@ function SummaryField({ label, value }) {
   );
 }
 
-function AdminAccountSummaryCard({ account }) {
+function CategorySummaryCard({ category }) {
   return (
     <Box
       sx={{
@@ -64,23 +60,27 @@ function AdminAccountSummaryCard({ account }) {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.25 }}>
-        <Avatar
+        <Box
           sx={{
             width: 44,
             height: 44,
+            borderRadius: '12px',
             bgcolor: alpha(PRIMARY, 0.12),
             color: PRIMARY,
-            fontSize: 15,
-            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          {getAccountInitials(account.fullName)}
-        </Avatar>
+          <CategoryOutlinedIcon sx={{ fontSize: 22 }} />
+        </Box>
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
-            {account.fullName}
-          </Typography>
+          <CategoryNameChip
+            label={category.displayName}
+            id={category.id}
+            colorCode={category.colorCode}
+          />
         </Box>
       </Box>
 
@@ -91,63 +91,77 @@ function AdminAccountSummaryCard({ account }) {
           gap: 1.25,
         }}
       >
-        <SummaryField label="Email" value={account.email} />
-        <SummaryField label="Số điện thoại" value={account.phone} />
-        <SummaryField label="Ngày sinh" value={formatAccountDateOfBirth(account.dateOfBirth)} />
+        <SummaryField
+          label="Trạng thái"
+          value={ADMIN_CATALOG_STATUS_LABELS[category.status] ?? category.status}
+        />
+        <SummaryField label="Ngày tạo" value={formatCategoryDate(category.createdAt)} />
       </Box>
     </Box>
   );
 }
 
-function buildChangeSummary(account, role, status) {
+function buildChangeSummary(category, form) {
   const lines = [];
-  if (account.role !== role) {
-    lines.push(
-      `Vai trò: ${ADMIN_ACCOUNT_ROLE_LABELS[account.role] ?? account.role} → ${ADMIN_ACCOUNT_ROLE_LABELS[role] ?? role}`,
-    );
+  if (category.displayName !== form.displayName.trim()) {
+    lines.push(`Tên hiển thị: ${category.displayName} → ${form.displayName.trim()}`);
   }
-  if (account.status !== status) {
+  if (category.status !== form.status) {
     lines.push(
-      `Trạng thái: ${ADMIN_ACCOUNT_STATUS_LABELS[account.status] ?? account.status} → ${ADMIN_ACCOUNT_STATUS_LABELS[status] ?? status}`,
+      `Trạng thái: ${ADMIN_CATALOG_STATUS_LABELS[category.status] ?? category.status} → ${ADMIN_CATALOG_STATUS_LABELS[form.status] ?? form.status}`,
     );
   }
   return lines;
 }
 
-export default function AdminAccountFormDialog({
+export default function AdminCategoryEditDialog({
   open,
   onClose,
-  account,
+  category,
   onSubmit,
   saving = false,
+  existingNames = [],
 }) {
-  const [role, setRole] = useState('Student');
-  const [status, setStatus] = useState('ACTIVE');
+  const [form, setForm] = useState({ displayName: '', status: 'ACTIVE' });
   const [errors, setErrors] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
-    if (open && account) {
-      setRole(account.role ?? 'Student');
-      setStatus(account.status ?? 'ACTIVE');
+    if (open && category) {
+      setForm({
+        displayName: category.displayName ?? '',
+        status: category.status ?? 'ACTIVE',
+      });
       setErrors({});
       setConfirmOpen(false);
     }
-  }, [open, account]);
+  }, [open, category]);
 
   const hasChanges = useMemo(() => {
-    if (!account) return false;
-    return account.role !== role || account.status !== status;
-  }, [account, role, status]);
+    if (!category) return false;
+    return (
+      category.displayName !== form.displayName.trim() ||
+      category.status !== form.status
+    );
+  }, [category, form]);
 
   const changeSummary = useMemo(() => {
-    if (!account) return [];
-    return buildChangeSummary(account, role, status);
-  }, [account, role, status]);
+    if (!category) return [];
+    return buildChangeSummary(category, form);
+  }, [category, form]);
+
+  const updateField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const handleSaveClick = () => {
-    const validationErrors = validateAccountEditForm({ role, status });
-    if (hasAccountEditErrors(validationErrors)) {
+    const validationErrors = validateCategoryForm(form, { existingNames });
+    if (hasCategoryFormErrors(validationErrors)) {
       setErrors(validationErrors);
       return;
     }
@@ -161,11 +175,14 @@ export default function AdminAccountFormDialog({
   };
 
   const handleConfirmSave = async () => {
-    await onSubmit?.({ role, status });
+    await onSubmit?.({
+      displayName: form.displayName.trim(),
+      status: form.status,
+    });
     setConfirmOpen(false);
   };
 
-  if (!account) return null;
+  if (!category) return null;
 
   return (
     <>
@@ -183,48 +200,30 @@ export default function AdminAccountFormDialog({
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>Chỉnh sửa tài khoản</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>Chỉnh sửa danh mục</DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           <Typography sx={{ fontSize: 13, color: MUTED, mb: 2, lineHeight: 1.5 }}>
-            Chỉ có thể thay đổi vai trò và trạng thái của tài khoản.
+            Cập nhật thông tin danh mục khóa học.
           </Typography>
 
-          <AdminAccountSummaryCard account={account} />
+          <CategorySummaryCard category={category} />
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-            <FormFieldSelect
-              label="Vai trò"
-              icon={BadgeOutlinedIcon}
-              iconColor="#7C3AED"
-              value={role}
-              options={ADMIN_ACCOUNT_FORM_ROLE_OPTIONS}
-              colorMap={ADMIN_ACCOUNT_ROLE_CHIP_SX}
-              onChange={(value) => {
-                setRole(value);
-                setErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.role;
-                  return next;
-                });
-              }}
-              error={errors.role}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <FormFieldText
+              label="Tên hiển thị"
+              value={form.displayName}
+              onChange={(value) => updateField('displayName', value)}
+              error={errors.displayName}
             />
 
             <FormFieldSelect
               label="Trạng thái"
               icon={FactCheckOutlinedIcon}
               iconColor="#047857"
-              value={status}
-              options={ADMIN_ACCOUNT_FORM_STATUS_OPTIONS}
-              colorMap={ADMIN_ACCOUNT_STATUS_CHIP_SX}
-              onChange={(value) => {
-                setStatus(value);
-                setErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.status;
-                  return next;
-                });
-              }}
+              value={form.status}
+              options={ADMIN_CATEGORY_FORM_STATUS_OPTIONS}
+              colorMap={ADMIN_CATALOG_STATUS_CHIP_SX}
+              onChange={(value) => updateField('status', value)}
               error={errors.status}
             />
           </Box>
@@ -250,9 +249,9 @@ export default function AdminAccountFormDialog({
         onClose={() => !saving && setConfirmOpen(false)}
         onConfirm={handleConfirmSave}
         loading={saving}
-        title="Lưu thay đổi tài khoản?"
+        title="Lưu thay đổi danh mục?"
         message={[
-          `Bạn sắp cập nhật tài khoản ${account.fullName}.`,
+          `Bạn sắp cập nhật danh mục "${category.displayName}".`,
           ...changeSummary,
         ].join(' ')}
         confirmLabel="Lưu thay đổi"

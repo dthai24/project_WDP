@@ -99,8 +99,11 @@ export default function Header({
   const isMentorCoursesPage = location.pathname === "/mentor/courses";
   const isMentorQuestionBanksPage = location.pathname === "/mentor/question-banks";
   const isAdminAccountsPage = location.pathname === "/admin/accounts";
+  const isAdminCategoriesPage = location.pathname === "/admin/categories";
+  const isAdminLevelsPage = location.pathname === "/admin/levels";
+  const isAdminCatalogPage = isAdminCategoriesPage || isAdminLevelsPage;
   const isMentorListSearchPage =
-    isMentorCoursesPage || isMentorQuestionBanksPage || isAdminAccountsPage;
+    isMentorCoursesPage || isMentorQuestionBanksPage || isAdminAccountsPage || isAdminCatalogPage;
   const isCourseListSearchPage = isCoursePage || isMyCoursesPage || isMentorListSearchPage;
   const [search, setSearch] = useState("");
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
@@ -343,11 +346,15 @@ export default function Header({
                   ? "Tìm khóa học..."
                   : isAdminAccountsPage
                     ? "Tìm theo tên, email hoặc username..."
-                    : isMyCoursesPage
-                      ? "Tìm trong khóa học của tôi..."
-                      : isCoursePage
-                        ? "Tìm khóa học..."
-                        : "Tìm kiếm khóa học, lộ trình..."
+                    : isAdminCategoriesPage
+                      ? "Tìm theo tên danh mục..."
+                      : isAdminLevelsPage
+                        ? "Tìm theo tên trình độ..."
+                        : isMyCoursesPage
+                          ? "Tìm trong khóa học của tôi..."
+                          : isCoursePage
+                            ? "Tìm khóa học..."
+                            : "Tìm kiếm khóa học, lộ trình..."
             }
             sx={{ width: "100%", maxWidth: 480 }}
           />

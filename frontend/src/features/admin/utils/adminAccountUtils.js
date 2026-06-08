@@ -75,6 +75,17 @@ export function formatAccountDate(value) {
   }
 }
 
+export function formatAccountDateOfBirth(value) {
+  if (!value) return '—';
+  const raw = String(value).trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${day}/${month}/${year}`;
+  }
+  return formatAccountDate(raw);
+}
+
 export function formatAccountDateTime(value) {
   if (!value) return '—';
   try {
@@ -97,6 +108,7 @@ export function normalizeAccount(raw = {}) {
     username: raw.username ?? '',
     email: raw.email ?? '',
     phone: raw.phone ?? '',
+    dateOfBirth: raw.dateOfBirth ?? '',
     role: raw.role ?? 'Student',
     status: raw.status ?? 'ACTIVE',
     createdAt: raw.createdAt ?? null,
@@ -159,6 +171,7 @@ export function validateAccountForm(values = {}, { isEdit = false } = {}) {
   const errors = {};
   const fullName = String(values.fullName ?? '').trim();
   const email = String(values.email ?? '').trim();
+  const dateOfBirth = String(values.dateOfBirth ?? '').trim();
   const role = values.role;
   const status = values.status;
   const tempPassword = String(values.tempPassword ?? '').trim();
@@ -171,6 +184,21 @@ export function validateAccountForm(values = {}, { isEdit = false } = {}) {
     errors.email = 'Vui lòng nhập email';
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.email = 'Email không hợp lệ';
+  }
+
+  if (!isEdit) {
+    if (!dateOfBirth) {
+      errors.dateOfBirth = 'Vui lòng chọn ngày sinh';
+    } else {
+      const dob = new Date(dateOfBirth);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(dob.getTime())) {
+        errors.dateOfBirth = 'Ngày sinh không hợp lệ';
+      } else if (dob >= today) {
+        errors.dateOfBirth = 'Ngày sinh phải trước hôm nay';
+      }
+    }
   }
 
   if (!role) {

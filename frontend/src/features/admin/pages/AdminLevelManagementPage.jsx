@@ -1,74 +1,75 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from '@/shared/ui/Toast';
 import AppButton from '@/shared/ui/AppButton';
 import AppPagination from '@/shared/ui/AppPagination';
-import AdminAccountsToolbar from '@/features/admin/components/AdminAccountsToolbar';
-import AdminAccountList from '@/features/admin/components/AdminAccountList';
-import AdminAccountFormDialog from '@/features/admin/components/AdminAccountFormDialog';
-import AdminAccountCreateDialog from '@/features/admin/components/AdminAccountCreateDialog';
-import { createAccount, getAccounts, updateAccount } from '@/features/admin/services/adminAccountService';
+import AdminCatalogToolbar from '@/features/admin/components/AdminCatalogToolbar';
+import AdminLevelList from '@/features/admin/components/AdminLevelList';
+import AdminLevelCreateDialog from '@/features/admin/components/AdminLevelCreateDialog';
+import AdminLevelEditDialog from '@/features/admin/components/AdminLevelEditDialog';
 import {
-  ADMIN_ACCOUNT_ROLE_OPTIONS,
-  ADMIN_ACCOUNT_STATUS_OPTIONS,
-} from '@/features/admin/data/adminAccountsMock';
-import { filterAndSortAccounts } from '@/features/admin/utils/adminAccountUtils';
+  ADMIN_CATALOG_STATUS_FILTER_OPTIONS,
+  ADMIN_LEVEL_SORT_OPTIONS,
+} from '@/features/admin/data/adminCatalogConstants';
 import {
-  ADMIN_ACCOUNT_LIST_DEFAULTS,
-  ADMIN_ACCOUNT_LIST_PAGE_SIZE,
-  buildAdminAccountActiveChips,
-  buildAdminAccountListSearchParams,
-  hasActiveAdminAccountFilters,
-  paginateAccounts,
-  parseAdminAccountListParams,
-  resetAdminAccountListParams,
-} from '@/features/admin/utils/adminAccountListParams';
-import { useSearchParams } from 'react-router-dom';
+  createLevel,
+  getLevels,
+  updateLevel,
+} from '@/features/admin/services/adminLevelService';
+import { filterAndSortLevels } from '@/features/admin/utils/adminLevelUtils';
+import {
+  ADMIN_LEVEL_LIST_DEFAULTS,
+  ADMIN_LEVEL_LIST_PAGE_SIZE,
+  buildAdminLevelActiveChips,
+  buildAdminLevelListSearchParams,
+  hasActiveAdminLevelFilters,
+  paginateLevels,
+  parseAdminLevelListParams,
+  resetAdminLevelListParams,
+} from '@/features/admin/utils/adminLevelUtils';
 import { TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
-const PAGE_SIZE = ADMIN_ACCOUNT_LIST_PAGE_SIZE;
+const PAGE_SIZE = ADMIN_LEVEL_LIST_PAGE_SIZE;
 
-export default function AdminAccountManagementPage() {
+export default function AdminLevelManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [accounts, setAccounts] = useState([]);
+  const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingLevel, setEditingLevel] = useState(null);
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const queryState = useMemo(
-    () => parseAdminAccountListParams(searchParams),
+    () => parseAdminLevelListParams(searchParams),
     [searchParams],
   );
 
-  const showReset = hasActiveAdminAccountFilters(queryState);
+  const showReset = hasActiveAdminLevelFilters(queryState);
 
   const activeFilterChips = useMemo(
-    () =>
-      buildAdminAccountActiveChips(queryState, {
-        roleOptions: ADMIN_ACCOUNT_ROLE_OPTIONS,
-        statusOptions: ADMIN_ACCOUNT_STATUS_OPTIONS,
-      }),
+    () => buildAdminLevelActiveChips(queryState, ADMIN_CATALOG_STATUS_FILTER_OPTIONS),
     [queryState],
   );
 
-  const loadAccounts = useCallback(async () => {
+  const loadLevels = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
     try {
-      const res = await getAccounts();
+      const res = await getLevels();
       if (res.ok) {
-        setAccounts(res.accounts ?? []);
+        setLevels(res.levels ?? []);
       } else {
-        setAccounts([]);
+        setLevels([]);
         setLoadError(true);
       }
     } catch {
-      setAccounts([]);
+      setLevels([]);
       setLoadError(true);
     } finally {
       setLoading(false);
@@ -76,24 +77,24 @@ export default function AdminAccountManagementPage() {
   }, []);
 
   useEffect(() => {
-    loadAccounts();
-  }, [loadAccounts]);
+    loadLevels();
+  }, [loadLevels]);
 
   const updateQuery = (patch) => {
     setSearchParams(
-      buildAdminAccountListSearchParams({ ...queryState, ...patch }, searchParams),
+      buildAdminLevelListSearchParams({ ...queryState, ...patch }, searchParams),
       { replace: true },
     );
   };
 
-  const filteredAccounts = useMemo(
-    () => filterAndSortAccounts(accounts, queryState),
-    [accounts, queryState],
+  const filteredLevels = useMemo(
+    () => filterAndSortLevels(levels, queryState),
+    [levels, queryState],
   );
 
   const pagination = useMemo(
-    () => paginateAccounts(filteredAccounts, queryState.page, PAGE_SIZE),
-    [filteredAccounts, queryState.page],
+    () => paginateLevels(filteredLevels, queryState.page, PAGE_SIZE),
+    [filteredLevels, queryState.page],
   );
 
   useEffect(() => {
@@ -102,64 +103,67 @@ export default function AdminAccountManagementPage() {
     }
   }, [loading, queryState.page, pagination.page]);
 
-  const handleRoleChange = (value) => updateQuery({ role: value, page: 1 });
+  const existingNames = useMemo(
+    () =>
+      levels
+        .filter((item) => item.id !== editingLevel?.id)
+        .map((item) => item.displayName.trim().toLowerCase()),
+    [levels, editingLevel],
+  );
+
   const handleStatusChange = (value) => updateQuery({ status: value, page: 1 });
   const handleSortChange = (value) => updateQuery({ sort: value, page: 1 });
   const handlePageChange = (page) => {
     updateQuery({ page });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handleReset = () => setSearchParams(resetAdminAccountListParams(searchParams), { replace: true });
+  const handleReset = () =>
+    setSearchParams(resetAdminLevelListParams(searchParams), { replace: true });
   const handleRemoveChip = ({ type }) => {
     const defaults = {
       q: '',
-      role: ADMIN_ACCOUNT_LIST_DEFAULTS.role,
-      status: ADMIN_ACCOUNT_LIST_DEFAULTS.status,
+      status: ADMIN_LEVEL_LIST_DEFAULTS.status,
     };
     if (type in defaults) updateQuery({ [type]: defaults[type], page: 1 });
   };
 
-  const openEditDialog = (account) => {
-    setEditingAccount(account);
-    setFormOpen(true);
-  };
-
-  const handleFormSubmit = async (values) => {
-    if (!editingAccount) return;
-
-    setSaving(true);
-    try {
-      const res = await updateAccount(editingAccount.id, values);
-
-      if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật tài khoản');
-        return;
-      }
-
-      toast.success('Đã cập nhật vai trò và trạng thái tài khoản');
-      setFormOpen(false);
-      setEditingAccount(null);
-      await loadAccounts();
-    } finally {
-      setSaving(false);
-    }
+  const openEditDialog = (level) => {
+    setEditingLevel(level);
+    setEditOpen(true);
   };
 
   const handleCreateSubmit = async (values) => {
     setCreating(true);
     try {
-      const res = await createAccount(values);
-
+      const res = await createLevel(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể tạo tài khoản');
+        toast.error(res.message ?? 'Không thể tạo trình độ');
         return;
       }
-
-      toast.success('Đã tạo tài khoản mới');
+      toast.success('Đã tạo trình độ mới');
       setCreateOpen(false);
-      await loadAccounts();
+      await loadLevels();
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleEditSubmit = async (values) => {
+    if (!editingLevel) return;
+
+    setSaving(true);
+    try {
+      const res = await updateLevel(editingLevel.id, values);
+      if (!res.ok) {
+        toast.error(res.message ?? 'Không thể cập nhật trình độ');
+        return;
+      }
+      toast.success('Đã cập nhật trình độ');
+      setEditOpen(false);
+      setEditingLevel(null);
+      await loadLevels();
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -177,10 +181,10 @@ export default function AdminAccountManagementPage() {
       >
         <Box>
           <Typography sx={{ fontSize: { xs: 22, sm: 24 }, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
-            Quản lý tài khoản
+            Quản lý trình độ
           </Typography>
           <Typography sx={{ fontSize: 14, color: MUTED, mt: 0.5, lineHeight: 1.55, maxWidth: 560 }}>
-            Theo dõi và quản lý tài khoản Admin, Mentor và Học viên trong hệ thống.
+            Thêm, chỉnh sửa và sắp xếp trình độ khóa học (Cơ bản, Trung cấp, Nâng cao...).
           </Typography>
         </Box>
 
@@ -201,29 +205,30 @@ export default function AdminAccountManagementPage() {
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}
         >
-          Tạo tài khoản
+          Tạo trình độ
         </AppButton>
       </Box>
 
-      <AdminAccountsToolbar
-        roleFilter={queryState.role}
-        onRoleChange={handleRoleChange}
+      <AdminCatalogToolbar
         statusFilter={queryState.status}
         onStatusChange={handleStatusChange}
         sortBy={queryState.sort}
         onSortChange={handleSortChange}
         showReset={showReset}
         onReset={handleReset}
-        totalCount={filteredAccounts.length}
+        totalCount={filteredLevels.length}
+        countLabel="trình độ"
+        CountIcon={LayersOutlinedIcon}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
+        sortOptions={ADMIN_LEVEL_SORT_OPTIONS}
       />
 
-      <AdminAccountList
-        accounts={pagination.items}
+      <AdminLevelList
+        levels={pagination.items}
         loading={loading}
         error={loadError}
-        hasAnyAccounts={accounts.length > 0}
+        hasAnyLevels={levels.length > 0}
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={openEditDialog}
         onClearFilters={handleReset}
@@ -235,19 +240,7 @@ export default function AdminAccountManagementPage() {
         onPageChange={handlePageChange}
       />
 
-      <AdminAccountFormDialog
-        open={formOpen}
-        onClose={() => {
-          if (saving) return;
-          setFormOpen(false);
-          setEditingAccount(null);
-        }}
-        account={editingAccount}
-        onSubmit={handleFormSubmit}
-        saving={saving}
-      />
-
-      <AdminAccountCreateDialog
+      <AdminLevelCreateDialog
         open={createOpen}
         onClose={() => {
           if (creating) return;
@@ -255,6 +248,20 @@ export default function AdminAccountManagementPage() {
         }}
         onSubmit={handleCreateSubmit}
         saving={creating}
+        existingNames={levels.map((item) => item.displayName.trim().toLowerCase())}
+      />
+
+      <AdminLevelEditDialog
+        open={editOpen}
+        onClose={() => {
+          if (saving) return;
+          setEditOpen(false);
+          setEditingLevel(null);
+        }}
+        level={editingLevel}
+        onSubmit={handleEditSubmit}
+        saving={saving}
+        existingNames={existingNames}
       />
     </Box>
   );

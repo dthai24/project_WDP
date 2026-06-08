@@ -7,10 +7,20 @@ import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
 import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import { isStudent } from "@/features/auth/utils/authUtils";
 
 export function isAdminAccountsActive(pathname) {
   return pathname === "/admin/accounts" || /^\/admin\/accounts\/\d+/.test(pathname);
+}
+
+export function isAdminCategoriesActive(pathname) {
+  return pathname === "/admin/categories" || pathname.startsWith("/admin/categories/");
+}
+
+export function isAdminLevelsActive(pathname) {
+  return pathname === "/admin/levels" || pathname.startsWith("/admin/levels/");
 }
 
 export function isMentorQuestionBankActive(pathname) {
@@ -97,6 +107,22 @@ export function getAdminMenuItems() {
       Icon: ManageAccountsOutlinedIcon,
       disabled: false,
       isActiveMatch: isAdminAccountsActive,
+    },
+    {
+      id: "admin-categories",
+      label: "Danh mục",
+      to: "/admin/categories",
+      Icon: CategoryOutlinedIcon,
+      disabled: false,
+      isActiveMatch: isAdminCategoriesActive,
+    },
+    {
+      id: "admin-levels",
+      label: "Trình độ",
+      to: "/admin/levels",
+      Icon: LayersOutlinedIcon,
+      disabled: false,
+      isActiveMatch: isAdminLevelsActive,
     },
   ];
 }
