@@ -36,15 +36,28 @@ export function getStudentProgressColor(percentage = 0) {
 }
 
 export function normalizeCourseStudent(raw = {}) {
-  const status = raw.status ?? raw.Status ?? 'not_started';
+  const progressPercentage = Number(
+    raw.progressPercentage ?? raw.ProgressPercentage ?? 0
+  );
+
+  let status = 'not_started';
+
+  if (progressPercentage === 100) {
+    status = 'completed';
+  } else if (progressPercentage > 0) {
+    status = 'learning';
+  }
+
   return {
     userId: raw.userId ?? raw.UserId,
     fullName: raw.fullName ?? raw.FullName ?? '',
     email: raw.email ?? raw.Email ?? '',
     avatarUrl: raw.avatarUrl ?? raw.AvatarUrl ?? null,
     enrollmentDate: raw.enrollmentDate ?? raw.EnrollmentDate ?? null,
+
     status,
-    progressPercentage: raw.progressPercentage ?? raw.ProgressPercentage ?? 0,
+    progressPercentage,
+
     currentLessonName: raw.currentLessonName ?? raw.CurrentLessonName ?? null,
     currentChapterName: raw.currentChapterName ?? raw.CurrentChapterName ?? null,
     lastAccessedAt: raw.lastAccessedAt ?? raw.LastAccessedAt ?? null,
@@ -95,8 +108,8 @@ export function computeCourseStudentStats(students = []) {
     totalStudents === 0
       ? 0
       : Math.round(
-          students.reduce((sum, s) => sum + (s.progressPercentage ?? 0), 0) / totalStudents
-        );
+        students.reduce((sum, s) => sum + (s.progressPercentage ?? 0), 0) / totalStudents
+      );
 
   return { totalStudents, learningCount, completedCount, averageProgress };
 }
@@ -114,7 +127,7 @@ export function filterAndSortCourseStudents(students = [], query = {}) {
     if (status !== 'all' && student.status !== status) return false;
 
     if (keyword) {
-      const haystack = [student.fullName, student.email].filter(Boolean).join(' ').toLowerCase();
+      const haystack = [student.FullName, student.Email].filter(Boolean).join(' ').toLowerCase();
       if (!haystack.includes(keyword)) return false;
     }
 
