@@ -54,7 +54,7 @@ export default function BecomeMentor() {
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
-      console.log("Data submitted to Lexiora Admin:", { ...formData, certificate });
+      console.log("Data submitted to English Master Admin:", { ...formData, certificate });
     }, 2200);
   };
 
@@ -92,7 +92,7 @@ export default function BecomeMentor() {
               </span>
             </h1>
             <p className="text-base text-slate-500 leading-relaxed max-w-md">
-              Lexiora connects industry professionals with eager learners. Build structured roadmaps, mentor students, and project your authority.
+              English Master connects industry professionals with eager learners. Build structured roadmaps, mentor students, and project your authority.
             </p>
           </div>
 
@@ -270,7 +270,7 @@ export default function BecomeMentor() {
               <div className="space-y-2">
                 <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Application Received!</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">
-                  Thank you for applying to Lexiora. Our screening panel will inspect your resume portfolio and credential media. We'll reach out via <span className="font-semibold text-slate-800">{formData.email || 'your email'}</span> shortly.
+                  Thank you for applying to English Master. Our screening panel will inspect your resume portfolio and credential media. We'll reach out via <span className="font-semibold text-slate-800">{formData.email || 'your email'}</span> shortly.
                 </p>
               </div>
               <div className="pt-2">
