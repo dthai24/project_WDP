@@ -2,14 +2,15 @@ import React from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import HomePage from "../pages/Home/HomePage"; 
 import LoginPage from "../pages/Auth/LoginPage";
-import BecomeMentor from "../pages/Mentor/BecomeMentor";
+import CreateCourse from "../pages/Mentor/CreateCourse";
+import BecomeMentor from "../pages/Mentor/BecomeMentor"; 
 
 export default function AppRoutes({ currentUser, onLogin, onLogout }) {
   const navigate = useNavigate();
 
   return (
     <Routes>
-      {/* 1. Trang chủ */}
+      {/* Trang chủ */}
       <Route 
         path="/" 
         element={
@@ -21,22 +22,41 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
         } 
       />
 
-      {/* 2. Trang Đăng nhập của bạn */}
+      {/* Trang Đăng nhập */}
       <Route 
         path="/login" 
         element={
           <LoginPage 
             onLogin={(userSession) => {
               onLogin(userSession);
-              navigate("/"); // Đăng nhập xong đẩy tự động về trang chủ
+              navigate("/"); 
             }} 
-            onBackHome={() => navigate("/")} // Click nút "← Home" nhảy về "/"
+            onBackHome={() => navigate("/")} 
           />
         } 
       />
 
-      {/* 3. Trang Become a Mentor */}
-      <Route path="/become-mentor" element={<BecomeMentor />} />
+      {/* 2.  Trang đăng ký làm Mentor */}
+      <Route 
+        path="/become-mentor" 
+        element={
+          <BecomeMentor 
+            currentUser={currentUser} 
+            onBackHome={() => navigate("/")} 
+          />
+        } 
+      />
+
+      {/* Trang Tạo lộ trình học của Mentor */}
+      <Route 
+        path="/create-roadmap" 
+        element={
+          <CreateCourse 
+            currentUser={currentUser} 
+            onBackDashboard={() => navigate("/")} 
+          />
+        } 
+      />
     </Routes>
   );
 }
