@@ -16,7 +16,7 @@ import { getUser, getUserRoles } from '@/features/auth/utils/authUtils';
  */
 export default function ProtectedRoute({ allowedRoles, roleRedirects, children }) {
   const user = getUser();
-  const isAuthenticated = user && Object.keys(user).length > 0 && sessionStorage.getItem('user');
+  const isAuthenticated = user && Object.keys(user).length > 0 && localStorage.getItem('user');
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

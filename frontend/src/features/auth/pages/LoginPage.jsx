@@ -42,6 +42,7 @@ import Logo from '@/shared/ui/Logo';
 import AuthPasswordField from '@/shared/ui/AuthPasswordField';
 import { toast } from '@/shared/ui/Toast';
 import '@/shared/styles/auth.css';
+import { useAuth } from '@/context/AuthContext';
 
 const REMEMBER_KEY = 'star_remember_email';
 
@@ -52,12 +53,13 @@ const validateEmail = (email) => {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();  
 
   const [form, setForm]           = useState({ email: '', password: '' });
   const [errors, setErrors]       = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [remember, setRemember]   = useState(false);
-  const submittingRef             = useRef(false); // sync guard — blocks before React re-renders
+  const submittingRef             = useRef(false); 
 
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBER_KEY);
@@ -94,19 +96,19 @@ export default function LoginPage() {
 
     try {
       const { ok, data } = await loginApi(form.email.trim(), form.password);
-
-      if (ok && data.success) {
+      if (ok) {
         if (remember) {
           localStorage.setItem(REMEMBER_KEY, form.email.trim());
+          
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
-        sessionStorage.setItem('user', JSON.stringify(data.user));
-        toast.success(data.message);
+        login(data);
+          toast.success("Đăng nhập thành công!");
         // Navigate ngay — không setTimeout, button vẫn disabled cho đến khi unmount
-        navigate(data.user.isFirstLogin ? '/survey' : '/home');
+        navigate(data.isFirstLogin ? '/survey' : '/home');
       } else {
-        toast.error(data.message || 'Đăng nhập thất bại.');
+        toast.error('Đăng nhập thất bại.');
         submittingRef.current = false;
         setIsSubmitting(false);
       }

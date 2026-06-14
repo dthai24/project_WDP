@@ -1,5 +1,17 @@
 const API_BASE = 'http://localhost:5000/api/auth';
 
+const safeJson = async (response) => {
+  try {
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
+  } catch (error) {
+    // catch JSON parse errors silently
+  }
+  return { success: false, message: "Lỗi server hoặc sai đường dẫn API" };
+};
+
 /** Helper: POST với JSON body */
 const apiFetch = async (endpoint, body) => {
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -7,20 +19,20 @@ const apiFetch = async (endpoint, body) => {
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(body),
   });
-  const data = await response.json();
+  const data = await safeJson(response);
   return { ok: response.ok, status: response.status, data };
 };
 
 /** Helper: GET */
 const apiGet = async (endpoint) => {
   const response = await fetch(`${API_BASE}${endpoint}`);
-  const data = await response.json();
+  const data = await safeJson(response);
   return { ok: response.ok, status: response.status, data };
 };
 
 const apiGetBase = async (url) => {
   const response = await fetch(`http://localhost:5000${url}`);
-  const data = await response.json();
+  const data = await safeJson(response);
   return { ok: response.ok, data };
 };
 
@@ -30,7 +42,7 @@ const apiPostBase = async (url, body) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = await response.json();
+  const data = await safeJson(response);
   return { ok: response.ok, data };
 };
 
@@ -40,7 +52,7 @@ export const getCoursesApi = (userId) => {
     headers['x-user-id'] = String(userId);
   }
   return fetch('http://localhost:5000/api/courses', { headers })
-    .then((response) => response.json())
+    .then(safeJson)
     .then((data) => ({ ok: true, data }))
     .catch(() => ({ ok: false, data: {} }));
 };
@@ -97,6 +109,6 @@ export const uploadAvatarApi = async (blob, userId) => {
     headers: { 'x-user-id': String(userId) },
     body: formData,
   });
-  const data = await response.json();
+  const data = await safeJson(response);
   return { ok: response.ok, data };
 };
