@@ -20,8 +20,8 @@ const apiFetch = async (endpoint, body) => {
     body:    JSON.stringify(body),
   });
   const data = await response.json();
-  return { ok: response.ok, status: response.status, data };
-};
+  return { ok: data.success, status: data.status, data: data.user };
+};  
 
 /** Helper: GET */
 const apiGet = async (endpoint) => {

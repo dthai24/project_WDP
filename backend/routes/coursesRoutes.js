@@ -23,6 +23,12 @@ const optionalAuth = (req, res, next) => {
     next();
 };
 
+// Dummy route cho /api/courses/top
+router.get('/top', (req, res) => {
+    const limit = parseInt(req.query.limit, 10) || 4;
+    res.json({ success: true, message: "Dummy data from /top", courses: [] });
+});
+
 // GET /api/courses
 // Lấy tất cả khóa học ngoài trang tổng (Catalog)
 router.get('/student', optionalAuth, getStudentCourses);
@@ -37,7 +43,6 @@ router.get('/my-courses/:courseId', getInformationCourse);
 router.post('/mentor/courses/save/draft', saveCourseDraftStepOne);
 router.post('/mentor/courses/createCourse', createFinalCourse);
 
-// CHỖ THIẾU CHÍ MẠNG: Khai báo đường dẫn cho nút Đăng ký khóa học!
 router.post('/enroll', enrollCourse); 
 
 module.exports = router;
