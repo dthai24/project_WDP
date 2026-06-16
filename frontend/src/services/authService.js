@@ -1,5 +1,7 @@
+// Đường dẫn gốc cấu trúc Auth nội bộ
 const API_BASE = 'http://localhost:5000/api/auth';
 
+// Hàm giải mã JSON an toàn, chống sập ứng dụng khi Backend lỗi
 const safeJson = async (response) => {
   try {
     const contentType = response.headers.get('content-type');
@@ -7,99 +9,132 @@ const safeJson = async (response) => {
       return await response.json();
     }
   } catch (error) {
-    // catch JSON parse errors silently
+    // Bỏ qua lỗi ép kiểu dữ liệu
   }
-  return { success: false, message: "Lỗi server hoặc sai đường dẫn API" };
+  return { success: false, message: "Lỗi hệ thống hoặc sai đường dẫn API" };
 };
 
-/** Helper: POST với JSON body */
-const apiFetch = async (endpoint, body) => {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  });
-  const data = await safeJson(response);
-  return { ok: response.ok, status: response.status, data };
+
+// 1. API Đăng ký khóa học (Sửa dứt điểm lỗi 400 và lỗi trả về)
+export const enrollCourseApi = async (data) => {
+  try {
+    const response = await fetch('http://localhost:5000/api/courses/enroll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    const result = await safeJson(response);
+    // Trả về đồng bộ thuộc tính success để file giao diện check điều kiện chuẩn
+    return { success: response.ok, ...result };
+  } catch (error) {
+    console.error("Lỗi kết nối đăng ký:", error);
+    return { success: false, message: "Không thể kết nối đến server." };
+  }
 };
 
-/** Helper: GET */
-const apiGet = async (endpoint) => {
-  const response = await fetch(`${API_BASE}${endpoint}`);
-  const data = await safeJson(response);
-  return { ok: response.ok, status: response.status, data };
+// 2. API Lấy danh sách khóa học hệ thống (Đồng bộ format)
+export const getCoursesApi = async (userId) => {
+  try {
+    const headers = {};
+    if (userId) headers['x-user-id'] = String(userId);
+
+    const response = await fetch('http://localhost:5000/api/courses', { headers });
+    const result = await safeJson(response);
+    return { success: response.ok, ...result };
+  } catch {
+    return { success: false, data: [] };
+  }
 };
 
-const apiGetBase = async (url) => {
-  const response = await fetch(`http://localhost:5000${url}`);
-  const data = await safeJson(response);
-  return { ok: response.ok, data };
+// 3. API Lấy danh sách khóa học nổi bật (Top)
+export const getTopCoursesApi = async (limit = 4) => {
+  const response = await fetch(`http://localhost:5000/api/courses/top?limit=${limit}`);
+  const result = await safeJson(response);
+  return { success: response.ok, ...result };
 };
 
-const apiPostBase = async (url, body) => {
-  const response = await fetch(`http://localhost:5000${url}`, {
+// 4. API Lấy danh sách khóa học cá nhân của tôi
+export const getMyCoursesApi = async (userId) => {
+  const response = await fetch(`http://localhost:5000/api/courses/my?userId=${userId}`);
+  const result = await safeJson(response);
+  return { success: response.ok, ...result };
+};
+
+// 5. API Đăng nhập tài khoản
+export const loginApi = async (email, password) => {
+  const response = await fetch(`${API_BASE}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ email, password }),
   });
-  const data = await safeJson(response);
-  return { ok: response.ok, data };
+  const result = await safeJson(response);
+  return { success: response.ok, status: response.status, ...result };
 };
 
-export const getCoursesApi = (userId) => {
-  const headers = {};
-  if (userId) {
-    headers['x-user-id'] = String(userId);
-  }
-  return fetch('http://localhost:5000/api/courses', { headers })
-    .then(safeJson)
-    .then((data) => ({ ok: true, data }))
-    .catch(() => ({ ok: false, data: {} }));
+// 6. API Đăng ký tài khoản mới
+export const registerApi = async (formData) => {
+  const response = await fetch(`${API_BASE}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(formData),
+  });
+  const result = await safeJson(response);
+  return { success: response.ok, status: response.status, ...result };
 };
 
-export const getTopCoursesApi = (limit = 4) =>
-  apiGetBase(`/api/courses/top?limit=${limit}`);
+// 7. API Xác thực mã OTP
+export const verifyOtpApi = async (email, otpCode) => {
+  const response = await fetch(`${API_BASE}/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otpCode }),
+  });
+  const result = await safeJson(response);
+  return { success: response.ok, status: response.status, ...result };
+};
 
-export const enrollCourseApi = (userId, courseId) =>
-  apiPostBase('/api/courses/enroll', { userId, courseId });
+// 8. API Lấy danh sách thẻ chủ đề (Tags)
+export const getTagsApi = async () => {
+  const response = await fetch(`${API_BASE}/tags`);
+  const result = await safeJson(response);
+  return { success: response.ok, status: response.status, ...result };
+};
 
-export const getMyCoursesApi = (userId) =>
-  apiGetBase(`/api/courses/my?userId=${userId}`);
+// 9. API Lưu cấu hình sở thích người dùng
+export const savePreferencesApi = async (userId, tagIds) => {
+  const response = await fetch(`${API_BASE}/save-preferences`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, tagIds }),
+  });
+  const result = await safeJson(response);
+  return { success: response.ok, status: response.status, ...result };
+};
 
-/** POST /api/auth/login */
-export const loginApi = (email, password) =>
-  apiFetch('/login', { email, password });
+// 10. API Yêu cầu quên mật khẩu
+export const forgotPasswordApi = async (email) => {
+  const response = await fetch(`${API_BASE}/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const result = await safeJson(response);
+  return { success: response.ok, status: response.status, ...result };
+};
 
-/** POST /api/auth/register */
-export const registerApi = (formData) =>
-  apiFetch('/register', formData);
+// 11. API Đặt lại mật khẩu mới bằng OTP
+export const resetPasswordApi = async (email, otp, newPassword) => {
+  const response = await fetch(`${API_BASE}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp, newPassword }),
+  });
+  const result = await safeJson(response);
+  return { success: response.ok, status: response.status, ...result };
+};
 
-/** POST /api/auth/verify-otp */
-export const verifyOtpApi = (email, otpCode) =>
-  apiFetch('/verify-otp', { email, otpCode });
-
-/** GET /api/auth/tags — lấy danh sách 12 chủ đề */
-export const getTagsApi = () =>
-  apiGet('/tags');
-
-/** POST /api/auth/save-preferences — lưu sở thích */
-export const savePreferencesApi = (userId, tagIds) =>
-  apiFetch('/save-preferences', { userId, tagIds });
-
-/** POST /api/auth/forgot-password — chỉ gửi email, không cần role */
-export const forgotPasswordApi = (email) =>
-  apiFetch('/forgot-password', { email });
-
-/** POST /api/auth/reset-password — xác nhận OTP + cập nhật mật khẩu */
-export const resetPasswordApi = (email, otp, newPassword) =>
-  apiFetch('/reset-password', { email, otp, newPassword });
-
-/**
- * POST /api/users/avatar — tải lên ảnh đại diện đã hợp nhất (face + frame).
- * @param {Blob} blob   - Merged PNG blob from AvatarCropperModal canvas fusion
- * @param {number} userId
- * @returns {{ ok: boolean, data: { success: boolean, avatarUrl?: string, message?: string } }}
- */
+// 12. API Tải lên ảnh đại diện cá nhân (Avatar)
 export const uploadAvatarApi = async (blob, userId) => {
   const formData = new FormData();
   formData.append('avatar', blob, 'avatar.png');
@@ -109,6 +144,6 @@ export const uploadAvatarApi = async (blob, userId) => {
     headers: { 'x-user-id': String(userId) },
     body: formData,
   });
-  const data = await safeJson(response);
-  return { ok: response.ok, data };
+  const result = await safeJson(response);
+  return { success: response.ok, ...result };
 };

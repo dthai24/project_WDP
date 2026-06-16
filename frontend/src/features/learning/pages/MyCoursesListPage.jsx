@@ -98,12 +98,12 @@ export default function MyCoursesListPage() {
   useEffect(() => {
     const getData = async () => {
       try {
-        const rawUser = sessionStorage.getItem("user");
+        const rawUser = localStorage.getItem("user");
 
         console.log("RAW USER:", rawUser);
 
         if (!rawUser) {
-          console.error("Chưa có user trong sessionStorage");
+          console.error("Chưa có user trong localStorage");
           return;
         }
 
@@ -127,7 +127,7 @@ export default function MyCoursesListPage() {
         });
 
         if (!userId || !roleName) {
-          console.error("Thiếu userId hoặc roleName sau khi đọc sessionStorage", {
+          console.error("Thiếu userId hoặc roleName sau khi đọc localStorage", {
             userId,
             roleName,
             user,

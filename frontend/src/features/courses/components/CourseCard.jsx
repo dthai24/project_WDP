@@ -1,38 +1,10 @@
 /**
- * CourseCard  ─  Card hiển thị một khóa học trong danh sách catalog
- *
- * Props:
- *   course : {
- *     courseId:     number,
- *     title:        string,
- *     description:  string,
- *     category:     string,
- *     level:        string,           // "Cơ bản" | "Trung cấp" | "Nâng cao"
- *     instructor:   string,
- *     thumbnail:    string,           // URL ảnh
- *     duration:     string,           // "8 giờ"
- *     lessonCount:  number,
- *     rating:       number,           // 0.0–5.0
- *     reviewCount:  number,
- *     studentCount: number,
- *     isFree:       boolean,
- *     isEnrolled:   boolean,
- *     progress:     number            // 0–100, dùng khi isEnrolled === true
- *   }
- *   isSaved    : boolean              — đã lưu vào danh sách yêu thích
- *   onSave     : (courseId) => void   — toggle lưu / bỏ lưu
- *   onEnroll   : (courseId) => void   — gọi enrollCourseApi bên ngoài
- *   onClick    : (courseId) => void   — navigate đến /courses/:courseId
+ * CourseCard ─ Card hiển thị một khóa học trong danh sách catalog
  */
-import {
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Typography,
-  alpha,
-  useTheme,
-} from "@mui/material";
+import { Box, Card, CardContent, Chip, Typography, alpha, useTheme } from "@mui/material";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+
+// Icons
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
@@ -41,14 +13,14 @@ import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+
+// Local Components & Utils
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import CourseBookmarkButton from "./CourseBookmarkButton";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
 
-/* ─── helpers ─── */
-
+/* ─── HÀM HELPER ─── */
 const MUTED = "#64748B";
 const TEXT = "#0F172A";
 
@@ -79,37 +51,27 @@ function normalizeCourse(course = {}) {
 }
 
 function getStatusChipStyle(isEnrolled, progress) {
-  if (!isEnrolled) return {
-    label: "Chưa đăng ký",
-    sx: {
-      bgcolor: "rgba(100,116,139,0.10)",
-      color: "#64748B",
-      border: "1px solid rgba(100,116,139,0.18)",
-    },
-  };
-  if (progress >= 100) return {
-    label: "Hoàn thành",
-    sx: {
-      bgcolor: "rgba(4,120,87,0.12)",
-      color: "#047857",
-      border: "1px solid rgba(4,120,87,0.24)",
-    },
-  };
-  if (progress > 0) return {
-    label: "Đang học",
-    sx: {
-      bgcolor: "rgba(8,145,178,0.12)",
-      color: "#0891B2",
-      border: "1px solid rgba(8,145,178,0.20)",
-    },
-  };
+  if (!isEnrolled) {
+    return {
+      label: "Chưa đăng ký",
+      sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
+    };
+  }
+  if (progress >= 100) {
+    return {
+      label: "Hoàn thành",
+      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
+    };
+  }
+  if (progress > 0) {
+    return {
+      label: "Đang học",
+      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
+    };
+  }
   return {
     label: "Đã đăng ký",
-    sx: {
-      bgcolor: "rgba(22,163,74,0.12)",
-      color: "#16A34A",
-      border: "1px solid rgba(22,163,74,0.20)",
-    },
+    sx: { bgcolor: "rgba(22,163,74,0.12)", color: "#16A34A", border: "1px solid rgba(22,163,74,0.20)" },
   };
 }
 
@@ -117,50 +79,32 @@ function getMyCoursesStatusChip(progress) {
   if (progress >= 100) {
     return {
       label: "Hoàn thành",
-      sx: {
-        bgcolor: "rgba(4,120,87,0.12)",
-        color: "#047857",
-        border: "1px solid rgba(4,120,87,0.24)",
-      },
+      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
     };
   }
   if (progress > 0) {
     return {
       label: "Đang học",
-      sx: {
-        bgcolor: "rgba(8,145,178,0.12)",
-        color: "#0891B2",
-        border: "1px solid rgba(8,145,178,0.20)",
-      },
+      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
     };
   }
   return {
     label: "Chưa bắt đầu",
-    sx: {
-      bgcolor: "rgba(100,116,139,0.10)",
-      color: "#64748B",
-      border: "1px solid rgba(100,116,139,0.18)",
-    },
+    sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
   };
 }
 
 function getLevelChipStyle(level = "") {
   const l = level.toLowerCase();
-  if (l.includes("cơ bản") || l.includes("sơ cấp")) return {
-    bgcolor: "rgba(56,189,248,0.12)",
-    color: "#0284C7",
-    border: "1px solid rgba(56,189,248,0.22)",
-  };
-  if (l.includes("trung cấp")) return {
-    bgcolor: "rgba(245,158,11,0.12)",
-    color: "#D97706",
-    border: "1px solid rgba(245,158,11,0.22)",
-  };
-  if (l.includes("nâng cao")) return {
-    bgcolor: "rgba(234,88,12,0.12)",
-    color: "#EA580C",
-    border: "1px solid rgba(234,88,12,0.22)",
-  };
+  if (l.includes("cơ bản") || l.includes("sơ cấp")) {
+    return { bgcolor: "rgba(56,189,248,0.12)", color: "#0284C7", border: "1px solid rgba(56,189,248,0.22)" };
+  }
+  if (l.includes("trung cấp")) {
+    return { bgcolor: "rgba(245,158,11,0.12)", color: "#D97706", border: "1px solid rgba(245,158,11,0.22)" };
+  }
+  if (l.includes("nâng cao")) {
+    return { bgcolor: "rgba(234,88,12,0.12)", color: "#EA580C", border: "1px solid rgba(234,88,12,0.22)" };
+  }
   return { bgcolor: "#F1F5F9", color: "#64748B" };
 }
 
@@ -175,8 +119,7 @@ function getCategoryChipStyle(category = "") {
   return map[category] ?? { bgcolor: "#F1F5F9", color: "#64748B" };
 }
 
-/* ─── sub-components ─── */
-
+/* ─── COMPONENT CON ─── */
 function CourseThumbnail({ thumbnail }) {
   const theme = useTheme();
   return (
@@ -226,8 +169,7 @@ function MetaInline({ icon: Icon, label }) {
   );
 }
 
-/* ─── main component ─── */
-
+/* ─── COMPONENT CHÍNH ─── */
 export default function CourseCard({
   course,
   variant = "catalog",
@@ -242,26 +184,26 @@ export default function CourseCard({
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+
+  // Khởi tạo các biến logic
   const isCatalog = variant === "catalog";
   const isMyCourses = variant === "myCourses";
   const data = normalizeCourse(course);
-  const statusChip = isMyCourses
-    ? getMyCoursesStatusChip(data.progressPercentage)
-    : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
+
+  const statusChip = isMyCourses ? getMyCoursesStatusChip(data.progressPercentage) : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
   const levelStyle = getLevelChipStyle(data.level);
   const categoryStyle = getCategoryChipStyle(data.category);
+
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const progressTextColor = getProgressColor(progressValue);
   const isCompleted = progressValue >= 100;
   const isNotStarted = isMyCourses && progressValue === 0;
-  const listFromUrl = isMyCourses
-    ? "/my-courses"
-    : location.pathname === "/courses"
-      ? `${location.pathname}${location.search}`
-      : undefined;
-  const detailPath = buildCourseDetailPath(data.courseId, searchParams, listFromUrl);
-  const lastActivity = course.lastActivity;
   const showProgress = isMyCourses || data.isEnrolled;
+  const lastActivity = course.lastActivity;
+
+  // Xử lý đường dẫn
+  const listFromUrl = isMyCourses ? "/my-courses" : location.pathname === "/courses" ? `${location.pathname}${location.search}` : undefined;
+  const detailPath = buildCourseDetailPath(data.courseId, searchParams, listFromUrl);
 
   return (
     <Card
@@ -289,10 +231,10 @@ export default function CourseCard({
         },
       }}
     >
-      {/* ── Thumbnail — clean, no overlaid chips ── */}
+      {/* ── Hình thu nhỏ ── */}
       <CourseThumbnail thumbnail={data.thumbnail} />
 
-      {/* ── Body ── */}
+      {/* ── Nội dung thẻ ── */}
       <CardContent
         sx={{
           position: "relative",
@@ -304,13 +246,14 @@ export default function CourseCard({
           "&:last-child": { pb: 2 },
         }}
       >
+        {/* Nút lưu khóa học */}
         {isCatalog && onToggleSave && (
           <Box sx={{ position: "absolute", top: 10, right: 10, zIndex: 1 }}>
             <CourseBookmarkButton isSaved={isSaved} onToggle={onToggleSave} />
           </Box>
         )}
 
-        {/* Title */}
+        {/* Tiêu đề */}
         <Typography
           component={Link}
           to={detailPath}
@@ -330,7 +273,7 @@ export default function CourseCard({
           {data.courseName}
         </Typography>
 
-        {/* Đánh giá & học viên */}
+        {/* Đánh giá & Học viên */}
         {(data.rating != null || data.studentCount > 0) && (
           <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.25 }}>
             {data.rating != null && (
@@ -360,39 +303,15 @@ export default function CourseCard({
           </Box>
         )}
 
-        {/* Chip row — status + level + category */}
+        {/* Trạng thái, Cấp độ, Danh mục */}
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-          <Chip
-            label={statusChip.label}
-            size="small"
-            sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }}
-          />
-          {data.level && (
-            <Chip
-              label={data.level}
-              size="small"
-              sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...levelStyle }}
-            />
-          )}
-          {data.category && (
-            <Chip
-              label={data.category}
-              size="small"
-              sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...categoryStyle }}
-            />
-          )}
+          <Chip label={statusChip.label} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }} />
+          {data.level && <Chip label={data.level} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...levelStyle }} />}
+          {data.category && <Chip label={data.category} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...categoryStyle }} />}
         </Box>
 
-        {/* Metadata — icon + text inline */}
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 1.5,
-            py: 0.5,
-          }}
-        >
+        {/* Thông tin Bài học, Chương, Học liệu */}
+        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5, py: 0.5 }}>
           <MetaInline icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
           <MetaInline icon={RouteOutlinedIcon} label={`${data.totalNodes} chương`} />
           <MetaInline icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
@@ -403,22 +322,13 @@ export default function CourseCard({
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
             <PersonOutlineOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8", flexShrink: 0 }} />
             <Typography sx={{ fontSize: 11.5, color: MUTED, flexShrink: 0 }}>Giảng viên:</Typography>
-            <Typography
-              sx={{
-                fontSize: 12,
-                color: TEXT,
-                fontWeight: 600,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <Typography sx={{ fontSize: 12, color: TEXT, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {data.instructor}
             </Typography>
           </Box>
         )}
 
-        {/* Progress bar */}
+        {/* Thanh Tiến độ (Nếu đang học) */}
         {showProgress && (
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
@@ -426,9 +336,7 @@ export default function CourseCard({
                 {isCompleted ? "Hoàn thành" : "Tiến độ"}
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                {isCompleted && (
-                  <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14, color: progressTextColor }} />
-                )}
+                {isCompleted && <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14, color: progressTextColor }} />}
                 <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 11.5, color: progressTextColor }}>
                   {data.progressPercentage}%
                 </Typography>
@@ -438,6 +346,7 @@ export default function CourseCard({
           </Box>
         )}
 
+        {/* Hoạt động gần nhất */}
         {isMyCourses && lastActivity && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: -0.25 }}>
             <AccessTimeOutlinedIcon sx={{ fontSize: 12, color: "#94A3B8" }} />
@@ -447,7 +356,7 @@ export default function CourseCard({
           </Box>
         )}
 
-        {/* Action button */}
+        {/* ── Nút Hành Động Cuối Card ── */}
         <Box sx={{ mt: "auto", pt: 0.75 }}>
           {isMyCourses ? (
             <AppButton
@@ -472,12 +381,14 @@ export default function CourseCard({
               fullWidth
               size="small"
               variant="contained"
-              onClick={(e) => { e.stopPropagation(); onContinueLearning?.(course); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onContinueLearning?.(course);
+              }}
             >
               Tiếp tục học
             </AppButton>
           ) : (
-            // Đăng ký dẫn đến trang detail, không đăng ký trực tiếp ở list
             <AppButton
               fullWidth
               size="small"
