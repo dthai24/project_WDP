@@ -165,37 +165,14 @@ export default function CourseListPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleGoToDetail = (course) => {
+    const cId = course.CourseId || course.courseId || course.id;
+    navigate(buildCourseDetailPath(cId, searchParams, `${location.pathname}${location.search}`));
+  };
   const handleContinueLearning = (course) => {
-    navigate(buildCourseDetailPath(course.courseId, searchParams, `${location.pathname}${location.search}`));
+    const cId = course.CourseId || course.courseId || course.id;
+    navigate(`/my-courses/${cId}/learn`);
   };
-
-  // Hàm xử lý tương tác khi người dùng bấm nút Đăng ký học (Enroll)
-  const handleEnroll = async (course) => {
-    // Đọc thông tin đăng nhập trực tiếp từ localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!user.userId) {
-      toast.error('Vui lòng đăng nhập để đăng ký khóa học.');
-      return;
-    }
-    try {
-      // Gọi sang API service
-      const res = await enrollCourseApi({
-        userId: Number(user.userId),
-        courseId: Number(course.id) // lấy id của khóa học hiện tại
-      });
-      if (res && (res.success === true || res.ok === true)) {
-        toast.success(`Đã đăng ký khóa "${course.title}" thành công!`);
-        // Đăng ký xong thì chuyển trạng thái trên giao diện thành Tiếp tục học
-        setCourse(prev => ({ ...prev, isEnrolled: true }));
-      } else {
-        toast.error(res?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
-      }
-    } catch (error) {
-      console.error("Lỗi xử lý đăng ký:", error);
-      toast.error("Hệ thống gặp lỗi khi xử lý đăng ký.");
-    }
-  };
-
   // Xử lý xóa nhãn chip tiêu chí lọc đang hiển thị
   const handleRemoveFilterChip = (chip) => {
     if (chip.type === "keyword") {
@@ -268,11 +245,12 @@ export default function CourseListPage() {
         <>
           <Grid container spacing={2.5}>
             {pageCourses.map((course, index) => (
-              <Grid key={course.CourseId || course.courseId || index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+              <Grid key={course.CourseId || index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                 <CourseCard
                   course={course}
-                  isSaved={isSaved(course.CourseId || course.courseId)}
-                  onToggleSave={() => toggleSave(course.CourseId || course.courseId)}
+                  isSaved={isSaved(course.CourseId)}
+                  onToggleSave={() => toggleSave(course.CourseId)}
+                  onEnroll={handleGoToDetail}
                   onContinueLearning={handleContinueLearning}
                 />
               </Grid>

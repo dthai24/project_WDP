@@ -30,23 +30,52 @@ function formatStudentCount(count) {
 }
 
 function normalizeCourse(course = {}) {
-  const progress = course.progressPercentage ?? course.progress ?? 0;
-  const isEnrolled = course.isEnrolled ?? progress > 0;
+  // 1. Kiểm tra tiến độ học
+  let currentProgress = 0;
+  if (course.Progress != null) {
+    currentProgress = course.Progress;
+  } else if (course.progressPercentage != null) {
+    currentProgress = course.progressPercentage;
+  } else if (course.progress != null) {
+    currentProgress = course.progress;
+  }
+  // 2. Kiểm tra xem đã đăng ký khóa học chưa
+  let checkEnrolled = false;
+  if (course.IsEnrolled === 1 || course.IsEnrolled === true) {
+    checkEnrolled = true; // Đọc từ biến viết hoa
+  } else if (course.isEnrolled === 1 || course.isEnrolled === true) {
+    checkEnrolled = true; // Đọc từ biến viết thường
+  } else if (currentProgress > 0) {
+    checkEnrolled = true; // Đang học dở thì chắc chắn là đã đăng ký
+  }
+  // 3. Xử lý ảnh Thumbnail bị lỗi
+  let courseImage = course.Thumbnail;
+  if (courseImage === 'CHƯA FIX LỖI ẢNH') {
+    courseImage = null;
+  }
+  // 4. Đếm số chương học (Paths)
+  let stageCount = 0;
+  if (course.Paths) {
+    stageCount = course.Paths.length;
+  } else if (course.TotalNodes != null) {
+    stageCount = course.TotalNodes;
+  }
+  // 5. Gắn dữ liệu vào danh sách chuẩn bị trả về
   return {
-    courseId: course.CourseId ?? course.id,
-    courseName: course.CourseName ?? course.title ?? "Khóa học",
-    thumbnail: course.Thumbnail ?? null,
-    category: course.Category ?? "",
-    level: course.Level ?? "",
-    instructor: course.Instructor ?? "",
-    rating: course.Rating ?? null,
-    reviewCount: course.ReviewCount ?? 0,
-    studentCount: course.StudentCount ?? 0,
-    totalLessons: course.TotalLessons ?? course.totalNodes ?? 0,
-    totalNodes: course.TotalNodes ?? 0,
-    totalMaterials: course.TotalMaterials ?? 0,
-    progressPercentage: progress,
-    isEnrolled,
+    courseId: course.CourseId || course.id,
+    courseName: course.CourseName || course.title || "Khóa học",
+    thumbnail: courseImage,
+    category: course.CategoryDisplayName || course.CategoryName || course.Category || "",
+    level: course.LevelDisplayName || course.LevelName || course.Level || "",
+    instructor: course.Instructor || "S.T.A.R Mentor Team",
+    rating: course.Rating || null,
+    reviewCount: course.ReviewCount || 0,
+    studentCount: course.StudentCount || 0,
+    totalLessons: course.TotalLessons || course.totalNodes || 0,
+    totalNodes: stageCount,
+    totalMaterials: course.TotalMaterials || 0,
+    progressPercentage: currentProgress,
+    isEnrolled: checkEnrolled,
   };
 }
 

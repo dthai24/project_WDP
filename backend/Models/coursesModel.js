@@ -19,19 +19,17 @@ const getCoursesByUserRole = (userId, userRole) => {
 const getStudentCoursesList = async (filters, userId) => {
     const request = new sql.Request();
     const { search, category, level, status, sort } = filters;
+    // Luôn truyền UserId vào SQL (nếu không đăng nhập thì là null)
+    request.input('UserId', sql.Int, userId || null);
 
     let baseQuery = `
         FROM Courses crs
         LEFT JOIN Categories cate ON crs.CategoryId = cate.CategoryId
         LEFT JOIN Levels lv ON crs.LevelId = lv.LevelId
+        LEFT JOIN User_Courses uc ON crs.CourseId = uc.CourseId AND uc.UserId = @UserId
         WHERE crs.IsPublished = 1
     `;
-    // Luôn kiểm tra trạng thái đăng ký
-    if (userId) {
-        if (!request.parameters.UserId) {
-            request.input('UserId', sql.Int, userId);
-        }
-    }
+
     // Lọc theo từ khóa tìm kiếm
     if (search) {
         baseQuery += ` AND crs.CourseName LIKE @Search`;
@@ -71,12 +69,28 @@ const getStudentCoursesList = async (filters, userId) => {
     const countResult = await request.query(countQuery);
     const totalCount = countResult.recordset[0].totalCount;
 
+    // Luôn kiểm tra trạng thái đăng ký
+    if (userId) {
+        if (!request.parameters.UserId) {
+            request.input('UserId', sql.Int, userId);
+        }
+    }
+    // Lọc theo trạng thái đã đăng ký hay chưa
+    if (status && userId) {
+        if (status === 'enrolled') {
+            baseQuery += ` AND EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
+        } else if (status === 'not_enrolled') {
+            baseQuery += ` AND NOT EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
+        }
+    }
+
     // Truy vấn dữ liệu chi tiết
     let selectQuery = `
         SELECT crs.CourseId, crs.CourseName, crs.Description, crs.CategoryId, crs.LevelId,
-               lv.LevelName as levelName, lv.DisplayName as LevelDisplayName, lv.SortOrder as LevelSortOrder,
+               lv.LevelName as levelName, lv.DisplayName as LevelDisplayName,
                crs.Thumbnail, crs.CreatedAt, crs.UpdatedAt,
-               cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName
+               cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName,
+               CASE WHEN uc.UserId IS NOT NULL THEN 1 ELSE 0 END AS isEnrolled
         ${baseQuery}
     `;
 
@@ -88,7 +102,6 @@ const getStudentCoursesList = async (filters, userId) => {
     }
 
     const coursesResult = await request.query(selectQuery);
-
     // Đắp thêm cấu trúc Path -> Node -> Material vào từng khóa học
     const coursesWithPaths = await buildCourse(coursesResult.recordset);
     return { courses: coursesWithPaths, totalCount };
@@ -149,25 +162,32 @@ const getMaterials = async (nodeId) => {
 // 3. CHI TIẾT KHÓA HỌC & MENTOR
 // ==========================================
 
-const getCourseById = async (courseId) => {
+const getCourseById = async (courseId, userId = null) => {
     const request = new sql.Request();
     request.input('courseId', sql.Int, courseId);
-
+    request.input('userId', sql.Int, userId || null);
     const result = await request.query(`
-        Select crs.CourseId, crs.CourseName, crs.TotalLessons, Users.FullName as InstructorName,
-               crs.Description, crs.CategoryId, crs.LevelId,
-               Levels.LevelName as levelName, Levels.Displayname as LevelDisplayName, Levels.SortOrder as LevelSortOrder,
-               crs.Thumbnail, crs.IsPublished, crs.CreatedAt, crs.UpdatedAt,
-               cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName
+        Select crs.CourseId, 
+               crs.CourseId as id,
+               crs.CourseName as title, 
+               crs.Description as description,
+               crs.Description as shortDescription,
+               crs.Thumbnail as thumbnail,
+               crs.TotalLessons as lessonCount,
+               Users.FullName as instructor,
+               Levels.DisplayName as level,
+               cate.DisplayName as category,
+               CASE WHEN uc.UserId IS NOT NULL THEN 1 ELSE 0 END AS isEnrolled,
+               ISNULL(uc.ProgressPercentage, 0) AS progress
         from courses crs
         join Categories cate on crs.CategoryId = cate.CategoryId
         join Levels on Levels.LevelId = crs.LevelId
         join Users on Users.UserId = crs.InstructorId
+        left join User_Courses uc on crs.CourseId = uc.CourseId and uc.UserId = @userId
         Where crs.CourseId = @courseId
     `);
     return await buildCourse(result.recordset);
 }
-
 const getMentorCourses = async (userId) => {
     const request = new sql.Request();
     request.input('InstructorId', sql.Int, userId);

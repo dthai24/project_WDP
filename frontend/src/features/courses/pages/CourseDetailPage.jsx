@@ -417,35 +417,42 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
 
   // 2. Tự động gọi API lấy data từ Database khi mở trang
+  // 2. Tự động gọi API lấy data từ Database khi mở trang
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const headers = user.userId ? { 'x-user-id': user.userId } : {};
-
+        // Vẫn dùng API cũ vì Backend của bạn chỉ có API này cho Detail
         const res = await fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=course`, { headers });
         const result = await res.json();
-
         // Kiểm tra xem có dữ liệu không
         if (result.success && result.data && result.data.length > 0) {
           const dbData = result.data[0];
-
-          // Gán dữ liệu Database vào khung cấu trúc để Giao diện cũ hiểu được
+          // 1. Xử lý ảnh lỗi (quét cả biến thumbnail viết thường lẫn hoa)
+          let courseImage = dbData.thumbnail || dbData.Thumbnail;
+          if (courseImage === 'CHƯA FIX LỖI ẢNH') {
+            courseImage = null;
+          }
+          // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
           const mappedCourse = {
-            id: dbData.CourseId,
-            title: dbData.CourseName,
-            description: dbData.Description,
-            shortDescription: dbData.Description,
-            thumbnail: dbData.Thumbnail === 'CHƯA FIX LỖI ẢNH' ? null : dbData.Thumbnail,
-            category: dbData.CategoryDisplayName || dbData.CategoryName,
-            level: dbData.LevelDisplayName || dbData.levelName,
-            isEnrolled: dbData.isEnrolled === 1 || dbData.isEnrolled === true,
-            progress: dbData.progress || 0,
-            lessonCount: dbData.TotalLessons || 0,
-            stageCount: dbData.Paths ? dbData.Paths.length : 0,
+            id: dbData.id || dbData.CourseId,
+            title: dbData.title || dbData.CourseName,
+            description: dbData.description || dbData.Description,
+            shortDescription: dbData.shortDescription || dbData.Description,
+            thumbnail: courseImage,
+            category: dbData.category || dbData.CategoryDisplayName || dbData.CategoryName,
+            level: dbData.level || dbData.LevelDisplayName || dbData.levelName,
+            instructor: dbData.instructor || "S.T.A.R Mentor Team",
 
+            // Xử lý biến bool cho IsEnrolled
+            isEnrolled: dbData.isEnrolled === 1 || dbData.isEnrolled === true || dbData.IsEnrolled === 1 || dbData.IsEnrolled === true,
+            progress: dbData.progress || dbData.Progress || 0,
+
+            lessonCount: dbData.lessonCount || dbData.TotalLessons || 0,
+            stageCount: dbData.Paths ? dbData.Paths.length : 0,
+            materialCount: 0, // SQL chưa có biến đếm tài liệu nên mình tạm để 0
             // Các trường không có trong DB thì điền số chung để không bị vỡ layout
-            instructor: "S.T.A.R Mentor Team",
             duration: "6 giờ",
             rating: 4.8,
             reviewCount: 154,
@@ -453,7 +460,6 @@ export default function CourseDetailPage() {
             isFree: true,
             outcomes: ["Nắm vững kiến thức cốt lõi"],
             prerequisites: [],
-
             // Lấy danh sách bài học đưa vào Modules
             modules: (dbData.Paths || []).map(path => {
               return {
@@ -473,23 +479,44 @@ export default function CourseDetailPage() {
               };
             })
           };
-
           setCourse(mappedCourse);
         }
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu:", err);
       } finally {
-        setLoading(false); // Gọi API xong thì tắt trạng thái loading
+        setLoading(false);
       }
     };
-
     fetchCourseData();
   }, [id]);
 
   // 3. Xử lý logic lúc bấm nút
-  const handleEnroll = () => {
-    // Tạm thời hiển thị thành Đã đăng ký rồi chuyển hướng
-    setCourse(prev => ({ ...prev, isEnrolled: true }));
+  const handleEnroll = async () => {
+    // Đọc thông tin đăng nhập trực tiếp từ localStorage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!user.userId) {
+      toast.error('Vui lòng đăng nhập để đăng ký khóa học.');
+      return;
+    }
+
+    try {
+      // Gọi sang API service
+      const res = await enrollCourseApi({
+        userId: Number(user.userId),
+        courseId: Number(course.id) // Lấy đúng ID của khóa học đang xem
+      });
+
+      if (res && (res.success === true || res.ok === true)) {
+        toast.success(`Đã đăng ký khóa "${course.title}" thành công!`);
+        // Đăng ký xong thì chuyển trạng thái trên giao diện thành Tiếp tục học luôn
+        setCourse(prev => ({ ...prev, isEnrolled: true }));
+      } else {
+        toast.error(res?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
+    } catch (error) {
+      console.error("Lỗi xử lý đăng ký:", error);
+      toast.error("Hệ thống gặp lỗi khi xử lý đăng ký.");
+    }
   };
 
   const handleContinue = () => {
