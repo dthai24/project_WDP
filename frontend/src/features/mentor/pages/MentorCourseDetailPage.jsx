@@ -105,7 +105,7 @@ export default function MentorCourseDetailPage() {
       case MENTOR_COURSE_DETAIL_TABS.CONTENT:
         return <MentorCourseContentTab course={course} />;
       case MENTOR_COURSE_DETAIL_TABS.STUDENTS:
-        return <MentorCourseStudentsTab courseId={course.courseId} />;
+        return <MentorCourseStudentsTab courseId={course.CourseId} />;
       case MENTOR_COURSE_DETAIL_TABS.COURSE:
         return <MentorCourseOverviewTab course={course} />;
       default:
@@ -198,7 +198,7 @@ export default function MentorCourseDetailPage() {
 
       {/* ACTIVE Tab Panel (Khóa học, nội dung, học viên) */}
       <Box key={activeTab}>{renderActiveTabPanel()}</Box>
-
+      {console.log("course", course)}
       <ConfirmDialog
         open={Boolean(publishDialogConfig)}
         onClose={handleClosePublishDialog}

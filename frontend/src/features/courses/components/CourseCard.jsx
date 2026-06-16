@@ -62,18 +62,18 @@ function normalizeCourse(course = {}) {
   const progress = course.progressPercentage ?? course.progress ?? 0;
   const isEnrolled = course.isEnrolled ?? progress > 0;
   return {
-    courseId:          course.courseId ?? course.id,
-    courseName:        course.courseName ?? course.title ?? "Khóa học",
-    thumbnail:         course.thumbnail ?? null,
-    category:          course.category ?? "",
-    level:             course.level ?? "",
-    instructor:        course.instructor ?? "",
-    rating:            course.rating ?? null,
-    reviewCount:       course.reviewCount ?? 0,
-    studentCount:      course.studentCount ?? 0,
-    totalLessons:      course.totalLessons ?? course.totalNodes ?? 0,
-    totalNodes:        course.totalNodes ?? 0,
-    totalMaterials:    course.totalMaterials ?? 0,
+    courseId: course.CourseId ?? course.id,
+    courseName: course.CourseName ?? course.title ?? "Khóa học",
+    thumbnail: course.Thumbnail ?? null,
+    category: course.Category ?? "",
+    level: course.Level ?? "",
+    instructor: course.Instructor ?? "",
+    rating: course.Rating ?? null,
+    reviewCount: course.ReviewCount ?? 0,
+    studentCount: course.StudentCount ?? 0,
+    totalLessons: course.TotalLessons ?? course.totalNodes ?? 0,
+    totalNodes: course.TotalNodes ?? 0,
+    totalMaterials: course.TotalMaterials ?? 0,
     progressPercentage: progress,
     isEnrolled,
   };
@@ -208,17 +208,17 @@ export default function CourseCard({
   onStartLearning,
   onClick,
 }) {
-  const theme   = useTheme();
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const isCatalog = variant === "catalog";
   const isMyCourses = variant === "myCourses";
-  const data         = normalizeCourse(course);
-  const statusChip   = isMyCourses
+  const data = normalizeCourse(course);
+  const statusChip = isMyCourses
     ? getMyCoursesStatusChip(data.progressPercentage)
     : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
-  const levelStyle   = resolveLevelChipSx({ displayName: data.level });
+  const levelStyle = resolveLevelChipSx({ displayName: data.level });
   const categoryStyle = resolveCategoryChipSx({ displayName: data.category }, { withBorder: false });
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const progressTextColor = getProgressColor(progressValue);

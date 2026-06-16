@@ -112,6 +112,7 @@ const getMentorCourses = async (userId) => {
     const result = await request.query(
         `Select crs.CourseId,
    crs.CourseName,
+   crs.TotalLessons as TotalLessons,
    crs.Description, crs.CategoryId,
    crs.LevelId,
    Levels.LevelName as levelName,
@@ -133,13 +134,96 @@ on Levels.LevelId = crs.LevelId
     return await buildCourse(result.recordset);
 }
 
-// Function nhận một mảng courses rồi gọi tới getCourseBase để format courses
+//___GET Node's Materials____
+const getMaterials = async (nodeId) => {
+    const request = new sql.Request();
+    request.input('nodeId', sql.Int, nodeId);
+
+    const result = await request.query(
+        `
+                SELECT *
+      FROM [LearningPath_Base].[dbo].[Node_Materials]
+        Where NodeId = @nodeId
+      Order By MaterialOrder ASC
+        `
+    )
+    return result.recordset
+}
+
+// Hàm buildCourse nhận vào một mảng courses
+// Mục tiêu: build lại dữ liệu theo cấu trúc:
+//
+// Course
+//  └── Paths
+//       └── Nodes
+//            └── Materials
+//
+// Tức là:
+// - Mỗi course sẽ có nhiều path
+// - Mỗi path sẽ có nhiều node
+// - Mỗi node sẽ có nhiều material
+
 const buildCourse = async (courses) => {
+    // Vì courses là mảng, ta dùng map để xử lý từng course
+    // Mỗi course cần gọi database nên callback phải là async
+    // Promise.all dùng để chờ tất cả course xử lý xong
     return await Promise.all(
         courses.map(async (course) => {
+            // Lấy danh sách path/chapter của course hiện tại
+            // Ví dụ: CourseId = 51 thì lấy các Paths thuộc CourseId = 51
+            const coursePaths = await getCoursePaths(course.CourseId);
+
+            // Với mỗi path, ta tiếp tục lấy danh sách nodes/bài học của path đó
+            // Vì mỗi path cũng cần gọi database nên tiếp tục dùng Promise.all
+            const pathsWithNodes = await Promise.all(
+                coursePaths.map(async (path) => {
+                    // Lấy PathId của path hiện tại
+                    // PathId dùng để query các nodes thuộc path này
+                    const pathId = path.PathId;
+
+                    // Lấy danh sách nodes/bài học thuộc path hiện tại
+                    const nodes = await getPathNodes(pathId);
+
+                    // Với mỗi node, ta tiếp tục lấy danh sách materials/học liệu của node đó
+                    // Vì mỗi node cũng cần gọi database nên phải dùng Promise.all
+                    const nodesWithMaterials = await Promise.all(
+                        nodes.map(async (node) => {
+                            // Lấy NodeId của node hiện tại
+                            // NodeId dùng để query các materials thuộc node này
+                            const nodeId = node.NodeId;
+
+                            // Lấy danh sách materials/học liệu thuộc node hiện tại
+                            const materials = await getMaterials(nodeId);
+
+                            // Trả về object node mới
+                            // Giữ nguyên toàn bộ dữ liệu cũ của node bằng ...node
+                            // Sau đó gắn thêm field Materials vào node
+                            return {
+                                ...node,
+                                Materials: materials,
+                            };
+                        })
+                    );
+
+                    // Trả về object path mới
+                    // Giữ nguyên toàn bộ dữ liệu cũ của path bằng ...path
+                    // Sau đó gắn thêm field Nodes vào path
+                    // Nodes lúc này không còn là nodes ban đầu nữa
+                    // mà là nodes đã có Materials bên trong
+                    return {
+                        ...path,
+                        Nodes: nodesWithMaterials,
+                    };
+                })
+            );
+
+            // Trả về object course mới
+            // Giữ nguyên toàn bộ dữ liệu cũ của course bằng ...course
+            // Sau đó gắn thêm field Paths vào course
+            // Paths lúc này đã có Nodes, và mỗi Node đã có Materials
             return {
                 ...course,
-                Paths: await getCoursePaths(course.CourseId)
+                Paths: pathsWithNodes,
             };
         })
     );
@@ -158,6 +242,7 @@ const getCoursePaths = async (courseId) => {
     const result = await request.query`
          Select * From Paths
          Where CourseId = @courseId
+         ORDER BY [Order] ASC
     `
     return result.recordset
 }
@@ -192,6 +277,19 @@ const getStudentCourses = async (userId) => {
     return result.recordset;
 }
 
+//___GET Path Node___
+const getPathNodes = async (pathId) => {
+    const request = new sql.Request();
+    request.input('pathId', sql.Int, pathId);
+
+    const result = await request.query`
+         SELECT*
+  FROM [dbo].[Path_Nodes]
+  Where PathId = @pathId
+  Order by NodeOrder Asc
+    `
+    return result.recordset
+}
 
 // GET Course's Information by it's Id
 const getCourseById = async (courseId) => {
@@ -200,6 +298,8 @@ const getCourseById = async (courseId) => {
 
     const result = await request.query(`Select crs.CourseId,
    crs.CourseName,
+   crs.TotalLessons,
+   Users.FullName as InstructorName,
    crs.Description, crs.CategoryId,
    crs.LevelId,
    Levels.LevelName as levelName,
@@ -216,6 +316,8 @@ join Categories cate
 on crs.CategoryId = cate.CategoryId
 join Levels
 on Levels.LevelId = crs.LevelId
+join Users
+on Users.UserId = crs.InstructorId
   Where crs.CourseId = @courseId`);
     return await buildCourse(result.recordset);
 }
@@ -229,7 +331,7 @@ const createCourseStepOne = async (course) => {
     request.input('CategoryId', sql.Int, Number(course.CategoryId));
     request.input('LevelId', sql.Int, Number(course.LevelId));
     request.input('InstructorId', sql.Int, Number(course.InstructorId));
-    request.input('Thumbnail', sql.NVarChar(500), 'Chưa Fix Lỗi ẢNh'); //course.Thumbnail || null
+    request.input('Thumbnail', sql.NVarChar(500), 'CHƯA FIX LỖI ẢNH'); //course.Thumbnail || null
 
     request.input('Rating', sql.Decimal(3, 1), course.Rating ?? 0.0);
     request.input('TotalLessons', sql.Int, course.TotalLessons ?? 0);
@@ -361,6 +463,8 @@ const buildPathsNodes = async (paths, courseId) => {
         const nodes = p.nodes;
         nodes.map(async (node) => {
             const nodeId = await insertNode(node, pathId);
+            //update totalLessons + 1
+            await increaseCourseTotalLessons(courseId);
             // insert materials into node
             const materials = node.materials;
             materials.map(async (m) => {
@@ -376,7 +480,24 @@ const createFinalCourse = async (course, paths) => {
     //create course (step one in create course process)
     const newCourseId = await createCourseStepOne(course);
     await buildPathsNodes(paths, newCourseId);
-}
+    return newCourseId;
+};
+
+
+// update course's total lessons
+const increaseCourseTotalLessons = async (courseId) => {
+    const request = new sql.Request();
+
+    request.input('courseId', sql.Int, Number(courseId));
+
+    await request.query(`
+    UPDATE dbo.Courses
+    SET 
+      TotalLessons = ISNULL(TotalLessons, 0) + 1,
+      UpdatedAt = GETDATE()
+    WHERE CourseId = @courseId
+  `);
+};
 
 const getMyEnrolledCourses = async (userId, filterStatus = 'all') => {
     const request = new sql.Request();

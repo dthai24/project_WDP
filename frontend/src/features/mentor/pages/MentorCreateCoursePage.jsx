@@ -186,7 +186,6 @@ export default function MentorCreateCoursePage() {
       // (thực tế là lưu all bước vào session, tới lúc tạo và public thì mới xóa sesion và lưu vào database)
       const result = await saveCreateCourseStep1(form, instructorId);
       if (!result.ok) {
-        console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
         return
       };
       // console.log(result);

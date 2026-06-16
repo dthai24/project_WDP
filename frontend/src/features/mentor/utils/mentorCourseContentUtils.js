@@ -22,8 +22,8 @@ export function countLearningMaterials(materials = []) {
 }
 
 export function countMaterialsInPath(path = {}) {
-  return (path.nodes ?? []).reduce(
-    (sum, node) => sum + countLearningMaterials(node.materials),
+  return (path.Nodes ?? []).reduce(
+    (sum, node) => sum + countLearningMaterials(node.Materials),
     0,
   );
 }
