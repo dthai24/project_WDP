@@ -68,7 +68,6 @@ const getInformationCourse = async (req, res) => {
   try {
     const courseId = req.params.courseId;
     const tab = req.query.tab;
-    //valid courseId (req.params.courseId) and tab (req.query.tab)
     if (!courseId) {
       return res.status(400).json({
         success: false,
@@ -84,6 +83,7 @@ const getInformationCourse = async (req, res) => {
     }
     // Tab=course
     if (tab.toLowerCase() === 'course') {
+      const userId = req.headers['x-user-id'] || null;
       const courses = await courseModel.getCourseById(courseId);
       //404
       if (courses.length === 0) {
@@ -101,9 +101,9 @@ const getInformationCourse = async (req, res) => {
       })
     }
     return res.status(400).json({
-        success: false,
-        message: `Chưa hỗ trợ lấy dữ liệu cho tab: ${tab}`,
-        data: []
+      success: false,
+      message: `Chưa hỗ trợ lấy dữ liệu cho tab: ${tab}`,
+      data: []
     });
 
   } catch (error) {
