@@ -148,7 +148,7 @@ export default function MentorCourseReviewStatusPanel({
 
       {showActions && (
         <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <MentorCourseReviewActions onCreate={onCreate} creating={creating} />
+          <MentorCourseReviewActions onCreate={onCreate} creating={creating} checklist={checklist} />
         </Box>
       )}
     </Box>
