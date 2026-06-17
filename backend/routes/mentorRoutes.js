@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 
 const {
-    getStudentsInCourse
+    getStudentsInCourse,
+    setPublishCourse,
+    setDraftCourse
 } = require('../controllers/mentorController');
 
 
@@ -18,4 +20,6 @@ const optionalAuth = (req, res, next) => {
     next();
 };
 router.get('/courses/:courseId/students', getStudentsInCourse);
+router.get('/courses/:courseId/setPublic', setPublishCourse);
+router.get('/courses/:courseId/setDraft', setDraftCourse);
 module.exports = router;

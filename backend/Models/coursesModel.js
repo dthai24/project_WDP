@@ -1,4 +1,5 @@
 const { sql } = require('../config/db');
+const { saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware')
 
 // ==========================================
 // 1. CÁC HÀM LẤY DANH SÁCH KHÓA HỌC CHUNG
@@ -164,26 +165,33 @@ const getMaterials = async (nodeId) => {
 
 const getCourseById = async (courseId, userId = null) => {
     const request = new sql.Request();
-    request.input('courseId', sql.Int, courseId);
+    request.input('courseId', sql.Int, Number(courseId));
     request.input('userId', sql.Int, userId || null);
     const result = await request.query(`
-        Select crs.CourseId, 
-               crs.CourseId as id,
-               crs.CourseName as title, 
-               crs.Description as description,
-               crs.Description as shortDescription,
-               crs.Thumbnail as thumbnail,
-               crs.TotalLessons as lessonCount,
-               Users.FullName as instructor,
-               Levels.DisplayName as level,
-               cate.DisplayName as category,
+       Select crs.CourseId, 
+crs.InstructorId,
+Users.FullName as InStructorName,
+            crs.IsPublished,
+               crs.CourseName, 
+               crs.Description,
+               crs.CreatedAt as CourseCreateAt,
+			   crs.UpdatedAt as CourseUpdateAt,
+               crs.Thumbnail,
+               crs.TotalLessons,
+               Users.FullName,
+               Levels.LevelId,
+               Levels.LevelName,
+               Levels.DisplayName as LevelDisplayName,
+               cate.CategoryId,
+               cate.CategoryName,
+               cate.DisplayName as CategoryDisplayName,
                CASE WHEN uc.UserId IS NOT NULL THEN 1 ELSE 0 END AS isEnrolled,
                ISNULL(uc.ProgressPercentage, 0) AS progress
         from courses crs
         join Categories cate on crs.CategoryId = cate.CategoryId
         join Levels on Levels.LevelId = crs.LevelId
         join Users on Users.UserId = crs.InstructorId
-        left join User_Courses uc on crs.CourseId = uc.CourseId and uc.UserId = @userId
+		 left join User_Courses uc on crs.CourseId = uc.CourseId and uc.UserId = @userId
         Where crs.CourseId = @courseId
     `);
     return await buildCourse(result.recordset);
@@ -297,7 +305,7 @@ const createCourseStepOne = async (course) => {
     request.input('CategoryId', sql.Int, Number(course.CategoryId));
     request.input('LevelId', sql.Int, Number(course.LevelId));
     request.input('InstructorId', sql.Int, Number(course.InstructorId));
-    request.input('Thumbnail', sql.NVarChar(500), 'CHƯA FIX LỖI ẢNH');
+    request.input('Thumbnail', sql.NVarChar(500), null);
     request.input('Rating', sql.Decimal(3, 1), course.Rating ?? 0.0);
     request.input('TotalLessons', sql.Int, course.TotalLessons ?? 0);
     request.input('IsPublished', sql.Bit, course.IsPublished ?? false);
@@ -384,8 +392,63 @@ const buildPathsNodes = async (paths, courseId) => {
 
 const createFinalCourse = async (course, paths) => {
     const newCourseId = await createCourseStepOne(course);
+    if (course.Thumbnail) {
+        const thumbnailPath = saveCourseThumbnailFromDataUrl(course.Thumbnail, newCourseId);
+        await updateCourseThumbnail(newCourseId, thumbnailPath);
+    }
     await buildPathsNodes(paths, newCourseId);
     return newCourseId;
+};
+
+// update Thumbnail
+const updateCourseThumbnail = async (courseId, thumbnailPath) => {
+    const request = new sql.Request();
+
+    request.input('CourseId', sql.Int, courseId);
+    request.input('Thumbnail', sql.NVarChar(500), thumbnailPath);
+
+    await request.query(`
+        UPDATE Courses
+        SET Thumbnail = @Thumbnail,
+            UpdatedAt = GETDATE()
+        WHERE CourseId = @CourseId
+    `);
+};
+
+// set course => publish
+const setPublishCourse = async (courseId) => {
+    const request = new sql.Request();
+
+    request.input('CourseId', sql.Int, Number(courseId));
+
+    const result = await request.query(`
+        UPDATE dbo.Courses
+        SET 
+            UpdatedAt = GETDATE(),
+            IsPublished = 1
+        OUTPUT inserted.CourseId
+        WHERE CourseId = @CourseId
+    `);
+
+    return result.recordset[0]?.CourseId || null;
+};
+
+// set course  => draft
+const setDraftCourse = async (courseId) => {
+    const request = new sql.Request();
+
+    request.input('CourseId', sql.Int, Number(courseId));
+
+    const result = await request.query(`
+        UPDATE dbo.Courses
+        SET 
+            UpdatedAt = GETDATE(),
+            IsPublished = 0
+        OUTPUT inserted.CourseId
+        WHERE CourseId = @CourseId
+    `);
+
+    return result.recordset[0]?.CourseId || null;
 };
 
 module.exports = {
@@ -395,5 +458,7 @@ module.exports = {
     createFinalCourse,
     getStudentCoursesList,
     getMyEnrolledCourses,
-    enrollCourse
+    enrollCourse,
+    setDraftCourse,
+    setPublishCourse
 }

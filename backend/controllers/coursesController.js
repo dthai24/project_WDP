@@ -42,12 +42,14 @@ const getMyCourses = async (req, res) => {
       });
     }
 
+
     let courses;
     if (roleName.toLowerCase() === 'student') {
       courses = await courseModel.getMyEnrolledCourses(userId, filterStatus);
     } else {
       courses = await courseModel.getCoursesByUserRole(userId, roleName);
     }
+
     return res.status(200).json({
       success: true,
       message: `Lấy khóa học của ${roleName} thành công`,
@@ -72,13 +74,13 @@ const getInformationCourse = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Thiếu courseId',
-        data: [],
+        data: {},
       })
     } else if (!tab) {
       return res.status(400).json({
         success: false,
         message: 'Thiếu hoặc sai query tab trên url',
-        data: []
+        data: {}
       })
     }
     // Tab=course
@@ -90,7 +92,7 @@ const getInformationCourse = async (req, res) => {
         return res.status(404).json({
           success: false,
           message: 'Không tìm thấy khóa học này trong Databse',
-          data: []
+          data: {}
         })
       }
       //200

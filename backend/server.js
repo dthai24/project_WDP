@@ -35,14 +35,18 @@ app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/mentor', mentorRoutes);
 app.use('/api', lookupRoutes);
-
+// Link URL Courses's Avatar
+// Static: serve course avatars
+app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 // ---- Health-check ----
-app.get('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running' }));
+app.use('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running' }));
 
 // ---- Start ----
 const server = app.listen(PORT, () => {
   console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);
 });
+
+
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
