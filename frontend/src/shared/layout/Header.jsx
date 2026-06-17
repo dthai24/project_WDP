@@ -27,7 +27,8 @@ import {
   buildCourseListSearchParams,
   parseCourseListParams,
 } from "@/features/courses/utils/courseListParams";
-
+import { useAuth } from '@/context/AuthContext'; 
+import { Link } from 'react-router-dom';
 const MENU_CLOSE_DELAY = 200;
 const KEYWORD_DEBOUNCE_MS = 300;
 const PROJECT_NAME = "S.T.A.R Learning Path";
@@ -120,31 +121,20 @@ export default function Header({
     []
   );
 
-  const userRaw = sessionStorage.getItem("user");
-  const user = userRaw ? JSON.parse(userRaw) : null;
+  // 1. LẤY USER VÀ HÀM LOGOUT TỪ KHO RA XÀI
+  const { user, logout } = useAuth(); 
 
+  // (Vẫn giữ logic Avatar của ông trong trường hợp ông có update lẻ avatar)
   const [avatarUrl, setAvatarUrl] = useState(() => {
-    const explicitAvatar = sessionStorage.getItem("avatarUrl");
+    const explicitAvatar = localStorage.getItem("avatarUrl"); // Đổi sang local cho đồng bộ
     if (explicitAvatar) return explicitAvatar;
     return user?.avatarUrl || null;
   });
 
+  // Nếu user thay đổi từ context, cập nhật lại avatar luôn
   useEffect(() => {
-    const handleStorageChange = () => {
-      const explicitAvatar = sessionStorage.getItem("avatarUrl");
-      if (explicitAvatar) {
-        setAvatarUrl(explicitAvatar);
-        return;
-      }
-      const raw = sessionStorage.getItem("user");
-      const u = raw ? JSON.parse(raw) : null;
-      if (u?.avatarUrl) {
-        setAvatarUrl(u.avatarUrl);
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+    setAvatarUrl(localStorage.getItem("avatarUrl") || user?.avatarUrl || null);
+  }, [user]);
 
   const clearCloseTimer = () => {
     if (closeTimer.current) {
@@ -196,12 +186,13 @@ export default function Header({
     else openUserMenu();
   };
 
+  // 2. HÀM LOGOUT: GỌI HÀM CỦA NHÀ KHO THAY VÌ TỰ XÓA STORAGE
   const handleLogout = () => {
     closeUserMenu();
     if (onLogout) {
       onLogout();
     } else {
-      sessionStorage.removeItem("user");
+      logout(); // Dùng hàm quét dọn của AuthContext
       toast.info("Đã đăng xuất thành công.");
       navigate("/login", { replace: true });
     }

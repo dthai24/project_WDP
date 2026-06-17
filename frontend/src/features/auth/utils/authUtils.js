@@ -1,13 +1,13 @@
 export function getUser() {
   try {
-    return JSON.parse(sessionStorage.getItem("user")) || {};
+    return JSON.parse(localStorage.getItem("user")) || {};
   } catch {
     return {};
   }
 }
 
 export function getUserRoles(user = getUser()) {
-  if (!Array.isArray(user?.roles)) return [];
+ if (!Array.isArray(user?.roles)) return [];
   return user.roles.map((role) => String(role).trim()).filter(Boolean);
 }
 

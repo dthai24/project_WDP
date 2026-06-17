@@ -38,8 +38,8 @@ const MENTOR_BLOCK_REDIRECTS = { Mentor: '/mentor/courses' };
 const STUDENT_MENTOR_ROUTE_REDIRECTS = { Student: '/courses' };
 
 export default function App() {
+  console.log("App.jsx: App component is rendering");
   return (
-    <BrowserRouter>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -177,6 +177,5 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
   );
 }
