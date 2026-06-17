@@ -98,12 +98,12 @@ export default function MyCoursesListPage() {
   useEffect(() => {
     const getData = async () => {
       try {
-        const rawUser = sessionStorage.getItem("user");
+        const rawUser = localStorage.getItem("user");
 
         console.log("RAW USER:", rawUser);
 
         if (!rawUser) {
-          console.error("Chưa có user trong sessionStorage");
+          console.error("Chưa có user trong localStorage");
           return;
         }
 
@@ -127,7 +127,7 @@ export default function MyCoursesListPage() {
         });
 
         if (!userId || !roleName) {
-          console.error("Thiếu userId hoặc roleName sau khi đọc sessionStorage", {
+          console.error("Thiếu userId hoặc roleName sau khi đọc localStorage", {
             userId,
             roleName,
             user,
@@ -155,7 +155,56 @@ export default function MyCoursesListPage() {
           return;
         }
 
-        setAllCourses(result.data || []);
+        // Bắt đầu vòng lặp để đổi tên biến từ Database cho khớp với Giao diện
+        const mappedData = [];
+        const rawData = result.data || [];
+
+        for (let i = 0; i < rawData.length; i++) {
+          const dbCourse = rawData[i];
+
+          // 1. Kiểm tra tiến độ học
+          let currentProgress = 0;
+          if (dbCourse.progress != null) {
+            currentProgress = dbCourse.progress;
+          }
+          // 2. Kiểm tra trạng thái
+          let status = "learning"; // Mặc định là đang học
+          if (currentProgress >= 100) {
+            status = "completed"; // Nếu 100% thì là đã hoàn thành
+          }
+          // 3. Đếm số chương học (Paths)
+          let stageCount = 0;
+          if (dbCourse.Paths) {
+            stageCount = dbCourse.Paths.length;
+          }
+          // 4. Kiểm tra ảnh Thumbnail bị lỗi
+          let courseImage = dbCourse.Thumbnail;
+          if (courseImage === 'CHƯA FIX LỖI ẢNH') {
+            courseImage = null;
+          }
+          // 5. Đưa dữ liệu vào danh sách mới với tên biến viết thường
+          mappedData.push({
+            courseId: dbCourse.CourseId,
+            courseName: dbCourse.CourseName,
+            thumbnail: courseImage,
+
+            category: dbCourse.CategoryName || dbCourse.CategoryDisplayName || "Chưa phân loại",
+            level: dbCourse.levelName || dbCourse.LevelDisplayName || "Cơ bản",
+            instructor: dbCourse.Instructor || "S.T.A.R Mentor Team",
+
+            totalLessons: dbCourse.TotalLessons || 0,
+            totalNodes: stageCount,
+
+            progressPercentage: currentProgress,
+            enrollmentStatus: status,
+
+            // Các dữ liệu mặc định bắt buộc phải có để tránh lỗi giao diện
+            isSaved: false,
+            modules: dbCourse.Paths || []
+          });
+        }
+        // Đưa danh sách đã xử lý xong lên giao diện
+        setAllCourses(mappedData);
       } catch (error) {
         console.log("Fetch courses error:", error);
       }
@@ -316,12 +365,7 @@ export default function MyCoursesListPage() {
         onReset={handleResetFilters}
       />
 
-      {showContinueSection && (
-        <MyCourseContinueSection
-          course={continueCourse}
-          onContinue={handleLearningAction}
-        />
-      )}
+
 
       {!hasAnyCourse || filteredCourses.length === 0 ? (
         renderEmptyState()

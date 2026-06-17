@@ -68,7 +68,6 @@ const getInformationCourse = async (req, res) => {
   try {
     const courseId = req.params.courseId;
     const tab = req.query.tab;
-    //valid courseId (req.params.courseId) and tab (req.query.tab)
     if (!courseId) {
       return res.status(400).json({
         success: false,
@@ -84,6 +83,7 @@ const getInformationCourse = async (req, res) => {
     }
     // Tab=course
     if (tab.toLowerCase() === 'course') {
+      const userId = req.headers['x-user-id'] || null;
       const courses = await courseModel.getCourseById(courseId);
       //404
       if (courses.length === 0) {
@@ -100,12 +100,12 @@ const getInformationCourse = async (req, res) => {
         data: courses
       })
     }
+    return res.status(400).json({
+      success: false,
+      message: `Chưa hỗ trợ lấy dữ liệu cho tab: ${tab}`,
+      data: []
+    });
 
-    // tab = content
-    // if (tab.toLowerCase() === 'content') {
-    //   const content
-    // }
-    // tab = students
   } catch (error) {
     console.error(error.message);
     return res.status(500).json({
@@ -235,28 +235,19 @@ const saveCourseDraftStepOne = async (req, res) => {
 const createFinalCourse = async (req, res) => {
   try {
     const newCourse = req.body.course;
-    const newCoursePaths = req.body.paths ?? [];
-
-    if (!newCourse?.CourseName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Thiếu thông tin khóa học.',
-      });
-    }
-
+    const newCoursePaths = req.body.paths;
     const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
 
     return res.status(201).json({
       success: true,
-      message: 'Khóa học đã được tạo.',
-      courseId: newCourseId,
-      data: { courseId: newCourseId },
+      message: 'Tạo khóa học hoàn chỉnh thành công!',
+      data: { courseId: newCourseId }
     });
   } catch (error) {
-    console.error('createFinalCourse error:', error.message);
+    console.error(error.message);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi khi tạo khóa học.',
+      message: 'Lỗi server khi tạo khóa học'
     });
   }
 }
