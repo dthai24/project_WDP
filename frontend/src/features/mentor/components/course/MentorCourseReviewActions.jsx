@@ -5,18 +5,10 @@ import { PRIMARY } from './mentorCourseCreateStyles';
 export default function MentorCourseReviewActions({
   onCreate,
   creating = false,
-  checklist = []
 }) {
-
-
-  const canCreate =
-    checklist.length > 0 &&
-    checklist.every((item) => item.status === 'ok');
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-
-      {canCreate && <AppButton
+      <AppButton
         onClick={onCreate}
         loading={creating}
         sx={{
@@ -28,7 +20,7 @@ export default function MentorCourseReviewActions({
         }}
       >
         Tạo khóa học
-      </AppButton>}
+      </AppButton>
     </Box>
   );
 }
