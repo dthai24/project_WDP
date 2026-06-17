@@ -92,6 +92,7 @@ export default function MentorCreateCourseReviewPage() {
 
   const persistDraft = async () => {
     const payload = buildCreateCoursePayload(draft, false);
+    console.log("paaaayyy: ", payload)
     const nextDraft = {
       ...draft,
       course: payload.course,
@@ -172,7 +173,7 @@ export default function MentorCreateCourseReviewPage() {
       </Box>
 
       <Box sx={{ display: { xs: 'block', lg: 'none' }, mt: 2.5 }}>
-        <MentorCourseReviewActions onCreate={handleCreateCourse} creating={creating} />
+        <MentorCourseReviewActions checklist={checklist} onCreate={handleCreateCourse} creating={creating} />
       </Box>
 
       <MentorCourseCreateSuccessDialog
