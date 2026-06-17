@@ -104,24 +104,29 @@ function getCategoryChipStyle(category = '') {
 }
 
 function CourseThumbnail({ thumbnail, courseName }) {
+  const imageUrl = `http://localhost:5000${thumbnail}`;
+
   return (
     <Box
       sx={{
-        width: { xs: '100%', sm: 96 },
-        height: { xs: 120, sm: 72 },
+        width: { xs: '100%', sm: 112 },
+        height: { xs: 140, sm: 72 },
         borderRadius: '14px',
         flexShrink: 0,
         overflow: 'hidden',
         bgcolor: alpha(PRIMARY, 0.1),
-        backgroundImage: thumbnail ? `url(${thumbnail})` : 'none',
+        backgroundImage: imageUrl ? `url("${imageUrl}")` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         display: 'grid',
         placeItems: 'center',
       }}
     >
-      {!thumbnail && <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />}
-      {!thumbnail && courseName && (
+      {!imageUrl && (
+        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
+      )}
+
+      {!imageUrl && courseName && (
         <Typography sx={{ display: 'none' }}>{courseName}</Typography>
       )}
     </Box>
@@ -135,6 +140,7 @@ export default function MentorCourseDetailHeader({
   onPublishToggle,
   publishing = false,
 }) {
+  console.log(course)
   const theme = useTheme();
   const navigate = useNavigate();
   const statusChip = getStatusChip(course.IsPublished);
@@ -228,7 +234,7 @@ export default function MentorCourseDetailHeader({
                   lineHeight: 1.35,
                 }}
               >
-                {course.CourseName}
+                {course.CategoryName}
               </Typography>
               <Chip size="small" label={statusChip.label} sx={{ ...PILL_CHIP_SX, ...statusChip.sx }} />
             </Box>
@@ -251,7 +257,7 @@ export default function MentorCourseDetailHeader({
             )}
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 0.5 }}>
-              {course.CategoryDisplayName && (
+              {course.CategoryName && (
                 <Chip
                   size="small"
                   label={course.CategoryDisplayName}
@@ -279,6 +285,7 @@ export default function MentorCourseDetailHeader({
               alignSelf: { xs: 'stretch', md: 'flex-start' },
             }}
           >
+            {/* Button Edit Course */}
             <AppButton
               variant="outlined"
               startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
@@ -294,6 +301,10 @@ export default function MentorCourseDetailHeader({
             >
               Chỉnh sửa
             </AppButton>
+
+            {/* 
+            -------------Button Question Bank---------------
+             */}
             <AppButton
               variant="outlined"
               startIcon={<QuizOutlinedIcon sx={{ fontSize: 16 }} />}
@@ -315,6 +326,11 @@ export default function MentorCourseDetailHeader({
             >
               Ngân hàng câu hỏi
             </AppButton>
+
+            {/* 
+            ---------------Button set publish course--------------------
+            */}
+
             <AppButton
               startIcon={
                 isPublished ? (

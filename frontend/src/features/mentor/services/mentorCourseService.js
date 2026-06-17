@@ -450,8 +450,8 @@ export async function fetchMentorCourseDetail(courseId) {
     if (!res.success) {
       return ({
         success: false,
-        message: 'Lỗi FetchMentorCourseDetail(courseId)',
-        course: [],
+        message: res.message,
+        course: {},
       })
     }
     // console.table(res.data)
@@ -585,27 +585,42 @@ export async function updateCourseContent(courseId, paths) {
  */
 export async function updateCoursePublishStatus(courseId, isPublished) {
   // TODO: replace with real API
+
+  if (isPublished) {
+    // ____________Set PUBLISH__________
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/setPublic`)
+    const data = await response.json();
+    if (!data.success) return { ok: false, message: data.message };
+    return { ok: true, courseIdUpdate: data.courseIdUpdate }
+  }
+  if (!isPublished) {
+    // ___________Set DRAFT_____________
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/setDraft`)
+    const data = await response.json();
+    if (!data.success) return { ok: false, message: data.message };
+    return { ok: true, courseIdUpdate: data.courseIdUpdate }
+  }
   // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/publish`, {
-  //   method:  'PATCH',
+  //   method: 'PATCH',
   //   headers: { 'Content-Type': 'application/json', 'x-user-id': String(getUser()?.userId) },
-  //   body:    JSON.stringify({ isPublished }),
+  //   body: JSON.stringify({ isPublished }),
   // });
   // const data = await response.json();
   // if (!response.ok) return { ok: false, message: data.message };
   // return { ok: true, course: normalizeMentorCourseDetail(data.course) };
 
-  await delay(400);
-  const id = Number(courseId);
-  const raw = mentorCourseDetailById[id];
+  // await delay(400);
+  // const id = Number(courseId);
+  // const raw = mentorCourseDetailById[id];
 
-  if (!raw) {
-    return { ok: false, message: 'Không tìm thấy khóa học.' };
-  }
+  // if (!raw) {
+  //   return { ok: false, message: 'Không tìm thấy khóa học.' };
+  // }
 
-  const updated = { ...raw, IsPublished: Boolean(isPublished) };
-  mentorCourseDetailById[id] = updated;
+  // const updated = { ...raw, IsPublished: Boolean(isPublished) };
+  // mentorCourseDetailById[id] = updated;
 
-  return { ok: true, course: normalizeMentorCourseDetail(updated) };
+  // return { ok: true, course: normalizeMentorCourseDetail(updated) };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
