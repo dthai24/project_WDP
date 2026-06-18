@@ -46,7 +46,7 @@ export default function MentorLessonBlock({
 
   console.log("materials__", materials)
 
-  const materialCount = countLearningMaterials(node.Materials);
+  const materialCount = countLearningMaterials(materials);
   const canReorder = materialCount > 1 && !disabled;
 
   const [dragIndex, setDragIndex] = useState(null);
