@@ -48,8 +48,12 @@ export default function MentorChapterCard({
   quizSetupDisabled = false,
   quizSetupDisabledReason = '',
 }) {
-  const lessonCount = (path.nodes ?? []).length;
 
+
+  console.log("pathsssss", path)
+
+  const nodesNormal = (path.Nodes ?? path.nodes)
+  const lessonCount = (nodesNormal ?? []).length;
   return (
     <Box sx={chapterCardSx(expanded)} data-content-error={`chapter-${path.tempId}`}>
       <Box
@@ -157,7 +161,7 @@ export default function MentorChapterCard({
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0, mb: 1.5 }}>
-                {(path.nodes ?? []).map((node, nodeIndex) => (
+                {(nodesNormal ?? []).map((node, nodeIndex) => (
                   <MentorLessonBlock
                     key={node.tempId}
                     node={node}

@@ -87,7 +87,7 @@ export default function MentorCoursesPage() {
         // console.log("START FETCH MENTOR COURSES");
 
         const res = await fetchMentorCourses();
-
+        console.log(res)
         // console.log("MENTOR COURSES SERVICE RESPONSE:", res);
 
         if (!isMounted) return;

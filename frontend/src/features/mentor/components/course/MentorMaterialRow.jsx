@@ -81,6 +81,9 @@ export default function MentorMaterialRow({
   const placeholder = MATERIAL_URL_PLACEHOLDERS[material.MaterialType] ?? '';
   const urlLabel = MATERIAL_URL_LABELS[material.MaterialType] ?? 'Link';
 
+  console.log(material)
+
+
   return (
     <Box
       data-content-error={`material-${material.tempId}`}

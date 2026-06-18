@@ -78,7 +78,7 @@ const API_BASE = 'http://localhost:5000/api';
  */
 export async function fetchMentorCourses() {
   try {
-    const rawUser = sessionStorage.getItem("user");
+    const rawUser = localStorage.getItem("user");
 
     if (!rawUser) {
       return {
@@ -458,30 +458,31 @@ export async function fetchMentorCourseDetail(courseId) {
     return {
       success: true,
       message: 'Lấy course detail thành công',
-      course: res.data,
+      course: res.data[0],
     }
   } catch (error) {
-    return { success: false, message: 'Lỗi Server', course: [] }
+    return { success: false, message: 'Lỗi Server', course: {} }
   }
-
-  // TODO: replace with real API
-  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
-  //   headers: { 'x-user-id': String(getUser()?.userId) },
-  // });
-  // const data = await response.json();
-  // if (!response.ok) return { ok: false, message: data.message };
-  // return { ok: true, course: normalizeMentorCourseDetail(data.course) };
-
-  // await delay(350);
-  // const id = Number(courseId);
-  // const raw = mentorCourseDetailById[id];
-
-  // if (!raw) {
-  //   return { ok: false, message: 'Không tìm thấy khóa học.' };
-  // }
-
-  // return { ok: true, course: normalizeMentorCourseDetail(raw) };
 }
+
+// TODO: replace with real API
+// const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
+//   headers: { 'x-user-id': String(getUser()?.userId) },
+// });
+// const data = await response.json();
+// if (!response.ok) return { ok: false, message: data.message };
+// return { ok: true, course: normalizeMentorCourseDetail(data.course) };
+
+// await delay(350);
+// const id = Number(courseId);
+// const raw = mentorCourseDetailById[id];
+
+// if (!raw) {
+//   return { ok: false, message: 'Không tìm thấy khóa học.' };
+// }
+
+// return { ok: true, course: normalizeMentorCourseDetail(raw) };
+// }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CẬP NHẬT KHÓA HỌC
