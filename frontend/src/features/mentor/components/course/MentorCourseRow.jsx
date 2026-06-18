@@ -88,54 +88,7 @@ function getStatusChip(IsPublished) {
   };
 }
 
-function getLevelChipStyle(levelId) {
-  // beginner
-  if (levelId === 1) {
-    return {
-      bgcolor: 'rgba(56,189,248,0.12)',
-      color: '#0284C7',
-      border: '1px solid rgba(56,189,248,0.22)',
-    };
-  }
-  //elementary
-  if (levelId === 2) {
-    return {
-      bgcolor: 'rgba(56,189,248,0.12)',
-      color: '#0284C7',
-      border: '1px solid rgba(56,189,248,0.22)',
-    };
-  }
-  //intermediate
-  if (levelId === 3) {
-    return {
-      bgcolor: 'rgba(245,158,11,0.12)',
-      color: '#D97706',
-      border: '1px solid rgba(245,158,11,0.22)',
-    };
-  }
-  //advanced
-  if (levelId === 4) {
-    return {
-      bgcolor: 'rgba(234,88,12,0.12)',
-      color: '#EA580C',
-      border: '1px solid rgba(234,88,12,0.22)',
-    };
-  }
-  //if not receive value of levelId 
-  return { bgcolor: '#F1F5F9', color: '#64748B' };
-}
-
-function getCategoryChipStyle(categoryId) {
-
-  switch (Number(categoryId)) {
-    case 1: return { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' };
-    case 2: return { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' };
-    case 3: return { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' };
-    case 4: return { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' };
-    case 5: return { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' };
-  }
-  return { bgcolor: '#F1F5F9', color: '#64748B' };
-}
+import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -262,14 +215,14 @@ export default function MentorCourseRow({ course }) {
             <Chip
               size="small"
               label={course.CategoryDisplayName}
-              sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.CategoryId) }}
+              sx={{ ...PILL_CHIP_SX, ...resolveCategoryChipSx({ id: course.CategoryId, displayName: course.CategoryName }) }}
             />
           )}
           {course.LevelDisplayName && (
             <Chip
               size="small"
               label={course.LevelDisplayName}
-              sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.LevelId) }}
+              sx={{ ...PILL_CHIP_SX, ...resolveLevelChipSx({ id: course.LevelId, displayName: course.LevelName }) }}
             />
           )}
         </Box>

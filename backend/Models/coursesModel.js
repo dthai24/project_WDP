@@ -70,21 +70,6 @@ const getStudentCoursesList = async (filters, userId) => {
     const countResult = await request.query(countQuery);
     const totalCount = countResult.recordset[0].totalCount;
 
-    // Luôn kiểm tra trạng thái đăng ký
-    if (userId) {
-        if (!request.parameters.UserId) {
-            request.input('UserId', sql.Int, userId);
-        }
-    }
-    // Lọc theo trạng thái đã đăng ký hay chưa
-    if (status && userId) {
-        if (status === 'enrolled') {
-            baseQuery += ` AND EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
-        } else if (status === 'not_enrolled') {
-            baseQuery += ` AND NOT EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
-        }
-    }
-
     // Truy vấn dữ liệu chi tiết
     let selectQuery = `
         SELECT crs.CourseId, crs.CourseName, crs.Description, crs.CategoryId, crs.LevelId,

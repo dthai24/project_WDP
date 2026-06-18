@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTagsApi, savePreferencesApi } from '@/features/auth/services/authService';
+import { getPostLoginPath } from '@/features/auth/utils/authUtils';
 import Logo from '@/shared/ui/Logo';
 import { toast } from '@/shared/ui/Toast';
 
@@ -114,7 +115,7 @@ export default function SurveyPage() {
         const updatedUser = { ...user, isFirstLogin: false };
         sessionStorage.setItem('user', JSON.stringify(updatedUser));
         toast.success(data.message || 'Đã lưu sở thích thành công!');
-        navigate('/home');
+        navigate(getPostLoginPath(updatedUser, { isFirstLogin: false }));
         // Không reset — button vẫn disabled cho đến khi unmount
       } else {
         toast.error(data.message || 'Lưu sở thích thất bại. Vui lòng thử lại.');

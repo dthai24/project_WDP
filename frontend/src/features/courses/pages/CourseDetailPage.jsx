@@ -45,6 +45,9 @@ import CourseBookmarkButton from "@/features/courses/components/CourseBookmarkBu
 import useSavedCourses from "@/features/courses/hooks/useSavedCourses";
 import { buildCourseDetailPath, buildCourseListPath } from "@/features/courses/utils/courseListParams";
 import { getExtraCourseDetail } from "@/features/courses/data/courseDetailMock";
+import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
+import { enrollCourseApi } from '@/features/auth/services/authService';
+import { toast } from "@/shared/ui/Toast";
 
 const PRIMARY = "#0891B2";
 const PRIMARY_DARK = "#0E7490";
@@ -104,25 +107,6 @@ function getStatusChip(isEnrolled, progress) {
   if (progress >= 100) return { label: "Hoàn thành", sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" } };
   if (progress > 0) return { label: "Đang học", sx: { bgcolor: "rgba(8,145,178,0.12)", color: PRIMARY, border: "1px solid rgba(8,145,178,0.20)" } };
   return { label: "Đã đăng ký", sx: { bgcolor: "rgba(22,163,74,0.12)", color: "#16A34A", border: "1px solid rgba(22,163,74,0.20)" } };
-}
-
-function getLevelChipSx(level = "") {
-  const l = level.toLowerCase();
-  if (l.includes("cơ bản")) return { bgcolor: "rgba(56,189,248,0.12)", color: "#0284C7", border: "1px solid rgba(56,189,248,0.22)" };
-  if (l.includes("trung cấp")) return { bgcolor: "rgba(245,158,11,0.12)", color: "#D97706", border: "1px solid rgba(245,158,11,0.22)" };
-  if (l.includes("nâng cao")) return { bgcolor: "rgba(234,88,12,0.12)", color: ACCENT, border: "1px solid rgba(234,88,12,0.22)" };
-  return { bgcolor: "#F1F5F9", color: MUTED };
-}
-
-function getCategoryChipSx(category = "") {
-  const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
-    IELTS: { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    TOEIC: { bgcolor: "rgba(14,116,144,0.10)", color: PRIMARY_DARK },
-    "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
-    "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
-  };
-  return map[category] ?? { bgcolor: "#F1F5F9", color: MUTED };
 }
 
 function formatStudentCount(count) {
@@ -221,8 +205,12 @@ function CourseIntro({ course, isEnrolled }) {
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5 }}>
         <Chip label={statusChip.label} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }} />
-        {course.level && <Chip label={course.level} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getLevelChipSx(course.level) }} />}
-        {course.category && <Chip label={course.category} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getCategoryChipSx(course.category) }} />}
+        {course.level && (
+          <Chip label={course.level} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...resolveLevelChipSx({ displayName: course.level }) }} />
+        )}
+        {course.category && (
+          <Chip label={course.category} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...resolveCategoryChipSx({ displayName: course.category }, { withBorder: false }) }} />
+        )}
       </Box>
 
       <CourseMetaRow course={course} />
@@ -436,22 +424,19 @@ export default function CourseDetailPage() {
           }
           // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
           const mappedCourse = {
-            id: dbData.id || dbData.CourseId,
-            title: dbData.title || dbData.CourseName,
-            description: dbData.description || dbData.Description,
-            shortDescription: dbData.shortDescription || dbData.Description,
-            thumbnail: courseImage,
-            category: dbData.category || dbData.CategoryDisplayName || dbData.CategoryName,
-            level: dbData.level || dbData.LevelDisplayName || dbData.levelName,
-            instructor: dbData.instructor || "S.T.A.R Mentor Team",
-
-            // Xử lý biến bool cho IsEnrolled
-            isEnrolled: dbData.isEnrolled === 1 || dbData.isEnrolled === true || dbData.IsEnrolled === 1 || dbData.IsEnrolled === true,
-            progress: dbData.progress || dbData.Progress || 0,
-
-            lessonCount: dbData.lessonCount || dbData.TotalLessons || 0,
+            id: dbData.CourseId,
+            title: dbData.CourseName,
+            description: dbData.Description,
+            shortDescription: dbData.Description,
+            thumbnail: dbData.Thumbnail,
+            category: dbData.CategoryDisplayName,
+            level: dbData.LevelDisplayName,
+            instructor: dbData.InStructorName,
+            isEnrolled: Boolean(dbData.isEnrolled),
+            progress: dbData.progress,
+            lessonCount: dbData.TotalLessons || 0,
             stageCount: dbData.Paths ? dbData.Paths.length : 0,
-            materialCount: 0, // SQL chưa có biến đếm tài liệu nên mình tạm để 0
+            materialCount: 0,
             // Các trường không có trong DB thì điền số chung để không bị vỡ layout
             duration: "6 giờ",
             rating: 4.8,
@@ -508,7 +493,6 @@ export default function CourseDetailPage() {
 
       if (res && (res.success === true || res.ok === true)) {
         toast.success(`Đã đăng ký khóa "${course.title}" thành công!`);
-        // Đăng ký xong thì chuyển trạng thái trên giao diện thành Tiếp tục học luôn
         setCourse(prev => ({ ...prev, isEnrolled: true }));
       } else {
         toast.error(res?.message || 'Đăng ký thất bại. Vui lòng thử lại.');

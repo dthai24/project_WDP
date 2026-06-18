@@ -20,6 +20,7 @@ import AppButton from '@/shared/ui/AppButton';
 import MentorCourseMetricsInline from './MentorCourseMetricsInline';
 import { PRIMARY, TEXT, MUTED } from './mentorCourseCreateStyles';
 import { MENTOR_COURSE_DETAIL_TABS } from '@/features/mentor/utils/mentorCourseDetailUtils';
+import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
 const PILL_CHIP_SX = {
   borderRadius: '999px',
@@ -53,54 +54,6 @@ function getStatusChip(status) {
       border: '1px solid rgba(100,116,139,0.18)',
     },
   };
-}
-
-function getLevelChipStyle(level) {
-  //người mới bắt đầu
-  if (level === 'beginner') {
-    return {
-      bgcolor: 'rgba(56,189,248,0.12)',
-      color: '#0284C7',
-      border: '1px solid rgba(56,189,248,0.22)',
-    };
-  }
-  //cơ bản
-  if (level === 'elementary') {
-    return {
-      bgcolor: 'rgba(245,158,11,0.12)',
-      color: '#D97706',
-      border: '1px solid rgba(245,158,11,0.22)',
-    };
-  }
-  //trung cấp
-  if (level === 'intermediate') {
-    return {
-      bgcolor: 'rgba(234,88,12,0.12)',
-      color: '#EA580C',
-      border: '1px solid rgba(234,88,12,0.22)',
-    };
-  }
-  //cao cấp và phần còn lại =)) 
-  return { bgcolor: '#F1F5F9', color: '#64748B' };
-}
-
-function getCategoryChipStyle(category = '') {
-  switch (category.toLowerCase()) {
-    case 'business': return { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' };
-    case 'finance': return { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' };
-    case 'communication': return { bgcolor: 'rgba(236,72,153,0.10)', color: 'hsl(315, 76%, 43%)' };
-    case 'technology': return { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' };
-    case 'lifestyle': return { bgcolor: '#F1F5F9', color: '#64748B' };
-  }
-  return { bgcolor: '#F1F5F9', color: 'hsl(0, 87%, 34%)' }
-  // const map = {
-  //   'Giao tiếp': ,
-  //   IELTS: { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' },
-  //   TOEIC: { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' },
-  //   'Ngữ pháp': { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' },
-  //   'Phát âm': { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' },
-  // };
-  // return map[category] ?? { bgcolor: '#F1F5F9', color: '#64748B' };
 }
 
 function CourseThumbnail({ thumbnail, courseName }) {
@@ -261,14 +214,26 @@ export default function MentorCourseDetailHeader({
                 <Chip
                   size="small"
                   label={course.CategoryDisplayName}
-                  sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.CategoryName) }}
+                  sx={{
+                    ...PILL_CHIP_SX,
+                    ...resolveCategoryChipSx({
+                      id: course.CategoryId,
+                      displayName: course.CategoryDisplayName ?? course.CategoryName,
+                    }),
+                  }}
                 />
               )}
               {course.LevelDisplayName && (
                 <Chip
                   size="small"
                   label={course.LevelDisplayName}
-                  sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.levelName) }}
+                  sx={{
+                    ...PILL_CHIP_SX,
+                    ...resolveLevelChipSx({
+                      id: course.LevelId,
+                      displayName: course.LevelDisplayName ?? course.levelName,
+                    }),
+                  }}
                 />
               )}
             </Box>
