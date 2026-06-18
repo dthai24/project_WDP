@@ -45,6 +45,8 @@ import CourseBookmarkButton from "@/features/courses/components/CourseBookmarkBu
 import useSavedCourses from "@/features/courses/hooks/useSavedCourses";
 import { buildCourseDetailPath, buildCourseListPath } from "@/features/courses/utils/courseListParams";
 import { getExtraCourseDetail } from "@/features/courses/data/courseDetailMock";
+import { enrollCourseApi } from '@/features/auth/services/authService';
+import { toast } from "@/shared/ui/Toast";
 
 const PRIMARY = "#0891B2";
 const PRIMARY_DARK = "#0E7490";
@@ -436,22 +438,19 @@ export default function CourseDetailPage() {
           }
           // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
           const mappedCourse = {
-            id: dbData.id || dbData.CourseId,
-            title: dbData.title || dbData.CourseName,
-            description: dbData.description || dbData.Description,
-            shortDescription: dbData.shortDescription || dbData.Description,
-            thumbnail: courseImage,
-            category: dbData.category || dbData.CategoryDisplayName || dbData.CategoryName,
-            level: dbData.level || dbData.LevelDisplayName || dbData.levelName,
-            instructor: dbData.instructor || "S.T.A.R Mentor Team",
-
-            // Xử lý biến bool cho IsEnrolled
-            isEnrolled: dbData.isEnrolled === 1 || dbData.isEnrolled === true || dbData.IsEnrolled === 1 || dbData.IsEnrolled === true,
-            progress: dbData.progress || dbData.Progress || 0,
-
-            lessonCount: dbData.lessonCount || dbData.TotalLessons || 0,
+            id: dbData.CourseId,
+            title: dbData.CourseName,
+            description: dbData.Description,
+            shortDescription: dbData.Description,
+            thumbnail: dbData.Thumbnail,
+            category: dbData.CategoryDisplayName,
+            level: dbData.LevelDisplayName,
+            instructor: dbData.InStructorName,
+            isEnrolled: Boolean(dbData.isEnrolled),
+            progress: dbData.progress,
+            lessonCount: dbData.TotalLessons || 0,
             stageCount: dbData.Paths ? dbData.Paths.length : 0,
-            materialCount: 0, // SQL chưa có biến đếm tài liệu nên mình tạm để 0
+            materialCount: 0,
             // Các trường không có trong DB thì điền số chung để không bị vỡ layout
             duration: "6 giờ",
             rating: 4.8,
@@ -508,7 +507,6 @@ export default function CourseDetailPage() {
 
       if (res && (res.success === true || res.ok === true)) {
         toast.success(`Đã đăng ký khóa "${course.title}" thành công!`);
-        // Đăng ký xong thì chuyển trạng thái trên giao diện thành Tiếp tục học luôn
         setCourse(prev => ({ ...prev, isEnrolled: true }));
       } else {
         toast.error(res?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
