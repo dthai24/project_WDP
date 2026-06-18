@@ -40,8 +40,13 @@ export default function MentorLessonBlock({
   courseId = null,
   chapterId = null,
 }) {
-  const materials = filterLearningMaterials(node.materials ?? []);
-  const materialCount = countLearningMaterials(node.materials);
+  console.log("node", node)
+  const materials = filterLearningMaterials(node.Materials ?? node.materials ?? []);
+
+
+  console.log("materials__", materials)
+
+  const materialCount = countLearningMaterials(node.Materials);
   const canReorder = materialCount > 1 && !disabled;
 
   const [dragIndex, setDragIndex] = useState(null);

@@ -67,7 +67,7 @@ function updateNodeInPath(paths, pathTempId, nodeTempId, patch) {
     if (p.tempId !== pathTempId) return p;
     return {
       ...p,
-      nodes: (p.nodes ?? []).map((n) => (n.tempId === nodeTempId ? { ...n, ...patch } : n)),
+      Nodes: (p.Nodes ?? []).map((n) => (n.tempId === nodeTempId ? { ...n, ...patch } : n)),
     };
   });
 }
@@ -77,7 +77,7 @@ function updateMaterialInPath(paths, pathTempId, nodeTempId, materialTempId, pat
     if (p.tempId !== pathTempId) return p;
     return {
       ...p,
-      nodes: (p.nodes ?? []).map((n) => {
+      Nodes: (p.Nodes ?? []).map((n) => {
         if (n.tempId !== nodeTempId) return n;
         return {
           ...n,
@@ -160,7 +160,7 @@ export default function MentorEditCourseContentPage() {
         const result = await fetchMentorCourseDetail(courseId);
         if (cancelled) return;
 
-        if (!result.ok) {
+        if (!result.success) {
           toast.error('Không thể tải nội dung khóa học.');
           navigate(`/mentor/courses/${courseId}`, { replace: true });
           return;
@@ -170,7 +170,7 @@ export default function MentorEditCourseContentPage() {
           resolvedCoursePascal = courseDetailToEditCourse(result.course);
         }
         if (!resolvedPaths) {
-          resolvedPaths = mapDetailPathsToEditPaths(result.course.paths ?? []);
+          resolvedPaths = mapDetailPathsToEditPaths(result.course.Paths ?? []);
         }
       }
 
@@ -225,13 +225,13 @@ export default function MentorEditCourseContentPage() {
 
   const requestDeleteNode = (pathTempId, nodeTempId) => {
     const p = paths.find((x) => x.tempId === pathTempId);
-    const n = (p?.nodes ?? []).find((x) => x.tempId === nodeTempId);
+    const n = (p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
     setDeleteConfirm({ type: 'lesson', pathTempId, nodeTempId, label: String(n?.NodeName ?? '').trim() || 'Bài học này' });
   };
 
   const requestDeleteMaterial = (pathTempId, nodeTempId, materialTempId) => {
     const p = paths.find((x) => x.tempId === pathTempId);
-    const n = (p?.nodes ?? []).find((x) => x.tempId === nodeTempId);
+    const n = (p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
     const m = (n?.materials ?? []).find((x) => x.tempId === materialTempId);
     const title = String(m?.Title ?? '').trim();
     const typeLabel = MATERIAL_TYPE_LABELS[m?.MaterialType] ?? 'Học liệu';
@@ -242,7 +242,7 @@ export default function MentorEditCourseContentPage() {
     applyPaths((prev) =>
       prev.map((p) =>
         p.tempId === pathTempId
-          ? { ...p, nodes: (p.nodes ?? []).filter((n) => n.tempId !== nodeTempId) }
+          ? { ...p, Nodes: (p.Nodes ?? []).filter((n) => n.tempId !== nodeTempId) }
           : p,
       ),
     );
@@ -255,7 +255,7 @@ export default function MentorEditCourseContentPage() {
         if (p.tempId !== pathTempId) return p;
         return {
           ...p,
-          nodes: (p.nodes ?? []).map((n) =>
+          Nodes: (p.Nodes ?? []).map((n) =>
             n.tempId !== nodeTempId
               ? n
               : { ...n, materials: (n.materials ?? []).filter((m) => m.tempId !== materialTempId) },
@@ -277,7 +277,7 @@ export default function MentorEditCourseContentPage() {
     const newNode = createEmptyNode();
     applyPaths((prev) =>
       prev.map((p) =>
-        p.tempId === pathTempId ? { ...p, nodes: [...(p.nodes ?? []), newNode] } : p,
+        p.tempId === pathTempId ? { ...p, Nodes: [...(p.Nodes ?? []), newNode] } : p,
       ),
     );
     setExpandedNodes((prev) => ({ ...prev, [newNode.tempId]: true }));
@@ -293,9 +293,9 @@ export default function MentorEditCourseContentPage() {
         if (p.tempId !== pathTempId) return p;
         return {
           ...p,
-          nodes: (p.nodes ?? []).map((n) =>
+          Nodes: (p.Nodes ?? []).map((n) =>
             n.tempId === nodeTempId
-              ? { ...n, materials: [...(n.materials ?? []), newMaterial] }
+              ? { ...n, Materials: [...(n.Materials ?? []), newMaterial] }
               : n,
           ),
         };
@@ -312,10 +312,10 @@ export default function MentorEditCourseContentPage() {
         if (p.tempId !== pathTempId) return p;
         return {
           ...p,
-          nodes: (p.nodes ?? []).map((n) =>
+          Nodes: (p.Nodes ?? []).map((n) =>
             n.tempId !== nodeTempId
               ? n
-              : { ...n, materials: reorderMaterials(n.materials ?? [], fromIndex, toIndex) },
+              : { ...n, materials: reorderMaterials(n.Materials ?? [], fromIndex, toIndex) },
           ),
         };
       }),
@@ -389,8 +389,8 @@ export default function MentorEditCourseContentPage() {
         const next = { ...prev };
         paths.forEach((p) => {
           const pe = errors.paths?.[p.tempId];
-          if (!pe?.nodes) return;
-          (p.nodes ?? []).forEach((n) => { if (pe.nodes[n.tempId]) next[n.tempId] = true; });
+          if (!pe?.Nodes) return;
+          (p.Nodes ?? []).forEach((n) => { if (pe.Nodes[n.tempId]) next[n.tempId] = true; });
         });
         return next;
       });

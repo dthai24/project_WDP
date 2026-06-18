@@ -78,7 +78,7 @@ export default function MentorCourseDetailPage() {
       setCourse(null);
       setError(result.message ?? 'Không tìm thấy khóa học.');
     } else {
-      setCourse(result.course[0]);
+      setCourse(result.course);
     }
 
     setLoading(false);
@@ -101,10 +101,13 @@ export default function MentorCourseDetailPage() {
 
   const renderActiveTabPanel = () => {
     switch (activeTab) {
+      // ------Course-------
       case MENTOR_COURSE_DETAIL_TABS.COURSE:
         return <MentorCourseOverviewTab course={course} />;
+      // ---------Content-----------
       case MENTOR_COURSE_DETAIL_TABS.CONTENT:
         return <MentorCourseContentTab course={course} />;
+      // ---------Students-----------
       case MENTOR_COURSE_DETAIL_TABS.STUDENTS:
         return <MentorCourseStudentsTab courseId={course.CourseId} />;
       default:
