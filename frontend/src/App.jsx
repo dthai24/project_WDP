@@ -51,8 +51,8 @@ import {
 } from '@/shared/routing/routeAccess';
 
 export default function App() {
+  console.log("App.jsx: App component is rendering");
   return (
-    <BrowserRouter>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -193,6 +193,5 @@ export default function App() {
 
         <Route path="*" element={<AppRootRedirect />} />
       </Routes>
-    </BrowserRouter>
   );
 }

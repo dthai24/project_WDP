@@ -23,6 +23,7 @@ function InfoRow({ label, value }) {
 
 export default function MentorCourseOverviewTab({ course }) {
   const isPublished = Number(course.IsPublished) === 1;
+  const thumbnail = `http://localhost:5000${course.Thumbnail}`
 
   return (
     <Box sx={CREATE_CARD_SX}>
@@ -63,7 +64,7 @@ export default function MentorCourseOverviewTab({ course }) {
           {course.Thumbnail ? (
             <Box
               component="img"
-              src={course.Thumbnail}
+              src={thumbnail}
               alt={course.CourseName}
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
@@ -84,13 +85,13 @@ export default function MentorCourseOverviewTab({ course }) {
           >
             <InfoRow label="Danh mục" value={course.CategoryDisplayName} />
             <InfoRow label="Trình độ" value={course.LevelDisplayName} />
-            <InfoRow label="Giảng viên" value={course.InstructorName} />
+            <InfoRow label="Giảng viên" value={course.InStructorName} />
             <InfoRow
               label="Trạng thái"
               value={isPublished ? 'Đã xuất bản' : 'Bản nháp'}
             />
-            <InfoRow label="Ngày tạo" value={formatMentorCourseDate(course.CreatedAt)} />
-            <InfoRow label="Cập nhật gần nhất" value={formatMentorCourseDate(course.UpdatedAt)} />
+            <InfoRow label="Ngày tạo" value={formatMentorCourseDate(course.CourseCreateAt)} />
+            <InfoRow label="Cập nhật gần nhất" value={formatMentorCourseDate(course.CourseUpdateAt)} />
           </Box>
         </Box>
       </Box>

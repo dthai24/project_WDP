@@ -38,7 +38,7 @@ export default function MentorCourseMetricsInline({ course }) {
     {
       icon: MenuBookRoundedIcon,
       label: 'Bài học',
-      value: course.totalLessons ?? 0,
+      value: course.TotalLessons ?? 0,
       iconColor: '#0E7490',
     },
     {

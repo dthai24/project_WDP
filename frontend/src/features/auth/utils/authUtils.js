@@ -1,6 +1,6 @@
 export function getUser() {
   try {
-    return JSON.parse(sessionStorage.getItem("user")) || {};
+    return JSON.parse(localStorage.getItem("user")) || {};
   } catch {
     return {};
   }
@@ -63,7 +63,7 @@ export const ROLE_DEFAULT_PATHS = {
 };
 
 export function isAuthenticatedUser(user = getUser()) {
-  return Boolean(user && Object.keys(user).length > 0 && sessionStorage.getItem("user"));
+  return Boolean(user && Object.keys(user).length > 0 && localStorage.getItem("user"));
 }
 
 /** Đích điều hướng sau đăng nhập / hoàn tất survey — theo role. */
