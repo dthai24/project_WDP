@@ -25,7 +25,7 @@ import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined
 import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
-const heroImg = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80';
+import heroImg from '@/asset/image/herosection.png';
 // Thêm import
 import { getTopCoursesApi } from '@/features/auth/services/authService';
 
