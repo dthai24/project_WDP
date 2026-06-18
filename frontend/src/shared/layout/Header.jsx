@@ -27,8 +27,8 @@ import {
   buildCourseListSearchParams,
   parseCourseListParams,
 } from "@/features/courses/utils/courseListParams";
-import { useAuth } from '@/context/AuthContext'; 
-import { Link } from 'react-router-dom';
+import { getPrimaryRoleLabel } from "@/features/auth/utils/authUtils";
+import { useAuth } from '@/context/AuthContext';
 const MENU_CLOSE_DELAY = 200;
 const KEYWORD_DEBOUNCE_MS = 300;
 const PROJECT_NAME = "S.T.A.R Learning Path";
@@ -98,7 +98,12 @@ export default function Header({
   const isMyCoursesPage = location.pathname === "/my-courses";
   const isMentorCoursesPage = location.pathname === "/mentor/courses";
   const isMentorQuestionBanksPage = location.pathname === "/mentor/question-banks";
-  const isMentorListSearchPage = isMentorCoursesPage || isMentorQuestionBanksPage;
+  const isAdminAccountsPage = location.pathname === "/admin/accounts";
+  const isAdminCategoriesPage = location.pathname === "/admin/categories";
+  const isAdminLevelsPage = location.pathname === "/admin/levels";
+  const isAdminCatalogPage = isAdminCategoriesPage || isAdminLevelsPage;
+  const isMentorListSearchPage =
+    isMentorCoursesPage || isMentorQuestionBanksPage || isAdminAccountsPage || isAdminCatalogPage;
   const isCourseListSearchPage = isCoursePage || isMyCoursesPage || isMentorListSearchPage;
   const [search, setSearch] = useState("");
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
@@ -209,7 +214,7 @@ export default function Header({
 
   const displayName = user?.fullName || "Phúc Nguyễn";
   const displayEmail = user?.email || "";
-  const displayRole = user?.role || "Học viên";
+  const displayRole = getPrimaryRoleLabel(user);
 
   const applyCourseKeyword = (value) => {
     const current = parseCourseListParams(searchParams);
@@ -329,11 +334,17 @@ export default function Header({
                 ? "Tìm khóa học trong ngân hàng câu hỏi..."
                 : isMentorCoursesPage
                   ? "Tìm khóa học..."
-                  : isMyCoursesPage
-                    ? "Tìm trong khóa học của tôi..."
-                    : isCoursePage
-                      ? "Tìm khóa học..."
-                      : "Tìm kiếm khóa học, lộ trình..."
+                  : isAdminAccountsPage
+                    ? "Tìm theo tên, email hoặc username..."
+                    : isAdminCategoriesPage
+                      ? "Tìm theo tên danh mục..."
+                      : isAdminLevelsPage
+                        ? "Tìm theo tên trình độ..."
+                        : isMyCoursesPage
+                          ? "Tìm trong khóa học của tôi..."
+                          : isCoursePage
+                            ? "Tìm khóa học..."
+                            : "Tìm kiếm khóa học, lộ trình..."
             }
             sx={{ width: "100%", maxWidth: 480 }}
           />

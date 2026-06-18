@@ -1,0 +1,38 @@
+export const adminLevelsSeed = [
+  {
+    id: 1,
+    levelName: 'co-ban',
+    displayName: 'Cơ bản',
+    sortOrder: 1,
+    colorCode: 'sky',
+    status: 'ACTIVE',
+    createdAt: '2026-03-01T08:00:00.000Z',
+  },
+  {
+    id: 2,
+    levelName: 'trung-cap',
+    displayName: 'Trung cấp',
+    sortOrder: 2,
+    colorCode: 'amber',
+    status: 'ACTIVE',
+    createdAt: '2026-03-02T08:00:00.000Z',
+  },
+  {
+    id: 3,
+    levelName: 'nang-cao',
+    displayName: 'Nâng cao',
+    sortOrder: 3,
+    colorCode: 'orange',
+    status: 'ACTIVE',
+    createdAt: '2026-03-03T08:00:00.000Z',
+  },
+  {
+    id: 4,
+    levelName: 'chuyen-sau',
+    displayName: 'Chuyên sâu',
+    sortOrder: 4,
+    colorCode: 'violet',
+    status: 'INACTIVE',
+    createdAt: '2026-03-04T08:00:00.000Z',
+  },
+];
