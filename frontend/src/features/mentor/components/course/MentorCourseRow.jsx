@@ -90,7 +90,30 @@ function getStatusChip(IsPublished) {
 
 import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+function getImageUrl(thumbnail) {
+  if (!thumbnail) return '';
+
+  const value = String(thumbnail).trim();
+
+  // Trường hợp ảnh đã là URL đầy đủ hoặc base64/blob
+  if (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:image') ||
+    value.startsWith('blob:')
+  ) {
+    return value;
+  }
+
+  // Trường hợp DB lưu: /assets/avatars/courses/course_avt_76.jpg
+  return `${API_URL}${value}`;
+}
+
 function CourseThumbnail({ thumbnail, courseName }) {
+  const imageUrl = getImageUrl(thumbnail);
+
   return (
     <Box
       sx={{
@@ -100,17 +123,18 @@ function CourseThumbnail({ thumbnail, courseName }) {
         flexShrink: 0,
         overflow: 'hidden',
         bgcolor: alpha(PRIMARY, 0.1),
-        backgroundImage: thumbnail ? `url(${thumbnail})` : 'none',
+        backgroundImage: imageUrl ? `url("${imageUrl}")` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         display: 'grid',
         placeItems: 'center',
       }}
     >
-      {!thumbnail && (
+      {!imageUrl && (
         <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
       )}
-      {!thumbnail && courseName && (
+
+      {!imageUrl && courseName && (
         <Typography sx={{ display: 'none' }}>{courseName}</Typography>
       )}
     </Box>
@@ -151,7 +175,7 @@ export default function MentorCourseRow({ course }) {
         gap: { xs: 1.75, md: 2.5 },
       }}
     >
-      <CourseThumbnail thumbnail={course.Thumbnail} courseName={course.courseName} />
+      <CourseThumbnail thumbnail={course.Thumbnail} courseName={course.CourseName} />
 
       <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
         <MuiLink

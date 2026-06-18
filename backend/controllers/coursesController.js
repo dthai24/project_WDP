@@ -42,12 +42,14 @@ const getMyCourses = async (req, res) => {
       });
     }
 
+
     let courses;
     if (roleName.toLowerCase() === 'student') {
       courses = await courseModel.getMyEnrolledCourses(userId, filterStatus);
     } else {
       courses = await courseModel.getCoursesByUserRole(userId, roleName);
     }
+
     return res.status(200).json({
       success: true,
       message: `Lấy khóa học của ${roleName} thành công`,
@@ -68,29 +70,29 @@ const getInformationCourse = async (req, res) => {
   try {
     const courseId = req.params.courseId;
     const tab = req.query.tab;
-    //valid courseId (req.params.courseId) and tab (req.query.tab)
     if (!courseId) {
       return res.status(400).json({
         success: false,
         message: 'Thiếu courseId',
-        data: [],
+        data: {},
       })
     } else if (!tab) {
       return res.status(400).json({
         success: false,
         message: 'Thiếu hoặc sai query tab trên url',
-        data: []
+        data: {}
       })
     }
     // Tab=course
     if (tab.toLowerCase() === 'course') {
+      const userId = req.headers['x-user-id'] || null;
       const courses = await courseModel.getCourseById(courseId);
       //404
       if (courses.length === 0) {
         return res.status(404).json({
           success: false,
           message: 'Không tìm thấy khóa học này trong Databse',
-          data: []
+          data: {}
         })
       }
       //200
@@ -100,12 +102,12 @@ const getInformationCourse = async (req, res) => {
         data: courses
       })
     }
+    return res.status(400).json({
+      success: false,
+      message: `Chưa hỗ trợ lấy dữ liệu cho tab: ${tab}`,
+      data: []
+    });
 
-    // tab = content
-    // if (tab.toLowerCase() === 'content') {
-    //   const content
-    // }
-    // tab = students
   } catch (error) {
     console.error(error.message);
     return res.status(500).json({
@@ -238,9 +240,17 @@ const createFinalCourse = async (req, res) => {
     const newCoursePaths = req.body.paths;
     const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
 
-
+    return res.status(201).json({
+      success: true,
+      message: 'Tạo khóa học hoàn chỉnh thành công!',
+      data: { courseId: newCourseId }
+    });
   } catch (error) {
-    console.error(error.message)
+    console.error(error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi tạo khóa học'
+    });
   }
 }
 const enrollCourse = async (req, res) => {
