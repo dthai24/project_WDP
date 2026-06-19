@@ -58,47 +58,7 @@ const BORDER = "rgba(8,145,178,0.09)";
 const DIVIDER = "rgba(8,145,178,0.10)";
 const STICKY_TOP = 76;
 
-/* ─── Mock data khóa học liên quan (tạm thời giữ vì chưa có API cho phần rìa này) ─── */
-const RELATED_COURSES = [
-  {
-    courseId: 7,
-    courseName: "IELTS Speaking Part 2 & 3",
-    description: "Xây dựng câu trả lời mạch lạc, tự tin giao tiếp trong phòng thi IELTS.",
-    category: "IELTS",
-    level: "Trung cấp",
-    totalLessons: 11,
-    totalNodes: 4,
-    totalMaterials: 14,
-    progressPercentage: 0,
-    isEnrolled: false,
-  },
-  {
-    courseId: 8,
-    courseName: "Giao tiếp đời sống hàng ngày",
-    description: "Tình huống mua sắm, du lịch, hỏi đường và trò chuyện xã giao tự nhiên.",
-    category: "Giao tiếp",
-    level: "Cơ bản",
-    totalLessons: 9,
-    totalNodes: 3,
-    totalMaterials: 8,
-    progressPercentage: 100,
-    isEnrolled: true,
-    thumbnail: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80",
-  },
-  {
-    courseId: 6,
-    courseName: "Phát âm chuẩn & Intonation",
-    description: "Luyện âm cuối, nối âm, trọng âm và ngữ điệu tự nhiên qua bài tập nghe-nhại.",
-    category: "Phát âm",
-    level: "Trung cấp",
-    totalLessons: 10,
-    totalNodes: 3,
-    totalMaterials: 9,
-    progressPercentage: 0,
-    isEnrolled: false,
-    thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80",
-  },
-];
+const RELATED_COURSES = [];
 
 /* ─── Helpers (Giữ nguyên 100%) ─── */
 
@@ -394,7 +354,6 @@ function RelatedCoursesSection() {
   );
 }
 
-/* ─── Main Page (ĐÃ VIẾT LẠI CODE LẤY API ĐƠN GIẢN) ─── */
 
 export default function CourseDetailPage() {
   const { id } = useParams();
@@ -404,8 +363,6 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 2. Tự động gọi API lấy data từ Database khi mở trang
-  // 2. Tự động gọi API lấy data từ Database khi mở trang
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
@@ -422,7 +379,6 @@ export default function CourseDetailPage() {
           if (courseImage === 'CHƯA FIX LỖI ẢNH') {
             courseImage = null;
           }
-          // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
           const mappedCourse = {
             id: dbData.CourseId,
             title: dbData.CourseName,
