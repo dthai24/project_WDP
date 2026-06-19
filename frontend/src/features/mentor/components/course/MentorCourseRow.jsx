@@ -37,6 +37,9 @@ import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import { Link } from 'react-router-dom';
 import {
+  countCourseLessons,
+  countCourseMaterials,
+  countCourseStudents,
   formatMentorCourseDate,
   truncateText,
 } from '@/features/mentor/utils/mentorCourseUtils';
@@ -156,10 +159,9 @@ export default function MentorCourseRow({ course }) {
   const theme = useTheme();
   const statusChip = getStatusChip(course.IsPublished);
   const detailPath = `/mentor/courses/${course.CourseId}?tab=course`;
-  const totalChapters = course.Paths.length;
-  const totalLessons = 0;
-  const totalMaterials = course.totalMaterials ?? 0;
-  console.log(totalLessons)
+  const totalChapters = (course.Paths ?? course.paths ?? []).length;
+  const totalLessons = countCourseLessons(course);
+  const totalMaterials = countCourseMaterials(course);
   return (
     <Box
       sx={{
@@ -231,7 +233,7 @@ export default function MentorCourseRow({ course }) {
           <MetricItem
             icon={PeopleOutlineRoundedIcon}
             label="Học viên"
-            value={course.studentCount ?? 0}
+            value={countCourseStudents(course)}
             iconColor={METRIC_COLORS.students}
           />
           <MetricItem
@@ -249,7 +251,7 @@ export default function MentorCourseRow({ course }) {
           <MetricItem
             icon={MenuBookRoundedIcon}
             label="Bài"
-            value={totalLessons.length}
+            value={totalLessons}
             iconColor={METRIC_COLORS.lessons}
           />
           <MetricItem

@@ -22,8 +22,9 @@ export function countLearningMaterials(materials = []) {
 }
 
 export function countMaterialsInPath(path = {}) {
-  return (path.Nodes ?? []).reduce(
-    (sum, node) => sum + countLearningMaterials(node.Materials),
+  const nodes = path.nodes ?? path.Nodes ?? [];
+  return nodes.reduce(
+    (sum, node) => sum + countLearningMaterials(node.materials ?? node.Materials),
     0,
   );
 }
@@ -154,7 +155,7 @@ export function stripNonLearningMaterials(paths) {
     ...path,
     nodes: (path.nodes ?? []).map((node) => ({
       ...node,
-      materials: filterLearningMaterials(node.materials),
+      materials: filterLearningMaterials(node.materials ?? node.Materials),
     })),
   }));
 }
@@ -223,17 +224,26 @@ export function isSimpleUrl(value) {
 }
 
 export function withNormalizedOrders(paths) {
-  return (paths ?? []).map((path) => ({
-    ...path,
-    nodes: (path.nodes ?? []).map((node, nodeIndex) => ({
-      ...node,
-      NodeOrder: nodeIndex + 1,
-      materials: (node.materials ?? []).map((material, materialIndex) => ({
-        ...material,
-        MaterialOrder: materialIndex + 1,
-      })),
-    })),
-  }));
+  return (paths ?? []).map((path) => {
+    const rawNodes = path.nodes ?? path.Nodes ?? [];
+    const normalizedNodes = rawNodes.map((node, nodeIndex) => {
+      const rawMaterials = node.materials ?? node.Materials ?? [];
+      const { Materials: _materials, ...nodeRest } = node;
+      return {
+        ...nodeRest,
+        NodeOrder: nodeIndex + 1,
+        materials: filterLearningMaterials(rawMaterials).map((material, materialIndex) => ({
+          ...material,
+          MaterialOrder: materialIndex + 1,
+        })),
+      };
+    });
+    const { Nodes: _nodes, ...pathRest } = path;
+    return {
+      ...pathRest,
+      nodes: normalizedNodes,
+    };
+  });
 }
 
 export function reorderMaterials(materials, fromIndex, toIndex) {

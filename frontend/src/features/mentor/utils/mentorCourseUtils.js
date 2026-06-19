@@ -1,6 +1,7 @@
 /**
  * Normalize raw course records from API (PascalCase) or mock (camelCase).
  */
+import { countMaterialsInPath } from './mentorCourseContentUtils';
 export function normalizeMentorCourse(raw = {}) {
   const isPublished = raw.isPublished ?? raw.IsPublished;
   let status = raw.status;
@@ -14,9 +15,9 @@ export function normalizeMentorCourse(raw = {}) {
     description: raw.description ?? raw.Description ?? '',
     thumbnail: raw.thumbnail ?? raw.Thumbnail ?? null,
     categoryId: raw.categoryId ?? raw.CategoryId ?? null,
-    categoryName: raw.categoryName ?? raw.category ?? raw.CategoryName ?? '',
+    categoryName: raw.categoryName ?? raw.category ?? raw.CategoryName ?? raw.CategoryDisplayName ?? '',
     levelId: raw.levelId ?? raw.LevelId ?? null,
-    levelName: raw.levelName ?? raw.level ?? raw.LevelName ?? '',
+    levelName: raw.levelName ?? raw.level ?? raw.LevelName ?? raw.LevelDisplayName ?? '',
     instructorId: raw.instructorId ?? raw.InstructorId ?? null,
     instructorName: raw.instructorName ?? raw.instructor ?? raw.InstructorName ?? '',
     rating: raw.rating ?? raw.Rating ?? null,
@@ -25,9 +26,99 @@ export function normalizeMentorCourse(raw = {}) {
     totalMaterials: raw.totalMaterials ?? raw.TotalMaterials ?? 0,
     studentCount: raw.studentCount ?? raw.StudentCount ?? 0,
     status,
+    isPublished: isPublished === true || isPublished === 1,
     createdAt: raw.createdAt ?? raw.CreatedAt ?? null,
     updatedAt: raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt ?? null,
+    paths: raw.paths ?? raw.Paths ?? [],
   };
+}
+
+function courseIsPublished(course) {
+  if (course?.status === 'published') return true;
+  if (course?.status === 'draft') return false;
+  const value = course?.IsPublished ?? course?.isPublished;
+  return value === true || value === 1;
+}
+
+function getCourseCategoryId(course) {
+  return course?.CategoryId ?? course?.categoryId ?? null;
+}
+
+function getCourseLevelId(course) {
+  return course?.LevelId ?? course?.levelId ?? null;
+}
+
+function getCourseName(course) {
+  return course?.CourseName ?? course?.courseName ?? '';
+}
+
+function getCourseRating(course) {
+  const value = course?.Rating ?? course?.rating;
+  if (value == null || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function getCourseStudentCount(course) {
+  return Number(course?.StudentCount ?? course?.studentCount ?? 0) || 0;
+}
+
+/** Số học viên đã đăng ký — hỗ trợ PascalCase/camelCase từ API. */
+export function countCourseStudents(course = {}) {
+  return getCourseStudentCount(course);
+}
+
+function getCourseTimestamp(course, kind = 'updated') {
+  const raw =
+    kind === 'created'
+      ? course?.CreatedAt ?? course?.createdAt
+      : course?.UpdatedAt ?? course?.updatedAt ?? course?.CreatedAt ?? course?.createdAt;
+  const time = raw ? new Date(raw).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
+}
+
+function getCourseSearchHaystack(course) {
+  return [
+    course?.CourseName,
+    course?.courseName,
+    course?.Description,
+    course?.description,
+    course?.CategoryDisplayName,
+    course?.CategoryName,
+    course?.categoryName,
+    course?.LevelDisplayName,
+    course?.levelName,
+    course?.LevelName,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+/** Đếm bài học (nodes) từ cây Paths — hỗ trợ PascalCase/camelCase từ API. */
+export function countCourseLessons(course = {}) {
+  const paths = course.Paths ?? course.paths ?? [];
+  const fromPaths = paths.reduce(
+    (sum, path) => sum + (path.Nodes ?? path.nodes ?? []).length,
+    0
+  );
+  if (fromPaths > 0) return fromPaths;
+
+  const fromDb = Number(course.TotalLessons ?? course.totalLessons ?? 0);
+  return Number.isFinite(fromDb) ? fromDb : 0;
+}
+
+/** Đếm học liệu (VIDEO/TEXT/DOC) từ cây Paths — hỗ trợ PascalCase/camelCase từ API. */
+export function countCourseMaterials(course = {}) {
+  const paths = course.Paths ?? course.paths ?? [];
+  const fromPaths = paths.reduce(
+    (sum, path) => sum + countMaterialsInPath(path),
+    0
+  );
+  if (fromPaths > 0) return fromPaths;
+
+  const fromDb = Number(course.TotalMaterials ?? course.totalMaterials ?? 0);
+  return Number.isFinite(fromDb) ? fromDb : 0;
 }
 
 export function isMentorCoursePublished(course) {
@@ -58,35 +149,32 @@ export function filterAndSortMentorCourses(courses, query = {}) {
   } = query;
   const keyword = q.trim().toLowerCase();
 
-  // return true => course is retained
-  // return false => course is removed 
-  let result = courses.filter((course) => {
-    if (status === 'published' && !course.IsPublished) return false;
-    if (status === 'draft' && course.IsPublished) return false;
+  let result = (courses ?? []).filter((course) => {
+    if (status === 'published' && !courseIsPublished(course)) return false;
+    if (status === 'draft' && courseIsPublished(course)) return false;
+
     if (category !== 'all') {
+      const categoryId = getCourseCategoryId(course);
       const categoryMatch =
-        String(course.CategoryId) === String(category) ||
-        course.CategoryName === category;
+        String(categoryId) === String(category) ||
+        course?.CategoryName === category ||
+        course?.CategoryDisplayName === category ||
+        course?.categoryName === category;
       if (!categoryMatch) return false;
     }
 
     if (level !== 'all') {
+      const levelId = getCourseLevelId(course);
       const levelMatch =
-        String(course.LevelId) === String(level) || course.levelName === level;
+        String(levelId) === String(level) ||
+        course?.levelName === level ||
+        course?.LevelDisplayName === level ||
+        course?.LevelName === level;
       if (!levelMatch) return false;
     }
 
-    if (keyword) {
-      const haystack = [
-        course.courseName,
-        course.description,
-        course.categoryName,
-        course.levelName,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      if (!haystack.includes(keyword)) return false;
+    if (keyword && !getCourseSearchHaystack(course).includes(keyword)) {
+      return false;
     }
 
     return true;
@@ -94,23 +182,23 @@ export function filterAndSortMentorCourses(courses, query = {}) {
 
   result = [...result].sort((a, b) => {
     if (sort === 'created_desc') {
-      return (
-        new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
-      );
+      return getCourseTimestamp(b, 'created') - getCourseTimestamp(a, 'created');
     }
     if (sort === 'students_desc') {
-      return (b.studentCount ?? 0) - (a.studentCount ?? 0);
+      return getCourseStudentCount(b) - getCourseStudentCount(a);
     }
     if (sort === 'rating_desc') {
-      return (b.rating ?? 0) - (a.rating ?? 0);
+      const ratingA = getCourseRating(a);
+      const ratingB = getCourseRating(b);
+      if (ratingA == null && ratingB == null) return 0;
+      if (ratingA == null) return 1;
+      if (ratingB == null) return -1;
+      return ratingB - ratingA;
     }
     if (sort === 'name_asc') {
-      return (a.courseName ?? '').localeCompare(b.courseName ?? '', 'vi');
+      return getCourseName(a).localeCompare(getCourseName(b), 'vi', { sensitivity: 'base' });
     }
-    return (
-      new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() -
-      new Date(a.updatedAt ?? a.createdAt ?? 0).getTime()
-    );
+    return getCourseTimestamp(b, 'updated') - getCourseTimestamp(a, 'updated');
   });
 
   return result;

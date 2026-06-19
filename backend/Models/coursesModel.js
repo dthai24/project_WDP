@@ -187,6 +187,8 @@ const getMentorCourses = async (userId) => {
 
     const result = await request.query(`
         Select crs.CourseId, crs.CourseName, crs.TotalLessons as TotalLessons, crs.Description, crs.CategoryId, crs.LevelId,
+               crs.Rating,
+               (SELECT COUNT(*) FROM User_Courses uc WHERE uc.CourseId = crs.CourseId) AS StudentCount,
                Levels.LevelName as levelName, Levels.Displayname as LevelDisplayName, Levels.SortOrder as LevelSortOrder,
                crs.Thumbnail, crs.IsPublished, crs.CreatedAt, crs.UpdatedAt,
                cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName

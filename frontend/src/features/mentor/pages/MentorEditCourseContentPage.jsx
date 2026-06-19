@@ -63,26 +63,28 @@ function updatePathInList(paths, pathTempId, patch) {
 }
 
 function updateNodeInPath(paths, pathTempId, nodeTempId, patch) {
-  return paths.map((p) => {
-    if (p.tempId !== pathTempId) return p;
+  return paths.map((path) => {
+    if (path.tempId !== pathTempId) return path;
     return {
-      ...p,
-      Nodes: (p.Nodes ?? []).map((n) => (n.tempId === nodeTempId ? { ...n, ...patch } : n)),
+      ...path,
+      nodes: (path.nodes ?? path.Nodes ?? []).map((node) =>
+        node.tempId === nodeTempId ? { ...node, ...patch } : node,
+      ),
     };
   });
 }
 
 function updateMaterialInPath(paths, pathTempId, nodeTempId, materialTempId, patch) {
-  return paths.map((p) => {
-    if (p.tempId !== pathTempId) return p;
+  return paths.map((path) => {
+    if (path.tempId !== pathTempId) return path;
     return {
-      ...p,
-      Nodes: (p.Nodes ?? []).map((n) => {
-        if (n.tempId !== nodeTempId) return n;
+      ...path,
+      nodes: (path.nodes ?? path.Nodes ?? []).map((node) => {
+        if (node.tempId !== nodeTempId) return node;
         return {
-          ...n,
-          materials: (n.materials ?? []).map((m) =>
-            m.tempId === materialTempId ? { ...m, ...patch } : m,
+          ...node,
+          materials: (node.materials ?? node.Materials ?? []).map((material) =>
+            material.tempId === materialTempId ? { ...material, ...patch } : material,
           ),
         };
       }),
@@ -170,7 +172,9 @@ export default function MentorEditCourseContentPage() {
           resolvedCoursePascal = courseDetailToEditCourse(result.course);
         }
         if (!resolvedPaths) {
-          resolvedPaths = mapDetailPathsToEditPaths(result.course.Paths ?? []);
+          resolvedPaths = mapDetailPathsToEditPaths(
+            result.course.Paths ?? result.course.paths ?? [],
+          );
         }
       }
 
@@ -225,14 +229,14 @@ export default function MentorEditCourseContentPage() {
 
   const requestDeleteNode = (pathTempId, nodeTempId) => {
     const p = paths.find((x) => x.tempId === pathTempId);
-    const n = (p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
+    const n = (p?.nodes ?? p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
     setDeleteConfirm({ type: 'lesson', pathTempId, nodeTempId, label: String(n?.NodeName ?? '').trim() || 'Bài học này' });
   };
 
   const requestDeleteMaterial = (pathTempId, nodeTempId, materialTempId) => {
     const p = paths.find((x) => x.tempId === pathTempId);
-    const n = (p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
-    const m = (n?.materials ?? []).find((x) => x.tempId === materialTempId);
+    const n = (p?.nodes ?? p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
+    const m = (n?.materials ?? n?.Materials ?? []).find((x) => x.tempId === materialTempId);
     const title = String(m?.Title ?? '').trim();
     const typeLabel = MATERIAL_TYPE_LABELS[m?.MaterialType] ?? 'Học liệu';
     setDeleteConfirm({ type: 'material', pathTempId, nodeTempId, materialTempId, label: title || `${typeLabel} này` });
@@ -242,7 +246,10 @@ export default function MentorEditCourseContentPage() {
     applyPaths((prev) =>
       prev.map((p) =>
         p.tempId === pathTempId
-          ? { ...p, Nodes: (p.Nodes ?? []).filter((n) => n.tempId !== nodeTempId) }
+          ? {
+              ...p,
+              nodes: (p.nodes ?? p.Nodes ?? []).filter((n) => n.tempId !== nodeTempId),
+            }
           : p,
       ),
     );
@@ -255,10 +262,15 @@ export default function MentorEditCourseContentPage() {
         if (p.tempId !== pathTempId) return p;
         return {
           ...p,
-          Nodes: (p.Nodes ?? []).map((n) =>
+          nodes: (p.nodes ?? p.Nodes ?? []).map((n) =>
             n.tempId !== nodeTempId
               ? n
-              : { ...n, materials: (n.materials ?? []).filter((m) => m.tempId !== materialTempId) },
+              : {
+                  ...n,
+                  materials: (n.materials ?? n.Materials ?? []).filter(
+                    (m) => m.tempId !== materialTempId,
+                  ),
+                },
           ),
         };
       }),
@@ -277,7 +289,9 @@ export default function MentorEditCourseContentPage() {
     const newNode = createEmptyNode();
     applyPaths((prev) =>
       prev.map((p) =>
-        p.tempId === pathTempId ? { ...p, Nodes: [...(p.Nodes ?? []), newNode] } : p,
+        p.tempId === pathTempId
+          ? { ...p, nodes: [...(p.nodes ?? p.Nodes ?? []), newNode] }
+          : p,
       ),
     );
     setExpandedNodes((prev) => ({ ...prev, [newNode.tempId]: true }));
@@ -293,9 +307,9 @@ export default function MentorEditCourseContentPage() {
         if (p.tempId !== pathTempId) return p;
         return {
           ...p,
-          Nodes: (p.Nodes ?? []).map((n) =>
+          nodes: (p.nodes ?? p.Nodes ?? []).map((n) =>
             n.tempId === nodeTempId
-              ? { ...n, Materials: [...(n.Materials ?? []), newMaterial] }
+              ? { ...n, materials: [...(n.materials ?? n.Materials ?? []), newMaterial] }
               : n,
           ),
         };
@@ -312,10 +326,17 @@ export default function MentorEditCourseContentPage() {
         if (p.tempId !== pathTempId) return p;
         return {
           ...p,
-          Nodes: (p.Nodes ?? []).map((n) =>
+          nodes: (p.nodes ?? p.Nodes ?? []).map((n) =>
             n.tempId !== nodeTempId
               ? n
-              : { ...n, materials: reorderMaterials(n.Materials ?? [], fromIndex, toIndex) },
+              : {
+                  ...n,
+                  materials: reorderMaterials(
+                    n.materials ?? n.Materials ?? [],
+                    fromIndex,
+                    toIndex,
+                  ),
+                },
           ),
         };
       }),
@@ -389,8 +410,8 @@ export default function MentorEditCourseContentPage() {
         const next = { ...prev };
         paths.forEach((p) => {
           const pe = errors.paths?.[p.tempId];
-          if (!pe?.Nodes) return;
-          (p.Nodes ?? []).forEach((n) => { if (pe.Nodes[n.tempId]) next[n.tempId] = true; });
+          if (!pe?.nodes) return;
+          (p.nodes ?? []).forEach((n) => { if (pe.nodes[n.tempId]) next[n.tempId] = true; });
         });
         return next;
       });
