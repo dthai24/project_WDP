@@ -86,7 +86,6 @@ export default function CourseListPage() {
     setSearchParams(next, { replace: options.replace ?? true });
   };
 
-  // Lấy danh mục dữ liệu cấu trúc lọc (Categories & Levels) khi load trang
   useEffect(() => {
     async function fetchLookups() {
       try {
@@ -99,14 +98,14 @@ export default function CourseListPage() {
 
         if (catData.success) {
           setCategoriesList(catData.data.map(c => ({
-            value: String(c.CategoryId || c.categoryId || ''),
-            label: c.DisplayName || c.CategoryName || 'Lỗi hiển thị'
+            value: String(c.categoryId),
+            label: c.displayName
           })));
         }
         if (levData.success) {
           setLevelsList(levData.data.map(l => ({
-            value: String(l.LevelId || l.levelId || ''),
-            label: l.DisplayName || l.LevelName || 'Lỗi hiển thị'
+            value: String(l.levelId),
+            label: l.displayName
           })));
         }
       } catch (error) {
@@ -165,10 +164,7 @@ export default function CourseListPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleGoToDetail = (course) => {
-    const cId = course.CourseId || course.courseId || course.id;
-    navigate(buildCourseDetailPath(cId, searchParams, `${location.pathname}${location.search}`));
-  };
+
   const handleContinueLearning = (course) => {
     const cId = course.CourseId || course.courseId || course.id;
     navigate(`/my-courses/${cId}/learn`);
@@ -250,7 +246,6 @@ export default function CourseListPage() {
                   course={course}
                   isSaved={isSaved(course.CourseId)}
                   onToggleSave={() => toggleSave(course.CourseId)}
-                  onEnroll={handleGoToDetail}
                   onContinueLearning={handleContinueLearning}
                 />
               </Grid>

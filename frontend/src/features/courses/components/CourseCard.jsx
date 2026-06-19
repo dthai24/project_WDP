@@ -127,7 +127,12 @@ function getMyCoursesStatusChip(progress) {
 /* ─── sub-components ─── */
 
 function CourseThumbnail({ thumbnail }) {
+  // console.log(thum)
   const theme = useTheme();
+  const BASE_IMG_URL = "http://localhost:5000"; // Sau này deploy web chỉ cần đổi link ở đây
+
+// Áp dụng vào CSS
+
   return (
     <Box
       sx={{
@@ -135,7 +140,7 @@ function CourseThumbnail({ thumbnail }) {
         aspectRatio: "16 / 9",
         overflow: "hidden",
         bgcolor: alpha(theme.palette.primary.main, 0.06),
-        backgroundImage: thumbnail ? `url(${thumbnail})` : "none",
+        backgroundImage: thumbnail ? `url(${BASE_IMG_URL}${thumbnail})` : "none",
         backgroundSize: "cover",
         backgroundPosition: "center",
         display: "flex",
@@ -236,8 +241,11 @@ export default function CourseCard({
         },
       }}
     >
-      {/* ── Hình thu nhỏ ── */}
+      {/* 
+      ================= Hình thu nhỏ ==========================================
+       */}
       <CourseThumbnail thumbnail={data.thumbnail} />
+      {/* {console.log("huhusdfasdfdasf", data.thumbnail)} */}
 
       {/* ── Nội dung thẻ ── */}
       <CardContent
