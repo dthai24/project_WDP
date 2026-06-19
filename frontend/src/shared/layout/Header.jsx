@@ -27,6 +27,10 @@ import {
   buildCourseListSearchParams,
   parseCourseListParams,
 } from "@/features/courses/utils/courseListParams";
+import {
+  buildMentorCourseListSearchParams,
+  parseMentorCourseListParams,
+} from "@/features/mentor/utils/mentorCourseListParams";
 import { getPrimaryRoleLabel } from "@/features/auth/utils/authUtils";
 import { useAuth } from '@/context/AuthContext';
 const MENU_CLOSE_DELAY = 200;
@@ -226,17 +230,27 @@ export default function Header({
   };
 
   const applyMentorCourseKeyword = (value) => {
-    const next = new URLSearchParams(searchParams);
-    const trimmed = value.trim();
-    if (trimmed) next.set("q", trimmed);
-    else next.delete("q");
-    next.delete("page");
+    const current = parseMentorCourseListParams(searchParams);
+    const next = buildMentorCourseListSearchParams(
+      { ...current, q: value.trim(), page: 1 },
+      searchParams,
+    );
     setSearchParams(next, { replace: true });
   };
 
   const applySearchKeyword = (value) => {
     if (isMentorListSearchPage) applyMentorCourseKeyword(value);
     else applyCourseKeyword(value);
+  };
+
+  const handleSearchClear = () => {
+    if (keywordDebounceRef.current) {
+      clearTimeout(keywordDebounceRef.current);
+    }
+    setSearch("");
+    if (isCourseListSearchPage) {
+      applySearchKeyword("");
+    }
   };
 
   const handleSearchChange = (event) => {
@@ -328,12 +342,13 @@ export default function Header({
             value={search}
             onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
-            showClear={!isCourseListSearchPage}
+            onClear={handleSearchClear}
+            showClear={isCourseListSearchPage}
             placeholder={
               isMentorQuestionBanksPage
                 ? "Tìm khóa học trong ngân hàng câu hỏi..."
                 : isMentorCoursesPage
-                  ? "Tìm khóa học..."
+                  ? "Tìm theo tên khóa học..."
                   : isAdminAccountsPage
                     ? "Tìm theo tên, email hoặc username..."
                     : isAdminCategoriesPage
