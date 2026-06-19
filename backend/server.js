@@ -21,7 +21,8 @@ const PORT = process.env.PORT || 5000;
 
 // ---- Middlewares ----
 app.use(cors());
-app.use(express.json());
+// Base64 ảnh 5MB (~6.7MB trong JSON) — limit phải lớn hơn ngưỡng validate thumbnail
+app.use(express.json({ limit: '8mb' }));
 
 // ---- Static: serve uploaded avatars ----
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

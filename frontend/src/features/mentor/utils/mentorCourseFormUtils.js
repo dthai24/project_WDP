@@ -1,4 +1,4 @@
-import { isValidThumbnailValue } from './mentorCourseImageUtils';
+import { isValidThumbnailValue, validateThumbnailDataUrl } from './mentorCourseImageUtils';
 
 //Max char user can input in course's description
 export const MENTOR_COURSE_DESCRIPTION_MAX = 250;
@@ -66,8 +66,13 @@ export function validateMentorCourseForm(form) {
   // Thumbnail
   if (!thumbnail) {
     errors.Thumbnail = 'Vui lòng tải lên ảnh khóa học của bạn.';
-  } else if (!isValidThumbnailValue(thumbnail)) {
-    errors.Thumbnail = 'Ảnh không hợp lệ.';
+  } else {
+    const thumbnailError = validateThumbnailDataUrl(thumbnail);
+    if (thumbnailError) {
+      errors.Thumbnail = thumbnailError;
+    } else if (!isValidThumbnailValue(thumbnail)) {
+      errors.Thumbnail = 'Ảnh không hợp lệ.';
+    }
   }
 
   return errors;

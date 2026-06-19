@@ -1,4 +1,5 @@
 const courseModel = require('../models/coursesModel');
+const { validateCourseThumbnailDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
 const getStudentCourses = async (req, res) => {
   try {
@@ -192,6 +193,10 @@ const saveCourseDraftStepOne = async (req, res) => {
       TotalLessons: 0,
     };
 
+    if (courseData.Thumbnail) {
+      validateCourseThumbnailDataUrl(courseData.Thumbnail);
+    }
+
     const newCourse = await courseModel.createCourseStepOne(courseData);
 
     return res.status(201).json({
@@ -202,9 +207,12 @@ const saveCourseDraftStepOne = async (req, res) => {
   } catch (error) {
     console.error('saveCourseDraftStepOne error:', error);
 
-    return res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
       success: false,
-      message: 'Step 1: Lỗi khi lưu khóa học.',
+      message: statusCode === 400
+        ? error.message
+        : 'Step 1: Lỗi khi lưu khóa học.',
     });
   }
 };
@@ -238,6 +246,11 @@ const createFinalCourse = async (req, res) => {
   try {
     const newCourse = req.body.course;
     const newCoursePaths = req.body.paths;
+
+    if (newCourse?.Thumbnail) {
+      validateCourseThumbnailDataUrl(newCourse.Thumbnail);
+    }
+
     const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
 
     return res.status(201).json({
@@ -247,9 +260,12 @@ const createFinalCourse = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    return res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
       success: false,
-      message: 'Lỗi server khi tạo khóa học'
+      message: statusCode === 400
+        ? error.message
+        : 'Lỗi server khi tạo khóa học',
     });
   }
 }

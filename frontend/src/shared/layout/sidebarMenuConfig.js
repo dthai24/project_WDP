@@ -26,9 +26,14 @@ export function isAdminLevelsActive(pathname) {
 export function isMentorQuestionBankActive(pathname) {
   return (
     pathname === "/mentor/question-banks" ||
-    pathname === "/mentor/question-banks/create" ||
+    pathname.startsWith("/mentor/question-banks/") ||
     /^\/mentor\/courses\/\d+\/questions/.test(pathname)
   );
+}
+
+export function isMentorCoursesActive(pathname) {
+  if (isMentorQuestionBankActive(pathname)) return false;
+  return pathname === "/mentor/courses" || pathname.startsWith("/mentor/courses/");
 }
 
 export function getStudentMenuItems(user) {
@@ -72,6 +77,7 @@ export function getMentorMenuItems() {
       to: "/mentor/courses",
       Icon: MenuBookRoundedIcon,
       disabled: false,
+      isActiveMatch: isMentorCoursesActive,
     },
     {
       id: "mentor-question-banks",

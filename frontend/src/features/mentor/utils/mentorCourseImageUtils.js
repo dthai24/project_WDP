@@ -1,5 +1,19 @@
 export const MAX_THUMBNAIL_FILE_SIZE = 5 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const THUMBNAIL_DATA_URL_PATTERN = /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i;
+const THUMBNAIL_SIZE_ERROR = 'Ảnh không được lớn hơn 5MB.';
+const THUMBNAIL_FORMAT_ERROR = 'Ảnh không đúng định dạng (JPG, PNG hoặc WEBP).';
+
+/** Ước lượng kích thước binary từ chuỗi data URL base64. */
+export function getDataUrlByteSize(dataUrl) {
+  const trimmed = String(dataUrl ?? '').trim();
+  const match = trimmed.match(THUMBNAIL_DATA_URL_PATTERN);
+  if (!match) return null;
+
+  const base64Data = match[2];
+  const padding = base64Data.endsWith('==') ? 2 : base64Data.endsWith('=') ? 1 : 0;
+  return Math.floor((base64Data.length * 3) / 4) - padding;
+}
 
 export function validateImageFile(file) {
   if (!file) return 'Không tìm thấy file ảnh.';
@@ -7,8 +21,36 @@ export function validateImageFile(file) {
     return 'Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP.';
   }
   if (file.size > MAX_THUMBNAIL_FILE_SIZE) {
-    return 'Ảnh không được lớn hơn 5MB.';
+    return THUMBNAIL_SIZE_ERROR;
   }
+  return null;
+}
+
+/** Validate thumbnail data URL (sau crop hoặc trước submit). */
+export function validateThumbnailDataUrl(dataUrl) {
+  const trimmed = String(dataUrl ?? '').trim();
+  if (!trimmed) return null;
+
+  if (!trimmed.startsWith('data:image/')) {
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol === 'http:' || url.protocol === 'https:') return null;
+    } catch {
+      // fall through
+    }
+    if (trimmed.startsWith('/assets/')) return null;
+    return THUMBNAIL_FORMAT_ERROR;
+  }
+
+  if (!THUMBNAIL_DATA_URL_PATTERN.test(trimmed)) {
+    return THUMBNAIL_FORMAT_ERROR;
+  }
+
+  const byteSize = getDataUrlByteSize(trimmed);
+  if (byteSize != null && byteSize > MAX_THUMBNAIL_FILE_SIZE) {
+    return THUMBNAIL_SIZE_ERROR;
+  }
+
   return null;
 }
 
@@ -103,12 +145,5 @@ export async function getCroppedImageDataUrl(
 export function isValidThumbnailValue(value) {
   const trimmed = String(value ?? '').trim();
   if (!trimmed) return true;
-  if (trimmed.startsWith('data:image/')) return true;
-
-  try {
-    const url = new URL(trimmed);
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
+  return validateThumbnailDataUrl(trimmed) == null;
 }

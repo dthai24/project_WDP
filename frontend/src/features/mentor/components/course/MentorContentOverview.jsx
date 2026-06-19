@@ -172,15 +172,15 @@ export default function MentorContentOverview({
       }}
     >
       <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.75, mb: 1.75 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+        <Box sx={{ mb: 1.75 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, mb: canConfigureQuiz ? 1.25 : 0 }}>
             <InsightsRoundedIcon sx={{ fontSize: 20, color: PRIMARY, flexShrink: 0 }} />
             <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEXT }}>
               Tổng quan nội dung
             </Typography>
           </Box>
           {canConfigureQuiz ? (
-            <MentorChapterCardMenu variant="course" onQuizSetup={openCourseQuizSetup} />
+            <MentorChapterCardMenu variant="courseButton" onQuizSetup={openCourseQuizSetup} />
           ) : null}
         </Box>
 
@@ -237,6 +237,7 @@ export default function MentorContentOverview({
                     }
                     trailing={
                       <MentorChapterCardMenu
+                        variant="button"
                         quizSetupDisabled={!canConfigureQuiz}
                         quizSetupDisabledReason={
                           canConfigureQuiz ? '' : 'Lưu khóa học trước khi thiết lập kiểm tra'

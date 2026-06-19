@@ -15,15 +15,31 @@ const editKey = (courseId) => `mentor_course_edit_draft_${courseId}`;
 export function mapDetailPathsToEditPaths(detailPaths = []) {
   return stripNonLearningMaterials(
     (detailPaths ?? []).map((path) => ({
-      ...path,
+      PathId: path.PathId ?? path.pathId ?? null,
+      PathName: path.PathName ?? path.pathName ?? '',
+      Description: path.Description ?? path.description ?? '',
+      Order: path.Order ?? path.order,
       tempId: createTempId('path'),
-      nodes: (path.nodes ?? []).map((node) => ({
-        ...node,
+      nodes: (path.nodes ?? path.Nodes ?? []).map((node) => ({
+        NodeId: node.NodeId ?? node.nodeId ?? null,
+        NodeName: node.NodeName ?? node.nodeName ?? '',
+        NodeOrder: node.NodeOrder ?? node.nodeOrder ?? 0,
+        Description: node.Description ?? node.description ?? '',
         tempId: createTempId('node'),
-        materials: filterLearningMaterials(node.materials ?? []).map((material) => ({
-          ...material,
-          tempId: createTempId('material'),
-        })),
+        materials: filterLearningMaterials(node.materials ?? node.Materials ?? []).map(
+          (material) => ({
+            MaterialId: material.MaterialId ?? material.materialId ?? null,
+            MaterialType: material.MaterialType ?? material.materialType ?? 'VIDEO',
+            Title: material.Title ?? material.title ?? '',
+            MaterialUrl: material.MaterialUrl ?? material.materialUrl ?? '',
+            Content: material.Content ?? material.content ?? '',
+            MaterialOrder: material.MaterialOrder ?? material.materialOrder ?? 0,
+            SourceType: material.SourceType ?? material.sourceType,
+            EmbedUrl: material.EmbedUrl ?? material.embedUrl,
+            FileName: material.FileName ?? material.fileName,
+            tempId: createTempId('material'),
+          }),
+        ),
       })),
     })),
   );

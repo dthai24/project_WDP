@@ -88,7 +88,7 @@ function updateNodeInPath(paths, pathTempId, nodeTempId, patch) {
     if (path.tempId !== pathTempId) return path;
     return {
       ...path,
-      nodes: (path.nodes ?? []).map((node) =>
+      nodes: (path.nodes ?? path.Nodes ?? []).map((node) =>
         node.tempId === nodeTempId ? { ...node, ...patch } : node,
       ),
     };
@@ -100,11 +100,11 @@ function updateMaterialInPath(paths, pathTempId, nodeTempId, materialTempId, pat
     if (path.tempId !== pathTempId) return path;
     return {
       ...path,
-      nodes: (path.nodes ?? []).map((node) => {
+      nodes: (path.nodes ?? path.Nodes ?? []).map((node) => {
         if (node.tempId !== nodeTempId) return node;
         return {
           ...node,
-          materials: (node.materials ?? []).map((material) =>
+          materials: (node.materials ?? node.Materials ?? []).map((material) =>
             material.tempId === materialTempId ? { ...material, ...patch } : material,
           ),
         };

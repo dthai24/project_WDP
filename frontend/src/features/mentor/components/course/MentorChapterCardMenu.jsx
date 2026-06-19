@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { IconButton, Menu, MenuItem, Tooltip, Typography, alpha, useTheme } from '@mui/material';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
+import AppButton from '@/shared/ui/AppButton';
 import { ICON_BTN_SX } from './mentorCourseContentStyles';
 import { PRIMARY } from './mentorCourseCreateStyles';
 
@@ -28,8 +29,94 @@ export default function MentorChapterCardMenu({
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const isCourseVariant = variant === 'course';
+  const isButtonVariant = variant === 'button' || variant === 'courseButton';
+  const buttonLabel =
+    variant === 'courseButton'
+      ? 'Thiết lập bài kiểm tra toàn khóa học'
+      : 'Thêm bài test';
   const menuLabel = isCourseVariant ? 'Thiết lập kiểm tra toàn khóa' : 'Thiết lập kiểm tra';
   const ariaLabel = isCourseVariant ? 'Tùy chọn khóa học' : 'Tùy chọn chương';
+
+  const handleQuizSetup = () => {
+    handleClose();
+    onQuizSetup?.();
+  };
+
+  const handleQuizSetupClick = (event) => {
+    event.stopPropagation();
+    if (disabled || quizSetupDisabled) return;
+    onQuizSetup?.();
+  };
+
+  if (isButtonVariant) {
+    const isCourseButton = variant === 'courseButton';
+    const quizButton = (
+      <AppButton
+        variant={isCourseButton ? 'contained' : 'outlined'}
+        fullWidth={isCourseButton}
+        onClick={handleQuizSetupClick}
+        disabled={disabled || quizSetupDisabled}
+        startIcon={
+          <QuizRoundedIcon sx={{ fontSize: isCourseButton ? 20 : 15 }} />
+        }
+        sx={
+          isCourseButton
+            ? {
+                width: '100%',
+                minHeight: 48,
+                px: 2,
+                py: 1.25,
+                fontSize: 14,
+                fontWeight: 800,
+                borderRadius: '14px',
+                bgcolor: '#7C3AED',
+                color: '#fff',
+                boxShadow: '0 8px 20px rgba(124,58,237,0.22)',
+                whiteSpace: 'normal',
+                lineHeight: 1.35,
+                textAlign: 'left',
+                justifyContent: 'flex-start',
+                '&:hover': {
+                  bgcolor: '#6D28D9',
+                  boxShadow: '0 10px 24px rgba(124,58,237,0.28)',
+                },
+                '& .MuiButton-startIcon': {
+                  mr: 1.25,
+                  ml: 0,
+                },
+              }
+            : {
+                flexShrink: 0,
+                height: 28,
+                minHeight: 28,
+                minWidth: 0,
+                px: 1,
+                fontSize: 11.5,
+                fontWeight: 700,
+                borderRadius: '999px',
+                borderColor: 'rgba(124,58,237,0.28)',
+                color: '#7C3AED',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.25,
+                '&:hover': {
+                  borderColor: '#7C3AED',
+                  bgcolor: 'rgba(124,58,237,0.06)',
+                },
+              }
+        }
+      >
+        {buttonLabel}
+      </AppButton>
+    );
+
+    return quizSetupDisabled && quizSetupDisabledReason ? (
+      <Tooltip title={quizSetupDisabledReason}>
+        <span>{quizButton}</span>
+      </Tooltip>
+    ) : (
+      quizButton
+    );
+  }
 
   const handleOpen = (event) => {
     event.stopPropagation();
@@ -38,11 +125,6 @@ export default function MentorChapterCardMenu({
   };
 
   const handleClose = () => setAnchorEl(null);
-
-  const handleQuizSetup = () => {
-    handleClose();
-    onQuizSetup?.();
-  };
 
   const menuButton = (
     <IconButton
