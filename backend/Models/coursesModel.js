@@ -204,7 +204,6 @@ const getMentorCourses = async (userId) => {
 // 4. API DÀNH CHO HỌC VIÊN (STUDENT) & ĐĂNG KÝ
 // ==========================================
 
-// Lấy danh sách khóa học của học viên (ĐÃ FIX: Đổi EnrolledAt -> EnrollmentDate)
 const getStudentCourses = async (userId, filterStatus = 'all') => {
     const request = new sql.Request();
     request.input('userId', sql.Int, userId);
@@ -237,11 +236,15 @@ const getMyEnrolledCourses = async (userId, filterStatus = 'all') => {
     request.input('UserId', sql.Int, userId);
 
     let query = `
-        SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail, 
-               uc.ProgressPercentage, uc.EnrollmentDate
-        FROM User_Courses uc
-        INNER JOIN Courses crs ON uc.CourseId = crs.CourseId
-        WHERE uc.UserId = @UserId
+      SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail, 
+       uc.ProgressPercentage as progress, uc.EnrollmentDate,
+       cate.CategoryName, cate.DisplayName as CategoryDisplayName,
+       lv.LevelName as levelName, lv.DisplayName as LevelDisplayName
+FROM User_Courses uc
+INNER JOIN Courses crs ON uc.CourseId = crs.CourseId
+LEFT JOIN Categories cate ON crs.CategoryId = cate.CategoryId
+LEFT JOIN Levels lv ON crs.LevelId = lv.LevelId
+WHERE uc.UserId = @UserId
     `;
 
     if (filterStatus === 'learning') {

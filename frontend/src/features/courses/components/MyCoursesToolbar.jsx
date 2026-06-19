@@ -175,10 +175,9 @@ function CompactMultiSelect({ icon, value = [], onChange, options, placeholder, 
         onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
-        slotProps={{
-          paper: { sx: getMenuPaperSx(theme) },
-          list: { dense: true, sx: { py: 0.5 } },
-        }}
+        // Fix: Sử dụng PaperProps và MenuListProps thay cho slotProps để tương thích tốt với MUI v5
+        PaperProps={{ sx: getMenuPaperSx(theme) }}
+        MenuListProps={{ dense: true, sx: { py: 0.5 } }}
       >
         {options.map((opt) => (
           <FilterMenuItem
@@ -215,10 +214,9 @@ function CompactSelect({ icon, value, onChange, options, iconColor = ICON }) {
         onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
-        slotProps={{
-          paper: { sx: getMenuPaperSx(theme) },
-          list: { dense: true, sx: { py: 0.5 } },
-        }}
+        // Fix: Sử dụng PaperProps và MenuListProps thay cho slotProps để tương thích tốt với MUI v5
+        PaperProps={{ sx: getMenuPaperSx(theme) }}
+        MenuListProps={{ dense: true, sx: { py: 0.5 } }}
       >
         {options.map((opt) => (
           <FilterMenuItem
