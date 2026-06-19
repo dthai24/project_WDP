@@ -1,0 +1,125 @@
+.roadmapList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.roadmapItem {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  box-shadow: var(--card-shadow);
+}
+
+.roadmapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.roadmapTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.roadmapSubtitle {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.roadmapProgress {
+  text-align: right;
+}
+
+.progressPercent {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.stages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg);
+  transition: all 0.2s;
+}
+
+.stage:hover {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.stageIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.completed {
+  background: rgba(35, 172, 56, 0.15);
+  color: #23ac38;
+}
+
+.inProgress {
+  background: rgba(37, 99, 235, 0.15);
+  color: #2563eb;
+}
+
+.locked {
+  background: var(--bg);
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.stageInfo {
+  flex: 1;
+}
+
+.stageName {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.stageWords {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.stageStatus {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.statusCompleted {
+  background: rgba(35, 172, 56, 0.15);
+  color: #23ac38;
+}
+
+.statusProgress {
+  background: rgba(37, 99, 235, 0.15);
+  color: #2563eb;
+}
+
+.statusLocked {
+  background: var(--bg);
+  color: var(--muted);
+}
