@@ -87,7 +87,7 @@ const getInformationCourse = async (req, res) => {
     // Tab=course
     if (tab.toLowerCase() === 'course') {
       const userId = req.headers['x-user-id'] || null;
-      const courses = await courseModel.getCourseById(courseId);
+      const courses = await courseModel.getCourseById(courseId, userId);
       //404
       if (courses.length === 0) {
         return res.status(404).json({
