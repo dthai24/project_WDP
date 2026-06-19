@@ -199,6 +199,7 @@ export default function CourseCard({
   // Khởi tạo các biến logic
   const isCatalog = variant === "catalog";
   const isMyCourses = variant === "myCourses";
+  const data = normalizeCourse(course);
   const statusChip = isMyCourses
     ? getMyCoursesStatusChip(data.progressPercentage)
     : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
