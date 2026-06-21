@@ -396,5 +396,7 @@ module.exports = {
   getStudentCourses,
   enrollCourse,
   getLearningPath,
-  updateProgress
+  updateProgress,
+  getFeaturedCourses,
+  getFeaturedPaths
 };

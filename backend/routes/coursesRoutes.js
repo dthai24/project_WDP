@@ -9,7 +9,9 @@ const {
     getStudentCourses,
     enrollCourse,
     getLearningPath,
-    updateProgress
+    updateProgress,
+    getFeaturedCourses,
+    getFeaturedPaths
 } = require('../controllers/coursesController');
 
 
@@ -32,6 +34,10 @@ router.get('/top', (req, res) => {
 });
 
 // GET /api/courses
+// lay top hoc vien
+router.get('/featured', getFeaturedCourses);
+// lay top rating
+router.get('/featured-paths', getFeaturedPaths);
 // Lấy tất cả khóa học ngoài trang tổng (Catalog)
 router.get('/student', optionalAuth, getStudentCourses);
 
