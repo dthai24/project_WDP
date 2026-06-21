@@ -63,9 +63,12 @@ export const registerApi = (formData) => apiAuthFetch('/register', formData);
 
 export const verifyOtpApi = (email, otpCode) => apiAuthFetch('/verify-otp', { email, otpCode });
 
-export const getTagsApi = () => apiGet('/auth/tags');
+export const getCategoriesApi = () => apiGet('/categories');
 
-export const savePreferencesApi = (userId, tagIds) => apiAuthFetch('/save-preferences', { userId, tagIds });
+export const getLevelsApi = () => apiGet('/levels');
+
+export const saveOnboardingApi = (userId, categoryId, levelId, goal) =>
+  apiAuthFetch('/onboarding', { userId, categoryId, levelId, goal });
 
 export const forgotPasswordApi = (email) => apiAuthFetch('/forgot-password', { email });
 

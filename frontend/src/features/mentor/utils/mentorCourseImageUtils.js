@@ -147,3 +147,21 @@ export function isValidThumbnailValue(value) {
   if (!trimmed) return true;
   return validateThumbnailDataUrl(trimmed) == null;
 }
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+export function resolveCourseThumbnailUrl(thumbnail) {
+  if (!thumbnail) return '';
+
+  const value = String(thumbnail).trim();
+  if (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:image') ||
+    value.startsWith('blob:')
+  ) {
+    return value;
+  }
+
+  return `${API_URL}${value.startsWith('/') ? value : `/${value}`}`;
+}

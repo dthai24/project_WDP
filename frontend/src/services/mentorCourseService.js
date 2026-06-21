@@ -1,4 +1,4 @@
-import { mentorCoursesMock } from '../data/mentorCoursesMock';
+//import { mentorCoursesMock } from '../data/mentorCoursesMock';
 import { mentorCourseDetailById } from '../data/mentorCourseDetailMock';
 import { mentorCourseStudentsByCourseId } from '../data/mentorCourseStudentsMock';
 import { normalizeMentorCourse } from '../utils/mentorCourseUtils';
