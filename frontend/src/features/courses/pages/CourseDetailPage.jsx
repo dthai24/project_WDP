@@ -205,7 +205,7 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
   return (
     <Box sx={{ position: sticky ? { md: "sticky" } : "static", top: sticky ? { md: STICKY_TOP } : "auto", width: "100%", flexShrink: 0 }}>
       <Box sx={{ bgcolor: "#fff", border: `1px solid ${BORDER}`, borderRadius: "20px", boxShadow: "0 8px 32px rgba(8,145,178,0.10)", overflow: "hidden" }}>
-        <Box sx={{ aspectRatio: "16 / 9", bgcolor: alpha(PRIMARY, 0.06), backgroundImage: course.thumbnail ? `url(${course.thumbnail})` : "none", backgroundSize: "cover", backgroundPosition: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box sx={{ aspectRatio: "16 / 9", bgcolor: alpha(PRIMARY, 0.06), backgroundImage: course.thumbnail ? `url(http://localhost:5000${course.thumbnail})` : "none", backgroundSize: "cover", backgroundPosition: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {!course.thumbnail && (
             <Box sx={{ width: 64, height: 64, borderRadius: "50%", bgcolor: alpha(PRIMARY, 0.1), display: "flex", alignItems: "center", justifyContent: "center", color: PRIMARY }}>
               <MenuBookOutlinedIcon sx={{ fontSize: 32 }} />
@@ -368,14 +368,14 @@ export default function CourseDetailPage() {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const headers = user.userId ? { 'x-user-id': user.userId } : {};
-        // Vẫn dùng API cũ vì Backend của bạn chỉ có API này cho Detail
+        // Vẫn dùng API cho Detail
         const res = await fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=course`, { headers });
         const result = await res.json();
         // Kiểm tra xem có dữ liệu không
         if (result.success && result.data && result.data.length > 0) {
           const dbData = result.data[0];
           // 1. Xử lý ảnh lỗi (quét cả biến thumbnail viết thường lẫn hoa)
-          let courseImage = dbData.thumbnail || dbData.Thumbnail;
+          let courseImage = dbData.Thumbnail;
           if (courseImage === 'CHƯA FIX LỖI ẢNH') {
             courseImage = null;
           }
@@ -384,7 +384,7 @@ export default function CourseDetailPage() {
             title: dbData.CourseName,
             description: dbData.Description,
             shortDescription: dbData.Description,
-            thumbnail: dbData.Thumbnail,
+            thumbnail: courseImage,
             category: dbData.CategoryDisplayName,
             level: dbData.LevelDisplayName,
             instructor: dbData.InStructorName,

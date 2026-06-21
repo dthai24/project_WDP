@@ -232,7 +232,7 @@ const getStudentCourses = async (userId, filterStatus = 'all') => {
     return result.recordset;
 }
 
-// Hàm lấy khóa học cá nhân (ĐÃ FIX: Tương tự hàm trên, gộp logic cho sạch)
+// Hàm lấy khóa học cá nhân 
 const getMyEnrolledCourses = async (userId, filterStatus = 'all') => {
     const request = new sql.Request();
     request.input('UserId', sql.Int, userId);
@@ -443,6 +443,113 @@ const setDraftCourse = async (courseId) => {
     return result.recordset[0]?.CourseId || null;
 };
 
+//  Hàm lấy danh sách bài học (Kèm trạng thái hoàn thành): dùng để lấy toàn bộ lộ trình học của 1 khóa học
+const getCourseLearningPath = async (courseId, userId) => {
+    try {
+
+        const query = `
+             SELECT 
+                p.PathId,
+                p.PathName,
+                pn.NodeId,
+                pn.NodeName,
+                nm.MaterialType,
+                nm.MaterialUrl,
+                CAST(CASE WHEN un.NodeId IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsCompleted
+            FROM Paths p
+            LEFT JOIN Path_Nodes pn ON p.PathId = pn.PathId
+            LEFT JOIN Node_Materials nm ON pn.NodeId = nm.NodeId
+            LEFT JOIN User_Nodes un ON pn.NodeId = un.NodeId AND un.UserId = @userId
+            WHERE p.CourseId = @courseId
+            ORDER BY p.[Order], pn.NodeOrder
+        `;
+        const result = await new sql.Request()
+            .input('courseId', sql.Int, courseId)
+            .input('userId', sql.Int, userId)
+            .query(query);
+        let finalModules = [];
+        result.recordset.forEach(row => {
+            // Tìm Chương (Path) dựa vào PathId
+            let existingModule = finalModules.find(m => m.PathId === row.PathId);
+
+            // Nếu chưa có thì tạo mới
+            if (!existingModule) {
+                existingModule = {
+                    PathId: row.PathId,
+                    PathName: row.PathName,
+                    lessons: []
+                };
+                finalModules.push(existingModule);
+            }
+            // Nhét Bài học (Node) vào Chương
+            if (row.NodeId) {
+                existingModule.lessons.push({
+                    NodeId: row.NodeId,
+                    NodeName: row.NodeName,
+                    MaterialType: row.MaterialType,
+                    MaterialUrl: row.MaterialUrl,
+                    IsCompleted: row.IsCompleted
+                });
+            }
+        });
+
+        return finalModules;
+    } catch (error) {
+        console.error("Lỗi lấy danh sách bài học:", error);
+        throw error;
+    }
+};
+// Hàm lưu tiến độ : chạy khi User ấn nút "Đánh dấu hoàn thành"
+const markNodeAsCompleted = async (courseId, userId, nodeId) => {
+    try {
+        //LƯU TRẠNG THÁI BÀI HỌC VÀO User_Nodes
+        const insertQuery = `
+            IF NOT EXISTS (SELECT 1 FROM User_Nodes WHERE UserId = @userId AND NodeId = @nodeId)
+            BEGIN
+                INSERT INTO User_Nodes (UserId, NodeId, IsCompleted) 
+                VALUES (@userId, @nodeId, 1);
+            END
+        `;
+        await new sql.Request()
+            .input('userId', sql.Int, userId)
+            .input('nodeId', sql.Int, nodeId)
+            .query(insertQuery);
+       // TÍNH LẠI % TIẾN ĐỘ TỔNG BẰNG CÁCH ĐẾM THỰC TẾ
+        const updateProgressQuery = `
+            DECLARE @Total INT = (
+                SELECT COUNT(pn.NodeId) 
+                FROM Path_Nodes pn
+                JOIN Paths p ON pn.PathId = p.PathId
+                WHERE p.CourseId = @courseId
+            );
+            DECLARE @Completed INT = (
+                SELECT COUNT(un.NodeId) 
+                FROM User_Nodes un
+                JOIN Path_Nodes pn ON un.NodeId = pn.NodeId
+                JOIN Paths p ON pn.PathId = p.PathId
+                WHERE un.UserId = @userId AND p.CourseId = @courseId
+            );
+            
+            DECLARE @Percent INT = 0;
+            IF @Total > 0
+                SET @Percent = (@Completed * 100) / @Total;
+                
+            UPDATE User_Courses 
+            SET ProgressPercentage = @Percent 
+            WHERE UserId = @userId AND CourseId = @courseId;
+            
+            SELECT @Percent as NewProgress;
+        `;
+        const result = await new sql.Request()
+            .input('courseId', sql.Int, courseId)
+            .input('userId', sql.Int, userId)
+            .query(updateProgressQuery);
+        return result.recordset[0].NewProgress;
+    } catch (error) {
+        console.error("Lỗi đánh dấu hoàn thành:", error);
+        throw error;
+    }
+};
 module.exports = {
     getCoursesByUserRole,
     getCourseById,
@@ -452,5 +559,7 @@ module.exports = {
     getMyEnrolledCourses,
     enrollCourse,
     setDraftCourse,
-    setPublishCourse
+    setPublishCourse,
+    getCourseLearningPath,
+    markNodeAsCompleted
 }

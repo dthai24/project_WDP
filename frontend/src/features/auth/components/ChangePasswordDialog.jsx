@@ -84,7 +84,7 @@ export default function ChangePasswordDialog({ open, onClose, onSubmit, loading 
       return;
     }
 
-    const userRaw = sessionStorage.getItem("user");
+    const userRaw = localStorage.getItem("user");
     const currentUser = userRaw ? JSON.parse(userRaw) : null;
     if (!currentUser?.userId) {
       setErrors({ current: "Không tìm thấy phiên đăng nhập" });
