@@ -8,9 +8,9 @@
  */
 
 import { mentorCoursesMock } from '@/features/mentor/data/mentorCoursesMock';
-import { mentorCourseDetailById } from '@/features/mentor/data/mentorCourseDetailMock';
 import { mentorQuestionBankMock } from '@/features/mentor/data/mentorQuestionBankMock';
 import { mentorQuestionBankSeed } from '@/features/mentor/data/mentorQuestionBankSeed';
+import { getUser } from '@/features/auth/utils/authUtils';
 import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
@@ -20,6 +20,34 @@ import {
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const QB_STORAGE_KEY = 'mentor_question_banks_v1';
+const API_BASE = 'http://localhost:5000/api';
+
+function getAuthHeaders() {
+  const userId = getUser()?.userId;
+  const headers = { 'Content-Type': 'application/json' };
+  if (userId) {
+    headers['x-user-id'] = String(userId);
+  }
+  return headers;
+}
+
+function mapPathsToChapters(paths = []) {
+  return paths.map((path, pathIndex) => {
+    const nodes = path.Nodes ?? path.nodes ?? [];
+    return {
+      chapterId: path.PathId ?? path.pathId,
+      chapterTitle:
+        (path.PathName ?? path.pathName)?.trim() || `Chương ${pathIndex + 1}`,
+      order: path.Order ?? path.PathOrder ?? path.order ?? pathIndex + 1,
+      lessons: nodes.map((node, nodeIndex) => ({
+        lessonId: node.NodeId ?? node.nodeId,
+        lessonTitle:
+          (node.NodeName ?? node.nodeName)?.trim() || `Bài ${nodeIndex + 1}`,
+        order: node.NodeOrder ?? node.nodeOrder ?? nodeIndex + 1,
+      })),
+    };
+  });
+}
 
 function loadStoredBanks() {
   try {
@@ -442,20 +470,31 @@ export async function fetchCourseForQB(courseId) {
 }
 
 export async function fetchCourseContentOutlineForQB(courseId) {
-  await new Promise((r) => setTimeout(r, 150));
-  const detail = mentorCourseDetailById[Number(courseId)];
-  const paths = detail?.paths ?? [];
-  const chapters = paths.map((p, pathIndex) => ({
-    chapterId: p.PathId,
-    chapterTitle: p.PathName || `Chương ${pathIndex + 1}`,
-    order: p.PathOrder ?? pathIndex + 1,
-    lessons: (p.nodes ?? []).map((n, nodeIndex) => ({
-      lessonId: n.NodeId,
-      lessonTitle: n.NodeName || `Bài ${nodeIndex + 1}`,
-      order: n.NodeOrder ?? nodeIndex + 1,
-    })),
-  }));
-  return { ok: true, chapters };
+  try {
+    const response = await fetch(
+      `${API_BASE}/courses/my-courses/${courseId}/chapters`,
+      { headers: getAuthHeaders() },
+    );
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        ok: false,
+        message: data.message ?? 'Không thể tải danh sách chương.',
+        chapters: [],
+      };
+    }
+
+    const paths = data.data?.Paths ?? data.data?.paths ?? [];
+    return { ok: true, chapters: mapPathsToChapters(paths) };
+  } catch (error) {
+    console.error('[fetchCourseContentOutlineForQB]', error);
+    return {
+      ok: false,
+      message: 'Lỗi kết nối khi tải danh sách chương.',
+      chapters: [],
+    };
+  }
 }
 
 export async function fetchChaptersForCourse(courseId) {

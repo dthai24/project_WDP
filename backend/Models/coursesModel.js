@@ -130,6 +130,35 @@ const getCoursePaths = async (courseId) => {
     return result.recordset;
 }
 
+/** Mục lục chương + bài (không kèm học liệu) — dùng cho Question Bank, quiz setup, v.v. */
+const getCourseChaptersOutline = async (courseId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    const courseCheck = await request.query(
+        `SELECT CourseId FROM Courses WHERE CourseId = @courseId`,
+    );
+    if (courseCheck.recordset.length === 0) {
+        return null;
+    }
+
+    const paths = await getCoursePaths(Number(courseId));
+    return Promise.all(
+        paths.map(async (path) => {
+            const nodes = await getPathNodes(path.PathId);
+            return {
+                PathId: path.PathId,
+                PathName: path.PathName,
+                Order: path.Order,
+                Nodes: nodes.map((node) => ({
+                    NodeId: node.NodeId,
+                    NodeName: node.NodeName,
+                    NodeOrder: node.NodeOrder,
+                })),
+            };
+        }),
+    );
+};
+
 const getPathNodes = async (pathId) => {
     const request = new sql.Request();
     request.input('pathId', sql.Int, pathId);
@@ -637,6 +666,7 @@ const markNodeAsCompleted = async (courseId, userId, nodeId) => {
 module.exports = {
     getCoursesByUserRole,
     getCourseById,
+    getCourseChaptersOutline,
     createCourseStepOne,
     createFinalCourse,
     getStudentCoursesList,
