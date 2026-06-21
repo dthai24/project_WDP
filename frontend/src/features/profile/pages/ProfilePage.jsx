@@ -317,19 +317,17 @@ export default function ProfilePage() {
         const data = await response.json();
         const p = data?.profile;
         if (data?.success && p) {
-          setProfile(prev => ({
-            ...prev,
-            name: p.name || prev.name,
-            email: p.email || prev.email,
-            phone: p.phone || prev.phone,
-            dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : prev.dateOfBirth,
-            joinedAt: p.joinedAt ? new Date(p.joinedAt).toLocaleDateString("vi-VN") : prev.joinedAt,
-            stats: {
-              ...prev.stats,
-              learning: p.stats?.learning ?? 0,
-              completed: p.stats?.completed ?? 0,
-            }
-          }));
+          setProfile({
+            name: data.profile.name || "",
+            email: data.profile.email || "",
+            phone: data.profile.phone || "",
+            dateOfBirth: data.profile.dateOfBirth?.split("T")[0] || "",
+            currentLevel: data.profile.currentLevel || "",
+            goals: [
+              ...(data.profile.learningGoal ? [`Mục tiêu: ${data.profile.learningGoal}`] : []),
+              ...(data.profile.categories || [])
+            ],
+          });
 
           setFormData(prevForm => ({
             ...prevForm,
