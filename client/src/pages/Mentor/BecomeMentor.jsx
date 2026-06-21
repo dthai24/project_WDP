@@ -194,7 +194,7 @@ export default function BecomeMentor() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900">Application Submitted!</h3>
               <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
-                Thank you for applying to be a mentor on LearnPath. Our administration team will review your portfolio and certificates. You will receive an email notification once approved.
+                Thank you for applying to be a mentor on English Master. Our administration team will review your portfolio and certificates. You will receive an email notification once approved.
               </p>
               <div className="pt-4">
                 <button 

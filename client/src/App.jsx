@@ -21,12 +21,15 @@ function MainRoutes({ currentUser, handleLogin, handleLogout }) {
         }
       />
 
-      {/* Authentication Route */}
       <Route
         path="/login"
         element={
           currentUser ? (
-            <Navigate to="/" replace />
+            (currentUser.email === "minh@gmail.com" || (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))) ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <Navigate to="/" replace />
+            )
           ) : (
             <LoginPage
               onLogin={handleLogin}

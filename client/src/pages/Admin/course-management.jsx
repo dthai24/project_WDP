@@ -1,121 +1,226 @@
-import React, { useState } from "react";
-import { BookOpen, Check, AlertCircle, Search, ToggleLeft, ToggleRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { adminApi } from "../../services/api";
+import { BookOpen, RefreshCw, Search, AlertCircle, Loader2 } from "lucide-react";
+import DataTable from "../../components/common/DataTable";
 
 const CourseManagement = () => {
-  const [courses, setCourses] = useState([
-    {
-      id: "crs_101",
-      title: "React JS Core Fundamentals",
-      category: "Frontend Development",
-      mentor: "Nguyen Thi B",
-      status: "Active"
-    },
-    {
-      id: "crs_102",
-      title: "NodeJS & Express Essentials",
-      category: "Backend Development",
-      mentor: "Nguyen Thi B",
-      status: "Active"
-    },
-    {
-      id: "crs_103",
-      title: "CI/CD Pipeline with GitHub Actions",
-      category: "DevOps & Cloud",
-      mentor: "Tran Van A",
-      status: "Inactive"
-    }
-  ]);
+  const [courses, setCourses] = useState([]);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
-  const toggleCourseStatus = (courseId) => {
-    setCourses(
-      courses.map((course) => {
-        if (course.id === courseId) {
-          const newStatus = course.status === "Active" ? "Inactive" : "Active";
-          return { ...course, status: newStatus };
-        }
-        return course;
-      })
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [submittingId, setSubmittingId] = useState(null);
+
+  const fetchCourses = async (pageNum = 1, searchVal = "", statusVal = "", categoryVal = "") => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await adminApi.getCourses({
+        page: pageNum,
+        limit: 10,
+        search: searchVal,
+        status: statusVal,
+        category: categoryVal
+      });
+      if (res && res.success) {
+        setCourses(res.data || []);
+        setPagination(res.pagination || { total: 0, page: pageNum, limit: 10, pages: 0 });
+      } else {
+        setCourses([]);
+      }
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses(1, search, statusFilter, categoryFilter);
+  }, []);
+
+  const handleToggleStatus = async (courseId, currentStatus) => {
+    // If pending, allow Activating or Suspending
+    const targetStatus = currentStatus === "Active" ? "Inactive" : "Active";
+    setSubmittingId(courseId);
+    try {
+      const res = await adminApi.toggleCourseStatus(courseId, targetStatus);
+      if (res && res.success) {
+        fetchCourses(pagination.page, search, statusFilter, categoryFilter);
+      } else {
+        alert("Failed to update status.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error occurred while changing course status.");
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
+  const ToggleSwitch = ({ checked, onChange, disabled }) => {
+    return (
+      <button
+        type="button"
+        onClick={onChange}
+        disabled={disabled}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-205 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 ${
+          checked ? "bg-emerald-500" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-205 ease-in-out ${
+            checked ? "translate-x-5" : "translate-x-0"
+          }`}
+        />
+      </button>
     );
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-950">Quản lý Khóa học & Lộ trình</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Quản lý trạng thái hoạt động (Active/Inactive) các khóa học/lộ trình (Learning Paths) trong hệ thống.
-        </p>
-      </div>
-
-      {/* Mock Search and Filter */}
-      <div className="flex gap-4 items-center">
-        <div className="relative max-w-sm w-full">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-            <Search className="w-4 h-4" />
+  const columns = [
+    {
+      key: "title",
+      label: "Course Title",
+      render: (c) => (
+        <div>
+          <div className="font-extrabold text-slate-800 text-sm">{c.title}</div>
+          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{c._id}</div>
+        </div>
+      )
+    },
+    {
+      key: "mentor",
+      label: "Instructor",
+      render: (c) => (
+        <div>
+          <div className="font-semibold text-slate-700">{c.mentorName}</div>
+          <div className="text-xs text-slate-400">{c.mentorEmail}</div>
+        </div>
+      )
+    },
+    {
+      key: "category",
+      label: "Level Tag",
+      render: (c) => (
+        <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-xs font-bold font-mono">
+          {c.category}
+        </span>
+      )
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (c) => {
+        let styleClass = "bg-amber-50 text-amber-700 border-amber-100";
+        if (c.status === "Active") styleClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
+        if (c.status === "Inactive") styleClass = "bg-slate-100 text-slate-600 border-slate-200";
+        return (
+          <span className={`px-2.5 py-0.5 border rounded-lg text-xs font-bold ${styleClass}`}>
+            {c.status.toUpperCase()}
           </span>
-          <input
-            type="text"
-            placeholder="Tìm kiếm khóa học..."
-            className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+        );
+      }
+    },
+    {
+      key: "actions",
+      label: "Status Control",
+      className: "text-right",
+      render: (c) => (
+        <div className="flex justify-end items-center gap-3">
+          <span className="text-xs text-slate-400 font-semibold select-none">
+            {c.status === "Active" ? "Active" : "Inactive"}
+          </span>
+          <ToggleSwitch
+            checked={c.status === "Active"}
+            onChange={() => handleToggleStatus(c._id, c.status)}
+            disabled={submittingId !== null}
           />
         </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6 text-slate-855 font-sans animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-blue-600" />
+            <span>Course Management</span>
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Browse and search courses, filter by tag categories, and toggle active/inactive status.
+          </p>
+        </div>
+        <button
+          onClick={() => fetchCourses(pagination.page, search, statusFilter, categoryFilter)}
+          disabled={loading}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl hover:bg-slate-50 text-slate-700 font-bold text-sm transition-all shadow-xs disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? "animate-spin" : ""}`} />
+          <span>Sync Courses</span>
+        </button>
       </div>
 
-      {/* Courses List Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {courses.map((course) => (
-          <div
-            key={course.id}
-            className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                  {course.category}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                    course.status === "Active"
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "bg-rose-50 text-rose-600"
-                  }`}
-                >
-                  {course.status === "Active" ? (
-                    <Check className="w-3 h-3" />
-                  ) : (
-                    <AlertCircle className="w-3 h-3" />
-                  )}
-                  {course.status}
-                </span>
-              </div>
-              <h3 className="font-bold text-slate-800 text-lg leading-snug">{course.title}</h3>
-              <p className="text-xs text-slate-400 mt-2">Mentor: {course.mentor}</p>
-              <p className="text-[10px] text-slate-300 font-mono mt-0.5">{course.id}</p>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-400">Trạng thái Khóa học</span>
-              <button
-                onClick={() => toggleCourseStatus(course.id)}
-                className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors"
-              >
-                {course.status === "Active" ? (
-                  <div className="flex items-center gap-1.5 text-indigo-600">
-                    <span>Active</span>
-                    <ToggleRight className="w-8 h-8 text-indigo-600" />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <span>Inactive</span>
-                    <ToggleLeft className="w-8 h-8 text-slate-300" />
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Main Content */}
+      {error ? (
+        <div className="p-6 border border-red-100 rounded-2xl bg-red-50/50 flex items-center gap-3 text-red-700 shadow-sm">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <div className="text-sm font-semibold">API connection error. Please verify the backend service or database status.</div>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={courses}
+          pagination={pagination}
+          onPageChange={(page) => fetchCourses(page, search, statusFilter, categoryFilter)}
+          searchPlaceholder="Search by title or instructor..."
+          onSearch={(val) => {
+            setSearch(val);
+            fetchCourses(1, val, statusFilter, categoryFilter);
+          }}
+          filters={[
+            {
+              key: "category",
+              label: "All tag levels",
+              value: categoryFilter,
+              options: [
+                { value: "ewp", label: "ewp - Working Professionals" },
+                { value: "efk", label: "efk - Kids English" },
+                { value: "ghse", label: "ghse - High School English" },
+                { value: "IELTS", label: "IELTS Prep" },
+                { value: "TOEIC", label: "TOEIC Prep" },
+                { value: "APTIS", label: "APTIS Prep" }
+              ]
+            },
+            {
+              key: "status",
+              label: "All statuses",
+              value: statusFilter,
+              options: [
+                { value: "Active", label: "Active" },
+                { value: "Inactive", label: "Inactive" },
+                { value: "Pending", label: "Pending" }
+              ]
+            }
+          ]}
+          onFilterChange={(key, val) => {
+            if (key === "category") {
+              setCategoryFilter(val);
+              fetchCourses(1, search, statusFilter, val);
+            } else if (key === "status") {
+              setStatusFilter(val);
+              fetchCourses(1, search, val, categoryFilter);
+            }
+          }}
+          loading={loading}
+        />
+      )}
     </div>
   );
 };

@@ -1,5 +1,8 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
+
 export default function HomePage({ currentUser, onLoginClick, onLogout }) {
+  const navigate = useNavigate();
   const features = [
     {
       title: "Personalized Learning",
@@ -45,7 +48,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
             <span className="text-white font-bold text-lg">L</span>
           </div>
           <h1 className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 tracking-tight">
-            LearnPath
+            English Master
           </h1>
         </div>
 
@@ -185,7 +188,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
             <div className="w-6 h-6 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded flex items-center justify-center">
               <span className="text-white font-bold text-xs">L</span>
             </div>
-            <span className="text-xl font-bold text-white">LearnPath</span>
+            <span className="text-xl font-bold text-white">English Master</span>
           </div>
           <p>
             © {new Date().getFullYear()} Smart Learning Platform. All rights reserved.
@@ -196,6 +199,18 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
           </div>
         </div>
       </footer>
+
+      {/* Floating Back to Admin Banner */}
+      {currentUser && (currentUser.email === "minh@gmail.com" || (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))) && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <button
+            onClick={() => navigate("/admin")}
+            className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-600/30 hover:bg-blue-700 transition-all hover:scale-105 hover:shadow-blue-600/50 border border-blue-500/20 active:scale-95"
+          >
+            <span>🛡️ Back to Admin Dashboard</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

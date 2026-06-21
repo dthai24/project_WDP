@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { authApi } from "../../services/api";
 
 const testAccounts = [
   {
@@ -11,7 +13,7 @@ const testAccounts = [
     email: "student@gmail.com",
     password: "123456",
     name: "Student User",
-    role: "Learner",
+    role: "Student",
   },
   {
     email: "mentor@gmail.com",
@@ -22,6 +24,8 @@ const testAccounts = [
 ];
 
 export default function LoginPage({ onLogin, onBackHome }) {
+  const navigate = useNavigate();
+  const Maps = navigate;
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -61,7 +65,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!validateForm()) {
@@ -69,32 +73,42 @@ export default function LoginPage({ onLogin, onBackHome }) {
     }
 
     setIsSubmitting(true);
+    setErrors({});
 
-    setTimeout(() => {
-      const account = testAccounts.find(
-        (item) =>
-          item.email.toLowerCase() === formData.email.trim().toLowerCase() &&
-          item.password === formData.password
-      );
+    try {
+      const res = await authApi.login(formData.email.trim(), formData.password);
+      if (res && res.success) {
+        // Save JWT token and user info
+        localStorage.setItem("learnpath_token", res.token);
+        
+        const userSession = {
+          email: res.user.email,
+          name: res.user.name,
+          role: res.user.role,
+          loggedInAt: new Date().toISOString(),
+        };
 
-      if (!account) {
+        onLogin(userSession);
+
+        // Redirect Admin immediately to admin dashboard, others to homepage
+        if (res.user.email === "minh@gmail.com" || (Array.isArray(res.user.roles) && res.user.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))) {
+          Maps("/admin");
+        } else {
+          Maps("/");
+        }
+      } else {
         setErrors({
-          form: "Email or password is incorrect. Please try again.",
+          form: res.message || "Login failed. Please try again.",
         });
-        setIsSubmitting(false);
-        return;
       }
-
-      const userSession = {
-        email: account.email,
-        name: account.name,
-        role: account.role,
-        loggedInAt: new Date().toISOString(),
-      };
-
-      onLogin(userSession);
+    } catch (err) {
+      console.error("Login error:", err);
+      setErrors({
+        form: err.response?.data?.message || "Unable to connect to the server. Please verify the backend service status.",
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 700);
+    }
   };
 
   return (
@@ -118,7 +132,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   L
                 </div>
                 <span className="text-2xl font-extrabold tracking-tight">
-                  LearnPath
+                  English Master
                 </span>
               </div>
               <h1 className="text-5xl font-extrabold leading-tight tracking-tight">
@@ -166,7 +180,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
                 Welcome back
               </p>
               <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">
-                Login to LearnPath
+                Login to English Master
               </h2>
               <p className="mt-3 text-sm leading-6 text-slate-500">
                 Use your account to resume lessons and keep every milestone in

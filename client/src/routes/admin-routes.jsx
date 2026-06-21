@@ -2,22 +2,30 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../layouts/admin-layout";
 import Dashboard from "../pages/Admin/dashboard";
-import UserManagement from "../pages/Admin/user-management";
+import CourseApproval from "../pages/Admin/course-approval";
 import CategoryManagement from "../pages/Admin/category-management";
+import UserControl from "../pages/Admin/user-control";
 import CourseManagement from "../pages/Admin/course-management";
-import UpdateHistory from "../pages/Admin/update-history";
-
 
 const AdminRoutes = () => {
   return (
     <Routes>
       <Route element={<AdminLayout />}>
-        {/* Redirect from /admin to /admin/ (renders index) */}
+        {/* /admin maps to Dashboard */}
         <Route index element={<Dashboard />} />
-        <Route path="users" element={<UserManagement />} />
+        
+        {/* /admin/approvals maps to Course Approvals Queue */}
+        <Route path="approvals" element={<CourseApproval />} />
+        
+        {/* /admin/categories maps to Category Management */}
         <Route path="categories" element={<CategoryManagement />} />
+        
+        {/* /admin/users maps to User Control */}
+        <Route path="users" element={<UserControl />} />
+        
+        {/* /admin/courses maps to Course Management */}
         <Route path="courses" element={<CourseManagement />} />
-        <Route path="history" element={<UpdateHistory />} />
+        
         {/* Fallback redirect */}
         <Route path="*" element={<Navigate to="" replace />} />
       </Route>
