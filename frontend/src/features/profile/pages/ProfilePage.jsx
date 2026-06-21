@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Avatar,
   Box,
@@ -15,6 +15,7 @@ import { Link } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
 import ChangePasswordDialog from "@/features/auth/components/ChangePasswordDialog";
 import { underlineFieldSx as valueUnderlineSx } from "@/shared/ui/UnderlineFieldPopup";
+import ProfileImageCropDialog from "@/shared/ProfileImageCropDialog";
 
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
@@ -30,6 +31,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 
+
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
@@ -37,22 +39,20 @@ const MUTED = "#64748B";
 const SUCCESS = "#16A34A";
 const ACCENT = "#EA580C";
 const DIVIDER = "rgba(8,145,178,0.08)";
-
-/* ─── Mock data ──────────────────────────────────────────────────────────── */
 const INITIAL_PROFILE = {
-  name: "Phúc Nguyễn",
-  email: "phucnguyen@example.com",
-  phone: "0987654321",
-  dateOfBirth: "2003-05-20",
+  name: "",
+  email: "",
+  phone: "",
+  dateOfBirth: "",
   role: "Học viên",
-  joinedAt: "24/05/2026",
-  currentLevel: "Cơ bản",
-  goals: ["Giao tiếp", "IELTS", "Tiếng Anh đi làm"],
+  joinedAt: "",
+  currentLevel: "",
+  goals: [],
   stats: {
-    learning: 3,
-    completed: 1,
-    saved: 2,
-    averageProgress: 68,
+    learning: 0,
+    completed: 0,
+    saved: 0,
+    averageProgress: 0,
   },
 };
 
@@ -268,7 +268,7 @@ function StatRow({ icon: Icon, iconColor, label, value, last = false, children }
 // ── Safe State Initialization Helpers ──
 const getInitialUser = () => {
   try {
-    const userRaw = sessionStorage.getItem("user");
+    const userRaw = localStorage.getItem("user");
     return userRaw ? JSON.parse(userRaw) : null;
   } catch (e) {
     return null;
@@ -277,7 +277,7 @@ const getInitialUser = () => {
 
 const getInitialAvatar = () => {
   try {
-    const explicitAvatar = sessionStorage.getItem("avatarUrl");
+    const explicitAvatar = localStorage.getItem("avatarUrl");
     if (explicitAvatar) return explicitAvatar;
     const userObj = getInitialUser();
     return userObj?.avatarUrl || null;
@@ -380,7 +380,7 @@ export default function ProfilePage() {
 
         // Optional: Update session storage to reflect new name in Navbar
         const updatedUser = { ...currentUser, fullName: formData.name };
-        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         // Force a small storage event to update Header if they listen to it, 
         // though normally context is better.
         window.dispatchEvent(new Event("storage"));
@@ -403,6 +403,60 @@ export default function ProfilePage() {
     setEditMode(false);
   };
 
+  // ==========================================
+  // LOGIC XỬ LÝ ẢNH ĐẠI DIỆN
+  // ==========================================
+  const fileInputRef = useRef(null);
+  const [tempImageSrc, setTempImageSrc] = useState(null);
+  /**
+   * Hàm: handleAvatarSelected
+   * Tác dụng: Bắt file từ thẻ input và chuyển thành URL tạm để đưa vào khung cắt
+   */
+  const handleAvatarSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTempImageSrc(URL.createObjectURL(file));
+    setCropperOpen(true);
+  };
+  /**
+   * Hàm: handleAvatarUpload
+   * Tác dụng: Nhận ảnh đã cắt (Base64), chuyển thành file và Upload lên Server
+   */
+  const handleAvatarUpload = async (croppedBase64) => {
+    try {
+      // 1. Convert base64 sang định dạng Blob chuẩn
+      const res = await fetch(croppedBase64);
+      const blob = await res.blob();
+
+      // 2. Gói file vào FormData để gửi lên API
+      const formData = new FormData();
+      formData.append("avatar", blob, "avatar.png");
+
+      // 3. Gửi Server
+      const response = await fetch("http://localhost:5000/api/users/avatar", {
+        method: "POST",
+        headers: { "x-user-id": currentUser.userId },
+        body: formData,
+      });
+      const data = await response.json();
+
+      // 4. Nếu thành công -> Đóng popup & Cập nhật UI
+      if (data.success) {
+        const finalUrl = data.avatarUrl.startsWith('http') ? data.avatarUrl : `http://localhost:5000${data.avatarUrl}`;
+        setAvatarUrl(finalUrl);
+        setProfile((prev) => ({ ...prev, avatarUrl: finalUrl }));
+        localStorage.setItem('avatarUrl', finalUrl);
+        window.dispatchEvent(new Event('storage'));
+
+        // Đóng popup và reset biến tạm
+        setCropperOpen(false);
+        setTempImageSrc(null);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Tải ảnh thất bại!");
+    }
+  };
   return (
     <Box sx={{ maxWidth: 1280, mx: "auto" }}>
       {/* ── Breadcrumb ── */}
@@ -750,21 +804,25 @@ export default function ProfilePage() {
         open={passwordDialogOpen}
         onClose={() => setPasswordDialogOpen(false)}
       />
-
-      {/* ── Avatar Cropper Modal — isolated, no layout impact ── */}
-      <AvatarCropperModal
-        open={cropperOpen}
-        onClose={() => setCropperOpen(false)}
-        onAvatarUpdated={(url, baseUrl) => {
-          setAvatarUrl(url);
-          setProfile((prev) => ({ ...prev, avatarUrl: url }));
-          sessionStorage.setItem('avatarUrl', url);
-          if (baseUrl) {
-            sessionStorage.setItem('baseAvatarUrl', baseUrl);
-          }
-          window.dispatchEvent(new Event('storage'));
-        }}
+      {/* ── Thẻ ẩn nhận File ── */}
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        ref={fileInputRef}
+        onChange={handleAvatarSelected}
       />
+      {/* ── Popup cắt ảnh chuẩn form Mentor ── */}
+      <ProfileImageCropDialog
+        open={cropperOpen}
+        imageSrc={tempImageSrc}
+        onClose={() => {
+          setCropperOpen(false);
+          setTempImageSrc(null);
+        }}
+        onSave={handleAvatarUpload}
+      />
+
     </Box>
   );
 }
