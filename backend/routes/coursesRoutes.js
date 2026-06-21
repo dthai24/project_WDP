@@ -11,7 +11,8 @@ const {
     getLearningPath,
     updateProgress,
     getFeaturedCourses,
-    getFeaturedPaths
+    getFeaturedPaths,
+    getContinueCourse
 } = require('../controllers/coursesController');
 
 
@@ -34,6 +35,8 @@ router.get('/top', (req, res) => {
 });
 
 // GET /api/courses
+// lay khoa hoc dang hoc
+router.get('/continue/:userId', getContinueCourse);
 // lay top hoc vien
 router.get('/featured', getFeaturedCourses);
 // lay top rating

@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Box,
-  Chip,
-  Divider,
-  Typography,
-  alpha,
-  useTheme,
-} from "@mui/material";
+import { Box, Chip, Divider, Typography, alpha, useTheme } from "@mui/material";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
@@ -22,12 +15,15 @@ import CollectionsBookmarkRoundedIcon from "@mui/icons-material/CollectionsBookm
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
+import {
+  resolveCategoryChipSx,
+  resolveLevelChipSx,
+} from "@/shared/catalog/catalogRegistry";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
-import heroImg from '@/asset/image/herosection.png';
+import heroImg from "@/asset/image/herosection.png";
 // Thêm import
-import { getTopCoursesApi } from '@/features/auth/services/authService';
+import { getTopCoursesApi } from "@/features/auth/services/authService";
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -37,8 +33,11 @@ const MUTED = "#64748B";
 const BORDER = "rgba(8,145,178,0.08)";
 
 function getUser() {
-  try { return JSON.parse(sessionStorage.getItem("user")) || {}; }
-  catch { return {}; }
+  try {
+    return JSON.parse(sessionStorage.getItem("user")) || {};
+  } catch {
+    return {};
+  }
 }
 
 /* ─── mock data ──────────────────────────────────────────── */
@@ -53,7 +52,8 @@ const MOCK_CONTINUE_COURSE = {
   currentStage: 3,
   currentLesson: 9,
   lastActivity: "Hôm qua",
-  thumbnail: "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=600&q=75",
+  thumbnail:
+    "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=600&q=75",
   currentLessonDetail: {
     stage: "Chương 3: Luyện đề nâng cao",
     lesson: "Bài 9",
@@ -67,7 +67,8 @@ const MOCK_PATHS = [
     title: "Mất gốc tiếng Anh",
     description: "Xây dựng lại nền tảng phát âm, ngữ pháp và từ vựng từ đầu.",
     courseCount: 4,
-    thumbnail: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70",
+    thumbnail:
+      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70",
     accent: "#38BDF8",
   },
   {
@@ -75,15 +76,18 @@ const MOCK_PATHS = [
     title: "Giao tiếp hằng ngày",
     description: "Thực hành hội thoại, từ vựng thực tế và kỹ năng nghe–nói.",
     courseCount: 5,
-    thumbnail: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&q=70",
+    thumbnail:
+      "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&q=70",
     accent: "#0891B2",
   },
   {
     id: 3,
     title: "IELTS Writing",
-    description: "Chinh phục Task 1 và Task 2 với lộ trình từ cơ bản đến nâng cao.",
+    description:
+      "Chinh phục Task 1 và Task 2 với lộ trình từ cơ bản đến nâng cao.",
     courseCount: 6,
-    thumbnail: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&q=70",
+    thumbnail:
+      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&q=70",
     accent: "#7C3AED",
   },
   {
@@ -91,7 +95,8 @@ const MOCK_PATHS = [
     title: "TOEIC nền tảng",
     description: "Luyện nghe, đọc và chiến lược làm bài thi TOEIC hiệu quả.",
     courseCount: 5,
-    thumbnail: "https://images.unsplash.com/photo-1588702547919-26089e690ecc?w=400&q=70",
+    thumbnail:
+      "https://images.unsplash.com/photo-1588702547919-26089e690ecc?w=400&q=70",
     accent: "#EA580C",
   },
 ];
@@ -106,7 +111,8 @@ const MOCK_COURSES = [
     rating: 4.7,
     studentCount: 1240,
     totalLessons: 12,
-    thumbnail: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=500&q=75",
+    thumbnail:
+      "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=500&q=75",
   },
   {
     courseId: 2,
@@ -117,7 +123,8 @@ const MOCK_COURSES = [
     rating: 4.8,
     studentCount: 980,
     totalLessons: 8,
-    thumbnail: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=500&q=75",
+    thumbnail:
+      "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=500&q=75",
   },
   {
     courseId: 3,
@@ -128,7 +135,8 @@ const MOCK_COURSES = [
     rating: 4.9,
     studentCount: 2100,
     totalLessons: 16,
-    thumbnail: "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=500&q=75",
+    thumbnail:
+      "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=500&q=75",
   },
   {
     courseId: 4,
@@ -139,7 +147,8 @@ const MOCK_COURSES = [
     rating: 4.6,
     studentCount: 760,
     totalLessons: 10,
-    thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&q=75",
+    thumbnail:
+      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&q=75",
   },
 ];
 
@@ -174,26 +183,32 @@ const ARTICLES = [
   {
     id: 1,
     title: "5 cách học từ vựng tiếng Anh hiệu quả",
-    excerpt: "Không phải học thuộc lòng—hãy học trong ngữ cảnh, dùng spaced repetition và kết hợp hình ảnh.",
+    excerpt:
+      "Không phải học thuộc lòng—hãy học trong ngữ cảnh, dùng spaced repetition và kết hợp hình ảnh.",
     category: "Mẹo học tập",
     date: "20 tháng 5, 2026",
-    thumbnail: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=500&q=70",
+    thumbnail:
+      "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=500&q=70",
   },
   {
     id: 2,
     title: "Cách luyện nghe tiếng Anh mỗi ngày",
-    excerpt: "Chỉ 20–30 phút mỗi ngày với đúng tài liệu, kỹ năng nghe của bạn sẽ cải thiện rõ rệt.",
+    excerpt:
+      "Chỉ 20–30 phút mỗi ngày với đúng tài liệu, kỹ năng nghe của bạn sẽ cải thiện rõ rệt.",
     category: "Kỹ năng nghe",
     date: "15 tháng 5, 2026",
-    thumbnail: "https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=500&q=70",
+    thumbnail:
+      "https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=500&q=70",
   },
   {
     id: 3,
     title: "Lộ trình IELTS Writing cho người mới bắt đầu",
-    excerpt: "Từ phân tích đề bài đến hoàn thiện bài viết—hướng dẫn từng bước cho người mới.",
+    excerpt:
+      "Từ phân tích đề bài đến hoàn thiện bài viết—hướng dẫn từng bước cho người mới.",
     category: "IELTS",
     date: "10 tháng 5, 2026",
-    thumbnail: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500&q=70",
+    thumbnail:
+      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500&q=70",
   },
 ];
 
@@ -270,7 +285,10 @@ function SectionHeader({ label, title, action, onAction }) {
 }
 
 function CategoryChip({ category }) {
-  const style = resolveCategoryChipSx({ displayName: category }, { withBorder: false });
+  const style = resolveCategoryChipSx(
+    { displayName: category },
+    { withBorder: false },
+  );
   return (
     <Chip
       label={category}
@@ -423,7 +441,8 @@ function HeroSection({ onExplore }) {
             textShadow: "0 1px 1px rgba(255,255,255,0.25)",
           }}
         >
-          Khám phá khóa học phù hợp, học theo từng chương rõ ràng và theo dõi tiến độ của bạn mỗi ngày.
+          Khám phá khóa học phù hợp, học theo từng chương rõ ràng và theo dõi
+          tiến độ của bạn mỗi ngày.
         </Typography>
 
         {/* CTA buttons */}
@@ -440,8 +459,6 @@ function HeroSection({ onExplore }) {
           </AppButton>
         </Box>
 
-
-
         {/* Stats — no wrapper container, items laid out flat */}
         <Box
           sx={{
@@ -453,58 +470,60 @@ function HeroSection({ onExplore }) {
             gap: { xs: 2.5, sm: 3.5 },
           }}
         >
-          {HERO_STATS.map(({ title, desc, Icon, iconBg, iconColor, iconBorder }) => (
-            <Box
-              key={title}
-              sx={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 1.25,
-                flex: "1 1 140px",
-                minWidth: 120,
-              }}
-            >
+          {HERO_STATS.map(
+            ({ title, desc, Icon, iconBg, iconColor, iconBorder }) => (
               <Box
+                key={title}
                 sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "10px",
-                  bgcolor: iconBg,
-                  color: iconColor,
-                  border: `1px solid ${iconBorder}`,
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  mt: 0.2,
+                  alignItems: "flex-start",
+                  gap: 1.25,
+                  flex: "1 1 140px",
+                  minWidth: 120,
                 }}
               >
-                <Icon sx={{ fontSize: 17 }} />
-              </Box>
-              <Box>
-                <Typography
+                <Box
                   sx={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: TEXT,
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {title}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: 11.5,
-                    color: MUTED,
-                    lineHeight: 1.4,
+                    width: 32,
+                    height: 32,
+                    borderRadius: "10px",
+                    bgcolor: iconBg,
+                    color: iconColor,
+                    border: `1px solid ${iconBorder}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
                     mt: 0.2,
                   }}
                 >
-                  {desc}
-                </Typography>
+                  <Icon sx={{ fontSize: 17 }} />
+                </Box>
+                <Box>
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: TEXT,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {title}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: 11.5,
+                      color: MUTED,
+                      lineHeight: 1.4,
+                      mt: 0.2,
+                    }}
+                  >
+                    {desc}
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
-          ))}
+            ),
+          )}
         </Box>
       </Box>
     </Box>
@@ -529,8 +548,12 @@ function ContinueSection({ course, onContinue, onExplore }) {
             textAlign: "center",
           }}
         >
-          <MenuBookOutlinedIcon sx={{ fontSize: 40, color: alpha("#0891B2", 0.3), mb: 1.5 }} />
-          <Typography sx={{ fontSize: 16, fontWeight: 600, color: TEXT, mb: 0.75 }}>
+          <MenuBookOutlinedIcon
+            sx={{ fontSize: 40, color: alpha("#0891B2", 0.3), mb: 1.5 }}
+          />
+          <Typography
+            sx={{ fontSize: 16, fontWeight: 600, color: TEXT, mb: 0.75 }}
+          >
             Bạn chưa bắt đầu khóa học nào
           </Typography>
           <Typography sx={{ fontSize: 14, color: MUTED, mb: 2.5 }}>
@@ -562,7 +585,9 @@ function ContinueSection({ course, onContinue, onExplore }) {
           "&::before": {
             content: '""',
             position: "absolute",
-            left: 0, top: 0, bottom: 0,
+            left: 0,
+            top: 0,
+            bottom: 0,
             width: 4,
             bgcolor: PRIMARY,
             borderRadius: "20px 0 0 20px",
@@ -592,44 +617,75 @@ function ContinueSection({ course, onContinue, onExplore }) {
                 flexShrink: 0,
                 boxShadow: "0 4px 16px rgba(8,145,178,0.12)",
               }}
-              onError={(e) => { e.target.style.display = "none"; }}
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
             />
           )}
 
           {/* Content */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
-              <PlayCircleOutlineRoundedIcon sx={{ fontSize: 14, color: PRIMARY }} />
-              <Typography sx={{ fontSize: 11, fontWeight: 700, color: PRIMARY, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}
+            >
+              <PlayCircleOutlineRoundedIcon
+                sx={{ fontSize: 14, color: PRIMARY }}
+              />
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: PRIMARY,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
                 Tiếp tục học
               </Typography>
             </Box>
-            <Typography sx={{ fontSize: { xs: 17, md: 20 }, fontWeight: 700, color: TEXT, lineHeight: 1.3, mb: 0.75 }}>
+            <Typography
+              sx={{
+                fontSize: { xs: 17, md: 20 },
+                fontWeight: 700,
+                color: TEXT,
+                lineHeight: 1.3,
+                mb: 0.75,
+              }}
+            >
               {course.courseName}
             </Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 1.5 }}>
               {course.currentStage != null && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <PlaceOutlinedIcon sx={{ fontSize: 14, color: "#94A3B8" }} />
-                  <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+                  <Typography
+                    sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+                  >
                     Chương {course.currentStage} · Bài {course.currentLesson}
                   </Typography>
                 </Box>
               )}
               {course.lastActivity && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <AccessTimeOutlinedIcon sx={{ fontSize: 14, color: "#94A3B8" }} />
-                  <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+                  <AccessTimeOutlinedIcon
+                    sx={{ fontSize: 14, color: "#94A3B8" }}
+                  />
+                  <Typography
+                    sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+                  >
                     Học gần nhất: {course.lastActivity}
                   </Typography>
                 </Box>
               )}
             </Box>
             {course.currentLessonDetail && (
-              <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 500, mb: 1.5 }}>
+              <Typography
+                sx={{ fontSize: 13, color: TEXT, fontWeight: 500, mb: 1.5 }}
+              >
                 Bài hiện tại:{" "}
                 <Box component="span" sx={{ color: PRIMARY, fontWeight: 600 }}>
-                  {course.currentLessonDetail.lesson} · {course.currentLessonDetail.title}
+                  {course.currentLessonDetail.lesson} ·{" "}
+                  {course.currentLessonDetail.title}
                 </Box>
               </Typography>
             )}
@@ -646,9 +702,25 @@ function ContinueSection({ course, onContinue, onExplore }) {
               width: { xs: "100%", md: "auto" },
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: { xs: 1, md: "none" }, width: { md: 160 } }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flex: { xs: 1, md: "none" },
+                width: { md: 160 },
+              }}
+            >
               <AppProgressBar value={progress} height={7} sx={{ flex: 1 }} />
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: progressColor, minWidth: 36, textAlign: "right" }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: progressColor,
+                  minWidth: 36,
+                  textAlign: "right",
+                }}
+              >
                 {progress}%
               </Typography>
             </Box>
@@ -674,20 +746,24 @@ function PathsSection() {
   useEffect(() => {
     const fetchFeaturedPaths = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/courses/featured-paths');
+        const res = await fetch(
+          "http://localhost:5000/api/courses/featured-paths",
+        );
         const data = await res.json();
-        setPaths(data.data.map(p => ({
-        id:          p.PathId,
-        title:       p.PathName,
-        description: p.Description  ?? '',
-        nodeCount:   p.TotalNodes   ?? 0,
-        courseName:  p.CourseName   ?? '',
-        rating:      p.Rating       ?? 0,
-        thumbnail:   p.Thumbnail    ?? null,
-        accent:      '#0891B2',
-        })));
+        setPaths(
+          data.data.map((p) => ({
+            id: p.PathId,
+            title: p.PathName,
+            description: p.Description ?? "",
+            nodeCount: p.TotalNodes ?? 0,
+            courseName: p.CourseName ?? "",
+            rating: p.Rating ?? 0,
+            thumbnail: p.Thumbnail ?? null,
+            accent: "#0891B2",
+          })),
+        );
       } catch (error) {
-        console.error('Error fetching featured paths:', error);
+        console.error("Error fetching featured paths:", error);
       }
     };
 
@@ -696,14 +772,15 @@ function PathsSection() {
 
   return (
     <Box sx={{ mb: { xs: 7, md: 9 } }}>
-      <SectionHeader
-        label="Lộ trình học"
-        title="Lộ trình học nổi bật"
-      />
+      <SectionHeader label="Lộ trình học" title="Lộ trình học nổi bật" />
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(4, 1fr)" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "1fr 1fr",
+            lg: "repeat(4, 1fr)",
+          },
           gap: 2.5,
         }}
       >
@@ -716,7 +793,8 @@ function PathsSection() {
               bgcolor: "#fff",
               overflow: "hidden",
               cursor: "default",
-              transition: "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease",
+              transition:
+                "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease",
               "&:hover": {
                 transform: "translateY(-3px)",
                 boxShadow: "0 12px 32px rgba(8,145,178,0.10)",
@@ -736,8 +814,15 @@ function PathsSection() {
                 component="img"
                 src={path.thumbnail}
                 alt={path.title}
-                sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                onError={(e) => { e.target.style.display = "none"; }}
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
               />
               <Box
                 sx={{
@@ -766,7 +851,15 @@ function PathsSection() {
 
             {/* Body */}
             <Box sx={{ p: 2 }}>
-              <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.3, mb: 0.75 }}>
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: TEXT,
+                  lineHeight: 1.3,
+                  mb: 0.75,
+                }}
+              >
                 {path.title}
               </Typography>
               <Typography
@@ -783,10 +876,18 @@ function PathsSection() {
               >
                 {path.description}
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <MenuBookOutlinedIcon sx={{ fontSize: 13, color: MUTED }} />
-                  <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
+                  <Typography
+                    sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}
+                  >
                     {path.courseCount} khóa học
                   </Typography>
                 </Box>
@@ -827,7 +928,11 @@ function CoursesSection({ courses = [], onExplore, onNavigateCourse }) {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", xl: "repeat(4, 1fr)" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "1fr 1fr",
+            xl: "repeat(4, 1fr)",
+          },
           gap: 2.5,
         }}
       >
@@ -845,7 +950,10 @@ function CoursesSection({ courses = [], onExplore, onNavigateCourse }) {
 
 function CourseHomeCard({ course, onClick }) {
   const theme = useTheme();
-  const levelSx = resolveLevelChipSx({ displayName: course.level }, { withBorder: false });
+  const levelSx = resolveLevelChipSx(
+    { displayName: course.level },
+    { withBorder: false },
+  );
   const lvl = { bg: levelSx.bgcolor, text: levelSx.color };
 
   return (
@@ -857,7 +965,8 @@ function CourseHomeCard({ course, onClick }) {
         bgcolor: "#fff",
         overflow: "hidden",
         cursor: "pointer",
-        transition: "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease",
+        transition:
+          "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease",
         "&:hover": {
           transform: "translateY(-3px)",
           boxShadow: "0 12px 32px rgba(8,145,178,0.10)",
@@ -881,11 +990,20 @@ function CourseHomeCard({ course, onClick }) {
             component="img"
             src={course.thumbnail}
             alt={course.courseName}
-            sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            onError={(e) => { e.target.style.display = "none"; }}
+            sx={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+            onError={(e) => {
+              e.target.style.display = "none";
+            }}
           />
         ) : (
-          <MenuBookOutlinedIcon sx={{ fontSize: 36, color: alpha(PRIMARY, 0.3) }} />
+          <MenuBookOutlinedIcon
+            sx={{ fontSize: 36, color: alpha(PRIMARY, 0.3) }}
+          />
         )}
       </Box>
 
@@ -930,7 +1048,9 @@ function CourseHomeCard({ course, onClick }) {
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 1.5 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <StarRoundedIcon sx={{ fontSize: 13, color: "#F59E0B" }} />
-            <Typography sx={{ fontSize: 12, color: TEXT, fontWeight: 600 }}>{course.rating}</Typography>
+            <Typography sx={{ fontSize: 12, color: TEXT, fontWeight: 600 }}>
+              {course.rating}
+            </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <PeopleOutlineRoundedIcon sx={{ fontSize: 13, color: MUTED }} />
@@ -942,12 +1062,16 @@ function CourseHomeCard({ course, onClick }) {
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <MenuBookOutlinedIcon sx={{ fontSize: 13, color: MUTED }} />
-            <Typography sx={{ fontSize: 12, color: MUTED }}>{course.totalLessons} bài</Typography>
+            <Typography sx={{ fontSize: 12, color: MUTED }}>
+              {course.totalLessons} bài
+            </Typography>
           </Box>
         </Box>
 
         <Divider sx={{ borderColor: BORDER, mb: 1.5 }} />
-        <Typography sx={{ fontSize: 12, color: MUTED }}>{course.instructor}</Typography>
+        <Typography sx={{ fontSize: 12, color: MUTED }}>
+          {course.instructor}
+        </Typography>
       </Box>
     </Box>
   );
@@ -965,7 +1089,8 @@ function BenefitsSection() {
         p: { xs: 3, md: 5 },
         borderRadius: "24px",
         border: `1px solid ${BORDER}`,
-        background: "linear-gradient(135deg, rgba(8,145,178,0.04) 0%, rgba(56,189,248,0.03) 100%)",
+        background:
+          "linear-gradient(135deg, rgba(8,145,178,0.04) 0%, rgba(56,189,248,0.03) 100%)",
       }}
     >
       <Box sx={{ textAlign: "center", mb: { xs: 3.5, md: 5 } }}>
@@ -996,7 +1121,11 @@ function BenefitsSection() {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(4, 1fr)" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "1fr 1fr",
+            lg: "repeat(4, 1fr)",
+          },
           gap: 3,
         }}
       >
@@ -1016,7 +1145,15 @@ function BenefitsSection() {
             >
               <item.icon sx={{ fontSize: 24, color: item.color }} />
             </Box>
-            <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT, lineHeight: 1.3, mb: 0.75 }}>
+            <Typography
+              sx={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: TEXT,
+                lineHeight: 1.3,
+                mb: 0.75,
+              }}
+            >
               {item.title}
             </Typography>
             <Typography sx={{ fontSize: 13.5, color: MUTED, lineHeight: 1.65 }}>
@@ -1034,14 +1171,15 @@ function BenefitsSection() {
 function ArticlesSection() {
   return (
     <Box sx={{ mb: { xs: 7, md: 9 } }}>
-      <SectionHeader
-        label="Tin tức & Mẹo học"
-        title="Bài viết mới nhất"
-      />
+      <SectionHeader label="Tin tức & Mẹo học" title="Bài viết mới nhất" />
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "1fr 1fr",
+            md: "repeat(3, 1fr)",
+          },
           gap: 2.5,
         }}
       >
@@ -1072,18 +1210,33 @@ function ArticlesSection() {
                 component="img"
                 src={article.thumbnail}
                 alt={article.title}
-                sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease", "&:hover": { transform: "scale(1.04)" } }}
-                onError={(e) => { e.target.style.display = "none"; }}
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  transition: "transform 0.4s ease",
+                  "&:hover": { transform: "scale(1.04)" },
+                }}
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
               />
             </Box>
 
             {/* Content */}
             <Box sx={{ p: 2.25 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25 }}
+              >
                 <CategoryChip category={article.category} />
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <CalendarTodayOutlinedIcon sx={{ fontSize: 11, color: MUTED }} />
-                  <Typography sx={{ fontSize: 11, color: MUTED }}>{article.date}</Typography>
+                  <CalendarTodayOutlinedIcon
+                    sx={{ fontSize: 11, color: MUTED }}
+                  />
+                  <Typography sx={{ fontSize: 11, color: MUTED }}>
+                    {article.date}
+                  </Typography>
                 </Box>
               </Box>
               <Typography
@@ -1147,7 +1300,8 @@ function CtaBlock({ onExplore, onMyCourses }) {
         p: { xs: 3.5, md: 6 },
         borderRadius: "24px",
         border: `1px solid ${BORDER}`,
-        background: "linear-gradient(135deg, rgba(8,145,178,0.08) 0%, rgba(56,189,248,0.06) 100%)",
+        background:
+          "linear-gradient(135deg, rgba(8,145,178,0.08) 0%, rgba(56,189,248,0.06) 100%)",
         textAlign: "center",
         mb: { xs: 2, md: 4 },
       }}
@@ -1177,11 +1331,22 @@ function CtaBlock({ onExplore, onMyCourses }) {
       >
         Khám phá khóa học phù hợp và theo dõi tiến độ học tập ngay hôm nay.
       </Typography>
-      <Box sx={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 1.5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          gap: 1.5,
+        }}
+      >
         <AppButton onClick={onExplore} sx={{ px: 3.5, py: 1.25, fontSize: 14 }}>
           Khám phá khóa học
         </AppButton>
-        <AppButton variant="outlined" onClick={onMyCourses} sx={{ px: 3.5, py: 1.25, fontSize: 14 }}>
+        <AppButton
+          variant="outlined"
+          onClick={onMyCourses}
+          sx={{ px: 3.5, py: 1.25, fontSize: 14 }}
+        >
           Khóa học của tôi
         </AppButton>
       </Box>
@@ -1195,50 +1360,62 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   const user = useMemo(() => getUser(), []);
+  console.log("user =", user);
+console.log("sessionStorage user =", sessionStorage.getItem("user"));
   const displayName = user.fullName || "Học viên";
 
   // TODO: replace with real API call
 
- const [continueCourseData, setContinueCourseData] = useState(null);
+  const [continueCourseData, setContinueCourseData] = useState(null);
 
-useEffect(() => {
-  if (!user.userId) return;
-  const getData = async () => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/courses/continue/${user.userId}`);
-      const result = await res.json();
-      if (result.success && result.data) {
-        setContinueCourseData({
-          courseId:           result.data.CourseId,
-          courseName:         result.data.CourseName,
-          category:           result.data.CategoryName ?? '',
-          level:              result.data.LevelName    ?? '',
-          progressPercentage: result.data.ProgressPercentage ?? 0,
-          thumbnail:          result.data.Thumbnail    ?? null,
-          currentStage:       null,
-          currentLesson:      null,
-          lastActivity:       null,
-          currentLessonDetail: null,
-        });
-      } else {
-        setContinueCourseData(null);
+  useEffect(() => {
+    console.log("Check useEffect trigger - userId hiện tại là:", user?.userId);
+
+  if (!user?.userId) {
+    console.log("Chưa có userId, đứng đợi...");
+    return; 
+  }
+   // if (!user.userId) return;
+    const getData = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/courses/continue/${user.userId}`,
+        );
+        const result = await res.json();
+        console.log("Kết quả API trả về thực tế:", result);
+        if (result.success && result.data) {
+          setContinueCourseData({
+            courseId: result.data.CourseId,
+            courseName: result.data.CourseName,
+            category: result.data.CategoryName ?? "",
+            level: result.data.LevelName ?? "",
+            progressPercentage: result.data.ProgressPercentage ?? 0,
+            thumbnail: result.data.Thumbnail ?? null,
+            currentStage: null,
+            currentLesson: null,
+            lastActivity: null,
+            currentLessonDetail: null,
+          });
+        } else {
+          setContinueCourseData(null);
+        }
+      } catch (error) {
+        console.error("getContinueCourse error:", error);
       }
-    } catch (error) {
-      console.error('getContinueCourse error:', error);
-    }
-  };
-  getData();
-}, [user.userId]);
+    };
+    getData();
+  }, [user.userId]);
 
   const handleExplore = () => navigate("/courses");
   const handleMyCourses = () => navigate("/my-courses");
-  const handleContinue = (course) => navigate(`/my-courses/${course.courseId}/learn`);
+  const handleContinue = (course) =>
+    navigate(`/my-courses/${course.courseId}/learn`);
   const handleCourseNav = (courseId) => navigate(`/courses/${courseId}`);
 
   const [courses, setCourses] = useState([]);
   useEffect(() => {
     const getData = async () => {
-      const res = await fetch('http://localhost:5000/api/courses/featured');
+      const res = await fetch("http://localhost:5000/api/courses/featured");
       const result = await res.json();
 
       if (!result.success) {
@@ -1246,17 +1423,19 @@ useEffect(() => {
         return;
       }
 
-      setCourses(result.data.map((c) => ({
-        courseId: c.CourseId,
-        courseName: c.CourseName,
-        category: c.CategoryName ?? 'Giao tiếp',
-        level: c.LevelName ?? 'Cơ bản',
-        instructor: c.InstructorName ?? '',
-        rating: c.Rating ?? 4.5,
-        studentCount: c.TotalStudents ?? 0,
-        totalLessons: c.TotalLessons ?? 0,
-        thumbnail: c.Thumbnail ?? null,
-      })));
+      setCourses(
+        result.data.map((c) => ({
+          courseId: c.CourseId,
+          courseName: c.CourseName,
+          category: c.CategoryName ?? "Giao tiếp",
+          level: c.LevelName ?? "Cơ bản",
+          instructor: c.InstructorName ?? "",
+          rating: c.Rating ?? 4.5,
+          studentCount: c.TotalStudents ?? 0,
+          totalLessons: c.TotalLessons ?? 0,
+          thumbnail: c.Thumbnail ?? null,
+        })),
+      );
     };
     getData();
   }, []);
@@ -1284,7 +1463,6 @@ useEffect(() => {
         <Box component="span" sx={{ color: PRIMARY, fontWeight: 700 }}>
           {displayName}
         </Box>{" "}
-
       </Typography>
 
       {/* Hero spans the full wide container */}

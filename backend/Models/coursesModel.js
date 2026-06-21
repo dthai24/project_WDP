@@ -243,6 +243,26 @@ Users.FullName as InStructorName,
     `);
   return await buildCourse(result.recordset);
 };
+// lay khoa hoc dang hoc hien thi o homepage
+const getContinueCourse = async (userId) => {
+  const request = new sql.Request();
+  request.input("UserId", sql.Int, userId);
+
+  const result = await request.query(`
+    SELECT TOP 1
+          c.CourseId,
+          c.CourseName,
+          c.Thumbnail,
+          uc.ProgressPercentage
+      FROM User_Courses uc
+      INNER JOIN Courses c
+          ON c.CourseId = uc.CourseId
+      WHERE uc.UserId = @UserId
+      ORDER BY uc.ProgressPercentage DESC`
+  );
+  return await buildCourse(result.recordset);
+};
+
 const getMentorCourses = async (userId) => {
   const request = new sql.Request();
   request.input("InstructorId", sql.Int, userId);
@@ -629,5 +649,6 @@ module.exports = {
   getCourseLearningPath,
   markNodeAsCompleted,
   getFeaturedCourses,
-  getFeaturedPaths
+  getFeaturedPaths,
+  getContinueCourse
 };
