@@ -1,11 +1,10 @@
 const express = require('express');
-const router  = express.Router();
+const router = express.Router();
 const {
   login,
   register,
   verifyOtp,
-  getTags,
-  savePreferences,
+  saveOnboarding,
   forgotPassword,
   resetPassword,
 } = require('../controllers/authController');
@@ -19,11 +18,10 @@ router.post('/register', register);
 // POST /api/auth/verify-otp — xác thực OTP đăng ký
 router.post('/verify-otp', verifyOtp);
 
-// GET /api/auth/tags — lấy danh sách 12 chủ đề khảo sát
-router.get('/tags', getTags);
 
-// POST /api/auth/save-preferences — lưu sở thích người dùng
-router.post('/save-preferences', savePreferences);
+// POST /api/auth/onboarding — lưu kết quả khảo sát 3 bước
+router.post('/onboarding', saveOnboarding);
+
 
 // POST /api/auth/forgot-password — gửi OTP đặt lại mật khẩu (tất cả roles)
 router.post('/forgot-password', forgotPassword);
