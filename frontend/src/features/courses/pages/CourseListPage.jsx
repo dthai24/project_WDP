@@ -143,52 +143,8 @@ export default function CourseListPage() {
     return () => { isMounted = false; };
   }, [filters]);
 
-<<<<<<< HEAD
-  const filteredCourses = useMemo(() => {
-    const keyword = filters.keyword.toLowerCase();
-    const filtered = courses.filter((course) => {
-      if (keyword) {
-        const matchSearch =
-          course.courseName.toLowerCase().includes(keyword) ||
-          course.description.toLowerCase().includes(keyword) ||
-          course.category.toLowerCase().includes(keyword);
-        if (!matchSearch) return false;
-      }
-      if (filters.categories.length > 0 && !filters.categories.includes(course.category)) {
-        return false;
-      }
-      if (filters.levels.length > 0 && !filters.levels.includes(course.level)) {
-        return false;
-      }
-      if (filters.statuses.length > 0) {
-        const matchesStatus = filters.statuses.some((status) => {
-          if (status === "enrolled") 
-            { return course.enrollmentStatus !== "available"; } 
-          if (status === "not_enrolled") 
-            { return course.enrollmentStatus === "available"; }
-          return false;
-        });
-        if (!matchesStatus) return false;
-      }
-      return true;
-    });
-
-    return [...filtered].sort((a, b) => {
-      if (filters.sort === "popular") {
-        return (b.popularity ?? 0) - (a.popularity ?? 0);
-      }
-      if (filters.sort === "progress") {
-        return (b.progressPercentage ?? 0) - (a.progressPercentage ?? 0);
-      }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [courses, filters]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
-=======
   // Logic chia nhỏ danh sách hiển thị phân trang ở giao diện client
   const totalPages = Math.max(1, Math.ceil(totalCourses / PAGE_SIZE));
->>>>>>> origin/main
   const currentPage = Math.min(filters.page, totalPages);
   const pageCourses = courses.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
@@ -213,33 +169,7 @@ export default function CourseListPage() {
     const cId = course.CourseId || course.courseId || course.id;
     navigate(`/my-courses/${cId}/learn`);
   };
-<<<<<<< HEAD
-
-  const handleEnroll = async (course) => {
-    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-    if (!user.userId) {
-      toast.error('Vui lòng đăng nhập để đăng ký khóa học.');
-      return;
-    }
-
-    const { ok, data } = await enrollCourseApi(user.userId, course.courseId);
-    if (ok && data.success) {
-      setCourses((prev) =>
-        prev.map((item) =>
-          item.courseId === course.courseId
-            ? { ...item, enrollmentStatus: "enrolled", isEnrolled: true, progressPercentage: 0 }
-            : item
-        )
-      );
-      toast.success(`Đã đăng ký khóa "${course.courseName}" thành công!`);
-    } else {
-      toast.error(data.message || 'Đăng ký thất bại. Vui lòng thử lại.');
-    }
-  };
-
-=======
   // Xử lý xóa nhãn chip tiêu chí lọc đang hiển thị
->>>>>>> origin/main
   const handleRemoveFilterChip = (chip) => {
     if (chip.type === "keyword") {
       updateFilters({ keyword: "", page: 1 });
