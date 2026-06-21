@@ -6,7 +6,8 @@ import {
   PRIMARY,
   TEXT,
 } from './mentorCourseCreateStyles';
-import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
+import { formatMentorCourseDate, isCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
+import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
 
 function InfoRow({ label, value }) {
   return (
@@ -22,8 +23,8 @@ function InfoRow({ label, value }) {
 }
 
 export default function MentorCourseOverviewTab({ course }) {
-  const isPublished = Number(course.IsPublished) === 1;
-  const thumbnail = `http://localhost:5000${course.Thumbnail}`
+  const published = isCoursePublished(course);
+  const thumbnail = resolveCourseThumbnailUrl(course.Thumbnail);
 
   return (
     <Box sx={CREATE_CARD_SX}>
@@ -88,7 +89,7 @@ export default function MentorCourseOverviewTab({ course }) {
             <InfoRow label="Giảng viên" value={course.InStructorName} />
             <InfoRow
               label="Trạng thái"
-              value={isPublished ? 'Đã xuất bản' : 'Bản nháp'}
+              value={published ? 'Đã xuất bản' : 'Bản nháp'}
             />
             <InfoRow label="Ngày tạo" value={formatMentorCourseDate(course.CourseCreateAt)} />
             <InfoRow label="Cập nhật gần nhất" value={formatMentorCourseDate(course.CourseUpdateAt)} />

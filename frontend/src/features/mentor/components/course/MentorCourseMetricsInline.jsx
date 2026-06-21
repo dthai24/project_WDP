@@ -5,7 +5,14 @@ import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import FolderRoundedIcon from '@mui/icons-material/FolderRounded';
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-//Metric (total {student, paths, node, materials, rate,...})
+import {
+  countCourseChapters,
+  countCourseLessons,
+  countCourseMaterials,
+  countCourseStudents,
+  formatCourseRating,
+} from '@/features/mentor/utils/mentorCourseUtils';
+
 function MetricInline({ icon: Icon, label, value, iconColor }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
@@ -20,37 +27,36 @@ function MetricInline({ icon: Icon, label, value, iconColor }) {
   );
 }
 
-//Metric (total {student, paths, node, materials, rate,...})
 export default function MentorCourseMetricsInline({ course }) {
   const metrics = [
     {
       icon: GroupsRoundedIcon,
       label: 'Học viên',
-      value: course.studentCount ?? 0,
+      value: countCourseStudents(course),
       iconColor: PRIMARY,
     },
     {
       icon: StarRoundedIcon,
       label: 'Đánh giá',
-      value: course.rating != null ? course.rating.toFixed(1) : '—',
+      value: formatCourseRating(course),
       iconColor: '#D97706',
     },
     {
       icon: MenuBookRoundedIcon,
       label: 'Bài học',
-      value: course.TotalLessons ?? 0,
+      value: countCourseLessons(course),
       iconColor: '#0E7490',
     },
     {
       icon: FolderRoundedIcon,
       label: 'Chương',
-      value: course.Paths.length,
+      value: countCourseChapters(course),
       iconColor: '#7C3AED',
     },
     {
       icon: DescriptionRoundedIcon,
       label: 'Học liệu',
-      value: course.totalMaterials ?? 0,
+      value: countCourseMaterials(course),
       iconColor: '#475569',
     },
   ];

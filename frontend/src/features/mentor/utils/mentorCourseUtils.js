@@ -68,6 +68,19 @@ export function countCourseStudents(course = {}) {
   return getCourseStudentCount(course);
 }
 
+export function countCourseChapters(course = {}) {
+  return (course.Paths ?? course.paths ?? []).length;
+}
+
+export function formatCourseRating(course = {}) {
+  const rating = getCourseRating(course);
+  return rating != null ? rating.toFixed(1) : '—';
+}
+
+export function isCoursePublished(course = {}) {
+  return courseIsPublished(course);
+}
+
 function getCourseTimestamp(course, kind = 'updated') {
   const raw =
     kind === 'created'
@@ -77,22 +90,20 @@ function getCourseTimestamp(course, kind = 'updated') {
   return Number.isFinite(time) ? time : 0;
 }
 
-function getCourseSearchHaystack(course) {
-  return [
-    course?.CourseName,
-    course?.courseName,
-    course?.Description,
-    course?.description,
-    course?.CategoryDisplayName,
-    course?.CategoryName,
-    course?.categoryName,
-    course?.LevelDisplayName,
-    course?.levelName,
-    course?.LevelName,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+function normalizeSearchText(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+}
+
+function matchesCourseNameSearch(course, keyword) {
+  if (!keyword) return true;
+  const haystack = normalizeSearchText(getCourseName(course));
+  return haystack.includes(normalizeSearchText(keyword));
 }
 
 /** Đếm bài học (nodes) từ cây Paths — hỗ trợ PascalCase/camelCase từ API. */
@@ -173,7 +184,7 @@ export function filterAndSortMentorCourses(courses, query = {}) {
       if (!levelMatch) return false;
     }
 
-    if (keyword && !getCourseSearchHaystack(course).includes(keyword)) {
+    if (keyword && !matchesCourseNameSearch(course, keyword)) {
       return false;
     }
 

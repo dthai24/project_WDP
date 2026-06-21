@@ -104,7 +104,7 @@ const buildResetPasswordHtml = (fullName, otpCode) => `
 // POST /api/auth/login
 // Works for ALL roles: Admin, Mentor, Student
 // ============================================================
-const   login = async (req, res) => {
+const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password)
@@ -150,10 +150,10 @@ const   login = async (req, res) => {
       success: true,
       message: 'Đăng nhập thành công!',
       user: {
-        userId:      user.UserId,
-        fullName:    user.FullName,
-        email:       user.Email,
-        phone:       user.Phone,
+        userId: user.UserId,
+        fullName: user.FullName,
+        email: user.Email,
+        phone: user.Phone,
         isFirstLogin: user.IsFirstLogin === true || user.IsFirstLogin === 1,
         roles,  // [] nếu Student chưa được gán role, hoặc ['Admin'] / ['Mentor']
       },
@@ -203,17 +203,17 @@ const register = async (req, res) => {
     await deleteReq.query('DELETE FROM OTP_Verification WHERE Email = @email');
 
     // Tạo OTP + thời hạn 3 phút
-    const otpCode  = generateOTP();
+    const otpCode = generateOTP();
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
     const insertReq = new sql.Request();
-    insertReq.input('email',       sql.NVarChar(150), email);
-    insertReq.input('fullName',    sql.NVarChar(100), fullName);
-    insertReq.input('phone',       sql.NVarChar(20),  phone);
-    insertReq.input('password',    sql.NVarChar(255), password);
-    insertReq.input('dateOfBirth', sql.Date,          new Date(dateOfBirth));
-    insertReq.input('otpCode',     sql.NVarChar(6),   otpCode);
-    insertReq.input('expiresAt',   sql.DateTime,      expiresAt);
+    insertReq.input('email', sql.NVarChar(150), email);
+    insertReq.input('fullName', sql.NVarChar(100), fullName);
+    insertReq.input('phone', sql.NVarChar(20), phone);
+    insertReq.input('password', sql.NVarChar(255), password);
+    insertReq.input('dateOfBirth', sql.Date, new Date(dateOfBirth));
+    insertReq.input('otpCode', sql.NVarChar(6), otpCode);
+    insertReq.input('expiresAt', sql.DateTime, expiresAt);
 
     await insertReq.query(`
       INSERT INTO OTP_Verification (Email, FullName, Phone, Password, DateOfBirth, OtpCode, ExpiresAt)
@@ -221,11 +221,11 @@ const register = async (req, res) => {
     `);
 
     const { emailSent } = await sendOtpEmail({
-      to:      email,
+      to: email,
       subject: '🔐 Mã xác thực OTP của bạn - S.T.A.R Learning Path',
-      html:    buildRegisterOtpHtml(fullName, otpCode),
+      html: buildRegisterOtpHtml(fullName, otpCode),
       otpCode,
-      label:   'đăng ký',
+      label: 'đăng ký',
     });
 
     return res.json({
@@ -252,8 +252,8 @@ const verifyOtp = async (req, res) => {
 
   try {
     const findReq = new sql.Request();
-    findReq.input('email',   sql.NVarChar(150), email.toLowerCase().trim());
-    findReq.input('otpCode', sql.NVarChar(6),   otpCode.trim());
+    findReq.input('email', sql.NVarChar(150), email.toLowerCase().trim());
+    findReq.input('otpCode', sql.NVarChar(6), otpCode.trim());
 
     const result = await findReq.query(
       'SELECT * FROM OTP_Verification WHERE Email = @email AND OtpCode = @otpCode'
@@ -276,11 +276,11 @@ const verifyOtp = async (req, res) => {
     try {
       // Chèn user mới vào Users
       const insertReq = new sql.Request(transaction);
-      insertReq.input('fullName',    sql.NVarChar(100), record.FullName);
-      insertReq.input('email',       sql.NVarChar(150), record.Email);
-      insertReq.input('phone',       sql.NVarChar(20),  record.Phone);
-      insertReq.input('password',    sql.NVarChar(255), record.Password);
-      insertReq.input('dateOfBirth', sql.Date,          record.DateOfBirth);
+      insertReq.input('fullName', sql.NVarChar(100), record.FullName);
+      insertReq.input('email', sql.NVarChar(150), record.Email);
+      insertReq.input('phone', sql.NVarChar(20), record.Phone);
+      insertReq.input('password', sql.NVarChar(255), record.Password);
+      insertReq.input('dateOfBirth', sql.Date, record.DateOfBirth);
 
       const userResult = await insertReq.query(`
         INSERT INTO Users (FullName, Email, Phone, Password, DateOfBirth)
@@ -320,77 +320,61 @@ const verifyOtp = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
   }
 };
-
 // ============================================================
-// GET /api/auth/tags
+// POST /api/auth/onboarding
+// Lấy kết quả 3 câu hỏi (Category, Level, Goal) lưu vào Users
 // ============================================================
-const getTags = async (req, res) => {
-  try {
-    const request = new sql.Request();
-    const result  = await request.query('SELECT TagId, TagName, DisplayName FROM Tags ORDER BY TagId');
-    return res.json({ success: true, tags: result.recordset });
-  } catch (err) {
-    console.error('[GetTags Error]', err.message);
-    return res.status(500).json({ success: false, message: 'Không thể lấy danh sách chủ đề.' });
-  }
-};
+// POST /api/auth/onboarding
+const saveOnboarding = async (req, res) => {
+  // Thay vì lấy 1 categoryId, ta lấy mảng categoryIds
+  const { userId, categoryIds, levelId, goal } = req.body;
 
-// ============================================================
-// POST /api/auth/save-preferences
-// ============================================================
-const savePreferences = async (req, res) => {
-  const { userId, tagIds } = req.body;
-
-  if (!userId)
-    return res.status(400).json({ success: false, message: 'userId không được để trống.' });
-
-  if (!Array.isArray(tagIds) || tagIds.length < 3 || tagIds.length > 5)
-    return res.status(400).json({
-      success: false,
-      message: 'Vui lòng chọn từ 3 đến 5 chủ đề yêu thích.',
-    });
+  // Validate kiểm tra mảng rỗng
+  if (!userId || !categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0 || !levelId || !goal)
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin (chọn ít nhất 1 Lĩnh vực).' });
 
   try {
     const userCheck = new sql.Request();
     userCheck.input('userId', sql.Int, userId);
     const userResult = await userCheck.query('SELECT UserId FROM Users WHERE UserId = @userId');
+
     if (userResult.recordset.length === 0)
       return res.status(404).json({ success: false, message: 'Người dùng không tồn tại.' });
 
-    const transaction = new sql.Transaction();
-    await transaction.begin();
+    // 1. Cập nhật bảng Users (Chỉ còn Level, Goal)
+    const updateReq = new sql.Request();
+    updateReq.input('userId', sql.Int, userId);
+    updateReq.input('levelId', sql.Int, levelId);
+    updateReq.input('goal', sql.NVarChar(100), goal);
+    await updateReq.query(`
+      UPDATE Users 
+      SET CurrentLevelId = @levelId, 
+          LearningGoal = @goal, 
+          IsFirstLogin = 0 
+      WHERE UserId = @userId
+    `);
 
-    try {
-      const deleteOld = new sql.Request(transaction);
-      deleteOld.input('userId', sql.Int, userId);
-      await deleteOld.query('DELETE FROM User_Preferences WHERE UserId = @userId');
+    // 2. Xóa dữ liệu cũ trong bảng User_Categories (nếu có)
+    const deleteReq = new sql.Request();
+    deleteReq.input('userId', sql.Int, userId);
+    await deleteReq.query('DELETE FROM User_Categories WHERE UserId = @userId');
 
-      for (const tagId of tagIds) {
-        const insertReq = new sql.Request(transaction);
-        insertReq.input('userId', sql.Int, parseInt(userId, 10));
-        insertReq.input('tagId',  sql.Int, parseInt(tagId,  10));
-        await insertReq.query('INSERT INTO User_Preferences (UserId, TagId) VALUES (@userId, @tagId)');
-      }
-
-      const updateReq = new sql.Request(transaction);
-      updateReq.input('userId', sql.Int, userId);
-      await updateReq.query('UPDATE Users SET IsFirstLogin = 0, UpdatedAt = GETDATE() WHERE UserId = @userId');
-
-      await transaction.commit();
-    } catch (dbErr) {
-      await transaction.rollback();
-      throw dbErr;
+    // 3. Vòng lặp Insert các lĩnh vực đã chọn vào bảng User_Categories
+    for (const catId of categoryIds) {
+      const insertReq = new sql.Request();
+      insertReq.input('userId', sql.Int, userId);
+      insertReq.input('categoryId', sql.Int, catId);
+      await insertReq.query('INSERT INTO User_Categories (UserId, CategoryId) VALUES (@userId, @categoryId)');
     }
 
-    return res.json({
-      success: true,
-      message: 'Đã lưu sở thích thành công. Chào mừng bạn đến với S.T.A.R Learning Path.',
-    });
+    return res.json({ success: true, message: 'Đã lưu kết quả khảo sát thành công!' });
   } catch (err) {
-    console.error('[SavePreferences Error]', err.message);
+    console.error('[SaveOnboarding Error]', err.message);
     return res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
   }
 };
+
+
 
 // ============================================================
 // POST /api/auth/forgot-password
@@ -412,25 +396,25 @@ const forgotPassword = async (req, res) => {
     if (result.recordset.length === 0)
       return res.status(404).json({ success: false, message: 'Email này chưa được đăng ký trong hệ thống.' });
 
-    const user      = result.recordset[0];
-    const otpCode   = generateOTP();
+    const user = result.recordset[0];
+    const otpCode = generateOTP();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
 
     // Lưu OTP vào cột ResetOtpCode, ResetOtpExpires trên bảng Users
     const updateReq = new sql.Request();
-    updateReq.input('email',     sql.NVarChar(150), normalizedEmail);
-    updateReq.input('otpCode',   sql.NVarChar(6),   otpCode);
-    updateReq.input('expiresAt', sql.DateTime,      expiresAt);
+    updateReq.input('email', sql.NVarChar(150), normalizedEmail);
+    updateReq.input('otpCode', sql.NVarChar(6), otpCode);
+    updateReq.input('expiresAt', sql.DateTime, expiresAt);
     await updateReq.query(
       'UPDATE Users SET ResetOtpCode = @otpCode, ResetOtpExpires = @expiresAt WHERE Email = @email'
     );
 
     const { emailSent } = await sendOtpEmail({
-      to:      normalizedEmail,
+      to: normalizedEmail,
       subject: '🔑 Mã OTP đặt lại mật khẩu - S.T.A.R Learning Path',
-      html:    buildResetPasswordHtml(user.FullName, otpCode),
+      html: buildResetPasswordHtml(user.FullName, otpCode),
       otpCode,
-      label:   'đặt lại mật khẩu',
+      label: 'đặt lại mật khẩu',
     });
 
     return res.json({
@@ -487,7 +471,7 @@ const resetPassword = async (req, res) => {
 
     // Cập nhật mật khẩu và xoá OTP
     const updateReq = new sql.Request();
-    updateReq.input('email',       sql.NVarChar(150), normalizedEmail);
+    updateReq.input('email', sql.NVarChar(150), normalizedEmail);
     updateReq.input('newPassword', sql.NVarChar(255), newPassword);
     await updateReq.query(
       'UPDATE Users SET Password = @newPassword, ResetOtpCode = NULL, ResetOtpExpires = NULL, UpdatedAt = GETDATE() WHERE Email = @email'
@@ -503,4 +487,4 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { login, register, verifyOtp, getTags, savePreferences, forgotPassword, resetPassword };
+module.exports = { login, register, verifyOtp, forgotPassword, resetPassword, saveOnboarding };

@@ -17,7 +17,6 @@
  */
 
 import { mentorCourseDetailById } from '@/features/mentor/data/mentorCourseDetailMock';
-import { mentorCourseStudentsByCourseId } from '@/features/mentor/data/mentorCourseStudentsMock';
 import { normalizeMentorCourse } from '@/features/mentor/utils/mentorCourseUtils';
 import { normalizeMentorCourseDetail } from '@/features/mentor/utils/mentorCourseDetailUtils';
 import {
@@ -445,23 +444,34 @@ export async function createCourse(payload) {
 //Get Information of Course by it's id
 export async function fetchMentorCourseDetail(courseId) {
   try {
-    const courses = await fetch(`http://localhost:5000/api/courses/my-courses/${courseId}?tab=course`);
-    const res = await courses.json();
+    const [courseRes, studentsRes] = await Promise.all([
+      fetch(`${API_BASE}/courses/my-courses/${courseId}?tab=course`),
+      fetch(`${API_BASE}/mentor/courses/${courseId}/students`),
+    ]);
+    const res = await courseRes.json();
     if (!res.success) {
-      return ({
+      return {
         success: false,
         message: res.message,
         course: {},
-      })
+      };
     }
-    // console.table(res.data)
+
+    const course = res.data[0];
+    if (course && studentsRes.ok) {
+      const studentsJson = await studentsRes.json();
+      if (studentsJson.success && Array.isArray(studentsJson.data)) {
+        course.StudentCount = studentsJson.data.length;
+      }
+    }
+
     return {
       success: true,
       message: 'Lấy course detail thành công',
-      course: res.data[0],
-    }
+      course,
+    };
   } catch (error) {
-    return { success: false, message: 'Lỗi Server', course: {} }
+    return { success: false, message: 'Lỗi Server', course: {} };
   }
 }
 
@@ -665,11 +675,18 @@ export async function updateCoursePublishStatus(courseId, isPublished) {
  * TODO: replace mock with real API call
  */
 export async function fetchCourseStudents(courseId, filters = {}) {
-  // TODO: replace with real API
-  const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students`);
-  const res = await response.json();
-  return { ok: response.ok, students: res.data.map(normalizeCourseStudent) };
-
+  void filters;
+  try {
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students`);
+    const res = await response.json();
+    if (!response.ok || !res.success) {
+      return { ok: false, students: [], message: res.message ?? 'Không lấy được danh sách học viên.' };
+    }
+    const rows = Array.isArray(res.data) ? res.data : [];
+    return { ok: true, students: rows.map(normalizeCourseStudent) };
+  } catch (error) {
+    return { ok: false, students: [], message: error.message ?? 'Lỗi kết nối server.' };
+  }
 }
 
 /**
@@ -691,12 +708,11 @@ export async function fetchCourseStudents(courseId, filters = {}) {
  * TODO: replace mock with real API call
  */
 export async function fetchCourseStudentStats(courseId) {
-  await delay(200);
-  const id = Number(courseId);
-  const rawStudents = mentorCourseStudentsByCourseId[id] ?? [];
-  const students = rawStudents.map(normalizeCourseStudent);
-
-  return { ok: true, stats: computeCourseStudentStats(students) };
+  const result = await fetchCourseStudents(courseId);
+  if (!result.ok) {
+    return { ok: false, stats: computeCourseStudentStats([]), message: result.message };
+  }
+  return { ok: true, stats: computeCourseStudentStats(result.students) };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

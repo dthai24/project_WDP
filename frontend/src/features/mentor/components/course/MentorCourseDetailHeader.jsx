@@ -19,6 +19,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import MentorCourseMetricsInline from './MentorCourseMetricsInline';
 import { PRIMARY, TEXT, MUTED } from './mentorCourseCreateStyles';
+import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
+import { isCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
 import { MENTOR_COURSE_DETAIL_TABS } from '@/features/mentor/utils/mentorCourseDetailUtils';
 import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
@@ -35,8 +37,8 @@ const PILL_CHIP_SX = {
   },
 };
 
-function getStatusChip(status) {
-  if (status) {
+function getStatusChip(isPublished) {
+  if (isPublished) {
     return {
       label: 'Đã xuất bản',
       sx: {
@@ -57,7 +59,7 @@ function getStatusChip(status) {
 }
 
 function CourseThumbnail({ thumbnail, courseName }) {
-  const imageUrl = `http://localhost:5000${thumbnail}`;
+  const imageUrl = resolveCourseThumbnailUrl(thumbnail);
 
   return (
     <Box
@@ -93,11 +95,10 @@ export default function MentorCourseDetailHeader({
   onPublishToggle,
   publishing = false,
 }) {
-  console.log(course)
   const theme = useTheme();
   const navigate = useNavigate();
-  const statusChip = getStatusChip(course.IsPublished);
-  const isPublished = course.IsPublished;
+  const published = isCoursePublished(course);
+  const statusChip = getStatusChip(published);
   const editPath = `/mentor/courses/${course.CourseId}/edit`;
   const questionsPath = `/mentor/courses/${course.CourseId ?? course.courseId}/questions`;
 
@@ -187,7 +188,7 @@ export default function MentorCourseDetailHeader({
                   lineHeight: 1.35,
                 }}
               >
-                {course.CategoryName}
+                {course.CourseName}
               </Typography>
               <Chip size="small" label={statusChip.label} sx={{ ...PILL_CHIP_SX, ...statusChip.sx }} />
             </Box>
@@ -300,7 +301,7 @@ export default function MentorCourseDetailHeader({
 
             <AppButton
               startIcon={
-                isPublished ? (
+                published ? (
                   <UnpublishedRoundedIcon sx={{ fontSize: 16 }} />
                 ) : (
                   <PublishRoundedIcon sx={{ fontSize: 16 }} />
@@ -321,7 +322,7 @@ export default function MentorCourseDetailHeader({
                 '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
               }}
             >
-              {isPublished ? 'Hủy xuất bản' : 'Xuất bản'}
+              {published ? 'Hủy xuất bản' : 'Xuất bản'}
             </AppButton>
           </Box>
         </Box>
