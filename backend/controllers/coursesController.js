@@ -142,6 +142,43 @@ const getInformationCourse = async (req, res) => {
   }
 };
 
+const getCourseChapters = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    if (!courseId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu courseId',
+        data: {},
+      });
+    }
+
+    const paths = await courseModel.getCourseChaptersOutline(courseId);
+    if (paths === null) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy khóa học này trong Database',
+        data: {},
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy danh sách chương thành công',
+      data: {
+        CourseId: Number(courseId),
+        Paths: paths,
+      },
+    });
+  } catch (error) {
+    console.error('Get course chapters error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy danh sách chương',
+    });
+  }
+};
+
 //Save Course Draft at Step 1
 const saveCourseDraftStepOne = async (req, res) => {
   try {
@@ -345,6 +382,7 @@ const enrollCourse = async (req, res) => {
 module.exports = {
   getMyCourses,
   getInformationCourse,
+  getCourseChapters,
   saveCourseDraftStepOne,
   createFinalCourse,
   getStudentCourses,

@@ -4,6 +4,7 @@ const router = express.Router();
 const {
     getMyCourses,
     getInformationCourse,
+    getCourseChapters,
     saveCourseDraftStepOne,
     createFinalCourse,
     getStudentCourses,
@@ -37,6 +38,9 @@ router.get('/student', optionalAuth, getStudentCourses);
 
 // Lấy danh sách khóa học của tôi (Trang My Courses)
 router.post('/my-courses', getMyCourses);
+
+// Mục lục chương / bài theo khóa học (Question Bank, quiz setup)
+router.get('/my-courses/:courseId/chapters', optionalAuth, getCourseChapters);
 
 // Chi tiết khóa học
 router.get('/my-courses/:courseId', getInformationCourse);
