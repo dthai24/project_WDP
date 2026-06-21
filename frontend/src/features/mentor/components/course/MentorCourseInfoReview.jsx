@@ -3,6 +3,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useNavigate } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { COURSE_THUMBNAIL_ASPECT, CREATE_CARD_SX, MUTED, TEXT } from './mentorCourseCreateStyles';
+import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
 
 function InfoRow({ label, value }) {
   return (
@@ -24,6 +25,7 @@ export default function MentorCourseInfoReview({
 }) {
   const navigate = useNavigate();
   const thumbnail = String(course?.Thumbnail ?? '').trim();
+  const thumbnailUrl = resolveCourseThumbnailUrl(thumbnail);
   const isPublished = Boolean(course?.IsPublished);
 
   return (
@@ -79,7 +81,7 @@ export default function MentorCourseInfoReview({
           {thumbnail ? (
             <Box
               component="img"
-              src={thumbnail}
+              src={thumbnailUrl}
               alt="Ảnh đại diện khóa học"
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />

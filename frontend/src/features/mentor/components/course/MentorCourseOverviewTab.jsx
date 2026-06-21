@@ -24,7 +24,10 @@ function InfoRow({ label, value }) {
 
 export default function MentorCourseOverviewTab({ course }) {
   const published = isCoursePublished(course);
-  const thumbnail = resolveCourseThumbnailUrl(course.Thumbnail);
+  const thumbnail = resolveCourseThumbnailUrl(
+    course.Thumbnail,
+    course.CourseUpdateAt ?? course.UpdatedAt ?? course.CourseCreateAt,
+  );
 
   return (
     <Box sx={CREATE_CARD_SX}>

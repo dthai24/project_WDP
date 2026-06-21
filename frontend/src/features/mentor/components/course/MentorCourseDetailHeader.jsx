@@ -58,8 +58,8 @@ function getStatusChip(isPublished) {
   };
 }
 
-function CourseThumbnail({ thumbnail, courseName }) {
-  const imageUrl = resolveCourseThumbnailUrl(thumbnail);
+function CourseThumbnail({ thumbnail, courseName, cacheKey }) {
+  const imageUrl = resolveCourseThumbnailUrl(thumbnail, cacheKey);
 
   return (
     <Box
@@ -176,7 +176,11 @@ export default function MentorCourseDetailHeader({
             gap: 2,
           }}
         >
-          <CourseThumbnail thumbnail={course.Thumbnail} courseName={course.CourseName} />
+          <CourseThumbnail
+            thumbnail={course.Thumbnail}
+            courseName={course.CourseName}
+            cacheKey={course.CourseUpdateAt ?? course.UpdatedAt ?? course.CourseCreateAt}
+          />
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.75 }}>
