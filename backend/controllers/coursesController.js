@@ -388,6 +388,7 @@ const getContinueCourse = async (req, res) => {
   }
 };
 
+
 module.exports = {
   getMyCourses,
   getInformationCourse,
@@ -398,5 +399,6 @@ module.exports = {
   getLearningPath,
   updateProgress,
   getFeaturedCourses,
-  getFeaturedPaths
+  getFeaturedPaths,
+  getContinueCourse
 };
