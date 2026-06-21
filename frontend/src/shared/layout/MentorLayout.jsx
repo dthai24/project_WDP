@@ -4,10 +4,11 @@ import Header from './Header';
 import Footer from './Footer';
 import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
 import { pageContentSx } from './MainLayout';
+import { MentorLayoutGuard } from '@/shared/routing/RoleShellRedirects';
 
 export default function MentorLayout() {
   return (
-    <>
+    <MentorLayoutGuard>
       <Box
         sx={{
           minHeight: '100vh',
@@ -34,6 +35,6 @@ export default function MentorLayout() {
       </Box>
 
       <Footer />
-    </>
+    </MentorLayoutGuard>
   );
 }

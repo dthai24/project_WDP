@@ -121,6 +121,7 @@ export function buildMentorCourseActiveChips(filters, options = {}) {
     statusOptions = [],
     categoryOptions = [],
     levelOptions = [],
+    sortOptions = [],
   } = options;
 
   const chips = [];
@@ -130,7 +131,7 @@ export function buildMentorCourseActiveChips(filters, options = {}) {
       key: `q:${filters.q}`,
       type: 'q',
       value: filters.q,
-      label: filters.q,
+      label: `"${filters.q}"`,
     });
   }
 
@@ -148,7 +149,7 @@ export function buildMentorCourseActiveChips(filters, options = {}) {
       key: `category:${filters.category}`,
       type: 'category',
       value: filters.category,
-      label: categoryOptions.find((o) => o.value === filters.category)?.label ?? filters.category,
+      label: categoryOptions.find((o) => String(o.value) === String(filters.category))?.label ?? filters.category,
     });
   }
 
@@ -157,7 +158,16 @@ export function buildMentorCourseActiveChips(filters, options = {}) {
       key: `level:${filters.level}`,
       type: 'level',
       value: filters.level,
-      label: levelOptions.find((o) => o.value === filters.level)?.label ?? filters.level,
+      label: levelOptions.find((o) => String(o.value) === String(filters.level))?.label ?? filters.level,
+    });
+  }
+
+  if (filters.sort && filters.sort !== MENTOR_COURSE_LIST_DEFAULTS.sort) {
+    chips.push({
+      key: `sort:${filters.sort}`,
+      type: 'sort',
+      value: filters.sort,
+      label: sortOptions.find((o) => o.value === filters.sort)?.label ?? filters.sort,
     });
   }
 

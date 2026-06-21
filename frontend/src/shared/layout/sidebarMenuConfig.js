@@ -6,14 +6,34 @@ import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
+import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import { isStudent } from "@/features/auth/utils/authUtils";
+
+export function isAdminAccountsActive(pathname) {
+  return pathname === "/admin/accounts" || /^\/admin\/accounts\/\d+/.test(pathname);
+}
+
+export function isAdminCategoriesActive(pathname) {
+  return pathname === "/admin/categories" || pathname.startsWith("/admin/categories/");
+}
+
+export function isAdminLevelsActive(pathname) {
+  return pathname === "/admin/levels" || pathname.startsWith("/admin/levels/");
+}
 
 export function isMentorQuestionBankActive(pathname) {
   return (
     pathname === "/mentor/question-banks" ||
-    pathname === "/mentor/question-banks/create" ||
+    pathname.startsWith("/mentor/question-banks/") ||
     /^\/mentor\/courses\/\d+\/questions/.test(pathname)
   );
+}
+
+export function isMentorCoursesActive(pathname) {
+  if (isMentorQuestionBankActive(pathname)) return false;
+  return pathname === "/mentor/courses" || pathname.startsWith("/mentor/courses/");
 }
 
 export function getStudentMenuItems(user) {
@@ -57,6 +77,7 @@ export function getMentorMenuItems() {
       to: "/mentor/courses",
       Icon: MenuBookRoundedIcon,
       disabled: false,
+      isActiveMatch: isMentorCoursesActive,
     },
     {
       id: "mentor-question-banks",
@@ -79,6 +100,35 @@ export function getMentorMenuItems() {
       to: "/mentor/student-progress",
       Icon: InsightsRoundedIcon,
       disabled: false,
+    },
+  ];
+}
+
+export function getAdminMenuItems() {
+  return [
+    {
+      id: "admin-accounts",
+      label: "Tài khoản",
+      to: "/admin/accounts",
+      Icon: ManageAccountsOutlinedIcon,
+      disabled: false,
+      isActiveMatch: isAdminAccountsActive,
+    },
+    {
+      id: "admin-categories",
+      label: "Danh mục",
+      to: "/admin/categories",
+      Icon: CategoryOutlinedIcon,
+      disabled: false,
+      isActiveMatch: isAdminCategoriesActive,
+    },
+    {
+      id: "admin-levels",
+      label: "Trình độ",
+      to: "/admin/levels",
+      Icon: LayersOutlinedIcon,
+      disabled: false,
+      isActiveMatch: isAdminLevelsActive,
     },
   ];
 }

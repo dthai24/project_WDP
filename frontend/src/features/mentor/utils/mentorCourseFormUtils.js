@@ -1,4 +1,4 @@
-import { isValidThumbnailValue } from './mentorCourseImageUtils';
+import { isValidThumbnailValue, validateThumbnailDataUrl } from './mentorCourseImageUtils';
 
 //Max char user can input in course's description
 export const MENTOR_COURSE_DESCRIPTION_MAX = 250;
@@ -36,11 +36,11 @@ export function validateMentorCourseForm(form) {
   // Course's Name 
   //(Not empty and have at least 3 chars, max: is setting 250 <depend on type of course name in database (nvarchar250)>)
   if (!courseName) {
-    errors.CourseName = 'Đéo đặt tên thì ai biết mà học??';
+    errors.CourseName = 'Tên khóa học không được để trống';
   } else if (courseName.length < 3) {
-    errors.CourseName = 'Địt mẹ khóa học lozn gì đéo đủ 3 ký tự???';
+    errors.CourseName = 'Tên khóa học phải nhiều hơn 3 ký tự';
   } else if (courseName.length > 250) {
-    errors.CourseName = 'Tên dài như này cho chó học à?????';
+    errors.CourseName = 'Tên khóa học không được vượt quá 250 ký tự';
   }
 
   // Course's Description
@@ -55,19 +55,24 @@ export function validateMentorCourseForm(form) {
 
   // Danh mục
   if (form.CategoryId === '' || form.CategoryId === null || form.CategoryId === undefined) {
-    errors.CategoryId = 'Mày cố tình không chọn danh mục à??? hay là mày đéo biết phân loại??';
+    errors.CategoryId = 'Vui lòng chọn danh mục cho khóa học của bạn';
   }
 
   // Level
   if (form.LevelId === '' || form.LevelId === null || form.LevelId === undefined) {
-    errors.LevelId = 'Không chọn Level thì ai biết mà học????';
+    errors.LevelId = 'Vui lòng chọn Level cho khóa học của bạn';
   }
 
   // Thumbnail
   if (!thumbnail) {
-    errors.Thumbnail = 'Thằng loz hỏng face id à???.';
-  } else if (!isValidThumbnailValue(thumbnail)) {
-    errors.Thumbnail = 'Ngu à mà đăng ảnh không hợp lệ? Tao báo công an.';
+    errors.Thumbnail = 'Vui lòng tải lên ảnh khóa học của bạn.';
+  } else {
+    const thumbnailError = validateThumbnailDataUrl(thumbnail);
+    if (thumbnailError) {
+      errors.Thumbnail = thumbnailError;
+    } else if (!isValidThumbnailValue(thumbnail)) {
+      errors.Thumbnail = 'Ảnh không hợp lệ.';
+    }
   }
 
   return errors;

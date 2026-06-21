@@ -13,7 +13,9 @@ import {
   clampCropOffset,
   getCroppedImageDataUrl,
   getRenderedSize,
+  validateThumbnailDataUrl,
 } from '@/features/mentor/utils/mentorCourseImageUtils';
+import { toast } from '@/shared/ui/Toast';
 import { COURSE_THUMBNAIL_ASPECT, PRIMARY } from './mentorCourseCreateStyles';
 
 const CROP_WIDTH = 300;
@@ -134,6 +136,13 @@ export default function MentorCourseImageCropDialog({ open, imageSrc, onClose, o
         zoom,
         offset,
       });
+
+      const validationError = validateThumbnailDataUrl(cropped);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
       onSave(cropped);
       onClose();
     } finally {

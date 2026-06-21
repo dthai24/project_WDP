@@ -104,7 +104,7 @@ const buildResetPasswordHtml = (fullName, otpCode) => `
 // POST /api/auth/login
 // Works for ALL roles: Admin, Mentor, Student
 // ============================================================
-const login = async (req, res) => {
+const   login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password)

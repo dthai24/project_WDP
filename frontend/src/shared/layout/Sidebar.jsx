@@ -1,7 +1,7 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Box, Stack, Typography, Tooltip, useTheme } from "@mui/material";
 import { getUser } from "@/features/auth/utils/authUtils";
-import { getMentorMenuItems, getStudentMenuItems } from "./sidebarMenuConfig";
+import { getMentorMenuItems, getStudentMenuItems, getAdminMenuItems } from "./sidebarMenuConfig";
 import { HEADER_HEIGHT } from "./MainLayout";
 
 export const SIDEBAR_WIDTH = 76;
@@ -95,12 +95,22 @@ export default function Sidebar({ variant = "student" }) {
   const theme = useTheme();
   const user = getUser();
   const menuItems =
-    variant === "mentor" ? getMentorMenuItems() : getStudentMenuItems(user);
+    variant === "mentor"
+      ? getMentorMenuItems()
+      : variant === "admin"
+        ? getAdminMenuItems()
+        : getStudentMenuItems(user);
 
   return (
     <Box
       component="aside"
-      aria-label={variant === "mentor" ? "Điều hướng mentor" : "Điều hướng chính"}
+      aria-label={
+        variant === "mentor"
+          ? "Điều hướng mentor"
+          : variant === "admin"
+            ? "Điều hướng admin"
+            : "Điều hướng chính"
+      }
       sx={{
         position: "fixed",
         left: 0,

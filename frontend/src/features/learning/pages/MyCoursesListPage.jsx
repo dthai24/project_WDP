@@ -16,24 +16,10 @@ import { getMyCoursesApi } from "@/features/auth/services/authService";
 
 const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
 
-const CATEGORY_OPTIONS = [
-  { value: "Giao tiếp", label: "Giao tiếp" },
-  { value: "IELTS", label: "IELTS" },
-  { value: "TOEIC", label: "TOEIC" },
-  { value: "Ngữ pháp", label: "Ngữ pháp" },
-  { value: "Phát âm", label: "Phát âm" },
-];
-
-const LEVEL_OPTIONS = [
-  { value: "Cơ bản", label: "Cơ bản" },
-  { value: "Trung cấp", label: "Trung cấp" },
-  { value: "Nâng cao", label: "Nâng cao" },
-];
-
 const SORT_OPTIONS = [
-  { value: "recent", label: "Gần đây nhất" },
+  { value: "recent", label: "Hoạt động gần nhất" },
   { value: "progress", label: "Tiến độ cao nhất" },
-  { value: "name", label: "Tên A-Z" },
+  { value: "name", label: "Tên khóa học (A-Z)" },
 ];
 
 const DEFAULT_FILTERS = {
@@ -94,16 +80,54 @@ export default function MyCoursesListPage() {
   const keyword = (searchParams.get("keyword") ?? "").trim();
   const [allCourses, setAllCourses] = useState([]);
 
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [levelOptions, setLevelOptions] = useState([]);
+
+  useEffect(() => {
+    async function fetchLookups() {
+      try {
+        const [catRes, levRes] = await Promise.all([
+          fetch('http://localhost:5000/api/categories'),
+          fetch('http://localhost:5000/api/levels')
+        ]);
+
+
+        const catData = await catRes.json();
+        const levData = await levRes.json();
+
+        // Nếu API categories thành công, ta đổ dữ liệu vào state categoryOptions
+        if (catData.success) {
+          setCategoryOptions(catData.data.map(c => ({
+            value: c.displayName,
+            label: c.displayName
+          })));
+        }
+
+        // Nếu API levels thành công, ta đổ dữ liệu vào state levelOptions
+        if (levData.success) {
+          setLevelOptions(levData.data.map(l => ({
+            value: l.displayName,
+            label: l.displayName
+          })));
+        }
+      } catch (error) {
+        console.error("Lỗi tải danh mục lựa chọn:", error);
+      }
+    }
+
+    fetchLookups();
+  }, []); // Mảng rỗng [] báo cho React biết chỉ chạy đoạn code này 1 lần duy nhất
+
   //________________FETCH DATA______________________
   useEffect(() => {
     const getData = async () => {
       try {
-        const rawUser = sessionStorage.getItem("user");
+        const rawUser = localStorage.getItem("user");
 
         console.log("RAW USER:", rawUser);
 
         if (!rawUser) {
-          console.error("Chưa có user trong sessionStorage");
+          console.error("Chưa có user trong localStorage");
           return;
         }
 
@@ -127,7 +151,7 @@ export default function MyCoursesListPage() {
         });
 
         if (!userId || !roleName) {
-          console.error("Thiếu userId hoặc roleName sau khi đọc sessionStorage", {
+          console.error("Thiếu userId hoặc roleName sau khi đọc localStorage", {
             userId,
             roleName,
             user,
@@ -155,7 +179,56 @@ export default function MyCoursesListPage() {
           return;
         }
 
-        setAllCourses(result.data || []);
+        // Bắt đầu vòng lặp để đổi tên biến từ Database cho khớp với Giao diện
+        const mappedData = [];
+        const rawData = result.data || [];
+
+        for (let i = 0; i < rawData.length; i++) {
+          const dbCourse = rawData[i];
+
+          // 1. Kiểm tra tiến độ học
+          let currentProgress = 0;
+          if (dbCourse.progress != null) {
+            currentProgress = dbCourse.progress;
+          }
+          // 2. Kiểm tra trạng thái
+          let status = "learning";
+          if (currentProgress >= 100) {
+            status = "completed";
+          }
+          // 3. Đếm số chương học (Paths)
+          let stageCount = 0;
+          if (dbCourse.Paths) {
+            stageCount = dbCourse.Paths.length;
+          }
+          // 4. Kiểm tra ảnh Thumbnail bị lỗi
+          let courseImage = dbCourse.Thumbnail;
+          if (courseImage === 'CHƯA FIX LỖI ẢNH') {
+            courseImage = null;
+          }
+          // 5. Đưa dữ liệu vào danh sách mới với tên biến viết thường
+          mappedData.push({
+            courseId: dbCourse.CourseId,
+            courseName: dbCourse.CourseName,
+            thumbnail: courseImage,
+
+            category: dbCourse.CategoryDisplayName || dbCourse.CategoryName || "Chưa phân loại",
+            level: dbCourse.LevelDisplayName || dbCourse.levelName || "Cơ bản",
+            instructor: dbCourse.Instructor || "S.T.A.R Mentor Team",
+
+            totalLessons: dbCourse.TotalLessons || 0,
+            totalNodes: stageCount,
+
+            progressPercentage: currentProgress,
+            enrollmentStatus: status,
+
+            // Các dữ liệu mặc định bắt buộc phải có để tránh lỗi giao diện
+            isSaved: false,
+            modules: dbCourse.Paths || []
+          });
+        }
+        // Đưa danh sách đã xử lý xong lên giao diện
+        setAllCourses(mappedData);
       } catch (error) {
         console.log("Fetch courses error:", error);
       }
@@ -302,10 +375,10 @@ export default function MyCoursesListPage() {
         onStatusTabChange={(value) => updateFilters({ statusTab: value, page: 1 })}
         categories={filters.categories}
         onCategoriesChange={(e) => updateFilters({ categories: e.target.value, page: 1 })}
-        categoryOptions={CATEGORY_OPTIONS}
+        categoryOptions={categoryOptions}
         levels={filters.levels}
         onLevelsChange={(e) => updateFilters({ levels: e.target.value, page: 1 })}
-        levelOptions={LEVEL_OPTIONS}
+        levelOptions={levelOptions}
         sortBy={filters.sort}
         onSortChange={(e) => updateFilters({ sort: e.target.value, page: 1 })}
         sortOptions={SORT_OPTIONS}
@@ -316,12 +389,7 @@ export default function MyCoursesListPage() {
         onReset={handleResetFilters}
       />
 
-      {showContinueSection && (
-        <MyCourseContinueSection
-          course={continueCourse}
-          onContinue={handleLearningAction}
-        />
-      )}
+
 
       {!hasAnyCourse || filteredCourses.length === 0 ? (
         renderEmptyState()

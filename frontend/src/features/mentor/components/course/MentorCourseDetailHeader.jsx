@@ -12,6 +12,7 @@ import {
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import UnpublishedRoundedIcon from '@mui/icons-material/UnpublishedRounded';
 import { Link, useNavigate } from 'react-router-dom';
@@ -19,6 +20,7 @@ import AppButton from '@/shared/ui/AppButton';
 import MentorCourseMetricsInline from './MentorCourseMetricsInline';
 import { PRIMARY, TEXT, MUTED } from './mentorCourseCreateStyles';
 import { MENTOR_COURSE_DETAIL_TABS } from '@/features/mentor/utils/mentorCourseDetailUtils';
+import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
 const PILL_CHIP_SX = {
   borderRadius: '999px',
@@ -54,73 +56,30 @@ function getStatusChip(status) {
   };
 }
 
-function getLevelChipStyle(level) {
-  //người mới bắt đầu
-  if (level === 'beginner') {
-    return {
-      bgcolor: 'rgba(56,189,248,0.12)',
-      color: '#0284C7',
-      border: '1px solid rgba(56,189,248,0.22)',
-    };
-  }
-  //cơ bản
-  if (level === 'elementary') {
-    return {
-      bgcolor: 'rgba(245,158,11,0.12)',
-      color: '#D97706',
-      border: '1px solid rgba(245,158,11,0.22)',
-    };
-  }
-  //trung cấp
-  if (level === 'intermediate') {
-    return {
-      bgcolor: 'rgba(234,88,12,0.12)',
-      color: '#EA580C',
-      border: '1px solid rgba(234,88,12,0.22)',
-    };
-  }
-  //cao cấp và phần còn lại =)) 
-  return { bgcolor: '#F1F5F9', color: '#64748B' };
-}
-
-function getCategoryChipStyle(category = '') {
-  switch (category.toLowerCase()) {
-    case 'business': return { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' };
-    case 'finance': return { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' };
-    case 'communication': return { bgcolor: 'rgba(236,72,153,0.10)', color: 'hsl(315, 76%, 43%)' };
-    case 'technology': return { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' };
-    case 'lifestyle': return { bgcolor: '#F1F5F9', color: '#64748B' };
-  }
-  return { bgcolor: '#F1F5F9', color: 'hsl(0, 87%, 34%)' }
-  // const map = {
-  //   'Giao tiếp': ,
-  //   IELTS: { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' },
-  //   TOEIC: { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' },
-  //   'Ngữ pháp': { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' },
-  //   'Phát âm': { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' },
-  // };
-  // return map[category] ?? { bgcolor: '#F1F5F9', color: '#64748B' };
-}
-
 function CourseThumbnail({ thumbnail, courseName }) {
+  const imageUrl = `http://localhost:5000${thumbnail}`;
+
   return (
     <Box
       sx={{
-        width: { xs: '100%', sm: 96 },
-        height: { xs: 120, sm: 72 },
+        width: { xs: '100%', sm: 112 },
+        height: { xs: 140, sm: 72 },
         borderRadius: '14px',
         flexShrink: 0,
         overflow: 'hidden',
         bgcolor: alpha(PRIMARY, 0.1),
-        backgroundImage: thumbnail ? `url(${thumbnail})` : 'none',
+        backgroundImage: imageUrl ? `url("${imageUrl}")` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         display: 'grid',
         placeItems: 'center',
       }}
     >
-      {!thumbnail && <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />}
-      {!thumbnail && courseName && (
+      {!imageUrl && (
+        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
+      )}
+
+      {!imageUrl && courseName && (
         <Typography sx={{ display: 'none' }}>{courseName}</Typography>
       )}
     </Box>
@@ -134,11 +93,13 @@ export default function MentorCourseDetailHeader({
   onPublishToggle,
   publishing = false,
 }) {
+  console.log(course)
   const theme = useTheme();
   const navigate = useNavigate();
   const statusChip = getStatusChip(course.IsPublished);
   const isPublished = course.IsPublished;
   const editPath = `/mentor/courses/${course.CourseId}/edit`;
+  const questionsPath = `/mentor/courses/${course.CourseId ?? course.courseId}/questions`;
 
   // console.log(course)
   return (
@@ -226,7 +187,7 @@ export default function MentorCourseDetailHeader({
                   lineHeight: 1.35,
                 }}
               >
-                {course.CourseName}
+                {course.CategoryName}
               </Typography>
               <Chip size="small" label={statusChip.label} sx={{ ...PILL_CHIP_SX, ...statusChip.sx }} />
             </Box>
@@ -249,18 +210,30 @@ export default function MentorCourseDetailHeader({
             )}
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 0.5 }}>
-              {course.CategoryDisplayName && (
+              {course.CategoryName && (
                 <Chip
                   size="small"
                   label={course.CategoryDisplayName}
-                  sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.CategoryName) }}
+                  sx={{
+                    ...PILL_CHIP_SX,
+                    ...resolveCategoryChipSx({
+                      id: course.CategoryId,
+                      displayName: course.CategoryDisplayName ?? course.CategoryName,
+                    }),
+                  }}
                 />
               )}
               {course.LevelDisplayName && (
                 <Chip
                   size="small"
                   label={course.LevelDisplayName}
-                  sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.levelName) }}
+                  sx={{
+                    ...PILL_CHIP_SX,
+                    ...resolveLevelChipSx({
+                      id: course.LevelId,
+                      displayName: course.LevelDisplayName ?? course.levelName,
+                    }),
+                  }}
                 />
               )}
             </Box>
@@ -277,6 +250,9 @@ export default function MentorCourseDetailHeader({
               alignSelf: { xs: 'stretch', md: 'flex-start' },
             }}
           >
+            {/* 
+            ----------------Button Edit Course----------------
+             */}
             <AppButton
               variant="outlined"
               startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
@@ -292,6 +268,36 @@ export default function MentorCourseDetailHeader({
             >
               Chỉnh sửa
             </AppButton>
+
+            {/* 
+            -------------Button Question Bank---------------
+             */}
+            <AppButton
+              variant="outlined"
+              startIcon={<QuizOutlinedIcon sx={{ fontSize: 16 }} />}
+              onClick={() => navigate(questionsPath)}
+              sx={{
+                height: 38,
+                borderRadius: '999px',
+                fontSize: 13,
+                fontWeight: 700,
+                px: 2,
+                flex: { xs: 1, md: 'unset' },
+                color: '#7C3AED',
+                borderColor: 'rgba(124,58,237,0.28)',
+                '&:hover': {
+                  borderColor: 'rgba(124,58,237,0.45)',
+                  bgcolor: 'rgba(124,58,237,0.04)',
+                },
+              }}
+            >
+              Ngân hàng câu hỏi
+            </AppButton>
+
+            {/* 
+            ---------------Button set publish course--------------------
+            */}
+
             <AppButton
               startIcon={
                 isPublished ? (

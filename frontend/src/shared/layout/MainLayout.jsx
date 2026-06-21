@@ -5,7 +5,8 @@ import Header from "./Header";
 import Footer from "./Footer";
 import Sidebar from "./Sidebar";
 import { SIDEBAR_WIDTH } from "./Sidebar";
-import { getUser, isMentor } from "@/features/auth/utils/authUtils";
+import { getRoleDefaultPath, getUser } from "@/features/auth/utils/authUtils";
+import { shouldBlockStudentShell } from "@/shared/routing/RoleShellRedirects";
 
 /** Header height — matches AppBar Toolbar minHeight at sm breakpoint */
 export const HEADER_HEIGHT = 60;
@@ -20,10 +21,10 @@ export const pageContentSx = {
 
 export default function MainLayout({ children }) {
   const user = getUser();
-  const isAuthenticated = user && Object.keys(user).length > 0 && sessionStorage.getItem("user");
 
-  if (isAuthenticated && isMentor(user)) {
-    return <Navigate to="/mentor/courses" replace />;
+  // Mentor không dùng shell học viên; Admin vẫn vào được /courses, /profile
+  if (shouldBlockStudentShell(user)) {
+    return <Navigate to={getRoleDefaultPath(user)} replace />;
   }
 
   return (

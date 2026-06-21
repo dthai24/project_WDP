@@ -74,12 +74,11 @@ export default function MentorCourseDetailPage() {
     //Course's detail
     const result = await fetchMentorCourseDetail(courseId);
     // Fetch data api return a array with 1 element is course => get first element to execute continue
-    //console.table(result.course)
     if (!result.success || !result.course) {
       setCourse(null);
       setError(result.message ?? 'Không tìm thấy khóa học.');
     } else {
-      setCourse(result.course[0]);
+      setCourse(result.course);
     }
 
     setLoading(false);
@@ -87,7 +86,7 @@ export default function MentorCourseDetailPage() {
 
   useEffect(() => {
     loadCourse();
-  }, [loadCourse]);
+  }, [loadCourse, publishing]);
 
   const handleTabChange = (tab) => {
     setSearchParams(
@@ -102,12 +101,15 @@ export default function MentorCourseDetailPage() {
 
   const renderActiveTabPanel = () => {
     switch (activeTab) {
-      case MENTOR_COURSE_DETAIL_TABS.CONTENT:
-        return <MentorCourseContentTab course={course} />;
-      case MENTOR_COURSE_DETAIL_TABS.STUDENTS:
-        return <MentorCourseStudentsTab courseId={course.courseId} />;
+      // ------Course-------
       case MENTOR_COURSE_DETAIL_TABS.COURSE:
         return <MentorCourseOverviewTab course={course} />;
+      // ---------Content-----------
+      case MENTOR_COURSE_DETAIL_TABS.CONTENT:
+        return <MentorCourseContentTab course={course} />;
+      // ---------Students-----------
+      case MENTOR_COURSE_DETAIL_TABS.STUDENTS:
+        return <MentorCourseStudentsTab courseId={course.CourseId} />;
       default:
         return <MentorCourseOverviewTab course={course} />;
     }
@@ -115,7 +117,7 @@ export default function MentorCourseDetailPage() {
 
   const handlePublishToggle = () => {
     if (!course || publishing) return;
-    setPublishDialog(course.status === 'published' ? 'unpublish' : 'publish');
+    setPublishDialog(course.IsPublished === true ? 'unpublish' : 'publish');
   };
 
   const handleClosePublishDialog = () => {
@@ -130,9 +132,10 @@ export default function MentorCourseDetailPage() {
     setPublishing(true);
 
     // TODO: wire real API — updateCoursePublishStatus(courseId, isPublished)
-    const result = await updateCoursePublishStatus(course.courseId, nextPublished);
-    if (result.ok && result.course) {
-      setCourse(result.course);
+    const result = await updateCoursePublishStatus(course.CourseId, nextPublished);
+    if (result.ok && result.courseIdUpdate) {
+      // setCourse(result.course);
+      setPublishing(true);
       toast.success(
         nextPublished ? 'Đã xuất bản khóa học.' : 'Đã hủy xuất bản khóa học.',
       );
@@ -196,9 +199,12 @@ export default function MentorCourseDetailPage() {
         publishing={publishing}
       />
 
-      {/* ACTIVE Tab Panel (Khóa học, nội dung, học viên) */}
+      {/* 
+      --------------------ACTIVE Tab Panel (Khóa học, nội dung, học viên)------------------------
+       */}
       <Box key={activeTab}>{renderActiveTabPanel()}</Box>
 
+      {/* --------------Dialog------------------------ */}
       <ConfirmDialog
         open={Boolean(publishDialogConfig)}
         onClose={handleClosePublishDialog}
