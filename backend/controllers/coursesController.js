@@ -216,6 +216,41 @@ const saveCourseDraftStepOne = async (req, res) => {
     });
   }
 };
+// Hứng request lấy danh sách bài học
+const getLearningPath = async (req, res) => {
+    try {
+        const courseId = req.params.id;
+        const userId = req.headers['x-user-id']; // Lấy ID người dùng từ Header
+        
+        // Lấy thêm tên khóa học và tên giảng viên
+        const coursesInfo = await courseModel.getCourseById(courseId, userId);
+        const courseDetails = coursesInfo.length > 0 ? coursesInfo[0] : null;
+
+        const data = await courseModel.getCourseLearningPath(courseId, userId);
+        res.json({ 
+            success: true, 
+            courseTitle: courseDetails ? courseDetails.CourseName : "Khóa học",
+            instructor: courseDetails ? courseDetails.InStructorName : "Giảng viên",
+            data: data 
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Lỗi Server" });
+    }
+};
+
+// Hứng request lưu bài học
+const updateProgress = async (req, res) => {
+    try {
+        const courseId = req.params.id;
+        const userId = req.headers['x-user-id'];
+        const { nodeId } = req.body; // Frontend gửi lên nodeId
+        
+        const newProgress = await courseModel.markNodeAsCompleted(courseId, userId, nodeId);
+        res.json({ success: true, newProgress: newProgress });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Lỗi Server" });
+    }
+};
 
 //create node
 
@@ -289,5 +324,7 @@ module.exports = {
   saveCourseDraftStepOne,
   createFinalCourse,
   getStudentCourses,
-  enrollCourse
+  enrollCourse,
+  getLearningPath,
+  updateProgress
 };
