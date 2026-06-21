@@ -7,7 +7,9 @@ const {
     saveCourseDraftStepOne,
     createFinalCourse,
     getStudentCourses,
-    enrollCourse
+    enrollCourse,
+    getLearningPath,
+    updateProgress
 } = require('../controllers/coursesController');
 
 
@@ -45,4 +47,9 @@ router.post('/mentor/courses/createCourse', createFinalCourse);
 
 router.post('/enroll', enrollCourse); 
 
+// Lấy lộ trình học và trạng thái hoàn thành (Trang Course Learning)
+router.get('/:id/learning', getLearningPath);
+
+// Lưu tiến độ học và đánh dấu bài học hoàn thành
+router.post('/:id/progress', updateProgress);
 module.exports = router;

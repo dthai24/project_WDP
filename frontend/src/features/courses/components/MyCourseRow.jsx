@@ -283,7 +283,7 @@ export default function MyCourseRow({
             borderRadius: "12px",
             overflow: "hidden",
             bgcolor: alpha(theme.palette.primary.main, 0.06),
-            backgroundImage: data.thumbnail ? `url(${data.thumbnail})` : "none",
+            backgroundImage: data.thumbnail ? `url(http://localhost:5000${data.thumbnail})` : "none",
             backgroundSize: "cover",
             backgroundPosition: "center",
             display: "flex",

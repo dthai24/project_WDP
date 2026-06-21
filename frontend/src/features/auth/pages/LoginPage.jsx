@@ -55,13 +55,13 @@ const validateEmail = (email) => {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();  
+  const { login } = useAuth();
 
-  const [form, setForm]           = useState({ email: '', password: '' });
-  const [errors, setErrors]       = useState({});
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [remember, setRemember]   = useState(false);
-  const submittingRef             = useRef(false); 
+  const [remember, setRemember] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBER_KEY);
@@ -79,9 +79,9 @@ export default function LoginPage() {
 
   const validate = () => {
     const errs = {};
-    if (!form.email.trim())              errs.email    = 'Email không được để trống.';
-    else if (!validateEmail(form.email)) errs.email    = 'Email không hợp lệ (phải có @, dấu chấm, tên miền, không khoảng trắng).';
-    if (!form.password)                  errs.password = 'Mật khẩu không được để trống.';
+    if (!form.email.trim()) errs.email = 'Email không được để trống.';
+    else if (!validateEmail(form.email)) errs.email = 'Email không hợp lệ (phải có @, dấu chấm, tên miền, không khoảng trắng).';
+    if (!form.password) errs.password = 'Mật khẩu không được để trống.';
     return errs;
   };
 
@@ -107,7 +107,7 @@ export default function LoginPage() {
       if (ok) {
         if (remember) {
           localStorage.setItem(REMEMBER_KEY, form.email.trim());
-          
+
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
@@ -115,7 +115,7 @@ export default function LoginPage() {
         toast.success('Đăng nhập thành công!');
         navigate(getPostLoginPath(data, { isFirstLogin: data.isFirstLogin }));
       } else {
-        toast.error('Đăng nhập thất bại.');
+        toast.error(data?.message);
         submittingRef.current = false;
         setIsSubmitting(false);
       }
