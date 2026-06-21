@@ -84,9 +84,10 @@ const getInformationCourse = async (req, res) => {
         data: {}
       })
     }
+    const userId = req.headers['x-user-id'] || null;
+
     // Tab=course
     if (tab.toLowerCase() === 'course') {
-      const userId = req.headers['x-user-id'] || null;
       const courses = await courseModel.getCourseById(courseId, userId);
       //404
       if (courses.length === 0) {
@@ -102,6 +103,29 @@ const getInformationCourse = async (req, res) => {
         message: 'Lấy thông tin khóa học thành công',
         data: courses
       })
+    }
+
+    // Tab=content — cây chương / bài / học liệu
+    if (tab.toLowerCase() === 'content') {
+      const courses = await courseModel.getCourseById(courseId, userId);
+      if (courses.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy khóa học này trong Databse',
+          data: {},
+        });
+      }
+
+      const course = courses[0];
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy nội dung khóa học thành công',
+        data: {
+          CourseId: course.CourseId,
+          Paths: course.Paths ?? [],
+          TotalLessons: course.TotalLessons ?? 0,
+        },
+      });
     }
     return res.status(400).json({
       success: false,

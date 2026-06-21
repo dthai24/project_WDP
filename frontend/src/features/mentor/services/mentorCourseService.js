@@ -17,7 +17,6 @@
  */
 
 import { mentorCourseDetailById } from '@/features/mentor/data/mentorCourseDetailMock';
-import { mentorCourseStudentsByCourseId } from '@/features/mentor/data/mentorCourseStudentsMock';
 import { normalizeMentorCourse } from '@/features/mentor/utils/mentorCourseUtils';
 import { normalizeMentorCourseDetail } from '@/features/mentor/utils/mentorCourseDetailUtils';
 import {
@@ -27,8 +26,32 @@ import {
 import { buildCreateCourseStep1Payload } from '@/features/mentor/utils/mentorCourseFormUtils';
 import { saveCreateCourseStep1ToStorage, saveCreateCourseContentToStorage } from '@/features/mentor/utils/mentorCourseCreateStorage';
 import { buildCourseContentPayload, buildFullCreateCoursePayload } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { uploadPendingMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
+import { getUser } from '@/features/auth/utils/authUtils';
 
 const API_BASE = 'http://localhost:5000/api';
+
+function getMentorAuthHeaders() {
+  const userId = getUser()?.userId;
+  const headers = { 'Content-Type': 'application/json' };
+  if (userId) {
+    headers['x-user-id'] = String(userId);
+  }
+  return headers;
+}
+
+function buildUpdateCourseBasicPayload(course = {}) {
+  const thumbnail = course.Thumbnail ?? course.thumbnail ?? null;
+  return {
+    CourseName: course.CourseName ?? course.courseName ?? '',
+    Description: course.Description ?? course.description ?? '',
+    Thumbnail: thumbnail != null && String(thumbnail).trim() !== '' ? thumbnail : null,
+    CategoryId: course.CategoryId ?? course.categoryId ?? null,
+    LevelId: course.LevelId ?? course.levelId ?? null,
+    IsPublished: Boolean(course.IsPublished ?? course.isPublished),
+    InstructorId: course.InstructorId ?? course.instructorId ?? getUser()?.userId ?? null,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DANH SÁCH KHÓA HỌC
@@ -338,9 +361,10 @@ export async function saveCreateCourseContent(course, paths, meta) {
  * TODO: replace mock with real API call
  */
 export async function createCourseWithContent(course, paths) {
-  const payload = buildFullCreateCoursePayload(course, paths);
-
   try {
+    const uploadedPaths = await uploadPendingMaterialsInPaths(paths);
+    const payload = buildFullCreateCoursePayload(course, uploadedPaths);
+
     const response = await fetch(`${API_BASE}/courses/mentor/courses/createCourse`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -359,9 +383,11 @@ export async function createCourseWithContent(course, paths) {
     const courseId = data.courseId ?? data.data?.courseId ?? null;
     return { success: true, courseId, payload };
   } catch (error) {
-    console.error('[createCourseWithContent]', error.message);
-    await delay(600);
-    return { success: true, courseId: Date.now(), payload };
+    console.error('[createCourseWithContent]', error);
+    return {
+      success: false,
+      message: error.message ?? 'Không thể tạo khóa học.',
+    };
   }
 }
 
@@ -445,23 +471,34 @@ export async function createCourse(payload) {
 //Get Information of Course by it's id
 export async function fetchMentorCourseDetail(courseId) {
   try {
-    const courses = await fetch(`http://localhost:5000/api/courses/my-courses/${courseId}?tab=course`);
-    const res = await courses.json();
+    const [courseRes, studentsRes] = await Promise.all([
+      fetch(`${API_BASE}/courses/my-courses/${courseId}?tab=course`),
+      fetch(`${API_BASE}/mentor/courses/${courseId}/students`),
+    ]);
+    const res = await courseRes.json();
     if (!res.success) {
-      return ({
+      return {
         success: false,
         message: res.message,
         course: {},
-      })
+      };
     }
-    // console.table(res.data)
+
+    const course = res.data[0];
+    if (course && studentsRes.ok) {
+      const studentsJson = await studentsRes.json();
+      if (studentsJson.success && Array.isArray(studentsJson.data)) {
+        course.StudentCount = studentsJson.data.length;
+      }
+    }
+
     return {
       success: true,
       message: 'Lấy course detail thành công',
-      course: res.data[0],
-    }
+      course,
+    };
   } catch (error) {
-    return { success: false, message: 'Lỗi Server', course: {} }
+    return { success: false, message: 'Lỗi Server', course: {} };
   }
 }
 
@@ -515,19 +552,27 @@ export async function fetchMentorCourseDetail(courseId) {
  * TODO: replace mock with real API call
  */
 export async function updateCourseBasicInfo(courseId, payload) {
-  // TODO: replace with real API
-  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
-  //   method:  'PATCH',
-  //   headers: { 'Content-Type': 'application/json', 'x-user-id': String(getUser()?.userId) },
-  //   body:    JSON.stringify(payload),
-  // });
-  // const data = await response.json();
-  // if (!response.ok) return { ok: false, message: data.message };
-  // return { ok: true, courseId };
+  try {
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}`, {
+      method: 'PATCH',
+      headers: getMentorAuthHeaders(),
+      body: JSON.stringify(buildUpdateCourseBasicPayload(payload)),
+    });
 
-  void courseId; void payload;
-  await delay(400);
-  return { ok: true, courseId };
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.success) {
+      return {
+        ok: false,
+        message: data.message ?? 'Không thể cập nhật thông tin khóa học.',
+      };
+    }
+
+    return { ok: true, courseId: data.courseId ?? Number(courseId) };
+  } catch (error) {
+    console.error('[updateCourseBasicInfo]', error);
+    return { ok: false, message: 'Lỗi kết nối khi cập nhật khóa học.' };
+  }
 }
 
 /**
@@ -548,20 +593,29 @@ export async function updateCourseBasicInfo(courseId, payload) {
  * TODO: replace mock with real API call
  */
 export async function updateCourseContent(courseId, paths) {
-  // TODO: replace with real API
-  // const payload = buildCourseContentPayload(paths);
-  // const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/content`, {
-  //   method:  'PUT',
-  //   headers: { 'Content-Type': 'application/json', 'x-user-id': String(getUser()?.userId) },
-  //   body:    JSON.stringify(payload),
-  // });
-  // const data = await response.json();
-  // if (!response.ok) return { ok: false, message: data.message };
-  // return { ok: true };
+  try {
+    const uploadedPaths = await uploadPendingMaterialsInPaths(paths);
+    const payload = buildCourseContentPayload(uploadedPaths);
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/content`, {
+      method: 'PUT',
+      headers: getMentorAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
 
-  void courseId; void paths;
-  await delay(400);
-  return { ok: true };
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.success) {
+      return {
+        ok: false,
+        message: data.message ?? 'Không thể cập nhật nội dung khóa học.',
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error('[updateCourseContent]', error);
+    return { ok: false, message: error.message ?? 'Lỗi kết nối khi cập nhật nội dung khóa học.' };
+  }
 }
 
 /**
@@ -665,11 +719,18 @@ export async function updateCoursePublishStatus(courseId, isPublished) {
  * TODO: replace mock with real API call
  */
 export async function fetchCourseStudents(courseId, filters = {}) {
-  // TODO: replace with real API
-  const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students`);
-  const res = await response.json();
-  return { ok: response.ok, students: res.data.map(normalizeCourseStudent) };
-
+  void filters;
+  try {
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/students`);
+    const res = await response.json();
+    if (!response.ok || !res.success) {
+      return { ok: false, students: [], message: res.message ?? 'Không lấy được danh sách học viên.' };
+    }
+    const rows = Array.isArray(res.data) ? res.data : [];
+    return { ok: true, students: rows.map(normalizeCourseStudent) };
+  } catch (error) {
+    return { ok: false, students: [], message: error.message ?? 'Lỗi kết nối server.' };
+  }
 }
 
 /**
@@ -691,12 +752,11 @@ export async function fetchCourseStudents(courseId, filters = {}) {
  * TODO: replace mock with real API call
  */
 export async function fetchCourseStudentStats(courseId) {
-  await delay(200);
-  const id = Number(courseId);
-  const rawStudents = mentorCourseStudentsByCourseId[id] ?? [];
-  const students = rawStudents.map(normalizeCourseStudent);
-
-  return { ok: true, stats: computeCourseStudentStats(students) };
+  const result = await fetchCourseStudents(courseId);
+  if (!result.ok) {
+    return { ok: false, stats: computeCourseStudentStats([]), message: result.message };
+  }
+  return { ok: true, stats: computeCourseStudentStats(result.students) };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
