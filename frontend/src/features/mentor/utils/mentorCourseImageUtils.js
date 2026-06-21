@@ -147,3 +147,30 @@ export function isValidThumbnailValue(value) {
   if (!trimmed) return true;
   return validateThumbnailDataUrl(trimmed) == null;
 }
+
+export function isThumbnailDataUrl(value) {
+  return typeof value === 'string' && value.trim().startsWith('data:image/');
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+export function resolveCourseThumbnailUrl(thumbnail, cacheKey) {
+  if (!thumbnail) return '';
+
+  const value = String(thumbnail).trim();
+  if (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:image') ||
+    value.startsWith('blob:')
+  ) {
+    return value;
+  }
+
+  let url = `${API_URL}${value.startsWith('/') ? value : `/${value}`}`;
+  if (cacheKey != null && cacheKey !== '') {
+    const separator = url.includes('?') ? '&' : '?';
+    url = `${url}${separator}v=${encodeURIComponent(String(cacheKey))}`;
+  }
+  return url;
+}

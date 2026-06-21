@@ -159,6 +159,8 @@ Users.FullName as InStructorName,
             crs.IsPublished,
                crs.CourseName, 
                crs.Description,
+               crs.Rating,
+               (SELECT COUNT(*) FROM User_Courses uc WHERE uc.CourseId = crs.CourseId) AS StudentCount,
                crs.CreatedAt as CourseCreateAt,
 			   crs.UpdatedAt as CourseUpdateAt,
                crs.Thumbnail,
@@ -341,16 +343,23 @@ const insertNode = async (node, pathId) => {
 
 const insertMaterial = async (material, nodeId) => {
     const request = new sql.Request();
+    const materialUrl = material.MaterialUrl ?? material.Content ?? null;
+
     request.input('NodeId', sql.Int, Number(nodeId));
     request.input('MaterialType', sql.NVarChar(20), material.MaterialType);
     request.input('Title', sql.NVarChar(255), material.Title);
-    request.input('MaterialUrl', sql.NVarChar(sql.MAX), material.MaterialUrl ?? null);
+    request.input('MaterialUrl', sql.NVarChar(sql.MAX), materialUrl);
     request.input('MaterialOrder', sql.Int, Number(material.MaterialOrder));
+    request.input('SourceType', sql.NVarChar(20), material.SourceType ?? null);
+    request.input('FileName', sql.NVarChar(255), material.FileName ?? null);
+    request.input('FileSize', sql.BigInt, material.FileSize != null ? Number(material.FileSize) : null);
+    request.input('EmbedUrl', sql.NVarChar(sql.MAX), material.EmbedUrl ?? null);
 
     const result = await request.query(`
-        INSERT INTO [dbo].[Node_Materials] ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder])
+        INSERT INTO [dbo].[Node_Materials]
+            ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder], [SourceType], [FileName], [FileSize], [EmbedUrl])
         OUTPUT INSERTED.MaterialId AS MaterialId
-        VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder)
+        VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize, @EmbedUrl)
     `);
     return result.recordset[0].MaterialId;
 };
@@ -366,18 +375,16 @@ const increaseCourseTotalLessons = async (courseId) => {
 }
 
 const buildPathsNodes = async (paths, courseId) => {
-    paths.map(async (p) => {
+    for (const p of paths ?? []) {
         const pathId = await insertPath(p, courseId);
-        const nodes = p.nodes;
-        nodes.map(async (node) => {
+        for (const node of p.nodes ?? []) {
             const nodeId = await insertNode(node, pathId);
             await increaseCourseTotalLessons(courseId);
-            const materials = node.materials;
-            materials.map(async (m) => {
-                await insertMaterial(m, nodeId)
-            })
-        })
-    })
+            for (const m of node.materials ?? []) {
+                await insertMaterial(m, nodeId);
+            }
+        }
+    }
 };
 
 const createFinalCourse = async (course, paths) => {
@@ -388,6 +395,85 @@ const createFinalCourse = async (course, paths) => {
     }
     await buildPathsNodes(paths, newCourseId);
     return newCourseId;
+};
+
+const replaceCourseContent = async (courseId, paths) => {
+    await clearCourseContent(courseId);
+    await buildPathsNodes(paths, courseId);
+};
+
+const getCourseInstructorId = async (courseId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    const result = await request.query(`
+        SELECT InstructorId FROM Courses WHERE CourseId = @courseId
+    `);
+    return result.recordset[0]?.InstructorId ?? null;
+};
+
+const clearCourseContent = async (courseId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+
+    await request.query(`
+        DELETE un
+        FROM User_Nodes un
+        INNER JOIN Path_Nodes pn ON un.NodeId = pn.NodeId
+        INNER JOIN Paths p ON pn.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE nm
+        FROM Node_Materials nm
+        INNER JOIN Path_Nodes pn ON nm.NodeId = pn.NodeId
+        INNER JOIN Paths p ON pn.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE pn
+        FROM Path_Nodes pn
+        INNER JOIN Paths p ON pn.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE FROM Paths WHERE CourseId = @courseId;
+
+        UPDATE Courses
+        SET TotalLessons = 0, UpdatedAt = GETDATE()
+        WHERE CourseId = @courseId;
+    `);
+};
+
+const getCourseStudentCount = async (courseId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    const result = await request.query(`
+        SELECT COUNT(*) AS StudentCount
+        FROM User_Courses
+        WHERE CourseId = @courseId
+    `);
+    return Number(result.recordset[0]?.StudentCount ?? 0) || 0;
+};
+
+const updateCourseById = async (courseId, course) => {
+    const request = new sql.Request();
+    request.input('CourseId', sql.Int, Number(courseId));
+    request.input('CourseName', sql.NVarChar(200), course.CourseName);
+    request.input('Description', sql.NVarChar(sql.MAX), course.Description);
+    request.input('CategoryId', sql.Int, Number(course.CategoryId));
+    request.input('LevelId', sql.Int, Number(course.LevelId));
+    request.input('IsPublished', sql.Bit, course.IsPublished ?? false);
+
+    const result = await request.query(`
+        UPDATE Courses
+        SET CourseName = @CourseName,
+            Description = @Description,
+            CategoryId = @CategoryId,
+            LevelId = @LevelId,
+            IsPublished = @IsPublished,
+            UpdatedAt = GETDATE()
+        OUTPUT INSERTED.CourseId
+        WHERE CourseId = @CourseId
+    `);
+
+    return result.recordset[0]?.CourseId ?? null;
 };
 
 // update Thumbnail
@@ -559,5 +645,10 @@ module.exports = {
     setDraftCourse,
     setPublishCourse,
     getCourseLearningPath,
-    markNodeAsCompleted
+    markNodeAsCompleted,
+    getCourseInstructorId,
+    getCourseStudentCount,
+    updateCourseById,
+    replaceCourseContent,
+    updateCourseThumbnail,
 }
