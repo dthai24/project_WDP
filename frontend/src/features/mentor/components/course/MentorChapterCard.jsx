@@ -8,6 +8,7 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import MentorLessonBlock from './MentorLessonBlock';
+import MentorChapterCardMenu from './MentorChapterCardMenu';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import {
@@ -43,9 +44,16 @@ export default function MentorChapterCard({
   onSave,
   courseId = null,
   chapterId = null,
+  onQuizSetup,
+  quizSetupDisabled = false,
+  quizSetupDisabledReason = '',
 }) {
-  const lessonCount = (path.nodes ?? []).length;
 
+
+  console.log("pathsssss", path)
+
+  const nodesNormal = (path.Nodes ?? path.nodes)
+  const lessonCount = (nodesNormal ?? []).length;
   return (
     <Box sx={chapterCardSx(expanded)} data-content-error={`chapter-${path.tempId}`}>
       <Box
@@ -90,6 +98,13 @@ export default function MentorChapterCard({
         <Typography sx={{ fontSize: 12, fontWeight: 500, color: MUTED, flexShrink: 0 }}>
           {lessonCount} bài học
         </Typography>
+
+        <MentorChapterCardMenu
+          disabled={disabled}
+          quizSetupDisabled={quizSetupDisabled}
+          quizSetupDisabledReason={quizSetupDisabledReason}
+          onQuizSetup={onQuizSetup}
+        />
 
         <IconButton
           size="small"
@@ -146,7 +161,7 @@ export default function MentorChapterCard({
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0, mb: 1.5 }}>
-                {(path.nodes ?? []).map((node, nodeIndex) => (
+                {(nodesNormal ?? []).map((node, nodeIndex) => (
                   <MentorLessonBlock
                     key={node.tempId}
                     node={node}

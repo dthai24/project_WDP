@@ -119,7 +119,7 @@ const toastGlobalStyles = {
   },
 };
 
-export default function ToastProvider() {
+export default function ToastProvider({ children }) {
   return (
     <>
       <GlobalStyles styles={toastGlobalStyles} />
@@ -149,6 +149,7 @@ export default function ToastProvider() {
           background: PROGRESS_COLOR,
         }}
       />
+      {children}
     </>
   );
 }

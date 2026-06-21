@@ -609,6 +609,7 @@ export default function MentorEditCoursePage() {
             <MentorCourseContentBuilder
               paths={paths}
               courseId={Number(courseId)}
+              courseTitle={coursePascal?.CourseName ?? form.CourseName}
               errors={contentErrors}
               expandedPaths={expandedPaths}
               expandedNodes={expandedNodes}
@@ -632,6 +633,7 @@ export default function MentorEditCoursePage() {
 
             <MentorContentOverview
               paths={paths}
+              courseId={Number(courseId)}
               courseName={coursePascal?.CourseName ?? form.CourseName}
               footer={tab2Actions}
               onNavigateToItem={handleNavigateToContent}

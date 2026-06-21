@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material';
+import { useState } from 'react';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import PlayLessonRoundedIcon from '@mui/icons-material/PlayLessonRounded';
 import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
@@ -6,9 +7,13 @@ import {
   countContentStats,
   filterLearningMaterials,
   MATERIAL_TYPE_LABELS,
+  resolveChapterId,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import { BUILDER_PANEL_SX, MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
+import MentorChapterCardMenu from './MentorChapterCardMenu';
+import MentorChapterQuizSetupDialog from './MentorChapterQuizSetupDialog';
+import { QUIZ_SETUP_SCOPE_CHAPTER, QUIZ_SETUP_SCOPE_COURSE } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 
 function StatPill({ label, value }) {
   return (
@@ -42,68 +47,84 @@ function OutlineNavItem({
   indent = 0,
   onClick,
   disabled = false,
+  trailing = null,
 }) {
   return (
     <Box
-      component="button"
-      type="button"
-      onClick={onClick}
-      disabled={disabled || !onClick}
       sx={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 0.65,
+        gap: 0.25,
         width: '100%',
-        textAlign: 'left',
-        border: 'none',
-        background: 'none',
-        cursor: onClick && !disabled ? 'pointer' : 'default',
-        font: 'inherit',
-        pl: indent * 1.5,
-        pr: 0.5,
-        py: 0.55,
-        borderRadius: '10px',
-        transition: 'background-color 0.15s',
-        '&:hover': onClick && !disabled ? { bgcolor: 'rgba(15,23,42,0.03)' } : undefined,
-        '&:disabled': { opacity: 0.55, cursor: 'default' },
       }}
     >
-      {Icon ? (
-        <Icon sx={{ fontSize: 15, color: iconColor, mt: 0.15, flexShrink: 0 }} />
-      ) : iconColor ? (
-        <Box
-          sx={{
-            width: 6,
-            height: 6,
-            borderRadius: '999px',
-            bgcolor: iconColor,
-            mt: 0.55,
-            flexShrink: 0,
-            ml: 0.45,
-          }}
-        />
-      ) : null}
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography
-          sx={{
-            fontSize: indent === 2 ? 12 : 13,
-            fontWeight: indent === 0 ? 700 : 600,
-            color: TEXT,
-            lineHeight: 1.4,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {label}
-        </Typography>
-        {meta && (
-          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.15, lineHeight: 1.35 }}>
-            {meta}
+      <Box
+        component="button"
+        type="button"
+        onClick={onClick}
+        disabled={disabled || !onClick}
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 0.65,
+          flex: 1,
+          minWidth: 0,
+          textAlign: 'left',
+          border: 'none',
+          background: 'none',
+          cursor: onClick && !disabled ? 'pointer' : 'default',
+          font: 'inherit',
+          pl: indent * 1.5,
+          pr: 0.5,
+          py: 0.55,
+          borderRadius: '10px',
+          transition: 'background-color 0.15s',
+          '&:hover': onClick && !disabled ? { bgcolor: 'rgba(15,23,42,0.03)' } : undefined,
+          '&:disabled': { opacity: 0.55, cursor: 'default' },
+        }}
+      >
+        {Icon ? (
+          <Icon sx={{ fontSize: 15, color: iconColor, mt: 0.15, flexShrink: 0 }} />
+        ) : iconColor ? (
+          <Box
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: '999px',
+              bgcolor: iconColor,
+              mt: 0.55,
+              flexShrink: 0,
+              ml: 0.45,
+            }}
+          />
+        ) : null}
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            sx={{
+              fontSize: indent === 2 ? 12 : 13,
+              fontWeight: indent === 0 ? 700 : 600,
+              color: TEXT,
+              lineHeight: 1.4,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {label}
           </Typography>
-        )}
+          {meta && (
+            <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.15, lineHeight: 1.35 }}>
+              {meta}
+            </Typography>
+          )}
+        </Box>
       </Box>
+      {trailing ? (
+        <Box sx={{ flexShrink: 0, mt: 0.15 }} onClick={(e) => e.stopPropagation()}>
+          {trailing}
+        </Box>
+      ) : null}
     </Box>
   );
 }
@@ -111,16 +132,36 @@ function OutlineNavItem({
 export default function MentorContentOverview({
   paths,
   courseName = '',
+  courseId = null,
   footer = null,
   onNavigateToItem,
 }) {
   const { pathCount, nodeCount, materialCount } = countContentStats(paths);
+  const [quizSetupTarget, setQuizSetupTarget] = useState(null);
+
+  const canConfigureQuiz = courseId != null && courseId !== '';
+
+  const openQuizSetup = (path, pathIndex) => {
+    if (!canConfigureQuiz) return;
+    setQuizSetupTarget({
+      scope: QUIZ_SETUP_SCOPE_CHAPTER,
+      chapterId: resolveChapterId(path, pathIndex),
+      chapterTitle: path.PathName?.trim() || `Chương ${pathIndex + 1}`,
+      chapterIndex: pathIndex,
+    });
+  };
+
+  const openCourseQuizSetup = () => {
+    if (!canConfigureQuiz) return;
+    setQuizSetupTarget({ scope: QUIZ_SETUP_SCOPE_COURSE });
+  };
 
   const handleNavigate = (target) => {
     if (onNavigateToItem) onNavigateToItem(target);
   };
 
   return (
+    <>
     <Box
       sx={{
         position: { lg: 'sticky' },
@@ -131,11 +172,16 @@ export default function MentorContentOverview({
       }}
     >
       <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.75 }}>
-          <InsightsRoundedIcon sx={{ fontSize: 20, color: PRIMARY, flexShrink: 0 }} />
-          <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEXT }}>
-            Tổng quan nội dung
-          </Typography>
+        <Box sx={{ mb: 1.75 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, mb: canConfigureQuiz ? 1.25 : 0 }}>
+            <InsightsRoundedIcon sx={{ fontSize: 20, color: PRIMARY, flexShrink: 0 }} />
+            <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEXT }}>
+              Tổng quan nội dung
+            </Typography>
+          </Box>
+          {canConfigureQuiz ? (
+            <MentorChapterCardMenu variant="courseButton" onQuizSetup={openCourseQuizSetup} />
+          ) : null}
         </Box>
 
         {courseName && (
@@ -188,6 +234,16 @@ export default function MentorContentOverview({
                     indent={0}
                     onClick={() =>
                       handleNavigate({ type: 'chapter', pathTempId: path.tempId })
+                    }
+                    trailing={
+                      <MentorChapterCardMenu
+                        variant="button"
+                        quizSetupDisabled={!canConfigureQuiz}
+                        quizSetupDisabledReason={
+                          canConfigureQuiz ? '' : 'Lưu khóa học trước khi thiết lập kiểm tra'
+                        }
+                        onQuizSetup={() => openQuizSetup(path, pathIndex)}
+                      />
                     }
                   />
 
@@ -261,5 +317,17 @@ export default function MentorContentOverview({
         </Box>
       )}
     </Box>
+
+      <MentorChapterQuizSetupDialog
+        open={Boolean(quizSetupTarget)}
+        onClose={() => setQuizSetupTarget(null)}
+        scope={quizSetupTarget?.scope ?? QUIZ_SETUP_SCOPE_CHAPTER}
+        courseId={courseId}
+        courseTitle={courseName}
+        chapterId={quizSetupTarget?.chapterId}
+        chapterTitle={quizSetupTarget?.chapterTitle}
+        chapterIndex={quizSetupTarget?.chapterIndex ?? 0}
+      />
+    </>
   );
 }

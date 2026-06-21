@@ -47,13 +47,11 @@ import {
   paginateMentorCourses,
 } from '@/features/mentor/utils/mentorCourseUtils';
 import {
-  buildMentorCourseActiveChips,
   buildMentorCourseListSearchParams,
   hasActiveMentorCourseFilters,
   parseMentorCourseListParams,
   resetMentorCourseListParams,
 } from '@/features/mentor/utils/mentorCourseListParams';
-import { mentorCourseFilterOptionsMock } from '@/features/mentor/data/mentorCoursesMock';
 
 const PAGE_SIZE = MENTOR_COURSE_LIST_PAGE_SIZE;
 
@@ -71,11 +69,6 @@ export default function MentorCoursesPage() {
 
   const showReset = hasActiveMentorCourseFilters(queryState);
 
-  const activeFilterChips = useMemo(
-    () => buildMentorCourseActiveChips(queryState, mentorCourseFilterOptionsMock),
-    [queryState]
-  );
-
   // TODO: replace mock with real API call — fetchMentorCourses(queryState)
   useEffect(() => {
     let isMounted = true;
@@ -87,8 +80,6 @@ export default function MentorCoursesPage() {
         // console.log("START FETCH MENTOR COURSES");
 
         const res = await fetchMentorCourses();
-
-        // console.log("MENTOR COURSES SERVICE RESPONSE:", res);
 
         if (!isMounted) return;
 
@@ -158,7 +149,13 @@ export default function MentorCoursesPage() {
     setSearchParams(resetMentorCourseListParams(searchParams), { replace: true });
 
   const handleRemoveFilterChip = ({ type }) => {
-    const defaults = { q: '', status: 'all', category: 'all', level: 'all' };
+    const defaults = {
+      q: '',
+      status: 'all',
+      category: 'all',
+      level: 'all',
+      sort: 'updated_desc',
+    };
     if (type in defaults) updateQuery({ [type]: defaults[type], page: 1 });
   };
 
@@ -217,6 +214,7 @@ export default function MentorCoursesPage() {
       </Box>
 
       <MentorCoursesToolbar
+        keyword={queryState.q}
         statusFilter={queryState.status}
         onStatusChange={handleStatusChange}
         categoryFilter={queryState.category}
@@ -228,7 +226,6 @@ export default function MentorCoursesPage() {
         totalCount={filteredCourses.length}
         showReset={showReset}
         onReset={handleResetFilters}
-        activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
       />
 

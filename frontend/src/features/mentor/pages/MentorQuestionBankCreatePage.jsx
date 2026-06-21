@@ -4,7 +4,6 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Box } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { useNavigate } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
@@ -284,17 +283,16 @@ export default function MentorQuestionBankCreatePage() {
       >
         Lưu ngân hàng
       </AppButton>
-      <AppButton
-        variant="outlined"
-        startIcon={<ArrowBackRoundedIcon />}
-        onClick={() => navigate('/mentor/question-banks')}
-        fullWidth
-        sx={{ height: 44, fontSize: 14, fontWeight: 600, borderRadius: '999px' }}
-      >
-        Huỷ
-      </AppButton>
     </Box>
   );
+
+  const handleBack = () => {
+    if (courseId) {
+      navigate(`/mentor/courses/${courseId}/questions`);
+      return;
+    }
+    navigate('/mentor/question-banks');
+  };
 
   if (loading) {
     return (
@@ -309,6 +307,7 @@ export default function MentorQuestionBankCreatePage() {
       <MentorQuestionBankDetailHeader
         isCreateMode
         bankTitle={bankTitle}
+        courseId={courseId}
         courseName={course?.courseName}
         courseCategory={courseCategory}
         chapterTitle={selectedChapter?.chapterTitle}
@@ -316,6 +315,7 @@ export default function MentorQuestionBankCreatePage() {
         totalQuestionCount={questionCount}
         questionCountBySkill={questionCountBySkill}
         actions={footerActions}
+        onBack={handleBack}
       />
 
       <Box

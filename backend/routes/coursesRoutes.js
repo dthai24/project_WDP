@@ -6,9 +6,10 @@ const {
     getInformationCourse,
     saveCourseDraftStepOne,
     createFinalCourse,
-    getFeaturedCourses,
-    getFeaturedPaths,
-    getContinueCourse
+    getStudentCourses,
+    enrollCourse,
+    getLearningPath,
+    updateProgress
 } = require('../controllers/coursesController');
 
 
@@ -24,18 +25,31 @@ const optionalAuth = (req, res, next) => {
     next();
 };
 
+// Dummy route cho /api/courses/top
+router.get('/top', (req, res) => {
+    const limit = parseInt(req.query.limit, 10) || 4;
+    res.json({ success: true, message: "Dummy data from /top", courses: [] });
+});
+
 // GET /api/courses
-// Lấy tất cả khóa học
-// Nếu có userId thì lấy kèm progress của user đó
+// Lấy tất cả khóa học ngoài trang tổng (Catalog)
+router.get('/student', optionalAuth, getStudentCourses);
 
-
-// POST /api/courses/my-courses
-// Lấy khóa học theo role student / mentor
+// Lấy danh sách khóa học của tôi (Trang My Courses)
 router.post('/my-courses', getMyCourses);
-router.get('/featured', getFeaturedCourses);
-router.get('/featured-paths', getFeaturedPaths);
-router.get('/continue/:userId', getContinueCourse);
+
+// Chi tiết khóa học
 router.get('/my-courses/:courseId', getInformationCourse);
-router.post('/mentor/courses/save/draft', saveCourseDraftStepOne)
-router.post('/mentor/courses/createCourse', createFinalCourse)
+
+// Lưu nháp và tạo khóa học (Role Mentor)
+router.post('/mentor/courses/save/draft', saveCourseDraftStepOne);
+router.post('/mentor/courses/createCourse', createFinalCourse);
+
+router.post('/enroll', enrollCourse); 
+
+// Lấy lộ trình học và trạng thái hoàn thành (Trang Course Learning)
+router.get('/:id/learning', getLearningPath);
+
+// Lưu tiến độ học và đánh dấu bài học hoàn thành
+router.post('/:id/progress', updateProgress);
 module.exports = router;

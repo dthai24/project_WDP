@@ -30,18 +30,21 @@
  *   Sau đăng nhập thành công:
  *   - Lưu user vào localStorage['star_user']
  *   - isFirstLogin === true  → navigate('/survey')
- *   - role === 'Mentor'      → navigate('/mentor/courses')
- *   - otherwise              → navigate('/')
+ *   - Admin                  → navigate('/admin/accounts')
+ *   - Mentor                 → navigate('/mentor/courses')
+ *   - otherwise              → navigate('/home')
  */
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { loginApi } from '@/features/auth/services/authService';
+import { getPostLoginPath, isAuthenticatedUser } from '@/features/auth/utils/authUtils';
 import Logo from '@/shared/ui/Logo';
 import AuthPasswordField from '@/shared/ui/AuthPasswordField';
 import { toast } from '@/shared/ui/Toast';
 import '@/shared/styles/auth.css';
+import { useAuth } from '@/context/AuthContext';
 
 const REMEMBER_KEY = 'star_remember_email';
 
@@ -52,12 +55,13 @@ const validateEmail = (email) => {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const [form, setForm]           = useState({ email: '', password: '' });
-  const [errors, setErrors]       = useState({});
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [remember, setRemember]   = useState(false);
-  const submittingRef             = useRef(false); // sync guard — blocks before React re-renders
+  const [remember, setRemember] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBER_KEY);
@@ -67,11 +71,17 @@ export default function LoginPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticatedUser()) {
+      navigate(getPostLoginPath(), { replace: true });
+    }
+  }, [navigate]);
+
   const validate = () => {
     const errs = {};
-    if (!form.email.trim())              errs.email    = 'Email không được để trống.';
-    else if (!validateEmail(form.email)) errs.email    = 'Email không hợp lệ (phải có @, dấu chấm, tên miền, không khoảng trắng).';
-    if (!form.password)                  errs.password = 'Mật khẩu không được để trống.';
+    if (!form.email.trim()) errs.email = 'Email không được để trống.';
+    else if (!validateEmail(form.email)) errs.email = 'Email không hợp lệ (phải có @, dấu chấm, tên miền, không khoảng trắng).';
+    if (!form.password) errs.password = 'Mật khẩu không được để trống.';
     return errs;
   };
 
@@ -94,19 +104,18 @@ export default function LoginPage() {
 
     try {
       const { ok, data } = await loginApi(form.email.trim(), form.password);
-
-      if (ok && data.success) {
+      if (ok) {
         if (remember) {
           localStorage.setItem(REMEMBER_KEY, form.email.trim());
+
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
-        sessionStorage.setItem('user', JSON.stringify(data.user));
-        toast.success(data.message);
-        // Navigate ngay — không setTimeout, button vẫn disabled cho đến khi unmount
-        navigate(data.user.isFirstLogin ? '/survey' : '/home');
+        login(data);
+        toast.success('Đăng nhập thành công!');
+        navigate(getPostLoginPath(data, { isFirstLogin: data.isFirstLogin }));
       } else {
-        toast.error(data.message || 'Đăng nhập thất bại.');
+        toast.error(data?.message);
         submittingRef.current = false;
         setIsSubmitting(false);
       }

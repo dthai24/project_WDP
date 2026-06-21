@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   alpha,
   Box,
@@ -19,7 +19,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import { mentorCourseFilterOptionsMock } from '@/features/mentor/data/mentorCoursesMock';
-// import { MENTOR_COURSE_LIST_DEFAULTS } from '@/features/mentor/utils/mentorCourseListParams';
+import { MENTOR_COURSE_LIST_DEFAULTS } from '@/features/mentor/utils/mentorCourseListParams';
 import {
   fetchCourseCategories,
   fetchCourseLevels
@@ -115,7 +115,7 @@ function FilterMenu({ anchorEl, open, onClose, options, value, onSelect }) {
       }}
     >
       {options.map((option) => {
-        const selected = option.value === value;
+        const selected = String(option.value) === String(value);
         return (
           <MenuItem
             key={option.value}
@@ -179,6 +179,7 @@ function ActiveFilterChip({ label, onDelete }) {
 }
 
 export default function MentorCoursesToolbar({
+  keyword = '',
   statusFilter,
   onStatusChange,
   categoryFilter,
@@ -190,11 +191,8 @@ export default function MentorCoursesToolbar({
   totalCount = 0,
   showReset = false,
   onReset,
-  //activeFilterChips = [],
   onRemoveFilterChip,
   statusOptions = mentorCourseFilterOptionsMock.statusOptions,
-  // categoryOptions = mentorCourseFilterOptionsMock.categoryOptions,
-  //levelOptions = mentorCourseFilterOptionsMock.levelOptions,
   sortOptions = mentorCourseFilterOptionsMock.sortOptions,
 }) {
   const theme = useTheme();
@@ -232,8 +230,8 @@ export default function MentorCoursesToolbar({
         const level = await fetchCourseLevels();
 
         const rs = level.levels.map((lv) => ({
-          value: lv.value,
-          label: lv.label
+          value: String(lv.value),
+          label: lv.label,
         }));
 
         setLevelOptions([
@@ -248,16 +246,21 @@ export default function MentorCoursesToolbar({
     getData();
   }, []);
 
-  //ACTIVE CHIPS
-  const [activeFilterChips, setActiveFilterChips] = useState([]);
-  useEffect(() => {
+  const activeFilterChips = useMemo(() => {
     const chips = [];
 
-    if (statusFilter !== 'all') {
+    if (keyword.trim()) {
+      chips.push({
+        key: `q:${keyword}`,
+        type: 'q',
+        label: `"${keyword.trim()}"`,
+      });
+    }
+
+    if (statusFilter !== MENTOR_COURSE_LIST_DEFAULTS.status) {
       const selectedStatus = statusOptions.find(
         (option) => String(option.value) === String(statusFilter)
       );
-
       chips.push({
         key: 'status',
         type: 'status',
@@ -265,11 +268,10 @@ export default function MentorCoursesToolbar({
       });
     }
 
-    if (categoryFilter !== 'all') {
+    if (categoryFilter !== MENTOR_COURSE_LIST_DEFAULTS.category) {
       const selectedCategory = categoryOptions.find(
         (option) => String(option.value) === String(categoryFilter)
       );
-
       chips.push({
         key: 'category',
         type: 'category',
@@ -277,11 +279,10 @@ export default function MentorCoursesToolbar({
       });
     }
 
-    if (levelFilter !== 'all') {
+    if (levelFilter !== MENTOR_COURSE_LIST_DEFAULTS.level) {
       const selectedLevel = levelOptions.find(
         (option) => String(option.value) === String(levelFilter)
       );
-
       chips.push({
         key: 'level',
         type: 'level',
@@ -289,14 +290,26 @@ export default function MentorCoursesToolbar({
       });
     }
 
-    setActiveFilterChips(chips);
+    if (sortBy !== MENTOR_COURSE_LIST_DEFAULTS.sort) {
+      const selectedSort = sortOptions.find((option) => option.value === sortBy);
+      chips.push({
+        key: 'sort',
+        type: 'sort',
+        label: selectedSort?.label ?? sortBy,
+      });
+    }
+
+    return chips;
   }, [
+    keyword,
     statusFilter,
     categoryFilter,
     levelFilter,
+    sortBy,
     statusOptions,
     categoryOptions,
     levelOptions,
+    sortOptions,
   ]);
 
   const statusLabel = statusOptions.find((o) => o.value === statusFilter)?.label ?? 'Trạng thái';
@@ -357,7 +370,7 @@ export default function MentorCoursesToolbar({
           <FilterTrigger
             icon={SortOutlinedIcon}
             label={sortLabel}
-            hasValue
+            hasValue={sortBy !== MENTOR_COURSE_LIST_DEFAULTS.sort}
             open={Boolean(sortAnchor)}
             onClick={(e) => setSortAnchor(e.currentTarget)}
             iconColor="#7C3AED"

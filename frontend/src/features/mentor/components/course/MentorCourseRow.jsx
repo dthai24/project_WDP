@@ -37,6 +37,9 @@ import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import { Link } from 'react-router-dom';
 import {
+  countCourseLessons,
+  countCourseMaterials,
+  countCourseStudents,
   formatMentorCourseDate,
   truncateText,
 } from '@/features/mentor/utils/mentorCourseUtils';
@@ -88,56 +91,32 @@ function getStatusChip(IsPublished) {
   };
 }
 
-function getLevelChipStyle(levelId) {
-  // beginner
-  if (levelId === 1) {
-    return {
-      bgcolor: 'rgba(56,189,248,0.12)',
-      color: '#0284C7',
-      border: '1px solid rgba(56,189,248,0.22)',
-    };
-  }
-  //elementary
-  if (levelId === 2) {
-    return {
-      bgcolor: 'rgba(56,189,248,0.12)',
-      color: '#0284C7',
-      border: '1px solid rgba(56,189,248,0.22)',
-    };
-  }
-  //intermediate
-  if (levelId === 3) {
-    return {
-      bgcolor: 'rgba(245,158,11,0.12)',
-      color: '#D97706',
-      border: '1px solid rgba(245,158,11,0.22)',
-    };
-  }
-  //advanced
-  if (levelId === 4) {
-    return {
-      bgcolor: 'rgba(234,88,12,0.12)',
-      color: '#EA580C',
-      border: '1px solid rgba(234,88,12,0.22)',
-    };
-  }
-  //if not receive value of levelId 
-  return { bgcolor: '#F1F5F9', color: '#64748B' };
-}
+import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
-function getCategoryChipStyle(categoryId) {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  switch (Number(categoryId)) {
-    case 1: return { bgcolor: 'rgba(37,99,235,0.10)', color: '#2563EB' };
-    case 2: return { bgcolor: 'rgba(124,58,237,0.10)', color: '#7C3AED' };
-    case 3: return { bgcolor: 'rgba(14,116,144,0.10)', color: '#0E7490' };
-    case 4: return { bgcolor: 'rgba(15,23,42,0.08)', color: '#334155' };
-    case 5: return { bgcolor: 'rgba(236,72,153,0.10)', color: '#DB2777' };
+function getImageUrl(thumbnail) {
+  if (!thumbnail) return '';
+
+  const value = String(thumbnail).trim();
+
+  // Trường hợp ảnh đã là URL đầy đủ hoặc base64/blob
+  if (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:image') ||
+    value.startsWith('blob:')
+  ) {
+    return value;
   }
-  return { bgcolor: '#F1F5F9', color: '#64748B' };
+
+  // Trường hợp DB lưu: /assets/avatars/courses/course_avt_76.jpg
+  return `${API_URL}${value}`;
 }
 
 function CourseThumbnail({ thumbnail, courseName }) {
+  const imageUrl = getImageUrl(thumbnail);
+
   return (
     <Box
       sx={{
@@ -147,17 +126,18 @@ function CourseThumbnail({ thumbnail, courseName }) {
         flexShrink: 0,
         overflow: 'hidden',
         bgcolor: alpha(PRIMARY, 0.1),
-        backgroundImage: thumbnail ? `url(${thumbnail})` : 'none',
+        backgroundImage: imageUrl ? `url("${imageUrl}")` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         display: 'grid',
         placeItems: 'center',
       }}
     >
-      {!thumbnail && (
+      {!imageUrl && (
         <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
       )}
-      {!thumbnail && courseName && (
+
+      {!imageUrl && courseName && (
         <Typography sx={{ display: 'none' }}>{courseName}</Typography>
       )}
     </Box>
@@ -179,10 +159,9 @@ export default function MentorCourseRow({ course }) {
   const theme = useTheme();
   const statusChip = getStatusChip(course.IsPublished);
   const detailPath = `/mentor/courses/${course.CourseId}?tab=course`;
-  const totalChapters = course.Paths.length;
-  const totalLessons = 0;
-  const totalMaterials = course.totalMaterials ?? 0;
-  console.log(totalLessons)
+  const totalChapters = (course.Paths ?? course.paths ?? []).length;
+  const totalLessons = countCourseLessons(course);
+  const totalMaterials = countCourseMaterials(course);
   return (
     <Box
       sx={{
@@ -198,7 +177,7 @@ export default function MentorCourseRow({ course }) {
         gap: { xs: 1.75, md: 2.5 },
       }}
     >
-      <CourseThumbnail thumbnail={course.Thumbnail} courseName={course.courseName} />
+      <CourseThumbnail thumbnail={course.Thumbnail} courseName={course.CourseName} />
 
       <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
         <MuiLink
@@ -238,14 +217,14 @@ export default function MentorCourseRow({ course }) {
             <Chip
               size="small"
               label={course.CategoryDisplayName}
-              sx={{ ...PILL_CHIP_SX, ...getCategoryChipStyle(course.CategoryId) }}
+              sx={{ ...PILL_CHIP_SX, ...resolveCategoryChipSx({ id: course.CategoryId, displayName: course.CategoryName }) }}
             />
           )}
           {course.LevelDisplayName && (
             <Chip
               size="small"
               label={course.LevelDisplayName}
-              sx={{ ...PILL_CHIP_SX, ...getLevelChipStyle(course.LevelId) }}
+              sx={{ ...PILL_CHIP_SX, ...resolveLevelChipSx({ id: course.LevelId, displayName: course.LevelName }) }}
             />
           )}
         </Box>
@@ -254,7 +233,7 @@ export default function MentorCourseRow({ course }) {
           <MetricItem
             icon={PeopleOutlineRoundedIcon}
             label="Học viên"
-            value={course.studentCount ?? 0}
+            value={countCourseStudents(course)}
             iconColor={METRIC_COLORS.students}
           />
           <MetricItem
@@ -272,7 +251,7 @@ export default function MentorCourseRow({ course }) {
           <MetricItem
             icon={MenuBookRoundedIcon}
             label="Bài"
-            value={totalLessons.length}
+            value={totalLessons}
             iconColor={METRIC_COLORS.lessons}
           />
           <MetricItem

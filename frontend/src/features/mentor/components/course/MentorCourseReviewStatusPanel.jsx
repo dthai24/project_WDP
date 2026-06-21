@@ -44,9 +44,17 @@ export default function MentorCourseReviewStatusPanel({
   creating = false,
   showActions = true,
 }) {
-  const errorCount = validation?.errors?.length ?? 0;
-  const isValid = validation?.isValid;
+  const errorChecklist = checklist.reduce((sumErr, err) => {
+    if (err.status === true) {
+      sumErr++;
+    }
 
+    return sumErr;
+  }, 0);
+  const errorValidation = validation?.errors?.length ?? 0
+  const errorCount = Number(errorChecklist + errorValidation);
+  const isValid = validation?.isValid;
+  const isValidCheckList = checklist.every((c) => c.status === true);
   return (
     <Box
       sx={{
@@ -80,7 +88,7 @@ export default function MentorCourseReviewStatusPanel({
               lineHeight: 1.5,
             }}
           >
-            {isValid
+            {isValid && isValidCheckList
               ? 'Khóa học đã sẵn sàng để tạo.'
               : `Còn ${errorCount} mục cần hoàn thiện`}
           </Typography>
@@ -99,7 +107,7 @@ export default function MentorCourseReviewStatusPanel({
           ))}
         </Box>
 
-        {!isValid && (validation?.errors ?? []).length > 0 && (
+        {!isValid && (validation?.errors ?? []).length > 0 && isValidCheckList && (
           <Box
             sx={{
               mb: 2,

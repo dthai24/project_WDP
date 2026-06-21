@@ -15,6 +15,8 @@ import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
   TEST_SKILL_WRITING,
+  getQuestionBankSectionDisplayTitle,
+  getSectionsBySkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const QB_STORAGE_KEY = 'mentor_question_banks_v1';
@@ -71,6 +73,21 @@ function filterByCourse(banks, courseId) {
   return banks.filter((b) => String(b.courseId) === String(courseId));
 }
 
+function countActiveQuestionsInSection(section) {
+  return (section?.Questions ?? []).filter(
+    (q) => String(q?.QuestionText ?? '').trim() && q?.isActive !== false,
+  ).length;
+}
+
+function getWritingSectionGroupsFromSections(sections = []) {
+  const bankSections = getSectionsBySkill(sections, TEST_SKILL_WRITING);
+  return bankSections.map((section) => ({
+    sectionTempId: section.tempId,
+    sectionTitle: getQuestionBankSectionDisplayTitle(section, sections),
+    activeCount: countActiveQuestionsInSection(section),
+  }));
+}
+
 function countQuestionsBySkill(sections = []) {
   return sections.reduce(
     (acc, section) => {
@@ -88,6 +105,140 @@ function countQuestionsBySkill(sections = []) {
       [TEST_SKILL_WRITING]: 0,
     },
   );
+}
+
+/** Thống kê câu hỏi đang bật trong bank của một chương. */
+export async function getChapterQuestionBankActiveStats(courseId, chapterId) {
+  const res = findQuestionBankByChapter(courseId, chapterId);
+  if (!res.ok) {
+    return { ok: true, hasBank: false, message: res.message };
+  }
+
+  const questionCountBySkill = countQuestionsBySkill(res.bank.sections ?? []);
+  const writingSectionGroups = getWritingSectionGroupsFromSections(res.bank.sections ?? []);
+  const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
+
+  return {
+    ok: true,
+    hasBank: true,
+    bank: res.bank,
+    questionCountBySkill,
+    writingSectionGroups,
+    totalActive,
+  };
+}
+
+/** Gom thống kê câu đang bật từ mọi ngân hàng câu hỏi theo chương của khóa học. */
+export async function getCourseQuestionBankActiveStats(courseId) {
+  const banks = filterByCourse(getAllBanks(), courseId);
+  const outlineRes = await fetchCourseContentOutlineForQB(courseId);
+  const outlineChapters = outlineRes.ok ? outlineRes.chapters : [];
+
+  const bankByChapterId = new Map(banks.map((bank) => [String(bank.chapterId), bank]));
+
+  const chapters = outlineChapters.map((outlineChapter) => {
+    const bank = bankByChapterId.get(String(outlineChapter.chapterId));
+    if (!bank) {
+      return {
+        chapterId: outlineChapter.chapterId,
+        chapterTitle: outlineChapter.chapterTitle,
+        hasBank: false,
+        totalActive: 0,
+        questionCountBySkill: {
+          [TEST_SKILL_LISTENING]: 0,
+          [TEST_SKILL_READING]: 0,
+          [TEST_SKILL_WRITING]: 0,
+        },
+        writingSectionGroups: [],
+      };
+    }
+
+    const questionCountBySkill = countQuestionsBySkill(bank.sections ?? []);
+    const chapterLabel = bank.chapterTitle?.trim() || outlineChapter.chapterTitle;
+    const writingSectionGroups = getWritingSectionGroupsFromSections(bank.sections ?? []).map(
+      (group) => ({
+        sectionTempId: `${bank.chapterId}::${group.sectionTempId}`,
+        sectionTitle: `${chapterLabel} · ${group.sectionTitle}`,
+        activeCount: group.activeCount,
+        chapterId: bank.chapterId,
+      }),
+    );
+    const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
+
+    return {
+      chapterId: bank.chapterId,
+      chapterTitle: chapterLabel,
+      hasBank: true,
+      totalActive,
+      questionCountBySkill,
+      writingSectionGroups,
+    };
+  });
+
+  banks.forEach((bank) => {
+    if (chapters.some((chapter) => String(chapter.chapterId) === String(bank.chapterId))) {
+      return;
+    }
+
+    const questionCountBySkill = countQuestionsBySkill(bank.sections ?? []);
+    const chapterLabel = bank.chapterTitle?.trim() || `Chương ${bank.chapterId}`;
+    const writingSectionGroups = getWritingSectionGroupsFromSections(bank.sections ?? []).map(
+      (group) => ({
+        sectionTempId: `${bank.chapterId}::${group.sectionTempId}`,
+        sectionTitle: `${chapterLabel} · ${group.sectionTitle}`,
+        activeCount: group.activeCount,
+        chapterId: bank.chapterId,
+      }),
+    );
+    const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
+
+    chapters.push({
+      chapterId: bank.chapterId,
+      chapterTitle: chapterLabel,
+      hasBank: true,
+      totalActive,
+      questionCountBySkill,
+      writingSectionGroups,
+    });
+  });
+
+  if (banks.length === 0) {
+    return {
+      ok: true,
+      hasBank: false,
+      bankCount: 0,
+      chapters,
+      message: 'Khóa học chưa có ngân hàng câu hỏi nào',
+    };
+  }
+
+  const questionCountBySkill = {
+    [TEST_SKILL_LISTENING]: 0,
+    [TEST_SKILL_READING]: 0,
+    [TEST_SKILL_WRITING]: 0,
+  };
+  const writingSectionGroups = [];
+
+  chapters
+    .filter((chapter) => chapter.hasBank)
+    .forEach((chapter) => {
+      Object.keys(questionCountBySkill).forEach((skill) => {
+        questionCountBySkill[skill] += chapter.questionCountBySkill?.[skill] ?? 0;
+      });
+      writingSectionGroups.push(...(chapter.writingSectionGroups ?? []));
+    });
+
+  const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
+
+  return {
+    ok: true,
+    hasBank: true,
+    bankCount: banks.length,
+    chapters,
+    questionCountBySkill,
+    writingSectionGroups,
+    totalActive,
+  };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

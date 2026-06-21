@@ -109,7 +109,7 @@ function MaterialOutlineRow({ material }) {
 
 function ChapterOutline({ path, pathIndex, defaultExpanded }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const nodes = path.nodes ?? [];
+  const nodes = path.Nodes ?? [];
   const chapterTitle = path.PathName || `Chương ${pathIndex + 1}`;
   const materialCount = countMaterialsInPath(path);
 
@@ -133,6 +133,7 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
           borderBottom: expanded ? `1px solid ${CHAPTER_THEME.border}` : 'none',
         }}
       >
+        {console.log(path)}
         <IconButton size="small" onClick={() => setExpanded((prev) => !prev)} sx={{ p: 0.4 }}>
           {expanded ? (
             <ExpandLessRoundedIcon sx={{ fontSize: 20, color: CHAPTER_THEME.color }} />
@@ -140,6 +141,7 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
             <ExpandMoreRoundedIcon sx={{ fontSize: 20, color: CHAPTER_THEME.color }} />
           )}
         </IconButton>
+        {console.log("nodes", nodes)}
         <MenuBookRoundedIcon sx={{ fontSize: 18, color: CHAPTER_THEME.color }} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
@@ -164,7 +166,7 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {nodes.map((node, nodeIndex) => {
-                const materials = node.materials ?? [];
+                const materials = node.Materials ?? [];
                 const lessonTitle = node.NodeName || `Bài ${nodeIndex + 1}`;
 
                 return (

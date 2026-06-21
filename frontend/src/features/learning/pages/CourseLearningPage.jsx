@@ -58,7 +58,7 @@
  *   }
  *   Response JSON: { success: true, progressPercentage: number }
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -94,7 +94,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import EmptyState from "@/shared/ui/EmptyState";
-import { getCourseLearningMock } from "@/features/learning/data/courseLearningMock";
 
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
@@ -206,21 +205,94 @@ export default function CourseLearningPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUserId = String(user.userId || '1');
 
-  const rawData = useMemo(() => getCourseLearningMock(courseId), [courseId]);
+  // 1. Tạo State
+  const [modules, setModules] = useState([]);
+  const [currentLessonId, setCurrentLessonId] = useState(null);
 
-  // All hooks must be called before any early return
-  const [modules, setModules] = useState(() =>
-    rawData ? JSON.parse(JSON.stringify(rawData.modules)) : []
-  );
-  const [currentLessonId, setCurrentLessonId] = useState(() =>
-    rawData ? getInitialLessonId(JSON.parse(JSON.stringify(rawData.modules))) : null
-  );
+  // 2. Tạo state để lưu tên khóa học và giảng viên
+  const [courseInfo, setCourseInfo] = useState({ courseTitle: "Đang tải dữ liệu...", instructor: "" });
+  const rawData = courseInfo; // Dùng lại tên rawData để UI bên dưới không bị lỗi
 
+  // 3. Gọi API và Dịch dữ liệu Database -> React UI
+  useEffect(() => {
+    const fetchLearningData = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/courses/${courseId}/learning`, {
+          headers: { 'x-user-id': currentUserId }
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          setCourseInfo({
+            courseTitle: result.courseTitle,
+            instructor: result.instructor
+          });
+          // ĐÂY LÀ ĐOẠN "DỊCH THUẬT" SIÊU HAY
+          const mappedModules = result.data.map(mod => ({
+            id: mod.PathId,             // DB là PathId -> React cần id
+            title: mod.PathName,        // DB là PathName -> React cần title
+            lessons: mod.lessons.map(l => ({
+              id: l.NodeId,           // DB là NodeId -> React cần id
+              title: l.NodeName,      // DB là NodeName -> React cần title
+              type: l.MaterialType ? l.MaterialType.toLowerCase() : "video",
+              status: l.IsCompleted ? "completed" : "not_started"
+            }))
+          }));
+
+          setModules(mappedModules);
+
+          // Chọn bài đầu tiên
+          if (mappedModules.length > 0 && mappedModules[0].lessons.length > 0) {
+            setCurrentLessonId(mappedModules[0].lessons[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi:", error);
+      }
+    };
+    fetchLearningData();
+  }, [courseId]);
+
+  // 4. Các hàm tính toán của React (Giữ nguyên không đổi)
   const allLessons = useMemo(() => flatLessons(modules), [modules]);
   const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
   const { lesson: currentLesson, mod: currentMod } = findLessonAndModule(modules, currentLessonId);
   const progress = useMemo(() => computeProgress(modules), [modules]);
+
+  // 5. Nút Đánh dấu hoàn thành
+  const handleToggleComplete = async () => {
+    if (!currentLesson) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/courses/${courseId}/progress`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId
+        },
+        body: JSON.stringify({ nodeId: currentLesson.id })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // Cập nhật giao diện thành xanh
+        setModules(prev =>
+          prev.map(module => ({
+            ...module,
+            lessons: module.lessons.map(lesson =>
+              lesson.id === currentLesson.id
+                ? { ...lesson, status: "completed" }
+                : lesson
+            )
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi khi lưu tiến độ:", error);
+    }
+  };
 
   if (!rawData) {
     return (
@@ -238,19 +310,6 @@ export default function CourseLearningPage() {
   }
 
   const handleSelectLesson = (id) => setCurrentLessonId(id);
-
-  const handleToggleComplete = () => {
-    if (!currentLesson) return;
-    const next = currentLesson.status === "completed" ? "current" : "completed";
-    setModules((prev) =>
-      prev.map((mod) => ({
-        ...mod,
-        lessons: mod.lessons.map((l) =>
-          l.id === currentLessonId ? { ...l, status: next } : l
-        ),
-      }))
-    );
-  };
 
   const handlePrev = () => {
     if (currentIndex > 0) handleSelectLesson(allLessons[currentIndex - 1].id);
@@ -585,23 +644,23 @@ export default function CourseLearningPage() {
                   fontWeight: 600,
                   ...(isCompleted
                     ? {
-                        borderColor: alpha(SUCCESS, 0.5),
-                        color: SUCCESS,
-                        bgcolor: alpha(SUCCESS, 0.08),
-                        "&:hover": {
-                          borderColor: SUCCESS,
-                          bgcolor: alpha(SUCCESS, 0.14),
-                        },
-                      }
+                      borderColor: alpha(SUCCESS, 0.5),
+                      color: SUCCESS,
+                      bgcolor: alpha(SUCCESS, 0.08),
+                      "&:hover": {
+                        borderColor: SUCCESS,
+                        bgcolor: alpha(SUCCESS, 0.14),
+                      },
+                    }
                     : {
-                        bgcolor: SUCCESS,
-                        color: "#fff",
-                        boxShadow: `0 2px 8px ${alpha(SUCCESS, 0.28)}`,
-                        "&:hover": {
-                          bgcolor: "#15803D",
-                          boxShadow: `0 3px 10px ${alpha(SUCCESS, 0.34)}`,
-                        },
-                      }),
+                      bgcolor: SUCCESS,
+                      color: "#fff",
+                      boxShadow: `0 2px 8px ${alpha(SUCCESS, 0.28)}`,
+                      "&:hover": {
+                        bgcolor: "#15803D",
+                        boxShadow: `0 3px 10px ${alpha(SUCCESS, 0.34)}`,
+                      },
+                    }),
                 }}
               >
                 {isCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
