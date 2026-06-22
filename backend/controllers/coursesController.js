@@ -1,5 +1,6 @@
 const courseModel = require('../models/coursesModel');
 const streakService = require("../services/streakService");
+const courseCommentsModel = require('../models/courseCommentsModel');
 const { validateCourseThumbnailDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
 const getStudentCourses = async (req, res) => {
@@ -324,8 +325,72 @@ async function getStreak(req, res) {
     console.error("streak error", e);
     res.json({ success: true, streak: 0 });
   }
-
 }
+
+const getCourseComments = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        if (!courseId) {
+            return res.status(400).json({ success: false, message: 'Thiếu courseId', data: [] });
+        }
+
+        const comments = await courseCommentsModel.getCourseComments(courseId);
+        return res.status(200).json({
+            success: true,
+            message: 'Lấy bình luận thành công',
+            data: comments,
+        });
+    } catch (error) {
+        console.error('getCourseComments error:', error.message);
+        return res.status(200).json({
+            success: true,
+            message: 'Chưa có bình luận',
+            data: [],
+        });
+    }
+};
+
+const createCourseComment = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const userId = req.headers['x-user-id'];
+        const { content, rating } = req.body;
+
+        if (!courseId) {
+            return res.status(400).json({ success: false, message: 'Thiếu courseId' });
+        }
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để bình luận' });
+        }
+        if (!content || String(content).trim() === '') {
+            return res.status(400).json({ success: false, message: 'Nội dung bình luận không được để trống' });
+        }
+        if (String(content).trim().length > 250) {
+            return res.status(400).json({ success: false, message: 'Bình luận không được vượt quá 250 ký tự' });
+        }
+
+        const numericRating = rating == null ? null : Number(rating);
+        if (numericRating != null && (numericRating < 1 || numericRating > 5)) {
+            return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 5 sao' });
+        }
+
+        const comment = await courseCommentsModel.createCourseComment({
+            courseId,
+            userId,
+            rating: numericRating,
+            content: String(content).trim(),
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'Gửi bình luận thành công',
+            data: comment,
+        });
+    } catch (error) {
+        console.error('createCourseComment error:', error.message);
+        return res.status(500).json({ success: false, message: 'Lỗi server khi gửi bình luận' });
+    }
+};
 
 //create node
 
@@ -476,5 +541,8 @@ module.exports = {
   updateProgress,
   getFeaturedCourses,
   getFeaturedPaths,
-  getContinueCourse, getStreak
+  getContinueCourse,
+  getStreak,
+  getCourseComments,
+  createCourseComment,
 };

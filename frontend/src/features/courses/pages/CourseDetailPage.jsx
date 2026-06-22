@@ -24,14 +24,12 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import OpenInFullRoundedIcon from "@mui/icons-material/OpenInFullRounded";
 import CloseFullscreenRoundedIcon from "@mui/icons-material/CloseFullscreenRounded";
 import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
 import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
@@ -42,9 +40,9 @@ import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import CourseCard from "@/features/courses/components/CourseCard";
 import CourseBookmarkButton from "@/features/courses/components/CourseBookmarkButton";
+import CourseCommentsSection from "@/features/courses/components/CourseCommentsSection";
 import useSavedCourses from "@/features/courses/hooks/useSavedCourses";
 import { buildCourseDetailPath, buildCourseListPath } from "@/features/courses/utils/courseListParams";
-import { getExtraCourseDetail } from "@/features/courses/data/courseDetailMock";
 import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
 import { enrollCourseApi } from '@/features/auth/services/authService';
 import { toast } from "@/shared/ui/Toast";
@@ -86,17 +84,37 @@ function SectionTitle({ children, sx }) {
 
 function CourseMetaRow({ course }) {
   const items = [
-    { icon: MenuBookOutlinedIcon, label: "Bài", value: `${course.lessonCount} bài` },
     { icon: RouteOutlinedIcon, label: "Chương", value: `${course.stageCount} chương` },
+    { icon: MenuBookOutlinedIcon, label: "Bài", value: `${course.lessonCount} bài` },
     { icon: ArticleOutlinedIcon, label: "Học liệu", value: `${course.materialCount} tài liệu` },
-    { icon: AccessTimeOutlinedIcon, label: "Thời lượng", value: course.duration || "—" },
     { icon: CalendarTodayOutlinedIcon, label: "Cập nhật", value: course.updatedAt || "—" },
   ];
 
   return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 2, sm: 3 }, rowGap: 2, pt: 0.5 }}>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(4, minmax(0, 1fr))" },
+        gap: { xs: 2, sm: 3 },
+        width: "100%",
+        pt: 0.5,
+      }}
+    >
       {items.map(({ icon: Icon, label, value }) => (
-        <Box key={label} sx={{ minWidth: 110, flex: "1 1 120px", maxWidth: 150, pb: "6px", borderBottom: "1px solid rgba(8,145,178,0.18)", transition: "border-color 0.2s ease", "&:hover": { borderBottomColor: "rgba(8,145,178,0.45)", "& .meta-icon": { color: PRIMARY } } }}>
+        <Box
+          key={label}
+          sx={{
+            minWidth: 0,
+            width: "100%",
+            pb: "6px",
+            borderBottom: "1px solid rgba(8,145,178,0.18)",
+            transition: "border-color 0.2s ease",
+            "&:hover": {
+              borderBottomColor: "rgba(8,145,178,0.45)",
+              "& .meta-icon": { color: PRIMARY },
+            },
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.4 }}>
             <Icon className="meta-icon" sx={{ fontSize: 14, color: MUTED, transition: "color 0.2s ease" }} />
             <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>{label}</Typography>
@@ -142,14 +160,12 @@ function CourseIntro({ course, isEnrolled }) {
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>{course.title}</Typography>
       </Breadcrumbs>
 
-      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5, mb: 1.25 }}>
-        <Typography sx={{ flex: 1, minWidth: 0, fontWeight: 700, color: TEXT, lineHeight: 1.25, fontSize: { xs: 24, sm: 28, md: 32 }, letterSpacing: "-0.02em" }}>
+      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, mb: 1.25 }}>
+        <Typography sx={{ flex: 1, minWidth: 0, fontWeight: 700, color: TEXT, lineHeight: 1.3, fontSize: { xs: 22, sm: 24, md: 28 }, letterSpacing: "0.01em" }}>
           {course.title}
         </Typography>
         <CourseBookmarkButton isSaved={isSaved(courseId)} onToggle={() => toggleSave(courseId)} size="medium" iconSize={26} />
       </Box>
-
-      <Typography sx={{ fontSize: 15, color: MUTED, lineHeight: 1.65, mb: 2 }}>{course.shortDescription}</Typography>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2, mb: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -163,7 +179,7 @@ function CourseIntro({ course, isEnrolled }) {
         </Box>
       </Box>
 
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2 }}>
         <Chip label={statusChip.label} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }} />
         {course.level && (
           <Chip label={course.level} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...resolveLevelChipSx({ displayName: course.level }) }} />
@@ -174,6 +190,13 @@ function CourseIntro({ course, isEnrolled }) {
       </Box>
 
       <CourseMetaRow course={course} />
+
+      {course.shortDescription && (
+        <Box sx={{ mt: 7.5 }}>
+          <SectionTitle sx={{ mb: 1.25 }}>Mô tả khóa học</SectionTitle>
+          <Typography sx={{ fontSize: 15, color: MUTED, lineHeight: 1.65 }}>{course.shortDescription}</Typography>
+        </Box>
+      )}
     </Box>
   );
 }
@@ -247,26 +270,6 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
   );
 }
 
-function OutcomesSection({ outcomes }) {
-  if (!outcomes?.length) return null;
-
-  return (
-    <Box>
-      <SectionTitle sx={{ mb: 2 }}>Bạn sẽ học được gì</SectionTitle>
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, columnGap: 4, rowGap: 1.75 }}>
-        {outcomes.map((item, i) => (
-          <Box key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 1.25, minHeight: 28 }}>
-            <Box sx={{ width: 20, height: 20, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", mt: "1px" }}>
-              <CheckRoundedIcon sx={{ fontSize: 18, color: PRIMARY }} />
-            </Box>
-            <Typography sx={{ fontSize: 14, color: TEXT, lineHeight: 1.55, fontWeight: 500, pt: "1px" }}>{item}</Typography>
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
 function LessonIcon({ type }) {
   const Icon = type === "video" ? PlayCircleOutlineOutlinedIcon : ArticleRoundedIcon;
   return <Icon sx={{ fontSize: 16, color: MUTED, flexShrink: 0 }} />;
@@ -296,9 +299,7 @@ function CurriculumSection({ modules, isEnrolled, course }) {
       <Box sx={{ pb: 2, mb: 0.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, borderBottom: `1px solid ${DIVIDER}` }}>
         <Box>
           <SectionTitle sx={{ mb: 0.75 }}>Nội dung khóa học</SectionTitle>
-          <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-            {course.stageCount} chương • {course.lessonCount} bài • {course.duration}
-          </Typography>
+          
         </Box>
         <IconButton onClick={toggleAll} sx={{ flexShrink: 0, mt: 0.25, color: MUTED, p: 0.5, "&:hover": { bgcolor: "transparent", color: MUTED } }}>
           {allExpanded ? <CloseFullscreenRoundedIcon sx={{ fontSize: 19 }} /> : <OpenInFullRoundedIcon sx={{ fontSize: 19 }} />}
@@ -316,6 +317,12 @@ function CurriculumSection({ modules, isEnrolled, course }) {
           </AccordionSummary>
 
           <AccordionDetails sx={{ p: 0, pb: 1.5 }}>
+            {mod.description && (
+              <Box sx={{ pl: 4.5, pr: 0, pt: 0, pb: 2, borderBottom: mod.lessons.length > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none" }}>
+                
+                <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{mod.description}</Typography>
+              </Box>
+            )}
             {mod.lessons.map((lesson, lessonIndex) => {
               const isLocked = !isEnrolled && !lesson.isPreview;
               return (
@@ -399,13 +406,13 @@ export default function CourseDetailPage() {
             reviewCount: 154,
             studentCount: 2000,
             isFree: true,
-            outcomes: ["Nắm vững kiến thức cốt lõi"],
             prerequisites: [],
             // Lấy danh sách bài học đưa vào Modules
             modules: (dbData.Paths || []).map(path => {
               return {
                 id: path.PathId,
                 title: path.PathName,
+                description: String(path.Description ?? "").trim(),
                 lessonCount: path.Nodes ? path.Nodes.length : 0,
                 lessons: (path.Nodes || []).map((node, index) => {
                   return {
@@ -485,11 +492,11 @@ export default function CourseDetailPage() {
           </Box>
 
           <Box sx={{ mt: 5 }}>
-            <OutcomesSection outcomes={course.outcomes} />
+            <CurriculumSection modules={course.modules} isEnrolled={course.isEnrolled} course={course} />
           </Box>
 
           <Box sx={{ mt: 5 }}>
-            <CurriculumSection modules={course.modules} isEnrolled={course.isEnrolled} course={course} />
+            <CourseCommentsSection courseId={course.id} isEnrolled={course.isEnrolled} />
           </Box>
         </Box>
 

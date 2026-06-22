@@ -107,7 +107,7 @@ export default function SurveyPage() {
           </p>
         </div>
 
-        <div className="survey-content" style={{ marginTop: '30px' }}>
+        <div className="survey-content">
 
           {step === 1 && (
             <div className="survey-grid">
