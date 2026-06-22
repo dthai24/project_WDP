@@ -1,4 +1,4 @@
-const { sql } = require('../config/db.js');
+const { sql , poolPromise} = require('../config/db.js');
 
 const getStudentsInCourseModel = async (courseId) => {
     const request = new sql.Request();
