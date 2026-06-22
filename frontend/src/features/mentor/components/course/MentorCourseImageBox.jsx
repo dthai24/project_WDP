@@ -6,6 +6,7 @@ import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import {
   readImageFileAsDataUrl,
+  resolveCourseThumbnailUrl,
   validateImageFile,
 } from '@/features/mentor/utils/mentorCourseImageUtils';
 import MentorCourseImageCropDialog from './MentorCourseImageCropDialog';
@@ -18,6 +19,7 @@ export default function MentorCourseImageBox({ value, error, onChange, disabled 
 
   const thumbnail = String(value ?? '').trim();
   const hasImage = Boolean(thumbnail);
+  const displayUrl = resolveCourseThumbnailUrl(thumbnail);
 
   const emitThumbnail = (nextValue) => {
     onChange({ target: { name: 'Thumbnail', value: nextValue } });
@@ -87,7 +89,7 @@ export default function MentorCourseImageBox({ value, error, onChange, disabled 
             placeItems: 'center',
             cursor: disabled ? 'default' : 'pointer',
             opacity: disabled ? 0.6 : 1,
-            backgroundImage: hasImage ? `url(${thumbnail})` : 'none',
+            backgroundImage: hasImage ? `url(${displayUrl})` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             transition: 'border-color 0.2s ease, box-shadow 0.2s ease',

@@ -188,6 +188,35 @@ const getCoursePaths = async (courseId) => {
   return result.recordset;
 };
 
+/** Mục lục chương + bài (không kèm học liệu) — dùng cho Question Bank, quiz setup, v.v. */
+const getCourseChaptersOutline = async (courseId) => {
+  const request = new sql.Request();
+  request.input("courseId", sql.Int, Number(courseId));
+  const courseCheck = await request.query(
+    `SELECT CourseId FROM Courses WHERE CourseId = @courseId`,
+  );
+  if (courseCheck.recordset.length === 0) {
+    return null;
+  }
+
+  const paths = await getCoursePaths(Number(courseId));
+  return Promise.all(
+    paths.map(async (path) => {
+      const nodes = await getPathNodes(path.PathId);
+      return {
+        PathId: path.PathId,
+        PathName: path.PathName,
+        Order: path.Order,
+        Nodes: nodes.map((node) => ({
+          NodeId: node.NodeId,
+          NodeName: node.NodeName,
+          NodeOrder: node.NodeOrder,
+        })),
+      };
+    }),
+  );
+};
+
 const getPathNodes = async (pathId) => {
   const request = new sql.Request();
   request.input("pathId", sql.Int, pathId);
@@ -260,8 +289,7 @@ const getContinueCourse = async (userId) => {
       INNER JOIN Courses c
           ON c.CourseId = uc.CourseId
       WHERE uc.UserId = @UserId
-      ORDER BY uc.ProgressPercentage DESC`
-  );
+      ORDER BY uc.ProgressPercentage DESC`);
   return await buildCourse(result.recordset);
 };
 
@@ -425,20 +453,27 @@ const insertNode = async (node, pathId) => {
 
 const insertMaterial = async (material, nodeId) => {
   const request = new sql.Request();
+  const materialUrl = material.MaterialUrl ?? material.Content ?? null;
+
   request.input("NodeId", sql.Int, Number(nodeId));
   request.input("MaterialType", sql.NVarChar(20), material.MaterialType);
   request.input("Title", sql.NVarChar(255), material.Title);
-  request.input(
-    "MaterialUrl",
-    sql.NVarChar(sql.MAX),
-    material.MaterialUrl ?? null,
-  );
+  request.input("MaterialUrl", sql.NVarChar(sql.MAX), materialUrl);
   request.input("MaterialOrder", sql.Int, Number(material.MaterialOrder));
+  request.input("SourceType", sql.NVarChar(20), material.SourceType ?? null);
+  request.input("FileName", sql.NVarChar(255), material.FileName ?? null);
+  request.input(
+    "FileSize",
+    sql.BigInt,
+    material.FileSize != null ? Number(material.FileSize) : null,
+  );
+  request.input("EmbedUrl", sql.NVarChar(sql.MAX), material.EmbedUrl ?? null);
 
   const result = await request.query(`
-        INSERT INTO [dbo].[Node_Materials] ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder])
+        INSERT INTO [dbo].[Node_Materials]
+            ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder], [SourceType], [FileName], [FileSize], [EmbedUrl])
         OUTPUT INSERTED.MaterialId AS MaterialId
-        VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder)
+        VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize, @EmbedUrl)
     `);
   return result.recordset[0].MaterialId;
 };
@@ -454,18 +489,16 @@ const increaseCourseTotalLessons = async (courseId) => {
 };
 
 const buildPathsNodes = async (paths, courseId) => {
-  paths.map(async (p) => {
+  for (const p of paths ?? []) {
     const pathId = await insertPath(p, courseId);
-    const nodes = p.nodes;
-    nodes.map(async (node) => {
+    for (const node of p.nodes ?? []) {
       const nodeId = await insertNode(node, pathId);
       await increaseCourseTotalLessons(courseId);
-      const materials = node.materials;
-      materials.map(async (m) => {
+      for (const m of node.materials ?? []) {
         await insertMaterial(m, nodeId);
-      });
-    });
-  });
+      }
+    }
+  }
 };
 
 const createFinalCourse = async (course, paths) => {
@@ -479,6 +512,85 @@ const createFinalCourse = async (course, paths) => {
   }
   await buildPathsNodes(paths, newCourseId);
   return newCourseId;
+};
+
+const replaceCourseContent = async (courseId, paths) => {
+  await clearCourseContent(courseId);
+  await buildPathsNodes(paths, courseId);
+};
+
+const getCourseInstructorId = async (courseId) => {
+  const request = new sql.Request();
+  request.input("courseId", sql.Int, Number(courseId));
+  const result = await request.query(`
+        SELECT InstructorId FROM Courses WHERE CourseId = @courseId
+    `);
+  return result.recordset[0]?.InstructorId ?? null;
+};
+
+const clearCourseContent = async (courseId) => {
+  const request = new sql.Request();
+  request.input("courseId", sql.Int, Number(courseId));
+
+  await request.query(`
+        DELETE un
+        FROM User_Nodes un
+        INNER JOIN Path_Nodes pn ON un.NodeId = pn.NodeId
+        INNER JOIN Paths p ON pn.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE nm
+        FROM Node_Materials nm
+        INNER JOIN Path_Nodes pn ON nm.NodeId = pn.NodeId
+        INNER JOIN Paths p ON pn.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE pn
+        FROM Path_Nodes pn
+        INNER JOIN Paths p ON pn.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE FROM Paths WHERE CourseId = @courseId;
+
+        UPDATE Courses
+        SET TotalLessons = 0, UpdatedAt = GETDATE()
+        WHERE CourseId = @courseId;
+    `);
+};
+
+const getCourseStudentCount = async (courseId) => {
+  const request = new sql.Request();
+  request.input("courseId", sql.Int, Number(courseId));
+  const result = await request.query(`
+        SELECT COUNT(*) AS StudentCount
+        FROM User_Courses
+        WHERE CourseId = @courseId
+    `);
+  return Number(result.recordset[0]?.StudentCount ?? 0) || 0;
+};
+
+const updateCourseById = async (courseId, course) => {
+  const request = new sql.Request();
+  request.input("CourseId", sql.Int, Number(courseId));
+  request.input("CourseName", sql.NVarChar(200), course.CourseName);
+  request.input("Description", sql.NVarChar(sql.MAX), course.Description);
+  request.input("CategoryId", sql.Int, Number(course.CategoryId));
+  request.input("LevelId", sql.Int, Number(course.LevelId));
+  request.input("IsPublished", sql.Bit, course.IsPublished ?? false);
+
+  const result = await request.query(`
+        UPDATE Courses
+        SET CourseName = @CourseName,
+            Description = @Description,
+            CategoryId = @CategoryId,
+            LevelId = @LevelId,
+            IsPublished = @IsPublished,
+            UpdatedAt = GETDATE()
+        OUTPUT INSERTED.CourseId
+        WHERE CourseId = @CourseId
+    `);
+
+  return result.recordset[0]?.CourseId ?? null;
 };
 
 // update Thumbnail
@@ -641,6 +753,7 @@ const markNodeAsCompleted = async (courseId, userId, nodeId) => {
 module.exports = {
   getCoursesByUserRole,
   getCourseById,
+  getCourseChaptersOutline,
   createCourseStepOne,
   createFinalCourse,
   getStudentCoursesList,
@@ -650,7 +763,12 @@ module.exports = {
   setPublishCourse,
   getCourseLearningPath,
   markNodeAsCompleted,
+  getCourseInstructorId,
+  getCourseStudentCount,
+  updateCourseById,
+  replaceCourseContent,
+  updateCourseThumbnail,
   getFeaturedCourses,
   getFeaturedPaths,
-  getContinueCourse
+  getContinueCourse,
 };

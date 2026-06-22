@@ -84,9 +84,10 @@ const getInformationCourse = async (req, res) => {
         data: {}
       })
     }
+    const userId = req.headers['x-user-id'] || null;
+
     // Tab=course
     if (tab.toLowerCase() === 'course') {
-      const userId = req.headers['x-user-id'] || null;
       const courses = await courseModel.getCourseById(courseId, userId);
       //404
       if (courses.length === 0) {
@@ -103,6 +104,29 @@ const getInformationCourse = async (req, res) => {
         data: courses
       })
     }
+
+    // Tab=content — cây chương / bài / học liệu
+    if (tab.toLowerCase() === 'content') {
+      const courses = await courseModel.getCourseById(courseId, userId);
+      if (courses.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy khóa học này trong Databse',
+          data: {},
+        });
+      }
+
+      const course = courses[0];
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy nội dung khóa học thành công',
+        data: {
+          CourseId: course.CourseId,
+          Paths: course.Paths ?? [],
+          TotalLessons: course.TotalLessons ?? 0,
+        },
+      });
+    }
     return res.status(400).json({
       success: false,
       message: `Chưa hỗ trợ lấy dữ liệu cho tab: ${tab}`,
@@ -114,6 +138,43 @@ const getInformationCourse = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Lỗi connect server'
+    });
+  }
+};
+
+const getCourseChapters = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    if (!courseId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu courseId',
+        data: {},
+      });
+    }
+
+    const paths = await courseModel.getCourseChaptersOutline(courseId);
+    if (paths === null) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy khóa học này trong Database',
+        data: {},
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy danh sách chương thành công',
+      data: {
+        CourseId: Number(courseId),
+        Paths: paths,
+      },
+    });
+  } catch (error) {
+    console.error('Get course chapters error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy danh sách chương',
     });
   }
 };
@@ -392,6 +453,7 @@ const getContinueCourse = async (req, res) => {
 module.exports = {
   getMyCourses,
   getInformationCourse,
+  getCourseChapters,
   saveCourseDraftStepOne,
   createFinalCourse,
   getStudentCourses,
