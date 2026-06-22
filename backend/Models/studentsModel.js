@@ -22,7 +22,20 @@ const getStudentsInCourseModel = async (courseId) => {
 
     return result.recordset;
 };
+async function getCompletionDates(userId) {
+  const pool = await poolPromise;
+  const result = await pool.request()
+    .input("userId", sql.Int, userId)
+    .query(`
+      SELECT DISTINCT CONVERT(varchar(10), CompletedAt, 23) AS d
+      FROM User_Nodes
+      WHERE UserId = @userId AND IsCompleted = 1
+      ORDER BY d DESC;
+    `);
+  return result.recordset.map((r) => r.d);
+}
 
 module.exports = {
-    getStudentsInCourseModel
+    getStudentsInCourseModel,
+    getCompletionDates
 }

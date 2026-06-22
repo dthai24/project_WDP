@@ -1,4 +1,5 @@
 const courseModel = require('../models/coursesModel');
+const streakService = require("../services/streakService");
 const { validateCourseThumbnailDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
 const getStudentCourses = async (req, res) => {
@@ -313,6 +314,18 @@ const updateProgress = async (req, res) => {
     }
 };
 
+async function getStreak(req, res) {
+  const userId = Number(req.headers["x-user-id"]);
+  if (!userId) return res.json({ success: true, streak: 0 });
+  try {
+    const streak = await streakService.getStreak(userId);
+    res.json({ success: true, streak });
+  } catch (e) {
+    console.error("streak error", e);
+    res.json({ success: true, streak: 0 });
+  }
+}
+
 //create node
 
 //Save Course (Final step in create course process)
@@ -462,5 +475,5 @@ module.exports = {
   updateProgress,
   getFeaturedCourses,
   getFeaturedPaths,
-  getContinueCourse
+  getContinueCourse, getStreak
 };
