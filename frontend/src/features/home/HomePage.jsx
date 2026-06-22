@@ -314,7 +314,9 @@ function StreakBadge({ userId }) {
       headers: { "x-user-id": String(userId) },
     })
       .then((res) => res.json())
-      .then((data) => { if (data.success) setStreak(data.streak || 0); })
+      .then((data) => {
+        if (data.success) setStreak(data.streak || 0);
+      })
       .catch(() => {});
   }, [userId]);
 
@@ -1395,7 +1397,7 @@ export default function HomePage() {
 
   const user = useMemo(() => getUser(), []);
   console.log("user =", user);
-console.log("sessionStorage user =", sessionStorage.getItem("user"));
+  console.log("sessionStorage user =", sessionStorage.getItem("user"));
   const displayName = user.fullName || "Học viên";
 
   // TODO: replace with real API call
@@ -1405,11 +1407,11 @@ console.log("sessionStorage user =", sessionStorage.getItem("user"));
   useEffect(() => {
     console.log("Check useEffect trigger - userId hiện tại là:", user?.userId);
 
-  if (!user?.userId) {
-    console.log("Chưa có userId, đứng đợi...");
-    return; 
-  }
-   // if (!user.userId) return;
+    if (!user?.userId) {
+      console.log("Chưa có userId, đứng đợi...");
+      return;
+    }
+    // if (!user.userId) return;
     const getData = async () => {
       try {
         const res = await fetch(
@@ -1417,14 +1419,16 @@ console.log("sessionStorage user =", sessionStorage.getItem("user"));
         );
         const result = await res.json();
         console.log("Kết quả API trả về thực tế:", result);
-        if (result.success && result.data) {
+        if (result.success && result.data && result.data.length > 0) {
+          // ① thêm length > 0
+          const row = result.data[0]; // ② lấy phần tử đầu mảng
           setContinueCourseData({
-            courseId: result.data.CourseId,
-            courseName: result.data.CourseName,
-            category: result.data.CategoryName ?? "",
-            level: result.data.LevelName ?? "",
-            progressPercentage: result.data.ProgressPercentage ?? 0,
-            thumbnail: result.data.Thumbnail ?? null,
+            courseId: row.CourseId, // ③ đổi hết result.data.XXX → row.XXX
+            courseName: row.CourseName,
+            category: row.CategoryName ?? "",
+            level: row.LevelName ?? "",
+            progressPercentage: row.ProgressPercentage ?? 0,
+            thumbnail: row.Thumbnail ?? null,
             currentStage: null,
             currentLesson: null,
             lastActivity: null,
