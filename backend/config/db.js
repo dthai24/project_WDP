@@ -13,6 +13,8 @@ const dbConfig = {
     trustServerCertificate: true,
   },
 };
+const poolPromise = new sql.ConnectionPool(dbConfig)
+  .connect();
 
 const connectDB = async () => {
   try {
@@ -25,4 +27,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = { sql, connectDB };
+module.exports = { sql, connectDB, poolPromise };

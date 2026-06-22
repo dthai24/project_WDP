@@ -8,6 +8,8 @@ function ymd(date) {
 }
 
 function computeStreak(dateStrings) {
+  console.log("dateStrings =", dateStrings);
+  console.log("today =", ymd(new Date()));
   if (!dateStrings.length) return 0;
   const set = new Set(dateStrings);
   const cursor = new Date();

@@ -324,6 +324,12 @@ async function getStreak(req, res) {
     console.error("streak error", e);
     res.json({ success: true, streak: 0 });
   }
+  const dates = await getCompletionDates(userId);
+
+  console.log("userId =", userId);
+  console.log("dates =", dates);
+
+  return computeStreak(dates);
 }
 
 //create node

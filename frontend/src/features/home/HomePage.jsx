@@ -1420,10 +1420,10 @@ export default function HomePage() {
         const result = await res.json();
         console.log("Kết quả API trả về thực tế:", result);
         if (result.success && result.data && result.data.length > 0) {
-          // ① thêm length > 0
-          const row = result.data[0]; // ② lấy phần tử đầu mảng
+       
+          const row = result.data[0];
           setContinueCourseData({
-            courseId: row.CourseId, // ③ đổi hết result.data.XXX → row.XXX
+            courseId: row.CourseId, 
             courseName: row.CourseName,
             category: row.CategoryName ?? "",
             level: row.LevelName ?? "",
