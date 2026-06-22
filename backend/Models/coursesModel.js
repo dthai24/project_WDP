@@ -491,10 +491,12 @@ const increaseCourseTotalLessons = async (courseId) => {
 const buildPathsNodes = async (paths, courseId) => {
   for (const p of paths ?? []) {
     const pathId = await insertPath(p, courseId);
-    for (const node of p.nodes ?? []) {
+    const nodes = p.Nodes ?? p.nodes ?? [];
+    for (const node of nodes) {
       const nodeId = await insertNode(node, pathId);
       await increaseCourseTotalLessons(courseId);
-      for (const m of node.materials ?? []) {
+      const materials = node.Materials ?? node.materials ?? [];
+      for (const m of materials) {
         await insertMaterial(m, nodeId);
       }
     }
@@ -651,8 +653,11 @@ const getCourseLearningPath = async (courseId, userId) => {
              SELECT 
                 p.PathId,
                 p.PathName,
+                p.Description AS PathDescription,
                 pn.NodeId,
                 pn.NodeName,
+                pn.Description AS NodeDescription,
+                pn.NodeOrder,
                 nm.MaterialType,
                 nm.MaterialUrl,
                 CAST(CASE WHEN un.NodeId IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsCompleted
@@ -661,7 +666,7 @@ const getCourseLearningPath = async (courseId, userId) => {
             LEFT JOIN Node_Materials nm ON pn.NodeId = nm.NodeId
             LEFT JOIN User_Nodes un ON pn.NodeId = un.NodeId AND un.UserId = @userId
             WHERE p.CourseId = @courseId
-            ORDER BY p.[Order], pn.NodeOrder
+            ORDER BY p.[Order], pn.NodeOrder, nm.MaterialOrder
         `;
     const result = await new sql.Request()
       .input("courseId", sql.Int, courseId)
@@ -677,19 +682,25 @@ const getCourseLearningPath = async (courseId, userId) => {
         existingModule = {
           PathId: row.PathId,
           PathName: row.PathName,
+          Description: row.PathDescription ?? null,
           lessons: [],
         };
         finalModules.push(existingModule);
       }
-      // Nhét Bài học (Node) vào Chương
+      // Nhét Bài học (Node) vào Chương — mỗi Node chỉ xuất hiện một lần
       if (row.NodeId) {
-        existingModule.lessons.push({
-          NodeId: row.NodeId,
-          NodeName: row.NodeName,
-          MaterialType: row.MaterialType,
-          MaterialUrl: row.MaterialUrl,
-          IsCompleted: row.IsCompleted,
-        });
+        const existingLesson = existingModule.lessons.find((l) => l.NodeId === row.NodeId);
+        if (!existingLesson) {
+          existingModule.lessons.push({
+            NodeId: row.NodeId,
+            NodeName: row.NodeName,
+            Description: row.NodeDescription ?? null,
+            NodeOrder: row.NodeOrder,
+            MaterialType: row.MaterialType,
+            MaterialUrl: row.MaterialUrl,
+            IsCompleted: row.IsCompleted,
+          });
+        }
       }
     });
 
