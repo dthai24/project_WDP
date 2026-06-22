@@ -161,7 +161,7 @@ function CourseIntro({ course, isEnrolled }) {
       </Breadcrumbs>
 
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, mb: 1.25 }}>
-        <Typography sx={{ flex: 1, minWidth: 0, fontWeight: 700, color: TEXT, lineHeight: 1.3, fontSize: { xs: 22, sm: 24, md: 28 }, letterSpacing: "0.01em" }}>
+        <Typography sx={{ flex: 1, minWidth: 0, fontWeight: 700, color: TEXT, lineHeight: 1.3, fontSize: { xs: 20, sm: 22, md: 24 }, letterSpacing: "0.01em" }}>
           {course.title}
         </Typography>
         <CourseBookmarkButton isSaved={isSaved(courseId)} onToggle={() => toggleSave(courseId)} size="medium" iconSize={26} />
@@ -193,8 +193,8 @@ function CourseIntro({ course, isEnrolled }) {
 
       {course.shortDescription && (
         <Box sx={{ mt: 7.5 }}>
-          <SectionTitle sx={{ mb: 1.25 }}>Mô tả khóa học</SectionTitle>
-          <Typography sx={{ fontSize: 15, color: MUTED, lineHeight: 1.65 }}>{course.shortDescription}</Typography>
+          <SectionTitle sx={{ mb: 1, fontSize: { xs: 16, sm: 17 } }}>Mô tả khóa học</SectionTitle>
+          <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>{course.shortDescription}</Typography>
         </Box>
       )}
     </Box>
@@ -272,7 +272,7 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
 
 function LessonIcon({ type }) {
   const Icon = type === "video" ? PlayCircleOutlineOutlinedIcon : ArticleRoundedIcon;
-  return <Icon sx={{ fontSize: 16, color: MUTED, flexShrink: 0 }} />;
+  return <Icon sx={{ fontSize: 15, color: MUTED, flexShrink: 0 }} />;
 }
 
 function CurriculumSection({ modules, isEnrolled, course }) {
@@ -296,43 +296,41 @@ function CurriculumSection({ modules, isEnrolled, course }) {
 
   return (
     <Box>
-      <Box sx={{ pb: 2, mb: 0.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, borderBottom: `1px solid ${DIVIDER}` }}>
+      <Box sx={{ pb: 1.75, mb: 0.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, borderBottom: `1px solid ${DIVIDER}` }}>
         <Box>
-          <SectionTitle sx={{ mb: 0.75 }}>Nội dung khóa học</SectionTitle>
-          
+          <SectionTitle sx={{ mb: 0.5, fontSize: { xs: 16, sm: 17 } }}>Nội dung khóa học</SectionTitle>
         </Box>
-        <IconButton onClick={toggleAll} sx={{ flexShrink: 0, mt: 0.25, color: MUTED, p: 0.5, "&:hover": { bgcolor: "transparent", color: MUTED } }}>
-          {allExpanded ? <CloseFullscreenRoundedIcon sx={{ fontSize: 19 }} /> : <OpenInFullRoundedIcon sx={{ fontSize: 19 }} />}
+        <IconButton onClick={toggleAll} sx={{ flexShrink: 0, mt: 0.15, color: MUTED, p: 0.5, "&:hover": { bgcolor: "transparent", color: MUTED } }}>
+          {allExpanded ? <CloseFullscreenRoundedIcon sx={{ fontSize: 18 }} /> : <OpenInFullRoundedIcon sx={{ fontSize: 18 }} />}
         </IconButton>
       </Box>
 
       {modules.map((mod, index) => (
         <Accordion key={mod.id} expanded={expandedIds.has(mod.id)} onChange={toggleModule(mod.id)} disableGutters elevation={0} sx={{ bgcolor: "transparent", "&:before": { display: "none" }, borderBottom: `1px solid ${DIVIDER}`, "&:last-of-type": { borderBottom: "none" } }}>
-          <AccordionSummary expandIcon={<ExpandMoreRoundedIcon sx={{ color: MUTED, fontSize: 22 }} />} sx={{ px: 0, py: 0, minHeight: "unset", bgcolor: "transparent", transition: "background-color 0.15s ease", "&:hover": { bgcolor: alpha(PRIMARY, 0.03) }, "& .MuiAccordionSummary-content": { my: 2.5, alignItems: "center", gap: 1.5 } }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: MUTED, minWidth: 28, flexShrink: 0 }}>{String(index + 1).padStart(2, "0")}</Typography>
+          <AccordionSummary expandIcon={<ExpandMoreRoundedIcon sx={{ color: MUTED, fontSize: 20 }} />} sx={{ px: 0, py: 0, minHeight: "unset", bgcolor: "transparent", transition: "background-color 0.15s ease", "&:hover": { bgcolor: alpha(PRIMARY, 0.03) }, "& .MuiAccordionSummary-content": { my: 2, alignItems: "center", gap: 1.25 } }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: MUTED, minWidth: 24, flexShrink: 0 }}>{String(index + 1).padStart(2, "0")}</Typography>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 700, fontSize: 15, color: TEXT, lineHeight: 1.35 }}>{mod.title}</Typography>
-              <Typography sx={{ fontSize: 12.5, color: MUTED, mt: 0.35 }}>{mod.lessonCount} bài học</Typography>
+              <Typography sx={{ fontWeight: 700, fontSize: 14, color: TEXT, lineHeight: 1.35 }}>{mod.title}</Typography>
+              <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>{mod.lessonCount} bài học</Typography>
             </Box>
           </AccordionSummary>
 
-          <AccordionDetails sx={{ p: 0, pb: 1.5 }}>
+          <AccordionDetails sx={{ p: 0, pb: 1.25 }}>
             {mod.description && (
-              <Box sx={{ pl: 4.5, pr: 0, pt: 0, pb: 2, borderBottom: mod.lessons.length > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none" }}>
-                
-                <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{mod.description}</Typography>
+              <Box sx={{ pl: 4, pr: 0, pt: 0, pb: 1.5, borderBottom: mod.lessons.length > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none" }}>
+                <Typography sx={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{mod.description}</Typography>
               </Box>
             )}
             {mod.lessons.map((lesson, lessonIndex) => {
               const isLocked = !isEnrolled && !lesson.isPreview;
               return (
-                <Box key={lesson.id} sx={{ display: "flex", alignItems: "center", gap: 1.25, pl: 4.5, pr: 0, py: 1.5, borderTop: lessonIndex > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none", opacity: isLocked ? 0.5 : 1, transition: "background-color 0.15s ease", "&:hover": { bgcolor: isLocked ? "transparent" : alpha(PRIMARY, 0.03) } }}>
-                  {isLocked ? <LockOutlinedIcon sx={{ fontSize: 16, color: MUTED, flexShrink: 0 }} /> : <LessonIcon type={lesson.type} />}
-                  <Typography sx={{ flex: 1, fontSize: 13.5, color: isLocked ? MUTED : TEXT, fontWeight: lesson.isCompleted ? 600 : 400, lineHeight: 1.4 }}>{lesson.title}</Typography>
+                <Box key={lesson.id} sx={{ display: "flex", alignItems: "center", gap: 1, pl: 4, pr: 0, py: 1.25, borderTop: lessonIndex > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none", opacity: isLocked ? 0.5 : 1, transition: "background-color 0.15s ease", "&:hover": { bgcolor: isLocked ? "transparent" : alpha(PRIMARY, 0.03) } }}>
+                  {isLocked ? <LockOutlinedIcon sx={{ fontSize: 15, color: MUTED, flexShrink: 0 }} /> : <LessonIcon type={lesson.type} />}
+                  <Typography sx={{ flex: 1, fontSize: 13, color: isLocked ? MUTED : TEXT, fontWeight: lesson.isCompleted ? 600 : 400, lineHeight: 1.4 }}>{lesson.title}</Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
-                    {lesson.isPreview && !isEnrolled && <Chip label="Xem thử" size="small" sx={{ height: 20, fontSize: 10.5, fontWeight: 700, borderRadius: "99px", bgcolor: alpha(ACCENT, 0.1), color: ACCENT }} />}
-                    {lesson.isCompleted && <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 15, color: "#047857" }} />}
-                    {lesson.duration && <Typography sx={{ fontSize: 12, color: MUTED, minWidth: 52, textAlign: "right" }}>{lesson.duration}</Typography>}
+                    {lesson.isPreview && !isEnrolled && <Chip label="Xem thử" size="small" sx={{ height: 18, fontSize: 10, fontWeight: 700, borderRadius: "99px", bgcolor: alpha(ACCENT, 0.1), color: ACCENT }} />}
+                    {lesson.isCompleted && <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14, color: "#047857" }} />}
+                    {lesson.duration && <Typography sx={{ fontSize: 11.5, color: MUTED, minWidth: 48, textAlign: "right" }}>{lesson.duration}</Typography>}
                   </Box>
                 </Box>
               );
