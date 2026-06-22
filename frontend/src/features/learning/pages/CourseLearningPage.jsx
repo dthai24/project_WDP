@@ -540,7 +540,29 @@ export default function CourseLearningPage() {
         }}
       >
         {/* ── Main lesson content ── */}
-        <Box sx={{ flex: "1 1 65%", minWidth: 0, width: "100%" }}>
+        <Box sx={{ flex: "1 1 65%", minWidth: 0, width: "100%", display: "flex", flexDirection: "column", gap: 2 }}>
+          {/* Mô tả bài học — container riêng */}
+          <Box
+            sx={{
+              bgcolor: "#fff",
+              borderRadius: "16px",
+              border: `1px solid ${DIVIDER}`,
+              boxShadow: theme.ios18?.shadow?.sm,
+              p: { xs: 2, md: 2.5 },
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75 }}>
+              <MenuBookRoundedIcon sx={{ fontSize: 16, color: ICON_COLORS.content }} />
+              <Typography sx={{ fontSize: { xs: 16, sm: 17 }, fontWeight: 700, color: TEXT }}>
+                Mô tả
+              </Typography>
+            </Box>
+            <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+              {currentLesson?.description || "Chưa có mô tả cho bài học này."}
+            </Typography>
+          </Box>
+
+          {/* Học liệu bài học */}
           <Box
             sx={{
               bgcolor: "#fff",
@@ -550,19 +572,6 @@ export default function CourseLearningPage() {
               p: { xs: 2.5, md: 3.5 },
             }}
           >
-            {/* Mô tả bài học (Node Description) */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75 }}>
-                <MenuBookRoundedIcon sx={{ fontSize: 16, color: ICON_COLORS.content }} />
-                <Typography sx={{ fontSize: { xs: 16, sm: 17 }, fontWeight: 700, color: TEXT }}>
-                  Mô tả
-                </Typography>
-              </Box>
-              <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>
-                {currentLesson?.description || "Chưa có mô tả cho bài học này."}
-              </Typography>
-            </Box>
-
             {/* Video placeholder */}
             {currentLesson?.type === "video" && (
               <Box
