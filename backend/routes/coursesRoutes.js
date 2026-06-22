@@ -10,7 +10,9 @@ const {
     getStudentCourses,
     enrollCourse,
     getLearningPath,
-    updateProgress
+    updateProgress,
+    getCourseComments,
+    createCourseComment,
 } = require('../controllers/coursesController');
 
 
@@ -50,6 +52,10 @@ router.post('/mentor/courses/save/draft', saveCourseDraftStepOne);
 router.post('/mentor/courses/createCourse', createFinalCourse);
 
 router.post('/enroll', enrollCourse); 
+
+// Bình luận khóa học (trang detail)
+router.get('/:courseId/comments', optionalAuth, getCourseComments);
+router.post('/:courseId/comments', optionalAuth, createCourseComment);
 
 // Lấy lộ trình học và trạng thái hoàn thành (Trang Course Learning)
 router.get('/:id/learning', getLearningPath);
