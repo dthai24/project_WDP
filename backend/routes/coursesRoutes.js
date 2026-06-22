@@ -13,7 +13,8 @@ const {
     updateProgress,
     getFeaturedCourses,
     getFeaturedPaths,
-    getContinueCourse
+    getContinueCourse,
+    getStreak
 } = require('../controllers/coursesController');
 
 
@@ -65,4 +66,6 @@ router.get('/:id/learning', getLearningPath);
 
 // Lưu tiến độ học và đánh dấu bài học hoàn thành
 router.post('/:id/progress', updateProgress);
+// lay treak
+router.get("/streak", getStreak);
 module.exports = router;

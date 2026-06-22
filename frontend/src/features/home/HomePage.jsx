@@ -34,7 +34,7 @@ const BORDER = "rgba(8,145,178,0.08)";
 
 function getUser() {
   try {
-    return JSON.parse(sessionStorage.getItem("user")) || {};
+    return JSON.parse(localStorage.getItem("user")) || {};
   } catch {
     return {};
   }
@@ -302,6 +302,40 @@ function CategoryChip({ category }) {
         "& .MuiChip-label": { px: 1 },
       }}
     />
+  );
+}
+
+function StreakBadge({ userId }) {
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetch("http://localhost:5000/api/courses/streak", {
+      headers: { "x-user-id": String(userId) },
+    })
+      .then((res) => res.json())
+      .then((data) => { if (data.success) setStreak(data.streak || 0); })
+      .catch(() => {});
+  }, [userId]);
+
+  return (
+    <Box
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 0.5,
+        px: 1.25,
+        py: 0.5,
+        borderRadius: "99px",
+        bgcolor: "rgba(234,88,12,0.10)",
+        border: "1px solid rgba(234,88,12,0.20)",
+      }}
+    >
+      <Typography sx={{ fontSize: 16, lineHeight: 1 }}>🔥</Typography>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#EA580C" }}>
+        {streak} ngày
+      </Typography>
+    </Box>
   );
 }
 
@@ -1464,6 +1498,7 @@ console.log("sessionStorage user =", sessionStorage.getItem("user"));
           {displayName}
         </Box>{" "}
       </Typography>
+      <StreakBadge userId={user.userId} />
 
       {/* Hero spans the full wide container */}
       <HeroSection onExplore={handleExplore} />
