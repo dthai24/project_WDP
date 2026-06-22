@@ -111,9 +111,9 @@ export default function LoginPage() {
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
-        login(data.user);
+        login(data);
         toast.success('Đăng nhập thành công!');
-        navigate(getPostLoginPath(data.user, { isFirstLogin: data.user.isFirstLogin }));
+        navigate(getPostLoginPath(data, { isFirstLogin: data.isFirstLogin }));
       } else {
         toast.error(data?.message);
         submittingRef.current = false;

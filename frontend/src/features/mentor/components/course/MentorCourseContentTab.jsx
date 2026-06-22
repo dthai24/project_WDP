@@ -9,12 +9,12 @@ import {
   TEXT,
   PRIMARY,
 } from './mentorCourseCreateStyles';
-import { countMaterialsInPath } from '../../utils/mentorCourseContentUtils';
+import { countMaterialsInPath, getCoursePaths } from '../../utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentTab({ course }) {
   const navigate = useNavigate();
 
-  const paths = course.Paths ?? [];
+  const paths = getCoursePaths(course);
   const courseId = course.CourseId;
   const editPath = `/mentor/courses/${courseId}/edit`;
 
@@ -71,7 +71,7 @@ export default function MentorCourseContentTab({ course }) {
           title="Khóa học chưa có nội dung"
           description="Thêm chương, bài học và học liệu để hoàn thiện khóa học."
           actionLabel="Xây nội dung"
-          onAction={() => navigate(editPath)}
+          onAction={() => navigate(`/mentor/courses/${courseId}/content/edit`)}
         />
       ) : (
         <MentorCourseContentOutline paths={paths} />
