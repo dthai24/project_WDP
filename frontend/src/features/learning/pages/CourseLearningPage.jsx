@@ -550,6 +550,19 @@ export default function CourseLearningPage() {
               p: { xs: 2.5, md: 3.5 },
             }}
           >
+            {/* Mô tả bài học (Node Description) */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75 }}>
+                <MenuBookRoundedIcon sx={{ fontSize: 16, color: ICON_COLORS.content }} />
+                <Typography sx={{ fontSize: { xs: 16, sm: 17 }, fontWeight: 700, color: TEXT }}>
+                  Mô tả
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>
+                {currentLesson?.description || "Chưa có mô tả cho bài học này."}
+              </Typography>
+            </Box>
+
             {/* Video placeholder */}
             {currentLesson?.type === "video" && (
               <Box
@@ -605,19 +618,6 @@ export default function CourseLearningPage() {
                 </Box>
               </Box>
             )}
-
-            {/* Mô tả bài học (Node Description) */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
-                <MenuBookRoundedIcon sx={{ fontSize: 18, color: ICON_COLORS.content }} />
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
-                  Mô tả
-                </Typography>
-              </Box>
-              <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.8 }}>
-                {currentLesson?.description || "Chưa có mô tả cho bài học này."}
-              </Typography>
-            </Box>
 
             {/* Materials */}
             {currentLesson?.materials?.length > 0 && (
@@ -749,16 +749,15 @@ export default function CourseLearningPage() {
               >
                 <Typography
                   sx={{
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 700,
                     color: TEXT,
-                    letterSpacing: "0.02em",
-                    mb: 0.75,
+                    mb: 0.5,
                   }}
                 >
                   Mô tả chương
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: TEXT, lineHeight: 1.65 }}>
+                <Typography sx={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
                   {currentMod.description}
                 </Typography>
               </Box>
