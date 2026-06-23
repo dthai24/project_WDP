@@ -58,24 +58,27 @@ const PRIMARY = "#0891B2";
 const SAVED = "#F59E0B";
 
 const ghostIconSx = {
-  p: 0.25,
-  width: 28,
-  height: 28,
-  color: MUTED,
-  bgcolor: "transparent",
-  transition: "color 0.2s ease",
-  "&:hover": {
-    bgcolor: "transparent",
-    color: PRIMARY,
-  },
+  transition: "all 0.2s ease",
+  "&:hover": { bgcolor: "rgba(15,23,42,0.04)" },
 };
+
+function getImageUrl(thumbnail) {
+  if (!thumbnail) return '';
+  let value = String(thumbnail).trim();
+  if (value === 'CHƯA FIX LỖI ẢNH') return '';
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image') || value.startsWith('blob:')) {
+    return value;
+  }
+  const BASE_IMG_URL = "http://localhost:5000";
+  return `${BASE_IMG_URL}${value.startsWith('/') ? value : '/' + value}`;
+}
 
 function normalizeCourse(course = {}) {
   const progress = course.progressPercentage ?? course.progress ?? 0;
   return {
     courseId: course.courseId ?? course.id,
     courseName: course.courseName ?? course.title ?? "Khóa học",
-    thumbnail: course.thumbnail ?? null,
+    thumbnail: course.Thumbnail ?? course.thumbnail ?? null,
     category: course.category ?? "",
     level: course.level ?? "",
     instructor: course.instructor ?? "",
@@ -94,6 +97,17 @@ function normalizeCourse(course = {}) {
   };
 }
 
+function getCompletedStatusChip() {
+  return {
+    label: "Hoàn thành",
+    sx: {
+      bgcolor: "rgba(4,120,87,0.12)",
+      color: "#047857",
+      border: "1px solid rgba(4,120,87,0.24)",
+    },
+  };
+}
+
 function getLearningStatusChip() {
   return {
     label: "Đang học",
@@ -105,16 +119,7 @@ function getLearningStatusChip() {
   };
 }
 
-function getCompletedStatusChip() {
-  return {
-    label: "Hoàn thành",
-    sx: {
-      bgcolor: "rgba(4,120,87,0.12)",
-      color: "#047857",
-      border: "1px solid rgba(4,120,87,0.24)",
-    },
-  };
-}
+
 
 function getSavedStatusChip() {
   return {
@@ -283,7 +288,7 @@ export default function MyCourseRow({
             borderRadius: "12px",
             overflow: "hidden",
             bgcolor: alpha(theme.palette.primary.main, 0.06),
-            backgroundImage: data.thumbnail ? `url(http://localhost:5000${data.thumbnail})` : "none",
+            backgroundImage: getImageUrl(data.thumbnail) ? `url("${getImageUrl(data.thumbnail)}")` : "none",
             backgroundSize: "cover",
             backgroundPosition: "center",
             display: "flex",

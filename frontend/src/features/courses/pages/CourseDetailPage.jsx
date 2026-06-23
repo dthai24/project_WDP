@@ -213,6 +213,17 @@ function CTAInfoRow({ icon: Icon, label, children, showDivider }) {
   );
 }
 
+function getImageUrl(thumbnail) {
+  if (!thumbnail) return '';
+  let value = String(thumbnail).trim();
+  if (value === 'CHƯA FIX LỖI ẢNH') return '';
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image') || value.startsWith('blob:')) {
+    return value;
+  }
+  const BASE_IMG_URL = "http://localhost:5000";
+  return `${BASE_IMG_URL}${value.startsWith('/') ? value : '/' + value}`;
+}
+
 function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = true }) {
   const [searchParams] = useSearchParams();
   const prerequisites = course.prerequisites ?? [];
@@ -224,12 +235,13 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
   };
 
   const btn = getButtonProps();
+  const imageUrl = getImageUrl(course.thumbnail);
 
   return (
     <Box sx={{ position: sticky ? { md: "sticky" } : "static", top: sticky ? { md: STICKY_TOP } : "auto", width: "100%", flexShrink: 0 }}>
       <Box sx={{ bgcolor: "#fff", border: `1px solid ${BORDER}`, borderRadius: "20px", boxShadow: "0 8px 32px rgba(8,145,178,0.10)", overflow: "hidden" }}>
-        <Box sx={{ aspectRatio: "16 / 9", bgcolor: alpha(PRIMARY, 0.06), backgroundImage: course.thumbnail ? `url(http://localhost:5000${course.thumbnail})` : "none", backgroundSize: "cover", backgroundPosition: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {!course.thumbnail && (
+        <Box sx={{ aspectRatio: "16 / 9", bgcolor: alpha(PRIMARY, 0.06), backgroundImage: imageUrl ? `url("${imageUrl}")` : "none", backgroundSize: "cover", backgroundPosition: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {!imageUrl && (
             <Box sx={{ width: 64, height: 64, borderRadius: "50%", bgcolor: alpha(PRIMARY, 0.1), display: "flex", alignItems: "center", justifyContent: "center", color: PRIMARY }}>
               <MenuBookOutlinedIcon sx={{ fontSize: 32 }} />
             </Box>
