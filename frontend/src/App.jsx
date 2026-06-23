@@ -36,6 +36,8 @@ import MentorLayout from '@/shared/layout/MentorLayout';
 import AdminLayout from '@/shared/layout/AdminLayout';
 import ProtectedRoute from '@/shared/ui/ProtectedRoute';
 import RoleAwareHome, { AppRootRedirect } from '@/shared/routing/RoleAwareHome';
+import { useAutoLogout } from '@/hooks/useAutoLogout';
+
 import {
   AdminShellFallbackRedirect,
   AdminShellIndexRedirect,
@@ -52,146 +54,148 @@ import {
 
 export default function App() {
   console.log("App.jsx: App component is rendering");
+  useAutoLogout();
+
   return (
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/verify-otp" element={<OtpPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/test-component" element={<TestPage />} />
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-otp" element={<OtpPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="/test-component" element={<TestPage />} />
+
+      <Route
+        path="/survey"
+        element={
+          <ProtectedRoute allowedRoles={['Student']}>
+            <SurveyPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Student app shell */}
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<RoleAwareHome />} />
+        <Route path="home" element={<RoleAwareHome />} />
 
         <Route
-          path="/survey"
+          path="courses"
           element={
-            <ProtectedRoute allowedRoles={['Student']}>
-              <SurveyPage />
+            <ProtectedRoute
+              allowedRoles={['Student', 'Admin']}
+              roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+            >
+              <CourseListPage />
             </ProtectedRoute>
           }
         />
-
-        {/* Student app shell */}
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<RoleAwareHome />} />
-          <Route path="home" element={<RoleAwareHome />} />
-
-          <Route
-            path="courses"
-            element={
-              <ProtectedRoute
-                allowedRoles={['Student', 'Admin']}
-                roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
-              >
-                <CourseListPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="courses/:id"
-            element={
-              <ProtectedRoute
-                allowedRoles={['Student', 'Admin']}
-                roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
-              >
-                <CourseDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="my-courses"
-            element={
-              <ProtectedRoute
-                allowedRoles={['Student']}
-                roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
-              >
-                <MyCoursesListPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="my-courses/:courseId/learn"
-            element={
-              <ProtectedRoute
-                allowedRoles={['Student']}
-                roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
-              >
-                <CourseLearningPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="profile"
-            element={
-              <ProtectedRoute
-                allowedRoles={['Student', 'Admin']}
-                roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
-              >
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
-
-        {/* Admin routes */}
         <Route
-          path="/admin"
+          path="courses/:id"
           element={
-            <ProtectedRoute allowedRoles={['Admin']} roleRedirects={ADMIN_SHELL_BLOCK_REDIRECTS}>
-              <AdminLayout />
+            <ProtectedRoute
+              allowedRoles={['Student', 'Admin']}
+              roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+            >
+              <CourseDetailPage />
             </ProtectedRoute>
           }
-        >
-          <Route index element={<AdminShellIndexRedirect />} />
-          <Route path="accounts" element={<AdminAccountManagementPage />} />
-          <Route path="categories" element={<AdminCategoryManagementPage />} />
-          <Route path="levels" element={<AdminLevelManagementPage />} />
-          <Route path="*" element={<AdminShellFallbackRedirect />} />
-        </Route>
-
-        {/* Mentor routes */}
+        />
         <Route
-          path="/mentor"
-          element={
-            <ProtectedRoute allowedRoles={['Mentor']} roleRedirects={MENTOR_SHELL_BLOCK_REDIRECTS}>
-              <MentorLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<MentorShellIndexRedirect />} />
-          <Route path="courses/create/review" element={<MentorCreateCourseReviewPage />} />
-          <Route path="courses/create/content" element={<MentorCreateCourseContentPage />} />
-          <Route path="courses/create" element={<MentorCreateCoursePage />} />
-          <Route path="courses/:courseId/review" element={<MentorEditCourseReviewPage />} />
-          <Route path="courses/:courseId/content/edit" element={<MentorEditCourseContentPage />} />
-          <Route path="courses/:courseId/content" element={<MentorEditCourseContentPage />} />
-          <Route path="courses/:courseId/edit" element={<MentorEditCoursePage />} />
-          <Route path="courses/:courseId/questions" element={<MentorCourseQuestionsPage />} />
-          <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
-          <Route path="courses" element={<MentorCoursesPage />} />
-          <Route path="question-banks/create" element={<MentorQuestionBankCreatePage />} />
-          <Route path="question-banks/:questionBankId" element={<MentorQuestionBankDetailPage />} />
-          <Route path="question-banks" element={<MentorQuestionBankListPage />} />
-          <Route path="news" element={<MentorNewsPage />} />
-          <Route path="student-progress" element={<MentorStudentProgressPage />} />
-          <Route path="paths" element={<MentorShellFallbackRedirect />} />
-          <Route path="*" element={<MentorShellFallbackRedirect />} />
-        </Route>
-
-        <Route
-          path="/student/*"
+          path="my-courses"
           element={
             <ProtectedRoute
               allowedRoles={['Student']}
               roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
             >
-              <StudentShellIndexRedirect />
+              <MyCoursesListPage />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="my-courses/:courseId/learn"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <CourseLearningPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student', 'Admin']}
+              roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+            >
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
 
-        <Route path="*" element={<AppRootRedirect />} />
-      </Routes>
+      {/* Admin routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['Admin']} roleRedirects={ADMIN_SHELL_BLOCK_REDIRECTS}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminShellIndexRedirect />} />
+        <Route path="accounts" element={<AdminAccountManagementPage />} />
+        <Route path="categories" element={<AdminCategoryManagementPage />} />
+        <Route path="levels" element={<AdminLevelManagementPage />} />
+        <Route path="*" element={<AdminShellFallbackRedirect />} />
+      </Route>
+
+      {/* Mentor routes */}
+      <Route
+        path="/mentor"
+        element={
+          <ProtectedRoute allowedRoles={['Mentor']} roleRedirects={MENTOR_SHELL_BLOCK_REDIRECTS}>
+            <MentorLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<MentorShellIndexRedirect />} />
+        <Route path="courses/create/review" element={<MentorCreateCourseReviewPage />} />
+        <Route path="courses/create/content" element={<MentorCreateCourseContentPage />} />
+        <Route path="courses/create" element={<MentorCreateCoursePage />} />
+        <Route path="courses/:courseId/review" element={<MentorEditCourseReviewPage />} />
+        <Route path="courses/:courseId/content/edit" element={<MentorEditCourseContentPage />} />
+        <Route path="courses/:courseId/content" element={<MentorEditCourseContentPage />} />
+        <Route path="courses/:courseId/edit" element={<MentorEditCoursePage />} />
+        <Route path="courses/:courseId/questions" element={<MentorCourseQuestionsPage />} />
+        <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
+        <Route path="courses" element={<MentorCoursesPage />} />
+        <Route path="question-banks/create" element={<MentorQuestionBankCreatePage />} />
+        <Route path="question-banks/:questionBankId" element={<MentorQuestionBankDetailPage />} />
+        <Route path="question-banks" element={<MentorQuestionBankListPage />} />
+        <Route path="news" element={<MentorNewsPage />} />
+        <Route path="student-progress" element={<MentorStudentProgressPage />} />
+        <Route path="paths" element={<MentorShellFallbackRedirect />} />
+        <Route path="*" element={<MentorShellFallbackRedirect />} />
+      </Route>
+
+      <Route
+        path="/student/*"
+        element={
+          <ProtectedRoute
+            allowedRoles={['Student']}
+            roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+          >
+            <StudentShellIndexRedirect />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="*" element={<AppRootRedirect />} />
+    </Routes>
   );
 }
