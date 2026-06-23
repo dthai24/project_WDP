@@ -126,12 +126,20 @@ function getMyCoursesStatusChip(progress) {
 
 /* ─── sub-components ─── */
 
-function CourseThumbnail({ thumbnail }) {
-  // console.log(thum)
-  const theme = useTheme();
-  const BASE_IMG_URL = "http://localhost:5000"; // Sau này deploy web chỉ cần đổi link ở đây
+function getImageUrl(thumbnail) {
+  if (!thumbnail) return '';
+  let value = String(thumbnail).trim();
+  if (value === 'CHƯA FIX LỖI ẢNH') return '';
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image') || value.startsWith('blob:')) {
+    return value;
+  }
+  const BASE_IMG_URL = "http://localhost:5000";
+  return `${BASE_IMG_URL}${value.startsWith('/') ? value : '/' + value}`;
+}
 
-// Áp dụng vào CSS
+function CourseThumbnail({ thumbnail }) {
+  const theme = useTheme();
+  const imageUrl = getImageUrl(thumbnail);
 
   return (
     <Box
@@ -140,7 +148,7 @@ function CourseThumbnail({ thumbnail }) {
         aspectRatio: "16 / 9",
         overflow: "hidden",
         bgcolor: alpha(theme.palette.primary.main, 0.06),
-        backgroundImage: thumbnail ? `url(${BASE_IMG_URL}${thumbnail})` : "none",
+        backgroundImage: imageUrl ? `url("${imageUrl}")` : "none",
         backgroundSize: "cover",
         backgroundPosition: "center",
         display: "flex",
