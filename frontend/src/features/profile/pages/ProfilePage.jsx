@@ -9,6 +9,14 @@ import {
   Typography,
   alpha,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormGroup,
+  FormControlLabel,
+  Checkbox
 } from "@mui/material";
 import { Link } from "react-router-dom";
 
@@ -327,9 +335,12 @@ export default function ProfilePage() {
             joinedAt: data.profile.joinedAt ? new Date(data.profile.joinedAt).toLocaleDateString("vi-VN", { timeZone: "UTC" }) : "",
             stats: data.profile.stats || prev.stats,
 
+            rawLearningGoal: data.profile.learningGoal || "",
+            rawCategories: data.profile.categories || [],
+
             goals: [
               ...(data.profile.learningGoal ? [`Mục tiêu: ${data.profile.learningGoal}`] : []),
-              ...(data.profile.categories || [])
+              ...(data.profile.categories ? data.profile.categories.map(c => c.displayName) : [])
             ],
           }));
 
@@ -459,6 +470,42 @@ export default function ProfilePage() {
       alert("Tải ảnh thất bại!");
     }
   };
+
+  // ==========================================
+  // STATE: CẬP NHẬT MỤC TIÊU VÀ LĨNH VỰC
+  // ==========================================
+  const [openGoals, setOpenGoals] = useState(false);
+  const [allCats, setAllCats] = useState([]);
+  const [goalInput, setGoalInput] = useState("");
+  const [selectedCats, setSelectedCats] = useState([]);
+  // ==========================================
+  // HÀM: MỞ POPUP VÀ TẢI DANH MỤC TỪ API
+  // Tác dụng: Lấy list categories và gán dữ liệu cũ vào Form
+  // ==========================================
+  const handleOpenPopup = async () => {
+    // Lấy danh sách Categories từ API
+    const res = await fetch("http://localhost:5000/api/categories");
+    const data = await res.json();
+    setAllCats(data.data);
+    // Đổ dữ liệu cũ vào form
+    setGoalInput(profile.rawLearningGoal || "");
+    setSelectedCats(profile.rawCategories ? profile.rawCategories.map(c => c.categoryId) : []);
+    setOpenGoals(true);
+  };
+  // ==========================================
+  // HÀM: LƯU MỤC TIÊU VÀ ĐÓNG POPUP
+  // Tác dụng: Đẩy dữ liệu xuống Backend và tự động F5
+  // ==========================================
+  const saveGoals = async () => {
+    await fetch("http://localhost:5000/api/users/goals", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-user-id": currentUser.userId },
+      body: JSON.stringify({ learningGoal: goalInput, categoryIds: selectedCats })
+    });
+    window.location.reload(); // Lưu xong thì tự F5 trang cho mới
+  };
+
+
   return (
     <Box sx={{ maxWidth: 1280, mx: "auto" }}>
       {/* ── Breadcrumb ── */}
@@ -697,6 +744,7 @@ export default function ProfilePage() {
                 <AppButton
                   size="small"
                   variant="text"
+                  onClick={handleOpenPopup}
                   sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
                 >
                   Cập nhật
@@ -723,6 +771,7 @@ export default function ProfilePage() {
               ))}
               <Chip
                 label="+ Thêm mục tiêu"
+                onClick={handleOpenPopup}
                 size="small"
                 sx={{
                   height: 28,
@@ -735,6 +784,7 @@ export default function ProfilePage() {
                   cursor: "pointer",
                   "&:hover": { borderColor: PRIMARY, color: PRIMARY },
                   transition: "border-color 0.2s, color 0.2s",
+
                 }}
               />
             </Box>
@@ -824,7 +874,56 @@ export default function ProfilePage() {
         }}
         onSave={handleAvatarUpload}
       />
+      <Dialog open={openGoals} onClose={() => setOpenGoals(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
+          Cập nhật Mục tiêu & Lĩnh vực
+        </DialogTitle>
 
+        <DialogContent dividers>
+          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}>
+            Mục tiêu học tập
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Ví dụ: Lấy bằng giỏi, Tìm việc làm..."
+            value={goalInput}
+            onChange={(e) => setGoalInput(e.target.value)}
+            sx={{ mb: 3 }}
+          />
+          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}>
+            Lĩnh vực quan tâm
+          </Typography>
+          <FormGroup sx={{ flexDirection: 'row', gap: 1 }}>
+            {allCats.map((cat) => (
+              <FormControlLabel
+                key={cat.categoryId}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={selectedCats.includes(cat.categoryId)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedCats([...selectedCats, cat.categoryId]); // Thêm vào mảng
+                      } else {
+                        setSelectedCats(selectedCats.filter(id => id !== cat.categoryId)); // Rút khỏi mảng
+                      }
+                    }}
+                  />
+                }
+                label={<Typography sx={{ fontSize: 14 }}>{cat.displayName}</Typography>}
+                sx={{ width: '45%', m: 0 }}
+              />
+            ))}
+          </FormGroup>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <AppButton variant="outlined" onClick={() => setOpenGoals(false)}>Hủy</AppButton>
+          <AppButton variant="contained" onClick={saveGoals}>Lưu</AppButton>
+        </DialogActions>
+      </Dialog>
     </Box>
+
   );
 }
