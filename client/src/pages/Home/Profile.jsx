@@ -13,14 +13,14 @@ import {
   Sparkles,
   Check,
 } from 'lucide-react'
-export function Profile({ onLogout, setCurrentPage }) {
+export function Profile({ onLogout, setCurrentPage, currentUser }) {
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState({
-    name: 'Alex Chen',
+    name: currentUser?.name || 'Alex Chen',
     school: 'Đại học Stanford',
     major: 'Khoa học Máy tính',
     year: 'Năm 3',
-    email: 'alex.chen@stanford.edu',
+    email: currentUser?.email || 'alex.chen@stanford.edu',
     memberSince: '10/2023',
     preferredStudyTime: 'Buổi sáng (6h - 12h)',
     dailyGoal: '3 Giờ',

@@ -1,5 +1,5 @@
-import React from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -10,12 +10,97 @@ import {
   Search,
   User,
   Menu,
-  ChevronDown
+  ChevronDown,
+  Award
 } from "lucide-react";
 
 const AdminLayout = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const navigate = useNavigate();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const [adminEmail, setAdminEmail] = useState("admin@gmail.com");
+
+  // Load admin email from localStorage
+  useEffect(() => {
+    const savedUser = localStorage.getItem("lexiora_user");
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user && user.email) {
+          setAdminEmail(user.email);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  // Fetch unread count for the notification bell
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/mentor/applications/unread-count");
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.count);
+      }
+    } catch (error) {
+      console.error("Lỗi fetch unread count:", error);
+    }
+  };
+
+  // Fetch recent applications for the dropdown list
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/mentor/applications");
+      if (response.ok) {
+        const data = await response.json();
+        // Lấy 5 đơn mới nhất làm thông báo
+        setNotifications(data.slice(0, 5));
+      }
+    } catch (error) {
+      console.error("Lỗi fetch notifications:", error);
+    }
+  };
+
+  // Poll for new requests every 10 seconds
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleBellClick = async () => {
+    const nextState = !isDropdownOpen;
+    setIsDropdownOpen(nextState);
+    if (nextState) {
+      // Khi mở ra: load thông báo và đánh dấu đã xem để xóa chấm đỏ
+      await fetchNotifications();
+      try {
+        await fetch("http://127.0.0.1:5000/api/mentor/applications/mark-read", {
+          method: "POST"
+        });
+        setUnreadCount(0);
+      } catch (err) {
+        console.error("Lỗi đánh dấu đã xem:", err);
+      }
+    }
+  };
 
   // Sidebar navigation items
   const menuItems = [
@@ -28,6 +113,11 @@ const AdminLayout = () => {
       path: "/admin/users",
       label: "Manage Users",
       icon: Users
+    },
+    {
+      path: "/admin/mentors",
+      label: "Mentor Requests",
+      icon: Award
     },
     {
       path: "/admin/categories",
@@ -52,11 +142,9 @@ const AdminLayout = () => {
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-slate-300 border-r border-slate-800 shrink-0">
         {/* Sidebar Brand */}
         <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-800">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-lg shadow-lg shadow-indigo-600/30">
-            L
-          </div>
+          <img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
           <div>
-            <h1 className="font-semibold text-white tracking-wide text-sm">Learning Path</h1>
+            <h1 className="font-semibold text-white tracking-wide text-sm">English Master</h1>
             <p className="text-xs text-indigo-400 font-medium">Admin Portal</p>
           </div>
         </div>
@@ -97,7 +185,7 @@ const AdminLayout = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-slate-200 truncate">Administrator</p>
-              <p className="text-[10px] text-slate-500 truncate">admin@learnpath.com</p>
+              <p className="text-[10px] text-slate-500 truncate">{adminEmail}</p>
             </div>
           </div>
         </div>
@@ -127,10 +215,79 @@ const AdminLayout = () => {
           {/* Right section: User Profile & Actions */}
           <div className="flex items-center gap-4">
             {/* Notification Button */}
-            <button className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
-            </button>
+            <div className="relative" ref={dropdownRef}>
+              <button 
+                onClick={handleBellClick}
+                className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors focus:outline-none"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
+                )}
+              </button>
+
+              {/* Notification Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2.5 w-80 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 py-2 antialiased">
+                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-800">Thông báo mới</span>
+                    {unreadCount > 0 && (
+                      <span className="text-[10px] bg-rose-50 text-rose-600 font-semibold px-2 py-0.5 rounded-full">
+                        {unreadCount} mới
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-xs text-slate-400">
+                        Không có yêu cầu ứng tuyển nào gần đây.
+                      </div>
+                    ) : (
+                      notifications.map((app) => (
+                        <div 
+                          key={app._id}
+                          onClick={() => {
+                            setIsDropdownOpen(false);
+                            navigate("/admin/mentors");
+                          }}
+                          className="px-4 py-3 hover:bg-slate-55/50 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50 last:border-0 flex flex-col gap-0.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-xs text-slate-800 truncate max-w-[150px]">
+                              {app.fullName}
+                            </span>
+                            <span className="text-[9px] text-slate-400">
+                              {new Date(app.createdAt).toLocaleDateString("vi-VN")}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 truncate">
+                            Đăng ký Mentor: {app.bio}
+                          </p>
+                          <span className={`self-start text-[9px] font-bold px-1.5 py-0.5 rounded-md mt-1 ${
+                            app.status === "pending" 
+                              ? "bg-amber-50 text-amber-600" 
+                              : app.status === "approved" 
+                              ? "bg-emerald-50 text-emerald-600" 
+                              : "bg-rose-50 text-rose-600"
+                          }`}>
+                            {app.status === "pending" ? "Đang chờ duyệt" : app.status === "approved" ? "Đã duyệt" : "Từ chối"}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div 
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      navigate("/admin/mentors");
+                    }}
+                    className="px-4 py-2 border-t border-slate-100 text-center text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer hover:bg-slate-50"
+                  >
+                    Xem tất cả hồ sơ đăng ký
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="h-6 w-px bg-slate-200"></div>
 
