@@ -193,7 +193,7 @@ const saveCourseDraftStepOne = async (req, res) => {
         message: 'Step 1: Không có dữ liệu gửi lên.',
       });
     }
-
+    console.error('Lỗi tại enrollCourse Controller:', error.message);
     const {
       CourseName,
       Description,
@@ -281,38 +281,38 @@ const saveCourseDraftStepOne = async (req, res) => {
 };
 // Hứng request lấy danh sách bài học
 const getLearningPath = async (req, res) => {
-    try {
-        const courseId = req.params.id;
-        const userId = req.headers['x-user-id']; // Lấy ID người dùng từ Header
-        
-        // Lấy thêm tên khóa học và tên giảng viên
-        const coursesInfo = await courseModel.getCourseById(courseId, userId);
-        const courseDetails = coursesInfo.length > 0 ? coursesInfo[0] : null;
+  try {
+    const courseId = req.params.id;
+    const userId = req.headers['x-user-id']; // Lấy ID người dùng từ Header
 
-        const data = await courseModel.getCourseLearningPath(courseId, userId);
-        res.json({ 
-            success: true, 
-            courseTitle: courseDetails ? courseDetails.CourseName : "Khóa học",
-            instructor: courseDetails ? courseDetails.InStructorName : "Giảng viên",
-            data: data 
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "Lỗi Server" });
-    }
+    // Lấy thêm tên khóa học và tên giảng viên
+    const coursesInfo = await courseModel.getCourseById(courseId, userId);
+    const courseDetails = coursesInfo.length > 0 ? coursesInfo[0] : null;
+
+    const data = await courseModel.getCourseLearningPath(courseId, userId);
+    res.json({
+      success: true,
+      courseTitle: courseDetails ? courseDetails.CourseName : "Khóa học",
+      instructor: courseDetails ? courseDetails.InStructorName : "Giảng viên",
+      data: data
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Lỗi Server" });
+  }
 };
 
 // Hứng request lưu bài học
 const updateProgress = async (req, res) => {
-    try {
-        const courseId = req.params.id;
-        const userId = req.headers['x-user-id'];
-        const { nodeId } = req.body; // Frontend gửi lên nodeId
-        
-        const newProgress = await courseModel.markNodeAsCompleted(courseId, userId, nodeId);
-        res.json({ success: true, newProgress: newProgress });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "Lỗi Server" });
-    }
+  try {
+    const courseId = req.params.id;
+    const userId = req.headers['x-user-id'];
+    const { nodeId } = req.body; // Frontend gửi lên nodeId
+
+    const newProgress = await courseModel.markNodeAsCompleted(courseId, userId, nodeId);
+    res.json({ success: true, newProgress: newProgress });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Lỗi Server" });
+  }
 };
 
 async function getStreak(req, res) {
@@ -328,68 +328,68 @@ async function getStreak(req, res) {
 }
 
 const getCourseComments = async (req, res) => {
-    try {
-        const { courseId } = req.params;
-        if (!courseId) {
-            return res.status(400).json({ success: false, message: 'Thiếu courseId', data: [] });
-        }
-
-        const comments = await courseCommentsModel.getCourseComments(courseId);
-        return res.status(200).json({
-            success: true,
-            message: 'Lấy bình luận thành công',
-            data: comments,
-        });
-    } catch (error) {
-        console.error('getCourseComments error:', error.message);
-        return res.status(200).json({
-            success: true,
-            message: 'Chưa có bình luận',
-            data: [],
-        });
+  try {
+    const { courseId } = req.params;
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'Thiếu courseId', data: [] });
     }
+
+    const comments = await courseCommentsModel.getCourseComments(courseId);
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy bình luận thành công',
+      data: comments,
+    });
+  } catch (error) {
+    console.error('getCourseComments error:', error.message);
+    return res.status(200).json({
+      success: true,
+      message: 'Chưa có bình luận',
+      data: [],
+    });
+  }
 };
 
 const createCourseComment = async (req, res) => {
-    try {
-        const { courseId } = req.params;
-        const userId = req.headers['x-user-id'];
-        const { content, rating } = req.body;
+  try {
+    const { courseId } = req.params;
+    const userId = req.headers['x-user-id'];
+    const { content, rating } = req.body;
 
-        if (!courseId) {
-            return res.status(400).json({ success: false, message: 'Thiếu courseId' });
-        }
-        if (!userId) {
-            return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để bình luận' });
-        }
-        if (!content || String(content).trim() === '') {
-            return res.status(400).json({ success: false, message: 'Nội dung bình luận không được để trống' });
-        }
-        if (String(content).trim().length > 250) {
-            return res.status(400).json({ success: false, message: 'Bình luận không được vượt quá 250 ký tự' });
-        }
-
-        const numericRating = rating == null ? null : Number(rating);
-        if (numericRating != null && (numericRating < 1 || numericRating > 5)) {
-            return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 5 sao' });
-        }
-
-        const comment = await courseCommentsModel.createCourseComment({
-            courseId,
-            userId,
-            rating: numericRating,
-            content: String(content).trim(),
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: 'Gửi bình luận thành công',
-            data: comment,
-        });
-    } catch (error) {
-        console.error('createCourseComment error:', error.message);
-        return res.status(500).json({ success: false, message: 'Lỗi server khi gửi bình luận' });
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'Thiếu courseId' });
     }
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để bình luận' });
+    }
+    if (!content || String(content).trim() === '') {
+      return res.status(400).json({ success: false, message: 'Nội dung bình luận không được để trống' });
+    }
+    if (String(content).trim().length > 250) {
+      return res.status(400).json({ success: false, message: 'Bình luận không được vượt quá 250 ký tự' });
+    }
+
+    const numericRating = rating == null ? null : Number(rating);
+    if (numericRating != null && (numericRating < 1 || numericRating > 5)) {
+      return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 5 sao' });
+    }
+
+    const comment = await courseCommentsModel.createCourseComment({
+      courseId,
+      userId,
+      rating: numericRating,
+      content: String(content).trim(),
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Gửi bình luận thành công',
+      data: comment,
+    });
+  } catch (error) {
+    console.error('createCourseComment error:', error.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi gửi bình luận' });
+  }
 };
 
 //create node
@@ -450,11 +450,9 @@ const enrollCourse = async (req, res) => {
     if (!userId || !courseId) {
       return res.status(400).json({ success: false, message: 'Thiếu userId hoặc courseId' });
     }
-    // Gọi xuống hàm ở file Model mà anh em mình đã viết lúc nãy
     const result = await courseModel.enrollCourse(userId, courseId);
     return res.status(200).json({ success: true, message: 'Đăng ký khóa học thành công!', data: result });
   } catch (error) {
-    console.error('Lỗi tại enrollCourse Controller:', error.message);
     return res.status(500).json({ success: false, message: 'Lỗi server khi đăng ký khóa học' });
   }
 };
