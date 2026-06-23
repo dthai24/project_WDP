@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import AppRoutes from "./routes/AppRoutes";
+import ChatBot from "./components/ChatBot";
+import FloatingChatButton from "./components/FloatingChatButton";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Giữ trạng thái đăng nhập khi tải lại trang
   useEffect(() => {
@@ -23,10 +26,14 @@ export default function App() {
   };
 
   return (
-    <AppRoutes
-      currentUser={currentUser}
-      onLogin={handleLogin}
-      onLogout={handleLogout}
-    />
+    <>
+      <AppRoutes
+        currentUser={currentUser}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+      />
+      <FloatingChatButton onClick={() => setIsChatOpen(true)} />
+      <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+    </>
   );
 }
