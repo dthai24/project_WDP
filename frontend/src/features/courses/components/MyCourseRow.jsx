@@ -217,7 +217,7 @@ export default function MyCourseRow({
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, "/my-courses");
   const learningPath = `/my-courses/${data.courseId}/learn`;
-  const titlePath = isSavedRow ? detailPath : learningPath;
+  const titlePath = detailPath;
   const progressTextColor = getProgressColor(progressValue);
 
   const statusChip = isSavedRow
