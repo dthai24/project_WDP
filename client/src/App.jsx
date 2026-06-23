@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import AppRoutes from "./routes/AppRoutes";
 import ChatBot from "./components/ChatBot";
 import FloatingChatButton from "./components/FloatingChatButton";
@@ -7,7 +7,6 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Giữ trạng thái đăng nhập khi tải lại trang
   useEffect(() => {
     const savedUser = localStorage.getItem("lexiora_user");
     if (savedUser) {
