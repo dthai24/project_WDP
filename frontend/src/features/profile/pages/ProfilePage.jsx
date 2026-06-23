@@ -317,17 +317,21 @@ export default function ProfilePage() {
         const data = await response.json();
         const p = data?.profile;
         if (data?.success && p) {
-          setProfile({
+          setProfile(prev => ({
+            ...prev,
             name: data.profile.name || "",
             email: data.profile.email || "",
             phone: data.profile.phone || "",
             dateOfBirth: data.profile.dateOfBirth?.split("T")[0] || "",
             currentLevel: data.profile.currentLevel || "",
+            joinedAt: data.profile.joinedAt ? new Date(data.profile.joinedAt).toLocaleDateString("vi-VN", { timeZone: "UTC" }) : "",
+            stats: data.profile.stats || prev.stats,
+
             goals: [
               ...(data.profile.learningGoal ? [`Mục tiêu: ${data.profile.learningGoal}`] : []),
               ...(data.profile.categories || [])
             ],
-          });
+          }));
 
           setFormData(prevForm => ({
             ...prevForm,
