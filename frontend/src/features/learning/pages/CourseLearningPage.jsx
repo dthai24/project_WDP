@@ -93,12 +93,56 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import EmptyState from "@/shared/ui/EmptyState";
+import { resolveVideoEmbed } from "@/shared/utils/videoEmbedUtils";
 
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
 const MUTED = "#64748B";
 const SUCCESS = "#16A34A";
 const DIVIDER = "rgba(8,145,178,0.08)";
+
+// CSS cấu hình để nội dung bài đọc (HTML) hiển thị y hệt như bên Mentor soạn thảo
+const RICH_CONTENT_SX = {
+  fontSize: 15,
+  lineHeight: 1.8,
+  color: TEXT,
+  wordBreak: 'break-word',
+  '& p': { margin: '0 0 8px' },
+  '& ul, & ol': { paddingLeft: '1.5rem', marginBottom: '8px' },
+  '& li': { marginBottom: '4px' },
+  '& img': { maxWidth: '100%', height: 'auto', borderRadius: '8px' },
+  '& i, & em': { fontStyle: 'italic' },
+  '& b, & strong': { fontWeight: 700 },
+  '& u': { textDecoration: 'underline' },
+};
+
+// Component phụ trách render Video: Tự động phân loại link Youtube/Vimeo hay link .mp4
+function LessonVideoPlayer({ url }) {
+  if (!url) return null;
+  const { previewType, embedUrl } = resolveVideoEmbed(url);
+
+  // Trả về thẻ video gốc nếu là file .mp4
+  if (previewType === 'video') {
+    return (
+      <Box
+        component="video"
+        src={embedUrl}
+        controls
+        sx={{ width: '100%', height: '100%', bgcolor: '#000', objectFit: 'contain' }}
+      />
+    );
+  }
+
+  // Trả về thẻ iframe nếu là link YouTube, Vimeo...
+  return (
+    <Box
+      component="iframe"
+      src={embedUrl}
+      allowFullScreen
+      sx={{ width: '100%', height: '100%', border: 'none', bgcolor: '#000' }}
+    />
+  );
+}
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -259,6 +303,9 @@ export default function CourseLearningPage() {
               description: String(lesson.Description ?? "").trim(),
               type: mapMaterialTypeToUi(lesson.MaterialType),
               status: lesson.IsCompleted ? "completed" : "not_started",
+              // Lấy thêm trường link video và nội dung HTML từ Backend
+              videoUrl: lesson.MaterialUrl,
+              contentBody: lesson.Content
             })),
           }));
 
@@ -550,27 +597,20 @@ export default function CourseLearningPage() {
               p: { xs: 2.5, md: 3.5 },
             }}
           >
-            {/* Video placeholder */}
-            {currentLesson?.type === "video" && (
+            {/* Khu vực hiển thị Video (chỉ hiện nếu type là video và có link) */}
+            {currentLesson?.type === "video" && currentLesson?.videoUrl && (
               <Box
                 sx={{
                   width: "100%",
                   aspectRatio: "16 / 9",
                   borderRadius: "12px",
                   mb: 3,
-                  bgcolor: alpha(PRIMARY, 0.05),
+                  bgcolor: "#000",
                   border: `1px solid ${DIVIDER}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 1,
+                  overflow: "hidden"
                 }}
               >
-                <PlayCircleOutlineOutlinedIcon
-                  sx={{ fontSize: 56, color: PRIMARY, opacity: 0.4 }}
-                />
-                <Typography sx={{ fontSize: 13, color: MUTED }}>Video bài học</Typography>
+                <LessonVideoPlayer url={currentLesson.videoUrl} />
               </Box>
             )}
 
@@ -618,6 +658,16 @@ export default function CourseLearningPage() {
                 {currentLesson?.description || "Chưa có mô tả cho bài học này."}
               </Typography>
             </Box>
+
+            {/* Khu vực hiển thị Bài đọc (Rich Text HTML) */}
+            {currentLesson?.contentBody && (
+              <Box sx={{ mb: 3, pt: 2, borderTop: `1px solid ${DIVIDER}` }}>
+                <Box 
+                  sx={RICH_CONTENT_SX}
+                  dangerouslySetInnerHTML={{ __html: currentLesson.contentBody }} 
+                />
+              </Box>
+            )}
 
             {/* Materials */}
             {currentLesson?.materials?.length > 0 && (
