@@ -1,18 +1,32 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import HomePage from "./pages/Home/HomePage";
-import { Dashboard } from "./pages/Home/Dashboard";
-import { Login } from "./pages/Auth/Login";
+import React, { useState, useEffect } from "react";
+import AppRoutes from "./routes/AppRoutes";
 
-function App() {
+export default function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Giữ trạng thái đăng nhập khi tải lại trang
+  useEffect(() => {
+    const savedUser = localStorage.getItem("lexiora_user");
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleLogin = (userSession) => {
+    setCurrentUser(userSession);
+    localStorage.setItem("lexiora_user", JSON.stringify(userSession));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("lexiora_user");
+  };
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
-    </BrowserRouter>
+    <AppRoutes
+      currentUser={currentUser}
+      onLogin={handleLogin}
+      onLogout={handleLogout}
+    />
   );
 }
-
-export default App;

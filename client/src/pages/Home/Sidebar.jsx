@@ -106,9 +106,9 @@ export function Sidebar({
           className={`flex items-center gap-3 overflow-hidden ${!isOpen && 'justify-center w-full'}`}
         >
           <img
-            src="https://cdn.magicpatterns.com/uploads/6HH8798EgvRqQxpsuayZEj/pasted-image.jpg"
-            alt="LearnMate Logo"
-            className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-primary-light"
+            src="/images/logo.png"
+            alt="English Master Logo"
+            className="w-10 h-10 object-contain flex-shrink-0"
           />
           {isOpen && (
             <motion.span
@@ -120,7 +120,7 @@ export function Sidebar({
               }}
               className="font-bold text-lg tracking-wide whitespace-nowrap"
             >
-              LearnPath
+              English Master
             </motion.span>
           )}
         </div>

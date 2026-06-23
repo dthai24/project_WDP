@@ -61,7 +61,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!validateForm()) {
@@ -70,7 +70,40 @@ export default function LoginPage({ onLogin, onBackHome }) {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      // 1. Cố gắng kết nối và xác thực qua API Backend
+      const response = await fetch("http://127.0.0.1:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const userSession = {
+          email: data.email,
+          name: data.name,
+          role: data.role,
+          loggedInAt: new Date().toISOString(),
+        };
+
+        onLogin(userSession);
+        setIsSubmitting(false);
+        return;
+      } else {
+        throw new Error(data.message || "Tài khoản không chính xác.");
+      }
+
+    } catch (error) {
+      console.warn("Kết nối API thất bại, chuyển hướng kiểm tra tài khoản test tĩnh:", error.message);
+      
+      // 2. Chế độ dự phòng (Fallback): Kiểm tra trong danh sách tài khoản test cục bộ
       const account = testAccounts.find(
         (item) =>
           item.email.toLowerCase() === formData.email.trim().toLowerCase() &&
@@ -79,7 +112,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
 
       if (!account) {
         setErrors({
-          form: "Email or password is incorrect. Please try again.",
+          form: "Email hoặc mật khẩu không chính xác. Vui lòng thử lại.",
         });
         setIsSubmitting(false);
         return;
@@ -94,7 +127,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
 
       onLogin(userSession);
       setIsSubmitting(false);
-    }, 700);
+    }
   };
 
   return (
@@ -114,11 +147,9 @@ export default function LoginPage({ onLogin, onBackHome }) {
 
             <div className="max-w-xl">
               <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-lg font-black shadow-lg shadow-blue-600/30">
-                  L
-                </div>
+                <img src="/images/logo.png" alt="English Master Logo" className="w-11 h-11 object-contain" />
                 <span className="text-2xl font-extrabold tracking-tight">
-                  LearnPath
+                  English Master
                 </span>
               </div>
               <h1 className="text-5xl font-extrabold leading-tight tracking-tight">
@@ -159,14 +190,14 @@ export default function LoginPage({ onLogin, onBackHome }) {
             </button>
 
             <div className="mb-8">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-xl font-black text-white shadow-lg shadow-blue-600/25 lg:hidden">
-                L
+              <div className="lg:hidden mb-4">
+                <img src="/images/logo.png" alt="English Master Logo" className="w-12 h-12 object-contain" />
               </div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
                 Welcome back
               </p>
               <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">
-                Login to LearnPath
+                Login to English Master
               </h2>
               <p className="mt-3 text-sm leading-6 text-slate-500">
                 Use your account to resume lessons and keep every milestone in
@@ -196,10 +227,11 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   onChange={handleChange}
                   autoComplete="email"
                   placeholder="student@gmail.com"
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${errors.email
+                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${
+                    errors.email
                       ? "border-red-300 focus:border-red-500 focus:ring-red-100"
                       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                    }`}
+                  }`}
                 />
                 {errors.email && (
                   <p className="mt-2 text-sm font-medium text-red-600">
@@ -232,10 +264,11 @@ export default function LoginPage({ onLogin, onBackHome }) {
                   onChange={handleChange}
                   autoComplete="current-password"
                   placeholder="Enter your password"
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${errors.password
+                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${
+                    errors.password
                       ? "border-red-300 focus:border-red-500 focus:ring-red-100"
                       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                    }`}
+                  }`}
                 />
                 {errors.password && (
                   <p className="mt-2 text-sm font-medium text-red-600">
