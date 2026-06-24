@@ -26,6 +26,10 @@ export function isAdminNewsActive(pathname) {
   return pathname === "/admin/news" || pathname.startsWith("/admin/news/");
 }
 
+export function isStudentNewsActive(pathname) {
+  return pathname === "/news" || /^\/news\/\d+/.test(pathname);
+}
+
 export function isMentorQuestionBankActive(pathname) {
   return (
     pathname === "/mentor/question-banks" ||
@@ -58,10 +62,12 @@ export function getStudentMenuItems(user) {
       disabled: !student,
     },
     {
-      id: "news",
-      label: "Tin tức",
+      id: 'news',
+      label: 'Tin tức',
+      to: '/news',
       Icon: NewspaperOutlinedIcon,
-      disabled: true,
+      disabled: !student,
+      isActiveMatch: isStudentNewsActive,
     },
   ];
 }
