@@ -141,8 +141,11 @@ export default function App() {
           path="profile"
           element={
             <ProtectedRoute
-              allowedRoles={['Student', 'Admin']}
-              roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+              allowedRoles={['Student']}
+              roleRedirects={{
+                ...STUDENT_SHELL_BLOCK_REDIRECTS,
+                Admin: '/admin/profile',
+              }}
             >
               <ProfilePage />
             </ProtectedRoute>
@@ -163,6 +166,7 @@ export default function App() {
         <Route path="accounts" element={<AdminAccountManagementPage />} />
         <Route path="categories" element={<AdminCategoryManagementPage />} />
         <Route path="levels" element={<AdminLevelManagementPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<AdminShellFallbackRedirect />} />
       </Route>
 

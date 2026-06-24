@@ -18,7 +18,7 @@ import {
   FormControlLabel,
   Checkbox
 } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import AppButton from "@/shared/ui/AppButton";
 import ChangePasswordDialog from "@/features/auth/components/ChangePasswordDialog";
@@ -296,6 +296,12 @@ const getInitialAvatar = () => {
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 export default function ProfilePage() {
+  const location = useLocation();
+  const isAdminShell = location.pathname.startsWith('/admin');
+  const breadcrumbHome = isAdminShell
+    ? { to: '/admin/accounts', label: 'Quản trị' }
+    : { to: '/home', label: 'Trang chủ' };
+
   const currentUser = useMemo(() => getInitialUser(), []);
 
   const [profile, setProfile] = useState(INITIAL_PROFILE);
@@ -515,7 +521,7 @@ export default function ProfilePage() {
       >
         <MuiLink
           component={Link}
-          to="/home"
+          to={breadcrumbHome.to}
           underline="none"
           sx={{
             fontSize: 13,
@@ -528,7 +534,7 @@ export default function ProfilePage() {
           }}
         >
           <HomeOutlinedIcon sx={{ fontSize: 14 }} />
-          Trang chủ
+          {breadcrumbHome.label}
         </MuiLink>
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
           Hồ sơ cá nhân
