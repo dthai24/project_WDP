@@ -28,12 +28,15 @@ const getProfile = async (req, res) => {
     const catReq = new sql.Request();
     catReq.input('userId', sql.Int, userId);
     const catResult = await catReq.query(`
-      SELECT c.DisplayName 
+       SELECT c.CategoryId, c.DisplayName, c.DisplayName 
       FROM User_Categories uc
       INNER JOIN Categories c ON uc.CategoryId = c.CategoryId
       WHERE uc.UserId = @userId
     `);
-    const interestedCategories = catResult.recordset.map(row => row.DisplayName);
+    const interestedCategories = catResult.recordset.map(row => ({
+      categoryId: row.CategoryId,
+      displayName: row.DisplayName
+    }));
     // 4. Lấy số liệu học tập
     const statsReq = new sql.Request();
     statsReq.input('userId', sql.Int, userId);
@@ -149,5 +152,33 @@ const changePassword = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi server' });
   }
 };
+// ============================================================
+// PUT /api/users/goals
+// Tác dụng: Cập nhật Mục tiêu học tập và Danh mục lĩnh vực
+// ============================================================
+const updateGoals = async (req, res) => {
+  const userId = req.user.userId;
+  const { learningGoal, categoryIds } = req.body;
+  try {
+    // 1. Cập nhật chữ LearningGoal
+    await new sql.Request().query(`
+      UPDATE Users SET LearningGoal = N'${learningGoal}' WHERE UserId = ${userId}
+    `);
+    // 2. Xóa các danh mục cũ của người dùng này
+    await new sql.Request().query(`
+      DELETE FROM User_Categories WHERE UserId = ${userId}
+    `);
+    // 3. Insert các danh mục mới được tick
+    for (let catId of categoryIds) {
+      await new sql.Request().query(`
+        INSERT INTO User_Categories (UserId, CategoryId) VALUES (${userId}, ${catId})
+      `);
+    }
+    res.json({ success: true, message: 'Cập nhật thành công!' });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
 
-module.exports = { getProfile, updateProfile, changePassword };
+
+module.exports = { getProfile, updateProfile, changePassword, updateGoals };
