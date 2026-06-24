@@ -7,7 +7,7 @@
  *   courseId : string  — ID khóa học, từ useParams()
  *
  * URL search params:
- *   tab : "overview" | "content" | "students"
+ *   tab : "course" | "content" | "students" | "comments"
  *
  * ── Fetch data ───────────────────────────────────────────────────────────
  *   useEffect: gọi fetchMentorCourseDetail(courseId) khi mount
@@ -46,6 +46,7 @@ import MentorCourseDetailHeader from '@/features/mentor/components/course/Mentor
 import MentorCourseOverviewTab from '@/features/mentor/components/course/MentorCourseOverviewTab';
 import MentorCourseContentTab from '@/features/mentor/components/course/MentorCourseContentTab';
 import MentorCourseStudentsTab from '@/features/mentor/components/course/MentorCourseStudentsTab';
+import MentorCourseCommentsTab from '@/features/mentor/components/course/MentorCourseCommentsTab';
 import {
   fetchMentorCourseDetail,
   updateCoursePublishStatus,
@@ -111,6 +112,8 @@ export default function MentorCourseDetailPage() {
       // ---------Students-----------
       case MENTOR_COURSE_DETAIL_TABS.STUDENTS:
         return <MentorCourseStudentsTab courseId={course.CourseId} />;
+      case MENTOR_COURSE_DETAIL_TABS.COMMENTS:
+        return <MentorCourseCommentsTab courseId={course.CourseId} />;
       default:
         return <MentorCourseOverviewTab course={course} />;
     }

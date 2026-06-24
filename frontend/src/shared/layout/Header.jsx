@@ -33,6 +33,10 @@ import {
 } from "@/features/mentor/utils/mentorCourseListParams";
 import { getPrimaryRoleLabel } from "@/features/auth/utils/authUtils";
 import { useAuth } from '@/context/AuthContext';
+import {
+  AVATAR_UPDATED_EVENT,
+  getStoredAvatarUrl,
+} from '@/features/profile/utils/profileAvatarUtils';
 const MENU_CLOSE_DELAY = 200;
 const KEYWORD_DEBOUNCE_MS = 300;
 const PROJECT_NAME = "S.T.A.R Learning Path";
@@ -139,16 +143,20 @@ export default function Header({
   const { user, logout } = useAuth(); 
 
   // (Vẫn giữ logic Avatar của ông trong trường hợp ông có update lẻ avatar)
-  const [avatarUrl, setAvatarUrl] = useState(() => {
-    const explicitAvatar = localStorage.getItem("avatarUrl"); // Đổi sang local cho đồng bộ
-    if (explicitAvatar) return explicitAvatar;
-    return user?.avatarUrl || null;
-  });
+  const [avatarUrl, setAvatarUrl] = useState(() => getStoredAvatarUrl());
 
-  // Nếu user thay đổi từ context, cập nhật lại avatar luôn
   useEffect(() => {
-    setAvatarUrl(localStorage.getItem("avatarUrl") || user?.avatarUrl || null);
+    setAvatarUrl(getStoredAvatarUrl());
   }, [user]);
+
+  useEffect(() => {
+    const handleAvatarUpdated = (event) => {
+      setAvatarUrl(event.detail?.avatarUrl ?? getStoredAvatarUrl());
+    };
+
+    window.addEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated);
+    return () => window.removeEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated);
+  }, []);
 
   const clearCloseTimer = () => {
     if (closeTimer.current) {
@@ -479,7 +487,8 @@ export default function Header({
                         sx={{
                           width: 32,
                           height: 32,
-                          objectFit: "contain",
+                          objectFit: "cover",
+                          borderRadius: "50%",
                           cursor: "pointer",
                         }}
                       />
@@ -563,7 +572,8 @@ export default function Header({
                           sx={{
                             width: 36,
                             height: 36,
-                            objectFit: "contain",
+                            objectFit: "cover",
+                            borderRadius: "50%",
                           }}
                         />
                       ) : (

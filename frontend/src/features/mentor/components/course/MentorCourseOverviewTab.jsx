@@ -3,19 +3,21 @@ import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import {
   COURSE_THUMBNAIL_ASPECT,
   CREATE_CARD_SX,
+  MUTED,
   PRIMARY,
   TEXT,
 } from './mentorCourseCreateStyles';
+import MentorCardSectionTitle from './MentorCardSectionTitle';
 import { formatMentorCourseDate, isCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
 import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
 
 function InfoRow({ label, value }) {
   return (
     <Box sx={{ mb: 1.25 }}>
-      <Typography sx={{ fontSize: 11, fontWeight: 700, color: PRIMARY, mb: 0.25, lineHeight: 1.35 }}>
+      <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.25, lineHeight: 1.35 }}>
         {label}
       </Typography>
-      <Typography sx={{ fontSize: 14, fontWeight: 600, color: TEXT, lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: 14, fontWeight: 500, color: TEXT, lineHeight: 1.5 }}>
         {value ?? '—'}
       </Typography>
     </Box>
@@ -31,20 +33,7 @@ export default function MentorCourseOverviewTab({ course }) {
 
   return (
     <Box sx={CREATE_CARD_SX}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <Box
-          sx={{
-            width: 4,
-            height: 22,
-            borderRadius: '999px',
-            bgcolor: PRIMARY,
-            flexShrink: 0,
-          }}
-        />
-        <Typography sx={{ fontSize: 17, fontWeight: 800, color: PRIMARY, lineHeight: 1.35 }}>
-          Thông tin khóa học
-        </Typography>
-      </Box>
+      <MentorCardSectionTitle title="Thông tin khóa học" />
 
       <Box
         sx={{
