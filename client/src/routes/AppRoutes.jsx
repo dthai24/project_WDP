@@ -4,6 +4,7 @@ import HomePage from "../pages/Home/HomePage";
 import LoginPage from "../pages/Auth/LoginPage";
 import CreateCourse from "../pages/Mentor/CreateCourse";
 import BecomeMentor from "../pages/Mentor/BecomeMentor"; 
+import AdminRoutes from "./admin-routes"; 
 
 export default function AppRoutes({ currentUser, onLogin, onLogout }) {
   const navigate = useNavigate();
@@ -54,6 +55,17 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
           <CreateCourse 
             currentUser={currentUser} 
             onBackDashboard={() => navigate("/")} 
+          />
+        } 
+      />
+
+      {/* Admin Panel */}
+      <Route 
+        path="/admin/*" 
+        element={
+          <AdminRoutes 
+            currentUser={currentUser} 
+            onLogout={onLogout} 
           />
         } 
       />
