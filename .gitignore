@@ -19,3 +19,4 @@ backend/scripts/add-material-content-column.js
 /.agents
 skills-lock.json
 /backend/public/assets
+backend/config/db.js
