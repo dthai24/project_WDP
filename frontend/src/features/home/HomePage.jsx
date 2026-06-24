@@ -21,6 +21,7 @@ import {
 } from "@/shared/catalog/catalogRegistry";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
+import LearningGoalStickyNote from "@/features/home/components/LearningGoalStickyNote";
 import heroImg from "@/asset/image/herosection.png";
 // Thêm import
 import { getTopCoursesApi } from "@/features/auth/services/authService";
@@ -302,42 +303,6 @@ function CategoryChip({ category }) {
         "& .MuiChip-label": { px: 1 },
       }}
     />
-  );
-}
-
-function StreakBadge({ userId }) {
-  const [streak, setStreak] = useState(0);
-
-  useEffect(() => {
-    if (!userId) return;
-    fetch("http://localhost:5000/api/courses/streak", {
-      headers: { "x-user-id": String(userId) },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setStreak(data.streak || 0);
-      })
-      .catch(() => {});
-  }, [userId]);
-
-  return (
-    <Box
-      sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 0.5,
-        px: 1.25,
-        py: 0.5,
-        borderRadius: "99px",
-        bgcolor: "rgba(234,88,12,0.10)",
-        border: "1px solid rgba(234,88,12,0.20)",
-      }}
-    >
-      <Typography sx={{ fontSize: 16, lineHeight: 1 }}>🔥</Typography>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#EA580C" }}>
-        {streak} ngày
-      </Typography>
-    </Box>
   );
 }
 
@@ -1403,6 +1368,9 @@ export default function HomePage() {
   // TODO: replace with real API call
 
   const [continueCourseData, setContinueCourseData] = useState(null);
+  const [streak, setStreak] = useState(0);
+  const [learningGoal, setLearningGoal] = useState("");
+  const [learningGoalLoading, setLearningGoalLoading] = useState(false);
 
   useEffect(() => {
     console.log("Check useEffect trigger - userId hiện tại là:", user?.userId);
@@ -1443,6 +1411,51 @@ export default function HomePage() {
     };
     getData();
   }, [user.userId]);
+
+  useEffect(() => {
+    if (!user?.userId) return;
+    fetch("http://localhost:5000/api/courses/streak", {
+      headers: { "x-user-id": String(user.userId) },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setStreak(data.streak || 0);
+      })
+      .catch(() => {});
+  }, [user?.userId]);
+
+  useEffect(() => {
+    if (!user?.userId) {
+      setLearningGoal("");
+      return;
+    }
+
+    let cancelled = false;
+    setLearningGoalLoading(true);
+
+    fetch("http://localhost:5000/api/users/profile", {
+      headers: { "x-user-id": String(user.userId) },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.success && data.profile) {
+          setLearningGoal(String(data.profile.learningGoal ?? "").trim());
+        } else {
+          setLearningGoal("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLearningGoal("");
+      })
+      .finally(() => {
+        if (!cancelled) setLearningGoalLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.userId]);
 
   const handleExplore = () => navigate("/courses");
   const handleMyCourses = () => navigate("/my-courses");
@@ -1486,26 +1499,41 @@ export default function HomePage() {
         maxWidth: 1600,
         mx: "auto",
         px: { xs: 0, sm: 0, md: 0, lg: 0 },
+        overflow: "visible",
+        position: "relative",
+        mt: { xs: -2, sm: -3, md: -4 },
       }}
     >
-      {/* Greeting */}
-      <Typography
-        sx={{
-          fontSize: 13,
-          color: MUTED,
-          fontWeight: 500,
-          mb: { xs: 2.5, md: 3 },
-        }}
-      >
-        Xin chào,{" "}
-        <Box component="span" sx={{ color: PRIMARY, fontWeight: 700 }}>
-          {displayName}
-        </Box>{" "}
-      </Typography>
-      <StreakBadge userId={user.userId} />
+      <Box sx={{ position: "relative", overflow: "visible" }}>
+        <HeroSection onExplore={handleExplore} />
 
-      {/* Hero spans the full wide container */}
-      <HeroSection onExplore={handleExplore} />
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            zIndex: 10,
+            width: {
+              xs: "min(100%, 360px)",
+              sm: 480,
+              md: 560,
+              lg: 640,
+              xl: 680,
+            },
+            maxWidth: "100%",
+            pointerEvents: "auto",
+          }}
+        >
+          <LearningGoalStickyNote
+            displayName={displayName}
+            streak={streak}
+            isLoggedIn={Boolean(user?.userId)}
+            goal={learningGoal}
+            loading={learningGoalLoading}
+            overlay
+          />
+        </Box>
+      </Box>
 
       {/* Remaining sections sit in a tighter content column */}
       <Box sx={{ maxWidth: 1360, mx: "auto", width: "100%" }}>
