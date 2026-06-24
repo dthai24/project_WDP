@@ -53,7 +53,7 @@ function BankRow({ bank, onManage }) {
         </Typography>
       </Box>
       <AppButton
-        onClick={() => onManage(bank.id)}
+        onClick={() => onManage(bank)}
         sx={{
           height: 40,
           px: 2.5,
@@ -113,8 +113,10 @@ export default function MentorCourseQuestionsPage() {
     };
   }, [courseId]);
 
-  const handleManage = (bankId) => {
-    navigate(`/mentor/question-banks/${bankId}`);
+  const handleManage = (bank) => {
+    navigate(
+      `/mentor/question-banks/${bank.id ?? bank.BankId}?courseId=${courseId}&chapterId=${bank.chapterId}`,
+    );
   };
 
   return (

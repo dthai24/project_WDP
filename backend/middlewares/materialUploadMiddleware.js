@@ -1,16 +1,14 @@
 const multer = require('multer');
-const { DOC_EXTENSIONS, MATERIAL_MAX_BYTES } = require('../services/cloudinaryService');
+const { AUDIO_EXTENSIONS, DOC_EXTENSIONS, MATERIAL_MAX_BYTES } = require('../services/cloudinaryService');
 
 const materialUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MATERIAL_MAX_BYTES },  fileFilter: (_req, file, cb) => {
-    const lower = String(file.originalname ?? '').toLowerCase();
-    const allowed = [...DOC_EXTENSIONS].some((ext) => lower.endsWith(`.${ext}`));
-    if (!allowed) {
-      cb(new Error('Chỉ hỗ trợ PDF, DOC, DOCX, PPT, PPTX.'));
-      return;
-    }
-    cb(null, true);
+  limits: { fileSize: MATERIAL_MAX_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const ext = String(file.originalname ?? '').toLowerCase().match(/\.([a-z0-9]+)$/)?.[1];
+    const ok = (ext && DOC_EXTENSIONS.has(ext)) || (ext && AUDIO_EXTENSIONS.has(ext));
+    if (!ok) cb(new Error('File không được hỗ trợ.'));
+    else cb(null, true);
   },
 });
 

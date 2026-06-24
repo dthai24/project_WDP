@@ -28,6 +28,7 @@ import {
   getFilledQuestionCount,
   getNonEmptyQuestionBankSections,
   getQuestionBankSectionNameFallback,
+  normalizeQuestionBankSectionForSave,
   getSectionBaiNumber,
   getSectionsBySkill,
   consolidateWritingSections,
@@ -182,12 +183,14 @@ export default function MentorQuestionBankCreatePage() {
   }, [activeSection, skillSections, setActiveSectionId]);
 
   const mapSectionsForSave = (sourceSections) =>
-    sourceSections.map((section) => ({
-      ...section,
-      DisplayName:
-        String(section.DisplayName ?? '').trim() ||
-        getQuestionBankSectionNameFallback(section, sourceSections),
-    }));
+    sourceSections.map((section) =>
+      normalizeQuestionBankSectionForSave({
+        ...section,
+        DisplayName:
+          String(section.DisplayName ?? '').trim() ||
+          getQuestionBankSectionNameFallback(section, sourceSections),
+      }),
+    );
 
   const handleChapterSelect = (nextChapterId) => {
     if (String(nextChapterId) === String(chapterId)) return;
@@ -279,6 +282,7 @@ export default function MentorQuestionBankCreatePage() {
           : 'Khóa học chưa có chương để tạo bộ câu hỏi',
       };
     }
+
     const materialErrors = validateTestMaterial(
       { Title: bankTitle, Sections: sections, ScoringMode: SCORING_MODE_AUTO },
       { inlineSections: true, skipTitle: true },
@@ -337,7 +341,9 @@ export default function MentorQuestionBankCreatePage() {
 
       clearQuestionBankCreateDraft(courseId, chapterId);
       toast.success('Tạo ngân hàng câu hỏi thành công!');
-      navigate(`/mentor/question-banks/${res.bank.id}`);
+      navigate(
+        `/mentor/question-banks/${res.bank.BankId ?? res.bank.id}?courseId=${courseId}&chapterId=${chapterId}`,
+      );
     } catch {
       toast.error('Đã xảy ra lỗi. Vui lòng thử lại.');
     } finally {
