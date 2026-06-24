@@ -26,8 +26,8 @@ export default function LearningGoalStickyNote({
     <Box
       sx={{
         width: "100%",
-        transform: compact ? "rotate(-1.25deg)" : "none",
-        transformOrigin: "top right",
+        transform: compact ? "rotate(1.25deg)" : "none",
+        transformOrigin: "top left",
         filter: compact
           ? `drop-shadow(2px 6px 4px ${alpha("#78350F", 0.18)}) drop-shadow(0 14px 20px ${alpha("#78350F", 0.12)})`
           : "none",
@@ -82,13 +82,13 @@ export default function LearningGoalStickyNote({
             content: '""',
             position: "absolute",
             bottom: 0,
-            right: 0,
+            left: 15,
             width: 0,
             height: 0,
             borderStyle: "solid",
-            borderWidth: compact ? "0 0 22px 22px" : "0 0 28px 28px",
-            borderColor: `transparent transparent ${alpha("#FDE047", 0.95)} transparent`,
-            filter: `drop-shadow(-1px 1px 1px ${alpha("#92400E", 0.12)})`,
+            borderWidth: compact ? "22px 22px 0 0" : "28px 28px 0 0",
+            borderColor: `${alpha("#FDE047", 0.95)} transparent transparent transparent`,
+            filter: `drop-shadow(1px 1px 1px ${alpha("#92400E", 0.12)})`,
           },
         }}
       >

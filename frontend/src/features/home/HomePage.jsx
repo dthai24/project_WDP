@@ -1341,7 +1341,7 @@ export default function HomePage() {
           sx={{
             position: "absolute",
             top: 0,
-            right: -80,
+            left: { xs: 28, sm: 0, md: -20, lg: -40 },
             zIndex: 10,
             width: {
               xs: "min(100%, 360px)",
