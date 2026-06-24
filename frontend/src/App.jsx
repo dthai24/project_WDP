@@ -31,6 +31,11 @@ import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuest
 import AdminAccountManagementPage from '@/features/admin/pages/AdminAccountManagementPage';
 import AdminCategoryManagementPage from '@/features/admin/pages/AdminCategoryManagementPage';
 import AdminLevelManagementPage from '@/features/admin/pages/AdminLevelManagementPage';
+import AdminNewsManagementPage from '@/features/admin/pages/AdminNewsManagementPage';
+import AdminNewsCreatePage from '@/features/admin/pages/AdminNewsCreatePage';
+import AdminNewsCreateContentPage from '@/features/admin/pages/AdminNewsCreateContentPage';
+import AdminNewsEditPage from '@/features/admin/pages/AdminNewsEditPage';
+import AdminNewsEditContentPage from '@/features/admin/pages/AdminNewsEditContentPage';
 
 import MainLayout from '@/shared/layout/MainLayout';
 import MentorLayout from '@/shared/layout/MentorLayout';
@@ -166,6 +171,11 @@ export default function App() {
         <Route path="accounts" element={<AdminAccountManagementPage />} />
         <Route path="categories" element={<AdminCategoryManagementPage />} />
         <Route path="levels" element={<AdminLevelManagementPage />} />
+        <Route path="news/create/content" element={<AdminNewsCreateContentPage />} />
+        <Route path="news/create" element={<AdminNewsCreatePage />} />
+        <Route path="news/:newsId/edit/content" element={<AdminNewsEditContentPage />} />
+        <Route path="news/:newsId/edit" element={<AdminNewsEditPage />} />
+        <Route path="news" element={<AdminNewsManagementPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<AdminShellFallbackRedirect />} />
       </Route>
