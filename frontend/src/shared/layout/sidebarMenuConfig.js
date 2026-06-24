@@ -1,6 +1,5 @@
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import NewspaperOutlinedIcon from "@mui/icons-material/NewspaperOutlined";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
@@ -53,12 +52,6 @@ export function getStudentMenuItems(user) {
       to: "/courses",
       Icon: MenuBookOutlinedIcon,
       disabled: !student,
-    },
-    {
-      id: "paths",
-      label: "Lộ trình",
-      Icon: RouteOutlinedIcon,
-      disabled: true,
     },
     {
       id: "news",
