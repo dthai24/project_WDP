@@ -739,9 +739,9 @@ function ContinueSection({ course, onContinue, onExplore }) {
   );
 }
 
-/* ─── Section 3: Learning paths ──────────────────────────── */
+/* ─── Section 3: Tin tức (lộ trình + bài viết) ───────────── */
 
-function PathsSection() {
+function NewsSection() {
   const [paths, setPaths] = useState([]);
 
   useEffect(() => {
@@ -753,14 +753,15 @@ function PathsSection() {
         const data = await res.json();
         setPaths(
           data.data.map((p) => ({
-            id: p.PathId,
+            id: `path-${p.PathId}`,
+            type: "path",
             title: p.PathName,
-            description: p.Description ?? "",
-            nodeCount: p.TotalNodes ?? 0,
-            courseName: p.CourseName ?? "",
-            rating: p.Rating ?? 0,
+            excerpt: p.Description ?? "",
+            category: "Lộ trình",
+            date: null,
             thumbnail: p.Thumbnail ?? null,
             accent: "#0891B2",
+            nodeCount: p.TotalNodes ?? 0,
           })),
         );
       } catch (error) {
@@ -771,103 +772,148 @@ function PathsSection() {
     fetchFeaturedPaths();
   }, []);
 
+  const items = useMemo(
+    () => [
+      ...paths,
+      ...ARTICLES.map((article) => ({
+        ...article,
+        id: `article-${article.id}`,
+        type: "article",
+        excerpt: article.excerpt,
+      })),
+    ],
+    [paths],
+  );
+
   return (
     <Box sx={{ mb: { xs: 7, md: 9 } }}>
-      <SectionHeader label="Lộ trình học" title="Lộ trình học nổi bật" />
+      <SectionHeader title="Tin tức" />
       <Box
         sx={{
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
             sm: "1fr 1fr",
-            lg: "repeat(4, 1fr)",
+            lg: "repeat(3, 1fr)",
           },
           gap: 2.5,
         }}
       >
-        {paths.map((path) => (
+        {items.map((item) => (
           <Box
-            key={path.id}
+            key={item.id}
             sx={{
               borderRadius: "18px",
               border: `1px solid ${BORDER}`,
               bgcolor: "#fff",
               overflow: "hidden",
               cursor: "default",
-              transition:
-                "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease",
+              transition: "transform 0.22s ease, box-shadow 0.22s ease",
               "&:hover": {
                 transform: "translateY(-3px)",
-                boxShadow: "0 12px 32px rgba(8,145,178,0.10)",
-                borderColor: `rgba(8,145,178,0.22)`,
+                boxShadow: "0 12px 32px rgba(8,145,178,0.09)",
               },
             }}
           >
-            {/* Thumbnail */}
             <Box
               sx={{
-                height: 130,
+                height: 180,
                 overflow: "hidden",
                 position: "relative",
+                bgcolor: alpha(PRIMARY, 0.05),
               }}
             >
-              <Box
-                component="img"
-                src={path.thumbnail}
-                alt={path.title}
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-              <Box
-                sx={{
-                  position: "absolute",
-                  inset: 0,
-                  background: `linear-gradient(135deg, ${alpha(path.accent, 0.45)} 0%, transparent 60%)`,
-                }}
-              />
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: 12,
-                  left: 14,
-                  width: 32,
-                  height: 32,
-                  borderRadius: "10px",
-                  bgcolor: "rgba(255,255,255,0.92)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <RouteOutlinedIcon sx={{ fontSize: 18, color: path.accent }} />
-              </Box>
+              {item.thumbnail ? (
+                <Box
+                  component="img"
+                  src={item.thumbnail}
+                  alt={item.title}
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                    transition: "transform 0.4s ease",
+                    ".MuiBox-root:hover &": { transform: "scale(1.04)" },
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {item.type === "path" ? (
+                    <RouteOutlinedIcon
+                      sx={{ fontSize: 36, color: alpha(item.accent ?? PRIMARY, 0.45) }}
+                    />
+                  ) : (
+                    <MenuBookOutlinedIcon
+                      sx={{ fontSize: 36, color: alpha(PRIMARY, 0.3) }}
+                    />
+                  )}
+                </Box>
+              )}
+              {item.type === "path" && item.thumbnail && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    inset: 0,
+                    background: `linear-gradient(135deg, ${alpha(item.accent ?? PRIMARY, 0.35)} 0%, transparent 60%)`,
+                  }}
+                />
+              )}
             </Box>
 
-            {/* Body */}
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2.25 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25, flexWrap: "wrap" }}
+              >
+                <CategoryChip category={item.category} />
+                {item.type === "article" && item.date && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <CalendarTodayOutlinedIcon sx={{ fontSize: 11, color: MUTED }} />
+                    <Typography sx={{ fontSize: 11, color: MUTED }}>{item.date}</Typography>
+                  </Box>
+                )}
+                {item.type === "path" && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <RouteOutlinedIcon sx={{ fontSize: 12, color: item.accent ?? PRIMARY }} />
+                    <Typography sx={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>
+                      {item.nodeCount} chương
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+
               <Typography
                 sx={{
                   fontSize: 14,
                   fontWeight: 700,
                   color: TEXT,
-                  lineHeight: 1.3,
-                  mb: 0.75,
+                  lineHeight: 1.35,
+                  mb: 0.875,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
                 }}
               >
-                {path.title}
+                {item.title}
               </Typography>
+
               <Typography
                 sx={{
-                  fontSize: 12.5,
+                  fontSize: 13,
                   color: MUTED,
-                  lineHeight: 1.55,
+                  lineHeight: 1.6,
                   mb: 2,
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -875,23 +921,25 @@ function PathsSection() {
                   overflow: "hidden",
                 }}
               >
-                {path.description}
+                {item.excerpt}
               </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <MenuBookOutlinedIcon sx={{ fontSize: 13, color: MUTED }} />
-                  <Typography
-                    sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}
-                  >
-                    {path.courseCount} khóa học
-                  </Typography>
+
+              {item.type === "article" ? (
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: PRIMARY,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.4,
+                    opacity: 0.7,
+                  }}
+                >
+                  Đọc thêm <ArrowForwardRoundedIcon sx={{ fontSize: 14 }} />
                 </Box>
+              ) : (
                 <Box
                   component="span"
                   sx={{
@@ -899,12 +947,11 @@ function PathsSection() {
                     fontWeight: 600,
                     color: MUTED,
                     opacity: 0.65,
-                    cursor: "default",
                   }}
                 >
                   Sắp ra mắt
                 </Box>
-              </Box>
+              )}
             </Box>
           </Box>
         ))}
@@ -1167,131 +1214,6 @@ function BenefitsSection() {
   );
 }
 
-/* ─── Section 6: Articles ────────────────────────────────── */
-
-function ArticlesSection() {
-  return (
-    <Box sx={{ mb: { xs: 7, md: 9 } }}>
-      <SectionHeader label="Tin tức & Mẹo học" title="Bài viết mới nhất" />
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "1fr 1fr",
-            md: "repeat(3, 1fr)",
-          },
-          gap: 2.5,
-        }}
-      >
-        {ARTICLES.map((article) => (
-          <Box
-            key={article.id}
-            sx={{
-              borderRadius: "18px",
-              border: `1px solid ${BORDER}`,
-              bgcolor: "#fff",
-              overflow: "hidden",
-              transition: "transform 0.22s ease, box-shadow 0.22s ease",
-              "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: "0 12px 32px rgba(8,145,178,0.09)",
-              },
-            }}
-          >
-            {/* Thumbnail */}
-            <Box
-              sx={{
-                height: 180,
-                overflow: "hidden",
-                bgcolor: alpha(PRIMARY, 0.05),
-              }}
-            >
-              <Box
-                component="img"
-                src={article.thumbnail}
-                alt={article.title}
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  transition: "transform 0.4s ease",
-                  "&:hover": { transform: "scale(1.04)" },
-                }}
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-            </Box>
-
-            {/* Content */}
-            <Box sx={{ p: 2.25 }}>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25 }}
-              >
-                <CategoryChip category={article.category} />
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <CalendarTodayOutlinedIcon
-                    sx={{ fontSize: 11, color: MUTED }}
-                  />
-                  <Typography sx={{ fontSize: 11, color: MUTED }}>
-                    {article.date}
-                  </Typography>
-                </Box>
-              </Box>
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: TEXT,
-                  lineHeight: 1.35,
-                  mb: 0.875,
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {article.title}
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  color: MUTED,
-                  lineHeight: 1.6,
-                  mb: 2,
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {article.excerpt}
-              </Typography>
-              <Box
-                component="span"
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: PRIMARY,
-                  cursor: "default",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.4,
-                  opacity: 0.7,
-                }}
-              >
-                Đọc thêm <ArrowForwardRoundedIcon sx={{ fontSize: 14 }} />
-              </Box>
-            </Box>
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
 /* ─── Section 7: CTA block ───────────────────────────────── */
 
 function CtaBlock({ onExplore, onMyCourses }) {
@@ -1511,7 +1433,7 @@ export default function HomePage() {
           sx={{
             position: "absolute",
             top: 0,
-            right: 0,
+            right: -90,
             zIndex: 10,
             width: {
               xs: "min(100%, 360px)",
@@ -1543,7 +1465,7 @@ export default function HomePage() {
           onExplore={handleExplore}
         />
 
-        <PathsSection />
+        <NewsSection />
 
         <CoursesSection
           courses={courses}
@@ -1552,8 +1474,6 @@ export default function HomePage() {
         />
 
         <BenefitsSection />
-
-        <ArticlesSection />
 
         <CtaBlock onExplore={handleExplore} onMyCourses={handleMyCourses} />
       </Box>
