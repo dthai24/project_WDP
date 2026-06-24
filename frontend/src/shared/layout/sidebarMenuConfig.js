@@ -22,6 +22,10 @@ export function isAdminLevelsActive(pathname) {
   return pathname === "/admin/levels" || pathname.startsWith("/admin/levels/");
 }
 
+export function isAdminNewsActive(pathname) {
+  return pathname === "/admin/news" || pathname.startsWith("/admin/news/");
+}
+
 export function isMentorQuestionBankActive(pathname) {
   return (
     pathname === "/mentor/question-banks" ||
@@ -122,6 +126,14 @@ export function getAdminMenuItems() {
       Icon: LayersOutlinedIcon,
       disabled: false,
       isActiveMatch: isAdminLevelsActive,
+    },
+    {
+      id: "admin-news",
+      label: "Tin tức",
+      to: "/admin/news",
+      Icon: NewspaperOutlinedIcon,
+      disabled: false,
+      isActiveMatch: isAdminNewsActive,
     },
   ];
 }

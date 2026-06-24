@@ -105,9 +105,14 @@ export default function Header({
   const isAdminAccountsPage = location.pathname === "/admin/accounts";
   const isAdminCategoriesPage = location.pathname === "/admin/categories";
   const isAdminLevelsPage = location.pathname === "/admin/levels";
+  const isAdminNewsPage = location.pathname === "/admin/news";
   const isAdminCatalogPage = isAdminCategoriesPage || isAdminLevelsPage;
   const isMentorListSearchPage =
-    isMentorCoursesPage || isMentorQuestionBanksPage || isAdminAccountsPage || isAdminCatalogPage;
+    isMentorCoursesPage ||
+    isMentorQuestionBanksPage ||
+    isAdminAccountsPage ||
+    isAdminCatalogPage ||
+    isAdminNewsPage;
   const isCourseListSearchPage = isCoursePage || isMyCoursesPage || isMentorListSearchPage;
   const [search, setSearch] = useState("");
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
@@ -355,7 +360,9 @@ export default function Header({
                       ? "Tìm theo tên danh mục..."
                       : isAdminLevelsPage
                         ? "Tìm theo tên trình độ..."
-                        : isMyCoursesPage
+                        : isAdminNewsPage
+                          ? "Tìm theo tiêu đề, danh mục..."
+                          : isMyCoursesPage
                           ? "Tìm trong khóa học của tôi..."
                           : isCoursePage
                             ? "Tìm khóa học..."
