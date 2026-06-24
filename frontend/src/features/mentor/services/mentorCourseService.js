@@ -28,6 +28,8 @@ import { saveCreateCourseStep1ToStorage, saveCreateCourseContentToStorage } from
 import { buildCourseContentPayload, buildFullCreateCoursePayload } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { uploadPendingMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
 import { getUser } from '@/features/auth/utils/authUtils';
+import { mapMentorCourseComment } from '@/features/mentor/utils/mentorCourseCommentsUtils';
+import { getInitialComments } from '@/features/courses/data/courseCommentsMock';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -757,6 +759,89 @@ export async function fetchCourseStudentStats(courseId) {
     return { ok: false, stats: computeCourseStudentStats([]), message: result.message };
   }
   return { ok: true, stats: computeCourseStudentStats(result.students) };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BÌNH LUẬN KHÓA HỌC
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/mentor/courses/:courseId/comments
+ */
+export async function fetchMentorCourseComments(courseId) {
+  try {
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/comments`, {
+      headers: getMentorAuthHeaders(),
+    });
+    const res = await response.json();
+
+    if (!response.ok || !res.success) {
+      return {
+        ok: false,
+        comments: [],
+        message: res.message ?? 'Không lấy được bình luận.',
+      };
+    }
+
+    const rows = Array.isArray(res.data) ? res.data : [];
+    return {
+      ok: true,
+      comments: rows.length > 0 ? rows.map(mapMentorCourseComment) : getInitialComments(),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      comments: getInitialComments(),
+      message: error.message ?? 'Lỗi kết nối server.',
+    };
+  }
+}
+
+/**
+ * PATCH /api/mentor/courses/:courseId/comments/:commentId/reply
+ */
+export async function replyMentorCourseComment(courseId, commentId, content) {
+  try {
+    const response = await fetch(
+      `${API_BASE}/mentor/courses/${courseId}/comments/${commentId}/reply`,
+      {
+        method: 'PATCH',
+        headers: getMentorAuthHeaders(),
+        body: JSON.stringify({ content }),
+      },
+    );
+    const res = await response.json();
+
+    if (!response.ok || !res.success || !res.data) {
+      return { ok: false, message: res.message ?? 'Không thể gửi phản hồi.' };
+    }
+
+    return { ok: true, comment: mapMentorCourseComment(res.data) };
+  } catch (error) {
+    return { ok: false, message: error.message ?? 'Lỗi kết nối server.' };
+  }
+}
+
+/**
+ * POST /api/mentor/courses/:courseId/comments
+ */
+export async function createMentorCourseComment(courseId, content) {
+  try {
+    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/comments`, {
+      method: 'POST',
+      headers: getMentorAuthHeaders(),
+      body: JSON.stringify({ content }),
+    });
+    const res = await response.json();
+
+    if (!response.ok || !res.success || !res.data) {
+      return { ok: false, message: res.message ?? 'Không thể gửi bình luận.' };
+    }
+
+    return { ok: true, comment: mapMentorCourseComment(res.data) };
+  } catch (error) {
+    return { ok: false, message: error.message ?? 'Lỗi kết nối server.' };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

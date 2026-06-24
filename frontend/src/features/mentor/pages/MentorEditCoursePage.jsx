@@ -11,7 +11,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseCreateForm from '@/features/mentor/components/course/MentorCourseCreateForm';
-import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { MUTED, PAGE_DESCRIPTION_SX, PAGE_TITLE_SX, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
   fetchCourseCategories,
   fetchCourseLevels,
@@ -208,13 +208,10 @@ export default function MentorEditCoursePage() {
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>Chỉnh sửa thông tin</Typography>
       </Breadcrumbs>
 
-      <Typography
-        component="h1"
-        sx={{ fontSize: { xs: 24, sm: 28 }, fontWeight: 800, color: TEXT, letterSpacing: '-0.02em', mb: 0.5, maxWidth: 720 }}
-      >
+      <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 0.5, maxWidth: 720 }}>
         Chỉnh sửa thông tin khóa học
       </Typography>
-      <Typography sx={{ fontSize: 15, color: MUTED, mb: 2.5, maxWidth: 720, lineHeight: 1.55 }}>
+      <Typography sx={{ ...PAGE_DESCRIPTION_SX, mb: 2.5 }}>
         Cập nhật tên, mô tả và thông tin cơ bản của khóa học. Để chỉnh sửa nội dung bài học, hãy vào mục nội dung khóa học.
       </Typography>
 

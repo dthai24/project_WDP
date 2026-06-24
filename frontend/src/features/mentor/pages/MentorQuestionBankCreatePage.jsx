@@ -264,26 +264,24 @@ export default function MentorQuestionBankCreatePage() {
   };
 
   const footerActions = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, width: '100%' }}>
-      <AppButton
-        loading={submitting}
-        startIcon={<SaveOutlinedIcon />}
-        onClick={handleSubmit}
-        fullWidth
-        sx={{
-          height: 44,
-          fontSize: 14,
-          fontWeight: 700,
-          borderRadius: '999px',
-          bgcolor: PRIMARY,
-          color: '#fff',
-          boxShadow: 'none',
-          '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-        }}
-      >
-        Lưu ngân hàng
-      </AppButton>
-    </Box>
+    <AppButton
+      loading={submitting}
+      startIcon={<SaveOutlinedIcon sx={{ fontSize: 16 }} />}
+      onClick={handleSubmit}
+      sx={{
+        height: 34,
+        px: 1.75,
+        fontSize: 12,
+        fontWeight: 600,
+        borderRadius: '999px',
+        bgcolor: PRIMARY,
+        color: '#fff',
+        boxShadow: 'none',
+        '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+      }}
+    >
+      Lưu ngân hàng
+    </AppButton>
   );
 
   const handleBack = () => {
@@ -400,11 +398,7 @@ export default function MentorQuestionBankCreatePage() {
         </Box>
       </Box>
 
-      <Box id="qb-mobile-footer-actions" sx={{ display: { xs: 'flex', lg: 'none' }, mt: 2.5, pb: 4 }}>
-        {footerActions}
-      </Box>
-
-      <ScrollToTopButton avoidSelectors={['#app-site-footer', '#qb-mobile-footer-actions']} />
+      <ScrollToTopButton avoidSelectors={['#app-site-footer']} />
     </Box>
   );
 }

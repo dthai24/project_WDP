@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
   Box,
+  Chip,
   Rating,
   TextField,
   Typography,
@@ -66,6 +67,21 @@ function CommentItem({ comment }) {
           <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
             {comment.authorName}
           </Typography>
+          {comment.isInstructor ? (
+            <Chip
+              size="small"
+              label="Giảng viên"
+              sx={{
+                height: 22,
+                fontSize: 11,
+                fontWeight: 600,
+                bgcolor: alpha(PRIMARY, 0.1),
+                color: PRIMARY,
+                border: `1px solid ${alpha(PRIMARY, 0.22)}`,
+                '& .MuiChip-label': { px: 0.85 },
+              }}
+            />
+          ) : null}
           <Typography sx={{ fontSize: 12.5, color: MUTED }}>
             {formatCommentDate(comment.createdAt)}
           </Typography>
@@ -85,6 +101,30 @@ function CommentItem({ comment }) {
         <Typography sx={{ fontSize: 14, color: TEXT, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
           {comment.content}
         </Typography>
+
+        {comment.reply?.content ? (
+          <Box
+            sx={{
+              mt: 1.25,
+              p: 1.5,
+              borderRadius: '12px',
+              bgcolor: alpha(PRIMARY, 0.04),
+              border: `1px solid ${alpha(PRIMARY, 0.12)}`,
+            }}
+          >
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: PRIMARY, mb: 0.35 }}>
+              Phản hồi từ giảng viên
+              {comment.reply.repliedAt ? (
+                <Box component="span" sx={{ fontWeight: 500, color: MUTED, ml: 0.75 }}>
+                  · {formatCommentDate(comment.reply.repliedAt)}
+                </Box>
+              ) : null}
+            </Typography>
+            <Typography sx={{ fontSize: 13.5, color: TEXT, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {comment.reply.content}
+            </Typography>
+          </Box>
+        ) : null}
       </Box>
     </Box>
   );

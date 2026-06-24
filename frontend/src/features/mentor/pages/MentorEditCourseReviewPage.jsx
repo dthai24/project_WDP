@@ -7,7 +7,7 @@ import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseInfoReview from '@/features/mentor/components/course/MentorCourseInfoReview';
 import MentorCourseContentReview from '@/features/mentor/components/course/MentorCourseContentReview';
-import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { CARD_SECTION_TITLE_SX, MUTED, PAGE_DESCRIPTION_SX, PAGE_TITLE_SX, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
   fetchCourseCategories,
   fetchCourseLevels,
@@ -143,19 +143,10 @@ export default function MentorEditCourseReviewPage() {
         </Typography>
       </Breadcrumbs>
 
-      <Typography
-        component="h1"
-        sx={{
-          fontSize: { xs: 24, sm: 28 },
-          fontWeight: 800,
-          color: TEXT,
-          letterSpacing: '-0.02em',
-          mb: 0.5,
-        }}
-      >
+      <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 0.5 }}>
         Xem lại thay đổi
       </Typography>
-      <Typography sx={{ fontSize: 15, color: MUTED, mb: 2.5, maxWidth: 720, lineHeight: 1.55 }}>
+      <Typography sx={{ ...PAGE_DESCRIPTION_SX, mb: 2.5 }}>
         {profileOnly
           ? 'Kiểm tra các thay đổi thông tin cơ bản trước khi cập nhật khóa học.'
           : 'Kiểm tra các thay đổi trước khi cập nhật khóa học.'}
@@ -190,7 +181,7 @@ export default function MentorEditCourseReviewPage() {
             top: { lg: 24 },
           }}
         >
-          <Typography sx={{ fontSize: 15, fontWeight: 800, color: TEXT, mb: 0.5 }}>
+          <Typography sx={{ ...CARD_SECTION_TITLE_SX, mb: 0.5 }}>
             Xác nhận cập nhật
           </Typography>
           <Typography sx={{ fontSize: 13, color: MUTED, mb: 2, lineHeight: 1.55 }}>
