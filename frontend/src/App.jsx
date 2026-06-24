@@ -36,6 +36,8 @@ import AdminNewsCreatePage from '@/features/admin/pages/AdminNewsCreatePage';
 import AdminNewsCreateContentPage from '@/features/admin/pages/AdminNewsCreateContentPage';
 import AdminNewsEditPage from '@/features/admin/pages/AdminNewsEditPage';
 import AdminNewsEditContentPage from '@/features/admin/pages/AdminNewsEditContentPage';
+import NewsListPage from '@/features/news/pages/NewsListPage';
+import NewsDetailPage from '@/features/news/pages/NewsDetailPage';
 
 import MainLayout from '@/shared/layout/MainLayout';
 import MentorLayout from '@/shared/layout/MentorLayout';
@@ -139,6 +141,28 @@ export default function App() {
               roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
             >
               <CourseTestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="news"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student', 'Admin']}
+              roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+            >
+              <NewsListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="news/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student', 'Admin']}
+              roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+            >
+              <NewsDetailPage />
             </ProtectedRoute>
           }
         />

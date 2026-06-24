@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Box, Chip, Divider, Typography, alpha, useTheme } from "@mui/material";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
@@ -25,6 +25,8 @@ import LearningGoalStickyNote from "@/features/home/components/LearningGoalStick
 import heroImg from "@/asset/image/herosection.png";
 // Thêm import
 import { getTopCoursesApi } from "@/features/auth/services/authService";
+import { fetchFeaturedNewsArticles } from "@/features/news/services/newsService";
+import { formatNewsDate } from "@/features/admin/utils/adminNewsUtils";
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -177,39 +179,6 @@ const BENEFITS = [
     title: "Gợi ý khóa học phù hợp",
     desc: "Hệ thống đề xuất khóa học dựa trên mục tiêu và tiến độ học tập của bạn.",
     color: "#EA580C",
-  },
-];
-
-const ARTICLES = [
-  {
-    id: 1,
-    title: "5 cách học từ vựng tiếng Anh hiệu quả",
-    excerpt:
-      "Không phải học thuộc lòng—hãy học trong ngữ cảnh, dùng spaced repetition và kết hợp hình ảnh.",
-    category: "Mẹo học tập",
-    date: "20 tháng 5, 2026",
-    thumbnail:
-      "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=500&q=70",
-  },
-  {
-    id: 2,
-    title: "Cách luyện nghe tiếng Anh mỗi ngày",
-    excerpt:
-      "Chỉ 20–30 phút mỗi ngày với đúng tài liệu, kỹ năng nghe của bạn sẽ cải thiện rõ rệt.",
-    category: "Kỹ năng nghe",
-    date: "15 tháng 5, 2026",
-    thumbnail:
-      "https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=500&q=70",
-  },
-  {
-    id: 3,
-    title: "Lộ trình IELTS Writing cho người mới bắt đầu",
-    excerpt:
-      "Từ phân tích đề bài đến hoàn thiện bài viết—hướng dẫn từng bước cho người mới.",
-    category: "IELTS",
-    date: "10 tháng 5, 2026",
-    thumbnail:
-      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500&q=70",
   },
 ];
 
@@ -650,7 +619,9 @@ function ContinueSection({ course, onContinue, onExplore }) {
 /* ─── Section 3: Tin tức (lộ trình + bài viết) ───────────── */
 
 function NewsSection() {
+  const navigate = useNavigate();
   const [paths, setPaths] = useState([]);
+  const [articles, setArticles] = useState([]);
 
   useEffect(() => {
     const fetchFeaturedPaths = async () => {
@@ -680,22 +651,42 @@ function NewsSection() {
     fetchFeaturedPaths();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchFeaturedNewsArticles(3).then((result) => {
+      if (!cancelled && result.ok) {
+        setArticles(result.articles);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const items = useMemo(
     () => [
       ...paths,
-      ...ARTICLES.map((article) => ({
-        ...article,
+      ...articles.map((article) => ({
         id: `article-${article.id}`,
+        articleId: article.id,
         type: "article",
+        title: article.title,
         excerpt: article.excerpt,
+        category: article.category,
+        date: formatNewsDate(article.publishedAt || article.updatedAt),
+        thumbnail: article.thumbnail,
       })),
     ],
-    [paths],
+    [paths, articles],
   );
 
   return (
     <Box sx={{ mb: { xs: 7, md: 9 } }}>
-      <SectionHeader title="Tin tức" />
+      <SectionHeader
+        title="Tin tức"
+        action="Xem tất cả"
+        onAction={() => navigate("/news")}
+      />
       <Box
         sx={{
           display: "grid",
@@ -707,15 +698,26 @@ function NewsSection() {
           gap: 2.5,
         }}
       >
-        {items.map((item) => (
-          <Box
+        {items.map((item) => {
+          const isArticle = item.type === "article";
+          const CardRoot = isArticle ? Link : Box;
+          const cardRootProps = isArticle
+            ? { to: `/news/${item.articleId}` }
+            : {};
+
+          return (
+          <CardRoot
             key={item.id}
+            {...cardRootProps}
             sx={{
+              display: "block",
+              textDecoration: "none",
+              color: "inherit",
               borderRadius: "18px",
               border: `1px solid ${BORDER}`,
               bgcolor: "#fff",
               overflow: "hidden",
-              cursor: "default",
+              cursor: isArticle ? "pointer" : "default",
               transition: "transform 0.22s ease, box-shadow 0.22s ease",
               "&:hover": {
                 transform: "translateY(-3px)",
@@ -861,8 +863,9 @@ function NewsSection() {
                 </Box>
               )}
             </Box>
-          </Box>
-        ))}
+          </CardRoot>
+          );
+        })}
       </Box>
     </Box>
   );
