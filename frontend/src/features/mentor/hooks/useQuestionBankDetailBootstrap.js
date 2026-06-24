@@ -29,7 +29,7 @@ function createEmptyEditorState() {
   return {
     bank: null,
     course: null,
-    courseChapters: [],
+    coursePaths: [],
     sections: [],
     sectionErrors: {},
     activeSkill: TEST_SKILL_LISTENING,
@@ -49,8 +49,8 @@ export default function useQuestionBankDetailBootstrap() {
   const [loadedBankId, setLoadedBankId] = useState('');
   const [bank, setBank] = useState(null);
   const [course, setCourse] = useState(null);
-  const [courseChapters, setCourseChapters] = useState([]);
-  const [chaptersLoading, setChaptersLoading] = useState(false);
+  const [coursePaths, setCoursePaths] = useState([]);
+  const [pathsLoading, setPathsLoading] = useState(false);
   const [sections, setSections] = useState([]);
   const [sectionErrors, setSectionErrors] = useState({});
   const [activeSkill, setActiveSkill] = useState(TEST_SKILL_LISTENING);
@@ -61,7 +61,7 @@ export default function useQuestionBankDetailBootstrap() {
     const empty = createEmptyEditorState();
     setBank(empty.bank);
     setCourse(empty.course);
-    setCourseChapters(empty.courseChapters);
+    setCoursePaths(empty.coursePaths);
     setSections(empty.sections);
     setSectionErrors(empty.sectionErrors);
     setActiveSkill(empty.activeSkill);
@@ -109,7 +109,7 @@ export default function useQuestionBankDetailBootstrap() {
       setPersistedQuestionIds(collectPersistedQuestionIds(loadedSections));
       questionSnapshotRef.current = buildQuestionSnapshotMap(loadedSections);
 
-      setChaptersLoading(true);
+      setPathsLoading(true);
       try {
         const [courseRes, outlineRes] = await Promise.all([
           fetchCourseForQB(loadedBank.courseId),
@@ -118,10 +118,10 @@ export default function useQuestionBankDetailBootstrap() {
         if (requestIdRef.current !== requestId) return;
 
         if (courseRes.ok) setCourse(courseRes.course);
-        if (outlineRes.ok) setCourseChapters(outlineRes.chapters ?? []);
+        if (outlineRes.ok) setCoursePaths(outlineRes.chapters ?? []);
       } finally {
         if (requestIdRef.current === requestId) {
-          setChaptersLoading(false);
+          setPathsLoading(false);
         }
       }
     } catch {
@@ -166,8 +166,8 @@ export default function useQuestionBankDetailBootstrap() {
     bank,
     setBank,
     course,
-    courseChapters,
-    chaptersLoading,
+    coursePaths,
+    pathsLoading,
     sections,
     setSections,
     sectionErrors,

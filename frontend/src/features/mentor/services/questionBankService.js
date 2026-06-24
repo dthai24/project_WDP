@@ -8,9 +8,9 @@
  */
 
 import { mentorCoursesMock } from '@/features/mentor/data/mentorCoursesMock';
-import { mentorQuestionBankMock } from '@/features/mentor/data/mentorQuestionBankMock';
 import { mentorQuestionBankSeed } from '@/features/mentor/data/mentorQuestionBankSeed';
 import { getUser } from '@/features/auth/utils/authUtils';
+import { fetchMentorCourses } from '../services/mentorCourseService';
 import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
@@ -18,9 +18,61 @@ import {
   getQuestionBankSectionDisplayTitle,
   getSectionsBySkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import axios from 'axios';
 
 const QB_STORAGE_KEY = 'mentor_question_banks_v1';
 const API_BASE = 'http://localhost:5000/api';
+const QB_LIST_CACHE_TTL_MS = 60_000;
+
+let banksApiCache = null;
+let mentorCoursesApiCache = null;
+
+export function invalidateQuestionBankListCache() {
+  banksApiCache = null;
+  mentorCoursesApiCache = null;
+}
+
+function readBanksCache() {
+  if (!banksApiCache) return null;
+  if (Date.now() - banksApiCache.fetchedAt > QB_LIST_CACHE_TTL_MS) {
+    banksApiCache = null;
+    return null;
+  }
+  return banksApiCache.banks;
+}
+
+function writeBanksCache(banks) {
+  banksApiCache = { banks, fetchedAt: Date.now() };
+}
+
+function readMentorCoursesCache() {
+  if (!mentorCoursesApiCache) return null;
+  if (Date.now() - mentorCoursesApiCache.fetchedAt > QB_LIST_CACHE_TTL_MS) {
+    mentorCoursesApiCache = null;
+    return null;
+  }
+  return mentorCoursesApiCache.courses;
+}
+
+function writeMentorCoursesCache(courses) {
+  mentorCoursesApiCache = { courses, fetchedAt: Date.now() };
+}
+
+async function fetchMentorCoursesCached(options = {}) {
+  const { force = false } = options;
+  if (!force) {
+    const cached = readMentorCoursesCache();
+    if (cached) {
+      return { ok: true, courses: cached, total: cached.length };
+    }
+  }
+
+  const res = await fetchMentorCourses();
+  if (res.ok) {
+    writeMentorCoursesCache(Array.isArray(res.courses) ? res.courses : []);
+  }
+  return res;
+}
 
 function getAuthHeaders() {
   const userId = getUser()?.userId;
@@ -32,21 +84,16 @@ function getAuthHeaders() {
 }
 
 function mapPathsToChapters(paths = []) {
-  return paths.map((path, pathIndex) => {
-    const nodes = path.Nodes ?? path.nodes ?? [];
-    return {
-      chapterId: path.PathId ?? path.pathId,
-      chapterTitle:
-        (path.PathName ?? path.pathName)?.trim() || `Chương ${pathIndex + 1}`,
-      order: path.Order ?? path.PathOrder ?? path.order ?? pathIndex + 1,
-      lessons: nodes.map((node, nodeIndex) => ({
-        lessonId: node.NodeId ?? node.nodeId,
-        lessonTitle:
-          (node.NodeName ?? node.nodeName)?.trim() || `Bài ${nodeIndex + 1}`,
-        order: node.NodeOrder ?? node.nodeOrder ?? nodeIndex + 1,
-      })),
-    };
-  });
+  return paths.map((path, pathIndex) => ({
+    PathId: path.PathId,
+    PathName: String(path.PathName ?? '').trim() || `Chương ${pathIndex + 1}`,
+    Order: path.Order ?? pathIndex + 1,
+    Nodes: (path.Nodes ?? []).map((node, nodeIndex) => ({
+      NodeId: node.NodeId,
+      NodeName: String(node.NodeName ?? '').trim() || `Bài ${nodeIndex + 1}`,
+      NodeOrder: node.NodeOrder ?? nodeIndex + 1,
+    })),
+  }));
 }
 
 function loadStoredBanks() {
@@ -97,8 +144,144 @@ function countSectionQuestions(sections = []) {
   return sections.reduce((sum, s) => sum + (s.Questions?.length ?? 0), 0);
 }
 
+function mapApiBankRow(row) {
+  return {
+    BankId: row.BankId ?? row.bankId ?? row.id,
+    CourseId: row.CourseId ?? row.courseId,
+    PathId: row.PathId ?? row.pathId ?? row.chapterId,
+    Title: row.Title ?? row.title ?? '',
+    Description: row.Description ?? row.description ?? '',
+    InstructorId: row.InstructorId ?? row.instructorId,
+    CreatedAt: row.CreatedAt ?? row.createdAt,
+    UpdatedAt: row.UpdatedAt ?? row.updatedAt,
+    Thumbnail: row.Thumbnail ?? null,
+    Sections: row.Sections ?? row.sections ?? [],
+  };
+}
+
+async function fetchQuestionBanksFromApi(options = {}) {
+  const { force = false } = options;
+  if (!force) {
+    const cached = readBanksCache();
+    if (cached) {
+      return { ok: true, banks: cached };
+    }
+  }
+
+  try {
+    const response = await axios.get(`${API_BASE}/questionBank/getAll`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.data?.success) {
+      return {
+        ok: false,
+        message: response.data?.message ?? 'Không lấy được danh sách ngân hàng câu hỏi.',
+        banks: [],
+      };
+    }
+
+    const banks = (response.data.data ?? []).map(mapApiBankRow);
+    writeBanksCache(banks);
+    return { ok: true, banks };
+  } catch (error) {
+    console.error('[fetchQuestionBanksFromApi]', error);
+    return {
+      ok: false,
+      message: 'Lỗi kết nối khi tải ngân hàng câu hỏi.',
+      banks: [],
+    };
+  }
+}
+
+function resolveCourseStatus(course) {
+  if (!course) return 'draft';
+  if (course.status === 'published' || course.status === 'PUBLISHED') return 'published';
+  if (course.IsPublished === 1 || course.IsPublished === true) return 'published';
+  return 'draft';
+}
+
+function buildSummaryFromBanks(banks = [], courses = []) {
+  const courseMap = new Map(
+    courses.map((course) => [String(course.CourseId ?? course.courseId), course]),
+  );
+  const byCourse = new Map();
+
+  banks.forEach((bank) => {
+    const courseId = bank.CourseId;
+    const key = String(courseId);
+    const existing = byCourse.get(key) ?? {
+      CourseId: Number(courseId),
+      CourseName: '',
+      Description: '',
+      Status: 'draft',
+      TotalQuestionCount: 0,
+      PublishedQuestionCount: 0,
+      DraftQuestionCount: 0,
+      ChapterWithQuestionCount: 0,
+      QuizCount: 0,
+      QuestionBankUpdatedAt: null,
+      Thumbnail: null,
+      BankIds: [],
+      LevelId: null,
+      LevelName: null,
+      LevelDisplayName: '',
+      CategoryId: null,
+      CategoryDisplayName: '',
+      UpdatedAt: null,
+      StudentCount: 0,
+    };
+
+    if (bank.Thumbnail) existing.Thumbnail = bank.Thumbnail;
+    existing.ChapterWithQuestionCount += 1;
+    if (bank.BankId != null && !existing.BankIds.includes(bank.BankId)) {
+      existing.BankIds.push(bank.BankId);
+    }
+    const updatedAt = bank.UpdatedAt;
+    if (
+      updatedAt &&
+      (!existing.QuestionBankUpdatedAt ||
+        new Date(updatedAt).getTime() > new Date(existing.QuestionBankUpdatedAt).getTime())
+    ) {
+      existing.QuestionBankUpdatedAt = updatedAt;
+    }
+
+    byCourse.set(key, existing);
+  });
+
+  return [...byCourse.values()]
+    .map((item) => {
+      const course = courseMap.get(String(item.CourseId));
+      if (!course) return item;
+
+      return {
+        ...item,
+        CourseName: course.CourseName ?? course.courseName ?? '',
+        Description: course.Description ?? course.description ?? '',
+        Status: resolveCourseStatus(course),
+        Thumbnail: course.Thumbnail ?? item.Thumbnail ?? null,
+        LevelId: course.LevelId ?? course.levelId ?? null,
+        LevelName: course.LevelName ?? course.levelName ?? null,
+        LevelDisplayName:
+          course.LevelDisplayName ?? course.levelName ?? course.level ?? '',
+        CategoryId: course.CategoryId ?? course.categoryId ?? null,
+        CategoryDisplayName:
+          course.CategoryDisplayName ?? course.categoryName ?? course.category ?? '',
+        UpdatedAt: course.UpdatedAt ?? course.updatedAt ?? null,
+        StudentCount: Number(course.StudentCount ?? course.studentCount ?? 0) || 0,
+      };
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.QuestionBankUpdatedAt ?? 0).getTime() -
+        new Date(a.QuestionBankUpdatedAt ?? 0).getTime(),
+    );
+}
+
 function filterByCourse(banks, courseId) {
-  return banks.filter((b) => String(b.courseId) === String(courseId));
+  return banks.filter(
+    (b) => String(b.CourseId ?? b.courseId) === String(courseId),
+  );
 }
 
 function countActiveQuestionsInSection(section) {
@@ -165,11 +348,11 @@ export async function getCourseQuestionBankActiveStats(courseId) {
   const bankByChapterId = new Map(banks.map((bank) => [String(bank.chapterId), bank]));
 
   const chapters = outlineChapters.map((outlineChapter) => {
-    const bank = bankByChapterId.get(String(outlineChapter.chapterId));
+    const bank = bankByChapterId.get(String(outlineChapter.PathId));
     if (!bank) {
       return {
-        chapterId: outlineChapter.chapterId,
-        chapterTitle: outlineChapter.chapterTitle,
+        PathId: outlineChapter.PathId,
+        PathName: outlineChapter.PathName,
         hasBank: false,
         totalActive: 0,
         questionCountBySkill: {
@@ -182,7 +365,7 @@ export async function getCourseQuestionBankActiveStats(courseId) {
     }
 
     const questionCountBySkill = countQuestionsBySkill(bank.sections ?? []);
-    const chapterLabel = bank.chapterTitle?.trim() || outlineChapter.chapterTitle;
+    const chapterLabel = bank.chapterTitle?.trim() || outlineChapter.PathName;
     const writingSectionGroups = getWritingSectionGroupsFromSections(bank.sections ?? []).map(
       (group) => ({
         sectionTempId: `${bank.chapterId}::${group.sectionTempId}`,
@@ -194,8 +377,8 @@ export async function getCourseQuestionBankActiveStats(courseId) {
     const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
 
     return {
-      chapterId: bank.chapterId,
-      chapterTitle: chapterLabel,
+      PathId: bank.chapterId,
+      PathName: chapterLabel,
       hasBank: true,
       totalActive,
       questionCountBySkill,
@@ -204,7 +387,7 @@ export async function getCourseQuestionBankActiveStats(courseId) {
   });
 
   banks.forEach((bank) => {
-    if (chapters.some((chapter) => String(chapter.chapterId) === String(bank.chapterId))) {
+    if (chapters.some((chapter) => String(chapter.PathId) === String(bank.chapterId))) {
       return;
     }
 
@@ -221,8 +404,8 @@ export async function getCourseQuestionBankActiveStats(courseId) {
     const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
 
     chapters.push({
-      chapterId: bank.chapterId,
-      chapterTitle: chapterLabel,
+      PathId: bank.chapterId,
+      PathName: chapterLabel,
       hasBank: true,
       totalActive,
       questionCountBySkill,
@@ -295,7 +478,15 @@ export async function getQuestionBankByChapter(courseId, chapterId) {
 }
 
 export async function getQuestionBanksByCourse(courseId) {
-  return { ok: true, banks: filterByCourse(getAllBanks(), courseId) };
+  const apiRes = await fetchQuestionBanksFromApi();
+  if (!apiRes.ok) {
+    return { ok: false, message: apiRes.message, banks: [] };
+  }
+
+  return {
+    ok: true,
+    banks: filterByCourse(apiRes.banks, courseId),
+  };
 }
 
 /** @deprecated — mỗi chương 1 bank, dùng getQuestionBankByChapter */
@@ -350,45 +541,20 @@ export async function getCourseChapterBankStats(courseId) {
   };
 }
 
-export async function getQuestionBankListSummaries() {
-  const banks = getAllBanks();
-  const byCourse = new Map();
+export async function getQuestionBankListSummaries(options = {}) {
+  const [apiRes, coursesRes] = await Promise.all([
+    fetchQuestionBanksFromApi(options),
+    fetchMentorCoursesCached(options),
+  ]);
 
-  mentorQuestionBankMock.forEach((item) => {
-    byCourse.set(item.courseId, { ...item });
-  });
+  if (!apiRes.ok) {
+    return { ok: false, message: apiRes.message, items: [] };
+  }
 
-  banks.forEach((bank) => {
-    const existing = byCourse.get(bank.courseId);
-    const qCount = bank.totalQuestionCount ?? countSectionQuestions(bank.sections);
-    const hasQuestions = qCount > 0;
+  const courses = coursesRes.ok ? coursesRes.courses ?? [] : [];
+  const items = buildSummaryFromBanks(apiRes.banks, courses);
 
-    if (existing) {
-      byCourse.set(bank.courseId, {
-        ...existing,
-        totalQuestionCount: (existing.totalQuestionCount ?? 0) + qCount,
-        draftQuestionCount: (existing.draftQuestionCount ?? 0) + (bank.draftQuestionCount ?? qCount),
-        chapterWithQuestionCount:
-          (existing.chapterWithQuestionCount ?? 0) + (hasQuestions ? 1 : 0),
-        questionBankUpdatedAt: bank.updatedAt ?? bank.questionBankUpdatedAt,
-      });
-    } else {
-      byCourse.set(bank.courseId, {
-        courseId: bank.courseId,
-        courseName: bank.courseTitle,
-        description: bank.description ?? '',
-        status: bank.status === 'PUBLISHED' ? 'published' : 'draft',
-        totalQuestionCount: qCount,
-        publishedQuestionCount: bank.publishedQuestionCount ?? 0,
-        draftQuestionCount: bank.draftQuestionCount ?? qCount,
-        chapterWithQuestionCount: hasQuestions ? 1 : 0,
-        quizCount: 0,
-        questionBankUpdatedAt: bank.updatedAt ?? bank.questionBankUpdatedAt,
-      });
-    }
-  });
-
-  return { ok: true, items: Array.from(byCourse.values()) };
+  return { ok: true, items };
 }
 
 export async function createQuestionBank(payload) {
@@ -424,6 +590,7 @@ export async function createQuestionBank(payload) {
 
   banks.unshift(newBank);
   saveStoredBanks(banks);
+  invalidateQuestionBankListCache();
   return { ok: true, bank: newBank };
 }
 
@@ -459,14 +626,60 @@ export async function updateQuestionBank(id, patch) {
   return { ok: true, bank: banks[idx] };
 }
 
-export async function fetchCoursesForQB() {
-  return { ok: true, courses: mentorCoursesMock };
+export async function fetchCoursesForQB(options = {}) {
+  const [coursesRes, banksRes] = await Promise.all([
+    fetchMentorCoursesCached(options),
+    fetchQuestionBanksFromApi(options),
+  ]);
+
+  if (!coursesRes.ok) {
+    return { ok: false, message: coursesRes.message, courses: [] };
+  }
+
+  const courses = Array.isArray(coursesRes.courses) ? coursesRes.courses : [];
+  const courseIdsWithBank = new Set(
+    (banksRes.ok ? banksRes.banks : []).map((bank) => String(bank.CourseId)),
+  );
+
+  return {
+    ok: true,
+    courses: courses.filter(
+      (course) => !courseIdsWithBank.has(String(course.CourseId ?? course.courseId)),
+    ),
+  };
 }
 
 export async function fetchCourseForQB(courseId) {
-  const course = mentorCoursesMock.find((c) => String(c.courseId) === String(courseId));
-  if (!course) return { ok: false, message: 'Không tìm thấy khóa học' };
-  return { ok: true, course };
+  const id = String(courseId ?? '').trim();
+  if (!id) {
+    return { ok: false, message: 'Thiếu mã khóa học' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/courses/my-courses/${id}?tab=course`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+
+    if (response.ok && data.success && Array.isArray(data.data) && data.data[0]) {
+      return { ok: true, course: data.data[0] };
+    }
+
+    const coursesRes = await fetchMentorCourses();
+    if (coursesRes.ok) {
+      const course = (coursesRes.courses ?? []).find(
+        (item) => String(item.CourseId) === id,
+      );
+      if (course) {
+        return { ok: true, course };
+      }
+    }
+
+    return { ok: false, message: data.message ?? 'Không tìm thấy khóa học' };
+  } catch (error) {
+    console.error('[fetchCourseForQB]', error);
+    return { ok: false, message: 'Lỗi kết nối khi tải thông tin khóa học.' };
+  }
 }
 
 export async function fetchCourseContentOutlineForQB(courseId) {
@@ -485,7 +698,7 @@ export async function fetchCourseContentOutlineForQB(courseId) {
       };
     }
 
-    const paths = data.data?.Paths ?? data.data?.paths ?? [];
+    const paths = data.data?.Paths ?? [];
     return { ok: true, chapters: mapPathsToChapters(paths) };
   } catch (error) {
     console.error('[fetchCourseContentOutlineForQB]', error);
@@ -501,12 +714,10 @@ export async function fetchChaptersForCourse(courseId) {
   const res = await fetchCourseContentOutlineForQB(courseId);
   if (!res.ok) return res;
   const chapters = res.chapters.map((ch) => ({
-    id: ch.chapterId,
-    chapterId: ch.chapterId,
-    courseId: Number(courseId),
-    title: ch.chapterTitle,
-    chapterTitle: ch.chapterTitle,
-    order: ch.order,
+    PathId: ch.PathId,
+    PathName: ch.PathName,
+    Order: ch.Order,
+    CourseId: Number(courseId),
   }));
   return { ok: true, chapters };
 }
@@ -524,7 +735,7 @@ export async function fetchChaptersWithoutQuestionBank(courseId) {
 
   return {
     ok: true,
-    chapters: outline.chapters.filter((ch) => !bankChapterIds.has(String(ch.chapterId))),
+    chapters: outline.chapters.filter((ch) => !bankChapterIds.has(String(ch.PathId))),
   };
 }
 

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { clearAllQuestionBankCreateDrafts } from '@/features/mentor/hooks/useQuestionBankCreateBootstrap';
 
 // 1. Khởi tạo Nhà Kho
 const AuthContext = createContext();
@@ -31,6 +32,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    clearAllQuestionBankCreateDrafts();
   };
 
   return (
