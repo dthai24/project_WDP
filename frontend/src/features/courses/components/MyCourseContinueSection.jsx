@@ -9,6 +9,17 @@ const MUTED = "#64748B";
 const TEXT = "#0F172A";
 const PRIMARY = "#0891B2";
 
+function getImageUrl(thumbnail) {
+  if (!thumbnail) return '';
+  let value = String(thumbnail).trim();
+  if (value === 'CHƯA FIX LỖI ẢNH') return '';
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image') || value.startsWith('blob:')) {
+    return value;
+  }
+  const BASE_IMG_URL = "http://localhost:5000";
+  return `${BASE_IMG_URL}${value.startsWith('/') ? value : '/' + value}`;
+}
+
 export default function MyCourseContinueSection({ course, onContinue }) {
   const theme = useTheme();
   if (!course) return null;
@@ -16,6 +27,7 @@ export default function MyCourseContinueSection({ course, onContinue }) {
   const progress = Math.min(Math.max(course.progressPercentage ?? 0, 0), 100);
   const progressTextColor = getProgressColor(progress);
   const currentLesson = course.currentLessonDetail;
+  const imageUrl = getImageUrl(course.thumbnail);
 
   return (
     <Box
@@ -49,7 +61,7 @@ export default function MyCourseContinueSection({ course, onContinue }) {
           gap: { xs: 2, md: 3 },
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0, pr: { md: course.thumbnail ? 0 : 0 } }}>
+        <Box sx={{ flex: 1, minWidth: 0, pr: { md: imageUrl ? 0 : 0 } }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1.25 }}>
             <PlayCircleOutlineOutlinedIcon sx={{ fontSize: 16, color: PRIMARY }} />
             <Typography
@@ -133,19 +145,17 @@ export default function MyCourseContinueSection({ course, onContinue }) {
           </Box>
         </Box>
 
-        {course.thumbnail && (
+        {imageUrl && (
           <Box
             sx={{
               display: { xs: "none", md: "block" },
-              width: 140,
+              width: 200,
               flexShrink: 0,
-              alignSelf: "center",
-              borderRadius: "14px",
+              alignSelf: "stretch",
+              borderRadius: "16px",
               overflow: "hidden",
-              aspectRatio: "4 / 3",
-              opacity: 0.85,
-              boxShadow: "0 8px 24px rgba(8,145,178,0.12)",
-              backgroundImage: `url(${course.thumbnail})`,
+              boxShadow: "0 8px 32px rgba(8,145,178,0.12)",
+              backgroundImage: `url("${imageUrl}")`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
