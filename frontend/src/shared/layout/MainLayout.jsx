@@ -22,7 +22,7 @@ export const pageContentSx = {
 export default function MainLayout({ children }) {
   const user = getUser();
   const location = useLocation();
-  const hideFooter = /\/my-courses\/[^/]+\/learn\/?$/.test(location.pathname);
+  const hideFooter = /\/my-courses\/[^/]+\/(learn|test)(\/|$)/.test(location.pathname);
 
   // Mentor không dùng shell học viên; Admin vẫn vào được /courses, /profile
   if (shouldBlockStudentShell(user)) {

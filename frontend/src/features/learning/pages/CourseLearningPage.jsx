@@ -89,11 +89,16 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
+import QuizRoundedIcon from "@mui/icons-material/QuizRounded";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import EmptyState from "@/shared/ui/EmptyState";
 import { resolveVideoEmbed } from "@/shared/utils/videoEmbedUtils";
+import {
+  getChapterQuizConfig,
+  getCourseQuizConfig,
+} from "@/features/mentor/services/chapterQuizConfigService";
 
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
@@ -168,6 +173,59 @@ function computeProgress(mods) {
   if (!all.length) return 0;
   return Math.round(
     (all.filter((l) => l.status === "completed").length / all.length) * 100
+  );
+}
+
+function OutlineTestItem({ label, subtitle, onClick, variant = "chapter" }) {
+  const isCourse = variant === "course";
+
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={onClick}
+      sx={{
+        width: "100%",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 1,
+        py: 1,
+        px: 1.25,
+        mt: isCourse ? 0.5 : 0.25,
+        border: "none",
+        borderRadius: "10px",
+        cursor: "pointer",
+        textAlign: "left",
+        fontFamily: "inherit",
+        bgcolor: isCourse ? alpha("#7C3AED", 0.08) : alpha("#7C3AED", 0.05),
+        borderTop: isCourse ? "none" : `1px dashed ${alpha("#7C3AED", 0.22)}`,
+        transition: "background-color 0.15s ease",
+        "&:hover": {
+          bgcolor: alpha("#7C3AED", isCourse ? 0.12 : 0.1),
+        },
+      }}
+    >
+      <Box sx={{ pt: 0.1, flexShrink: 0 }}>
+        <QuizRoundedIcon sx={{ fontSize: 18, color: "#7C3AED" }} />
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography
+          sx={{
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: "#6D28D9",
+            lineHeight: 1.35,
+          }}
+        >
+          {label}
+        </Typography>
+        {subtitle ? (
+          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.25, lineHeight: 1.35 }}>
+            {subtitle}
+          </Typography>
+        ) : null}
+      </Box>
+    </Box>
   );
 }
 
@@ -271,6 +329,8 @@ export default function CourseLearningPage() {
   // 1. Tạo State
   const [modules, setModules] = useState([]);
   const [currentLessonId, setCurrentLessonId] = useState(null);
+  const [chapterQuizConfigs, setChapterQuizConfigs] = useState({});
+  const [courseQuizConfig, setCourseQuizConfig] = useState(null);
 
   // 2. Tạo state để lưu tên khóa học và giảng viên
   const [courseInfo, setCourseInfo] = useState({ courseTitle: "Đang tải dữ liệu...", instructor: "" });
@@ -322,6 +382,38 @@ export default function CourseLearningPage() {
     };
     fetchLearningData();
   }, [courseId]);
+
+  useEffect(() => {
+    if (!courseId || modules.length === 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const entries = await Promise.all(
+        modules.map(async (mod) => {
+          const res = await getChapterQuizConfig(courseId, mod.id, {
+            chapterTitle: mod.title,
+            chapterIndex: mod.index - 1,
+          });
+          return [mod.id, res.ok ? res.config : null];
+        }),
+      );
+
+      if (cancelled) return;
+      setChapterQuizConfigs(Object.fromEntries(entries));
+
+      const courseRes = await getCourseQuizConfig(courseId, {
+        courseTitle: courseInfo.courseTitle,
+      });
+      if (!cancelled && courseRes.ok) {
+        setCourseQuizConfig(courseRes.config);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId, modules, courseInfo.courseTitle]);
 
   // 4. Các hàm tính toán của React (Giữ nguyên không đổi)
   const allLessons = useMemo(() => flatLessons(modules), [modules]);
@@ -385,6 +477,14 @@ export default function CourseLearningPage() {
   const handleNext = () => {
     if (currentIndex < allLessons.length - 1)
       handleSelectLesson(allLessons[currentIndex + 1].id);
+  };
+
+  const handleGoToChapterTest = (chapterId) => {
+    navigate(`/my-courses/${courseId}/test/chapter/${chapterId}`);
+  };
+
+  const handleGoToCourseTest = () => {
+    navigate(`/my-courses/${courseId}/test/final`);
   };
 
   const TypeIcon = TYPE_ICON[currentLesson?.type] ?? ArticleRoundedIcon;
@@ -980,10 +1080,27 @@ export default function CourseLearningPage() {
                             </Box>
                           );
                         })}
+
+                        <OutlineTestItem
+                          label="Làm bài kiểm tra"
+                          subtitle={
+                            chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"
+                          }
+                          onClick={() => handleGoToChapterTest(mod.id)}
+                        />
                       </AccordionDetails>
                     </Accordion>
                   );
                 })}
+
+                <Box sx={{ px: 0.5, pt: 0.5, pb: 0.5 }}>
+                  <OutlineTestItem
+                    variant="course"
+                    label="Làm bài kiểm tra toàn khóa"
+                    subtitle={courseQuizConfig?.title || "Kiểm tra cuối khóa"}
+                    onClick={handleGoToCourseTest}
+                  />
+                </Box>
               </Box>
             </Box>
           </Box>
