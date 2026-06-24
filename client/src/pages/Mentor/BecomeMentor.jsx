@@ -46,16 +46,41 @@ export default function BecomeMentor() {
     }
   };
 
-  // Xử lý gửi Form giả lập (Sau này kết nối API Backend tại đây)
-  const handleSubmit = (e) => {
+  // Xử lý gửi Form liên kết với Backend API
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!certificate) {
+      alert("Vui lòng tải lên ảnh chứng chỉ chuyên môn.");
+      return;
+    }
     setIsSubmitting(true);
     
-    setTimeout(() => {
+    try {
+      const data = new FormData();
+      data.append("fullName", formData.fullName);
+      data.append("email", formData.email);
+      data.append("portfolioUrl", formData.portfolioUrl || "");
+      data.append("bio", formData.bio);
+      data.append("certificate", certificate);
+
+      const response = await fetch("http://127.0.0.1:5000/api/mentor/become-mentor", {
+        method: "POST",
+        body: data,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setIsSuccess(true);
+      } else {
+        alert(result.message || "Đã xảy ra lỗi trong quá trình gửi hồ sơ.");
+      }
+    } catch (error) {
+      console.error("Lỗi khi kết nối đến máy chủ:", error);
+      alert("Không thể kết nối đến máy chủ. Vui lòng đảm bảo server backend đang chạy.");
+    } finally {
       setIsSubmitting(false);
-      setIsSuccess(true);
-      console.log("Data submitted to English Master Admin:", { ...formData, certificate });
-    }, 2200);
+    }
   };
 
   return (

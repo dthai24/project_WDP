@@ -24,9 +24,9 @@ export function Login() {
       <div className="w-full max-w-md z-10">
         <div className="text-center mb-8">
           <img
-            src="https://cdn.magicpatterns.com/uploads/6HH8798EgvRqQxpsuayZEj/pasted-image.jpg"
-            alt="LEARNMATE Logo"
-            className="h-20 mx-auto mb-4 object-contain mix-blend-multiply"
+            src="/images/logo.png"
+            alt="English Master Logo"
+            className="h-20 mx-auto mb-4 object-contain"
           />
           <p className="text-slate-500 font-medium">
             Trợ lý học tập thông minh AI

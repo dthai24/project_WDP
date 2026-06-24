@@ -5,3 +5,6 @@ build/
 .env.local
 .eslintcache
 PROJECT_CONTEXT.md
+mongodb_data/
+server/.env
+client/node_modules/.cache/
