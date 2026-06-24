@@ -310,33 +310,6 @@ function CategoryChip({ category }) {
 
 const HERO_IMG = heroImg;
 
-const HERO_STATS = [
-  {
-    title: "20+ khóa học",
-    desc: "theo kỹ năng và mục tiêu",
-    Icon: MenuBookOutlinedIcon,
-    iconBg: "rgba(8,145,178,0.12)",
-    iconColor: "#0891B2",
-    iconBorder: "rgba(8,145,178,0.20)",
-  },
-  {
-    title: "5 lộ trình",
-    desc: "học theo từng chương",
-    Icon: RouteOutlinedIcon,
-    iconBg: "rgba(124,58,237,0.12)",
-    iconColor: "#7C3AED",
-    iconBorder: "rgba(124,58,237,0.20)",
-  },
-  {
-    title: "Theo dõi tiến độ",
-    desc: "tiếp tục đúng bài đang học",
-    Icon: TrackChangesRoundedIcon,
-    iconBg: "rgba(5,150,105,0.12)",
-    iconColor: "#059669",
-    iconBorder: "rgba(5,150,105,0.20)",
-  },
-];
-
 function HeroSection({ onExplore }) {
   return (
     <Box
@@ -345,8 +318,10 @@ function HeroSection({ onExplore }) {
         overflow: "hidden",
         borderRadius: 0,
         minHeight: { xs: 520, sm: 540, md: 620 },
+        display: "flex",
+        alignItems: "center",
         px: { xs: 3.5, sm: 5, md: 7 },
-        py: { xs: 5, sm: 6, md: 8 },
+        py: { xs: 4, sm: 5, md: 6 },
         mb: { xs: 6, md: 6 },
         border: "none",
         boxShadow: "none",
@@ -458,73 +433,6 @@ function HeroSection({ onExplore }) {
           >
             Xem lộ trình
           </AppButton>
-        </Box>
-
-        {/* Stats — no wrapper container, items laid out flat */}
-        <Box
-          sx={{
-            mt: 4,
-            pt: 3,
-            borderTop: "1px solid rgba(15,23,42,0.08)",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: { xs: 2.5, sm: 3.5 },
-          }}
-        >
-          {HERO_STATS.map(
-            ({ title, desc, Icon, iconBg, iconColor, iconBorder }) => (
-              <Box
-                key={title}
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 1.25,
-                  flex: "1 1 140px",
-                  minWidth: 120,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "10px",
-                    bgcolor: iconBg,
-                    color: iconColor,
-                    border: `1px solid ${iconBorder}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    mt: 0.2,
-                  }}
-                >
-                  <Icon sx={{ fontSize: 17 }} />
-                </Box>
-                <Box>
-                  <Typography
-                    sx={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: TEXT,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {title}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 11.5,
-                      color: MUTED,
-                      lineHeight: 1.4,
-                      mt: 0.2,
-                    }}
-                  >
-                    {desc}
-                  </Typography>
-                </Box>
-              </Box>
-            ),
-          )}
         </Box>
       </Box>
     </Box>
@@ -1433,7 +1341,7 @@ export default function HomePage() {
           sx={{
             position: "absolute",
             top: 0,
-            right: -90,
+            right: -80,
             zIndex: 10,
             width: {
               xs: "min(100%, 360px)",
