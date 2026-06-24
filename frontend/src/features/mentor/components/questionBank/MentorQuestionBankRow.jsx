@@ -167,7 +167,7 @@ function MentorQuestionBankRow({ item }) {
     }
 
     if (bankIds.length === 1) {
-      navigate(`/mentor/question-banks/${bankIds[0]}`);
+      navigate(`/mentor/question-banks/${bankIds[0]}?courseId=${item.CourseId}`);
       return;
     }
 

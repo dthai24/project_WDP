@@ -15,6 +15,7 @@ import {
 import {
   fetchCourseContentOutlineForQB,
   fetchCourseForQB,
+  fetchPathQuestionBank,
 } from '@/features/mentor/services/questionBankService';
 
 const DRAFT_KEY_PREFIX = 'mentor_qb_create_draft';
@@ -141,7 +142,7 @@ export default function useQuestionBankCreateBootstrap() {
   }, []);
 
   const activateChapter = useCallback(
-    (targetChapterId) => {
+    async (targetChapterId) => {
       if (!courseId || !targetChapterId) return null;
 
       const path = coursePaths.find(
@@ -149,9 +150,18 @@ export default function useQuestionBankCreateBootstrap() {
       );
       if (!path) return null;
 
+      const existing = await fetchPathQuestionBank(courseId, targetChapterId);
+      if (existing.ok) {
+        toast.info('Chương này đã có ngân hàng câu hỏi.');
+        navigate(
+          `/mentor/question-banks/${existing.bank.BankId ?? existing.bank.id}?courseId=${courseId}&chapterId=${targetChapterId}`,
+        );
+        return null;
+      }
+
       return applyChapterState(courseId, targetChapterId);
     },
-    [applyChapterState, courseId, coursePaths],
+    [applyChapterState, courseId, coursePaths, navigate],
   );
 
   useEffect(() => {
@@ -209,14 +219,11 @@ export default function useQuestionBankCreateBootstrap() {
   }, [loading, courseId, chapterId, coursePaths, activateChapter, resetEmptyEditor]);
 
   const selectChapter = useCallback(
-    (nextChapterId) => {
+    async (nextChapterId) => {
       if (String(nextChapterId) === String(chapterId)) return false;
 
-      const nextSections = activateChapter(nextChapterId);
-      if (!nextSections) {
-        toast.error('Không tìm thấy chương trong khóa học.');
-        return false;
-      }
+      const nextSections = await activateChapter(nextChapterId);
+      if (!nextSections) return false;
 
       setSearchParams(
         (prev) => {

@@ -228,12 +228,7 @@ export default function MentorTestSectionCard({
       ? 'Nhập nội dung bài đọc...'
       : 'Mô tả ngắn cho bài (tuỳ chọn)';
   })();
-  const listeningPromptValue = (() => {
-    const title = String(section.SectionTitle ?? '').trim();
-    const desc = String(section.Description ?? '').trim();
-    if (title && desc) return `${title}\n\n${desc}`;
-    return title || desc;
-  })();
+  const listeningPromptValue = String(section.SectionTitle ?? '');
   const emptyQuestionsText = questionBankMode
     ? 'Chưa có câu hỏi trong bài này.'
     : 'Chưa có câu hỏi trong phần này.';

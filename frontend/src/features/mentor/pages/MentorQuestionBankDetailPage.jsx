@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import Loading from '@/shared/ui/Loading';
@@ -19,6 +19,8 @@ import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBan
 import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questionBank/MentorQuestionBankBuilderPanel';
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
 import MentorQuestionBankRightRail from '@/features/mentor/components/questionBank/MentorQuestionBankRightRail';
+import MentorQuestionBankPathsView from '@/features/mentor/components/questionBank/MentorQuestionBankPathsView';
+import MentorChapterQuestionListView from '@/features/mentor/components/questionBank/MentorChapterQuestionListView';
 import MentorChapterQuizSetupDialog from '@/features/mentor/components/course/MentorChapterQuizSetupDialog';
 import {
   QUIZ_SETUP_SCOPE_CHAPTER,
@@ -38,6 +40,7 @@ import {
   getFilledQuestionCount,
   getNonEmptyQuestionBankSections,
   getQuestionBankSectionNameFallback,
+  normalizeQuestionBankSectionForSave,
   getSectionBaiNumber,
   getSectionsBySkill,
   consolidateWritingSections,
@@ -52,23 +55,30 @@ const PUBLISHED_COURSE_QB_HINT =
   'Khóa học đã xuất bản: chỉ thêm câu hỏi mới, không sửa/xóa câu hỏi cũ. Có thể tắt "Dùng cho quiz" để ẩn câu cũ khỏi quiz/test mới — lịch sử học viên không bị ảnh hưởng.';
 
 function mapSectionsForSave(sourceSections) {
-  return sourceSections.map((section) => ({
-    ...section,
-    DisplayName:
-      String(section.DisplayName ?? '').trim() ||
-      getQuestionBankSectionNameFallback(section, sourceSections),
-  }));
+  return sourceSections.map((section) =>
+    normalizeQuestionBankSectionForSave({
+      ...section,
+      DisplayName:
+        String(section.DisplayName ?? '').trim() ||
+        getQuestionBankSectionNameFallback(section, sourceSections),
+    }),
+  );
 }
 
 export default function MentorQuestionBankDetailPage() {
   const navigate = useNavigate();
+  const { questionBankId } = useParams();
+  const [searchParams] = useSearchParams();
+  const isEditorMode = searchParams.get('mode') === 'editor';
   const [submitting, setSubmitting] = useState(false);
   const [quizSetupTarget, setQuizSetupTarget] = useState(null);
 
   const {
     loading,
     notFound,
+    isPathListMode,
     bank,
+    bankPaths,
     setBank,
     course,
     coursePaths,
@@ -85,7 +95,10 @@ export default function MentorQuestionBankDetailPage() {
     setPersistedQuestionIds,
     questionSnapshotRef,
     workspaceKey,
+    openPath,
+    backToPathList,
     selectChapter,
+    reloadBank,
   } = useQuestionBankDetailBootstrap();
 
   const coursePublished = course?.IsPublished === true || course?.IsPublished === 1;
@@ -312,6 +325,16 @@ export default function MentorQuestionBankDetailPage() {
   };
 
   const backToCourseQuestions = () => {
+    if (isEditorMode && bank?.courseId && bank?.chapterId) {
+      navigate(
+        `/mentor/question-banks/${questionBankId}?courseId=${bank.courseId}&chapterId=${bank.chapterId}`,
+      );
+      return;
+    }
+    if (!isPathListMode && bank?.courseId) {
+      backToPathList();
+      return;
+    }
     if (bank?.courseId) {
       navigate(`/mentor/courses/${bank.courseId}/questions`);
       return;
@@ -322,7 +345,7 @@ export default function MentorQuestionBankDetailPage() {
   if (loading) {
     return (
       <Box sx={{ py: 8, display: 'flex', justifyContent: 'center' }}>
-        <Loading message="Đang tải ngân hàng câu hỏi..." />
+        <Loading message={isPathListMode ? 'Đang tải danh sách chương...' : 'Đang tải ngân hàng câu hỏi...'} />
       </Box>
     );
   }
@@ -346,6 +369,51 @@ export default function MentorQuestionBankDetailPage() {
           description="Ngân hàng câu hỏi có thể đã bị xóa hoặc không tồn tại."
           actionLabel="Quay lại danh sách"
           onAction={() => navigate('/mentor/question-banks')}
+        />
+      </Box>
+    );
+  }
+
+  if (isPathListMode) {
+    return (
+      <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
+        <MentorQuestionBankPathsView
+          bank={bank}
+          paths={bankPaths}
+          courseName={course?.CourseName ?? bank.courseTitle}
+          updatedAt={bank.updatedAt}
+          onOpenPath={openPath}
+          onBack={() => navigate('/mentor/question-banks')}
+          onCreatePath={
+            bank.courseId
+              ? () => navigate(`/mentor/question-banks/create?courseId=${bank.courseId}`)
+              : undefined
+          }
+        />
+      </Box>
+    );
+  }
+
+  if (!isEditorMode) {
+    return (
+      <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
+        <MentorChapterQuestionListView
+          bankId={questionBankId}
+          courseId={bank.courseId}
+          chapterId={bank.chapterId}
+          chapterTitle={bank.chapterTitle}
+          courseName={course?.CourseName ?? bank.courseTitle}
+          questions={bank.questionList ?? []}
+          onBack={backToPathList}
+          onReload={reloadBank}
+          onEditQuestion={(question) =>
+            navigate(
+              `/mentor/question-banks/${questionBankId}?courseId=${bank.courseId}&chapterId=${bank.chapterId}&mode=editor&questionId=${question.QuestionId}`,
+            )
+          }
+          onAddQuestion={() =>
+            navigate(`/mentor/question-banks/create?courseId=${bank.courseId}&chapterId=${bank.chapterId}`)
+          }
         />
       </Box>
     );
