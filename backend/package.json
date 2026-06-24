@@ -8,7 +8,9 @@
     "start": "node --disable-warning=DEP0040 server.js",
     "db:material-columns": "node scripts/add-material-cloudinary-columns.js",
     "db:material-type": "node scripts/update-material-type-constraint.js",
-    "db:merge-material-url": "node scripts/merge-material-content-into-url.js"
+    "db:merge-material-url": "node scripts/merge-material-content-into-url.js",
+    "db:question-bank": "node scripts/migrate-question-bank-schema.js",
+    "db:test": "node scripts/migrate-test-schema.js"
   },
   "keywords": [],
   "author": "",

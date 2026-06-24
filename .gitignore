@@ -16,3 +16,6 @@ backend/scripts/add-material-content-column.js
 backend/scripts/add-material-content-column.js
 backend/scripts/applySchema.js
 backend/scripts/add-material-content-column.js
+backend/package-lock.json
+frontend/package-lock.json
+package-lock.json

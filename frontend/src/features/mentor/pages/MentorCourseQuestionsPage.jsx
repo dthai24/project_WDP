@@ -99,7 +99,7 @@ export default function MentorCourseQuestionsPage() {
         );
         setCourseName(
           courseRes.ok
-            ? courseRes.course?.courseName
+            ? courseRes.course?.CourseName
             : mockCourse?.courseName ?? `Khóa học #${courseId}`,
         );
         setBanks(banksRes.ok ? banksRes.banks : []);
