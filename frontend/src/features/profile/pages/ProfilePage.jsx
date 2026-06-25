@@ -21,6 +21,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 
 import AppButton from "@/shared/ui/AppButton";
+import { toast } from "@/shared/ui/Toast";
 import ChangePasswordDialog from "@/features/auth/components/ChangePasswordDialog";
 import { underlineFieldSx as valueUnderlineSx } from "@/shared/ui/UnderlineFieldPopup";
 import ProfileImageCropDialog from "@/shared/ProfileImageCropDialog";
@@ -29,7 +30,6 @@ import {
   getStoredAvatarUrl,
   persistUserAvatar,
 } from "@/features/profile/utils/profileAvatarUtils";
-import { toast } from "@/shared/ui/Toast";
 
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
