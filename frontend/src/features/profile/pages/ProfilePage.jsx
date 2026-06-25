@@ -442,14 +442,60 @@ export default function ProfilePage() {
     setCropperOpen(true);
   };
 
-  const handleAvatarUpload = async (croppedBase64) => {
+  const mergeAvatarWithFrame = (faceBase64, frameUrl) => {
+    return new Promise((resolve, reject) => {
+      const FRAME_SIZE = 500;
+      const FACE_SIZE = 380;
+      const FACE_X = (FRAME_SIZE - FACE_SIZE) / 2;
+      const FACE_Y = (FRAME_SIZE - FACE_SIZE) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = FRAME_SIZE;
+      canvas.height = FRAME_SIZE;
+      const ctx = canvas.getContext('2d');
+      const faceImg = new Image();
+      faceImg.crossOrigin = 'Anonymous';
+      faceImg.src = faceBase64;
+
+      faceImg.onload = () => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(
+          FACE_X + FACE_SIZE / 2,
+          FACE_Y + FACE_SIZE / 2,
+          FACE_SIZE / 2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(faceImg, FACE_X, FACE_Y, FACE_SIZE, FACE_SIZE);
+        ctx.restore();
+
+        const frameImg = new Image();
+        frameImg.crossOrigin = 'Anonymous';
+        frameImg.src = frameUrl;
+        frameImg.onload = () => {
+          ctx.drawImage(frameImg, 0, 0, FRAME_SIZE, FRAME_SIZE);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        frameImg.onerror = () => reject('Lỗi tải Khung');
+      };
+      faceImg.onerror = () => reject('Lỗi tải Mặt');
+    });
+  };
+
+  const handleAvatarUpload = async ({ faceBase64, frameUrl }) => {
     if (!currentUser?.userId) {
       toast.error('Vui lòng đăng nhập lại để cập nhật ảnh đại diện.');
       return;
     }
 
     try {
-      const res = await fetch(croppedBase64);
+      localStorage.setItem('rawAvatar', faceBase64);
+      localStorage.setItem('rawFrame', frameUrl || '');
+
+      const mergedBase64 = frameUrl ? await mergeAvatarWithFrame(faceBase64, frameUrl) : faceBase64;
+      const res = await fetch(mergedBase64);
       const blob = await res.blob();
       const data = await uploadUserAvatar(blob);
 
@@ -870,10 +916,11 @@ export default function ProfilePage() {
         ref={fileInputRef}
         onChange={handleAvatarSelected}
       />
-      {/* ── Popup cắt ảnh chuẩn form Mentor ── */}
+      {/* 🚀 Popup cắt ảnh chuẩn form Mentor 🚀 */}
       <ProfileImageCropDialog
-        open={cropperOpen && Boolean(tempImageSrc)}
-        imageSrc={tempImageSrc}
+        open={cropperOpen}
+        imageSrc={tempImageSrc || localStorage.getItem('rawAvatar') || ''}
+        initialFrame={localStorage.getItem('rawFrame') || ''}
         onClose={() => {
           setCropperOpen(false);
           if (tempImageSrc?.startsWith('blob:')) {

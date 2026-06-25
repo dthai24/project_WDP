@@ -2,6 +2,8 @@ const cloudinary = require('../config/cloudinary');
 
 const MATERIALS_FOLDER = 'learning-path/materials';
 const TEXT_FOLDER = `${MATERIALS_FOLDER}/text`;
+const AUDIO_FOLDER = `${MATERIALS_FOLDER}/audio`;
+const AUDIO_EXTENSIONS = new Set(['mp3', 'mp4']);
 
 /** Giới hạn Cloudinary free tier — 10 MB. */
 const MATERIAL_MAX_BYTES = 10 * 1024 * 1024;
@@ -86,6 +88,27 @@ async function uploadDocumentFile(file) {
   };
 }
 
+async function uploadAudioFile(file) {
+  assertMaterialSize(file.size);
+  const ext = getExtensionFromFileName(file.originalname);
+  if (!ext || !AUDIO_EXTENSIONS.has(ext)) {
+    const error = new Error('Chỉ hỗ trợ file đuôi .mp3 hoặc .mp4.');
+    error.statusCode = 400;
+    throw error;
+  }
+  const safeName = sanitizeFileName(file.originalname).replace(/\.[^.]+$/, '');
+  const result = await uploadBuffer(file.buffer, {
+    resource_type: 'video',
+    folder: AUDIO_FOLDER,
+    public_id: `${safeName}_${Date.now()}`,
+  });
+  return {
+    url: result.secure_url,
+    fileName: file.originalname,
+    fileSize: file.size,
+  };
+}
+
 async function uploadTextHtml(html, title = 'text-material') {
   const trimmed = String(html ?? '').trim();
   if (!trimmed) {
@@ -114,8 +137,10 @@ async function uploadTextHtml(html, title = 'text-material') {
 }
 
 module.exports = {
+  AUDIO_EXTENSIONS,
   DOC_EXTENSIONS,
   MATERIAL_MAX_BYTES,
+  uploadAudioFile,
   uploadDocumentFile,
   uploadTextHtml,
 };

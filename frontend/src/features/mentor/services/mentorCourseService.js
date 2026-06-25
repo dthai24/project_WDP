@@ -119,7 +119,7 @@ export async function fetchMentorCourses() {
     if (!userId) {
       return {
         ok: false,
-        message: "Không tìm thấy userId trong sessionStorage.",
+        message: "Không tìm thấy userId trong localStorage.",
       };
     }
 

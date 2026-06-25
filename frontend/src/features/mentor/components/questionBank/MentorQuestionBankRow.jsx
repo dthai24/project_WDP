@@ -1,6 +1,7 @@
 /**
  * MentorQuestionBankRow — layout mirror MentorCourseRow, metrics tập trung câu hỏi.
  */
+import { memo, useCallback, useMemo } from 'react';
 import {
   Box,
   Chip,
@@ -22,7 +23,8 @@ import {
   formatMentorCourseDate,
   truncateText,
 } from '@/features/mentor/utils/mentorCourseUtils';
-import { getQuestionBanksByCourse } from '@/features/mentor/services/questionBankService';
+import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
+import { resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
@@ -50,6 +52,20 @@ const PILL_CHIP_SX = {
   },
 };
 
+const ROW_SX = {
+  position: 'relative',
+  p: { xs: 2, sm: 2.25 },
+  borderRadius: '20px',
+  bgcolor: '#FFFFFF',
+  border: `1px solid ${alpha('#0F172A', 0.08)}`,
+  display: 'flex',
+  flexDirection: { xs: 'column', md: 'row' },
+  alignItems: { xs: 'stretch', md: 'center' },
+  gap: { xs: 1.75, md: 2.5 },
+  contentVisibility: 'auto',
+  containIntrinsicSize: '0 220px',
+};
+
 function getStatusChip(status) {
   if (status === 'published') {
     return {
@@ -71,7 +87,9 @@ function getStatusChip(status) {
   };
 }
 
-function CourseThumbnail({ courseName }) {
+const CourseThumbnail = memo(function CourseThumbnail({ thumbnail, courseName }) {
+  const imageUrl = resolveCourseThumbnailUrl(thumbnail);
+
   return (
     <Box
       sx={{
@@ -85,13 +103,23 @@ function CourseThumbnail({ courseName }) {
         placeItems: 'center',
       }}
     >
-      <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
-      {courseName && <Typography sx={{ display: 'none' }}>{courseName}</Typography>}
+      {imageUrl ? (
+        <Box
+          component="img"
+          src={imageUrl}
+          alt={courseName ? `Ảnh khóa học ${courseName}` : 'Ảnh khóa học'}
+          loading="lazy"
+          decoding="async"
+          sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
+      )}
     </Box>
   );
-}
+});
 
-function MetricItem({ icon: Icon, label, value, iconColor }) {
+const MetricItem = memo(function MetricItem({ icon: Icon, label, value, iconColor }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
       <Icon sx={{ fontSize: 15, color: iconColor, flexShrink: 0 }} />
@@ -100,49 +128,57 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
       </Typography>
     </Box>
   );
-}
+});
 
-export default function MentorQuestionBankRow({ item }) {
+function MentorQuestionBankRow({ item }) {
   const theme = useTheme();
   const navigate = useNavigate();
-  const statusChip = getStatusChip(item.status);
 
-  const handleManageQuestions = async () => {
-    const res = await getQuestionBanksByCourse(item.courseId);
-    const banks = res.ok ? res.banks : [];
+  const statusChip = useMemo(() => getStatusChip(item.Status), [item.Status]);
+  const description = useMemo(
+    () => truncateText(item.Description, 140),
+    [item.Description],
+  );
+  const formattedUpdatedAt = useMemo(
+    () => formatMentorCourseDate(item.QuestionBankUpdatedAt),
+    [item.QuestionBankUpdatedAt],
+  );
+  const levelChipSx = useMemo(
+    () =>
+      item.LevelDisplayName
+        ? {
+            ...PILL_CHIP_SX,
+            ...resolveLevelChipSx({
+              id: item.LevelId,
+              displayName: item.LevelName ?? item.LevelDisplayName,
+            }),
+          }
+        : null,
+    [item.LevelDisplayName, item.LevelId, item.LevelName],
+  );
 
-    if (banks.length === 0) {
+  const handleManageQuestions = useCallback(() => {
+    const bankIds = item.BankIds ?? [];
+
+    if (bankIds.length === 0) {
       toast.info('Chưa có ngân hàng câu hỏi cho khóa học này.');
-      navigate(`/mentor/question-banks/create?courseId=${item.courseId}`);
+      navigate(`/mentor/question-banks/create?courseId=${item.CourseId}`);
       return;
     }
 
-    if (banks.length === 1) {
-      navigate(`/mentor/question-banks/${banks[0].id}`);
+    if (bankIds.length === 1) {
+      navigate(`/mentor/question-banks/${bankIds[0]}?courseId=${item.CourseId}`);
       return;
     }
 
-    navigate(`/mentor/courses/${item.courseId}/questions`);
-  };
+    navigate(`/mentor/courses/${item.CourseId}/questions`);
+  }, [item.BankIds, item.CourseId, navigate]);
 
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        p: { xs: 2, sm: 2.25 },
-        borderRadius: '20px',
-        bgcolor: '#FFFFFF',
-        border: `1px solid ${alpha('#0F172A', 0.08)}`,
-        boxShadow: theme.ios18?.shadow?.sm,
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        alignItems: { xs: 'stretch', md: 'center' },
-        gap: { xs: 1.75, md: 2.5 },
-      }}
-    >
-      <CourseThumbnail courseName={item.courseName} />
+    <Box sx={{ ...ROW_SX, boxShadow: theme.ios18?.shadow?.sm }}>
+      <CourseThumbnail thumbnail={item.Thumbnail} courseName={item.CourseName} />
 
-      <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
+      <Box sx={{ flex: 1, minWidth: 0, pr: { xs: item.LevelDisplayName ? 18 : 10, md: 0 } }}>
         <Typography
           sx={{
             display: 'block',
@@ -153,7 +189,7 @@ export default function MentorQuestionBankRow({ item }) {
             mb: 0.75,
           }}
         >
-          {item.courseName}
+          {item.CourseName}
         </Typography>
 
         <Typography
@@ -168,38 +204,38 @@ export default function MentorQuestionBankRow({ item }) {
             overflow: 'hidden',
           }}
         >
-          {truncateText(item.description, 140)}
+          {description}
         </Typography>
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
           <MetricItem
             icon={QuizOutlinedIcon}
             label="Tổng câu hỏi"
-            value={item.totalQuestionCount ?? 0}
+            value={item.TotalQuestionCount ?? 0}
             iconColor={METRIC_COLORS.total}
           />
           <MetricItem
             icon={CheckCircleOutlineRoundedIcon}
             label="Đã xuất bản"
-            value={item.publishedQuestionCount ?? 0}
+            value={item.PublishedQuestionCount ?? 0}
             iconColor={METRIC_COLORS.published}
           />
           <MetricItem
             icon={EditNoteRoundedIcon}
             label="Bản nháp"
-            value={item.draftQuestionCount ?? 0}
+            value={item.DraftQuestionCount ?? 0}
             iconColor={METRIC_COLORS.draft}
           />
           <MetricItem
             icon={RouteOutlinedIcon}
             label="Chương có câu hỏi"
-            value={item.chapterWithQuestionCount ?? 0}
+            value={item.ChapterWithQuestionCount ?? 0}
             iconColor={METRIC_COLORS.chapters}
           />
           <MetricItem
             icon={AssignmentOutlinedIcon}
             label="Quiz/Test"
-            value={item.quizCount ?? 0}
+            value={item.QuizCount ?? 0}
             iconColor={METRIC_COLORS.quiz}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
@@ -209,7 +245,7 @@ export default function MentorQuestionBankRow({ item }) {
             <Typography sx={{ fontSize: 12, color: MUTED }}>
               Cập nhật ngân hàng:{' '}
               <Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>
-                {formatMentorCourseDate(item.questionBankUpdatedAt)}
+                {formattedUpdatedAt}
               </Box>
             </Typography>
           </Box>
@@ -244,8 +280,17 @@ export default function MentorQuestionBankRow({ item }) {
           right: { xs: 16, md: 'auto' },
           flexShrink: 0,
           alignSelf: { md: 'flex-start' },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: { xs: 'flex-end', md: 'flex-start' },
+          flexWrap: 'wrap',
+          gap: 0.75,
+          maxWidth: { xs: '55%', md: 'none' },
         }}
       >
+        {item.LevelDisplayName && levelChipSx && (
+          <Chip size="small" label={item.LevelDisplayName} sx={levelChipSx} />
+        )}
         <Chip
           size="small"
           label={statusChip.label}
@@ -255,3 +300,5 @@ export default function MentorQuestionBankRow({ item }) {
     </Box>
   );
 }
+
+export default memo(MentorQuestionBankRow);
