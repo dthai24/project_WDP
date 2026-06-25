@@ -1,10 +1,8 @@
 /**
- * Bootstrap trang Question Bank:
- * - Không có chapterId → danh sách Questions_Path
- * - Có chapterId → editor câu hỏi 1 chương
+ * Bootstrap trang Detail Question Bank — reload an toàn khi F5 / đổi chương.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   TEST_SKILL_LISTENING,
   buildQuestionSnapshotMap,
@@ -13,11 +11,10 @@ import {
   getSectionsBySkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
-  fetchBankPathList,
   fetchCourseContentOutlineForQB,
   fetchCourseForQB,
-  fetchQuestionBankById,
   findQuestionBankByChapter,
+  getQuestionBankById,
 } from '@/features/mentor/services/questionBankService';
 
 function getFirstListeningSectionId(sections) {
@@ -28,69 +25,83 @@ function getFirstListeningSectionId(sections) {
   );
 }
 
+function createEmptyEditorState() {
+  return {
+    bank: null,
+    course: null,
+    courseChapters: [],
+    sections: [],
+    sectionErrors: {},
+    activeSkill: TEST_SKILL_LISTENING,
+    activeSectionId: '',
+    persistedQuestionIds: new Set(),
+  };
+}
+
 export default function useQuestionBankDetailBootstrap() {
   const navigate = useNavigate();
   const { questionBankId } = useParams();
-  const [searchParams] = useSearchParams();
-  const chapterIdFromUrl = searchParams.get('chapterId') ?? '';
-  const isPathListMode = !chapterIdFromUrl;
   const requestIdRef = useRef(0);
   const questionSnapshotRef = useRef(new Map());
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadedBankId, setLoadedBankId] = useState('');
   const [bank, setBank] = useState(null);
-  const [bankPaths, setBankPaths] = useState([]);
   const [course, setCourse] = useState(null);
-  const [coursePaths, setCoursePaths] = useState([]);
-  const [pathsLoading, setPathsLoading] = useState(false);
+  const [courseChapters, setCourseChapters] = useState([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
   const [sections, setSections] = useState([]);
   const [sectionErrors, setSectionErrors] = useState({});
   const [activeSkill, setActiveSkill] = useState(TEST_SKILL_LISTENING);
   const [activeSectionId, setActiveSectionId] = useState('');
   const [persistedQuestionIds, setPersistedQuestionIds] = useState(() => new Set());
 
-  const loadData = useCallback(async () => {
-    const requestId = ++requestIdRef.current;
+  const resetEditorState = useCallback(() => {
+    const empty = createEmptyEditorState();
+    setBank(empty.bank);
+    setCourse(empty.course);
+    setCourseChapters(empty.courseChapters);
+    setSections(empty.sections);
+    setSectionErrors(empty.sectionErrors);
+    setActiveSkill(empty.activeSkill);
+    setActiveSectionId(empty.activeSectionId);
+    setPersistedQuestionIds(empty.persistedQuestionIds);
+    questionSnapshotRef.current = new Map();
+    setLoadedBankId('');
+    setNotFound(false);
+  }, []);
+
+  useEffect(() => {
+    requestIdRef.current += 1;
+    setLoading(true);
+    resetEditorState();
+  }, [questionBankId, resetEditorState]);
+
+  const loadBank = useCallback(async () => {
+    const requestId = requestIdRef.current;
+
     setLoading(true);
     setNotFound(false);
-    setBank(null);
-    setBankPaths([]);
-    setSections([]);
-    setCourse(null);
-    setCoursePaths([]);
 
     try {
-      if (isPathListMode) {
-        const res = await fetchBankPathList(questionBankId);
-        if (requestIdRef.current !== requestId) return;
-        if (!res.ok) {
-          setNotFound(true);
-          return;
-        }
-        setBank(res.bank);
-        setBankPaths(res.paths);
-
-        const courseRes = await fetchCourseForQB(res.bank.courseId);
-        if (requestIdRef.current === requestId && courseRes.ok) {
-          setCourse(courseRes.course);
-        }
-        return;
-      }
-
-      const res = await fetchQuestionBankById(questionBankId, {
-        chapterId: chapterIdFromUrl,
-      });
+      const res = await getQuestionBankById(questionBankId);
       if (requestIdRef.current !== requestId) return;
+
       if (!res.ok || !res.bank) {
         setNotFound(true);
+        setBank(null);
+        setLoadedBankId('');
         return;
       }
 
       const loadedBank = res.bank;
-      const loadedSections = ensureQuestionBankSkillSections(loadedBank.sections ?? []);
+      const loadedSections = ensureQuestionBankSkillSections(
+        loadedBank.sections?.length > 0 ? loadedBank.sections : [],
+      );
 
       setBank(loadedBank);
+      setLoadedBankId(String(loadedBank.id));
       setSections(loadedSections);
       setSectionErrors({});
       setActiveSkill(TEST_SKILL_LISTENING);
@@ -98,50 +109,44 @@ export default function useQuestionBankDetailBootstrap() {
       setPersistedQuestionIds(collectPersistedQuestionIds(loadedSections));
       questionSnapshotRef.current = buildQuestionSnapshotMap(loadedSections);
 
-      setPathsLoading(true);
-      const [courseRes, outlineRes] = await Promise.all([
-        fetchCourseForQB(loadedBank.courseId),
-        fetchCourseContentOutlineForQB(loadedBank.courseId),
-      ]);
-      if (requestIdRef.current !== requestId) return;
-      if (courseRes.ok) setCourse(courseRes.course);
-      if (outlineRes.ok) setCoursePaths(outlineRes.chapters ?? []);
+      setChaptersLoading(true);
+      try {
+        const [courseRes, outlineRes] = await Promise.all([
+          fetchCourseForQB(loadedBank.courseId),
+          fetchCourseContentOutlineForQB(loadedBank.courseId),
+        ]);
+        if (requestIdRef.current !== requestId) return;
+
+        if (courseRes.ok) setCourse(courseRes.course);
+        if (outlineRes.ok) setCourseChapters(outlineRes.chapters ?? []);
+      } finally {
+        if (requestIdRef.current === requestId) {
+          setChaptersLoading(false);
+        }
+      }
     } catch {
-      if (requestIdRef.current === requestId) setNotFound(true);
+      if (requestIdRef.current === requestId) {
+        setNotFound(true);
+        setLoadedBankId('');
+      }
     } finally {
       if (requestIdRef.current === requestId) {
         setLoading(false);
-        setPathsLoading(false);
       }
     }
-  }, [chapterIdFromUrl, isPathListMode, questionBankId]);
+  }, [questionBankId]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const openPath = useCallback(
-    (path) => {
-      navigate(
-        `/mentor/question-banks/${questionBankId}?courseId=${bank?.courseId}&chapterId=${path.PathId}`,
-      );
-    },
-    [bank?.courseId, navigate, questionBankId],
-  );
-
-  const backToPathList = useCallback(() => {
-    navigate(`/mentor/question-banks/${questionBankId}?courseId=${bank?.courseId ?? ''}`);
-  }, [bank?.courseId, navigate, questionBankId]);
+    loadBank();
+  }, [loadBank]);
 
   const selectChapter = useCallback(
-    async (nextChapterId) => {
+    (nextChapterId) => {
       if (!bank?.courseId || String(nextChapterId) === String(bank.chapterId)) return;
 
-      const bankRes = await findQuestionBankByChapter(bank.courseId, nextChapterId);
+      const bankRes = findQuestionBankByChapter(bank.courseId, nextChapterId);
       if (bankRes.ok) {
-        navigate(
-          `/mentor/question-banks/${bankRes.bank.BankId ?? bankRes.bank.id}?courseId=${bank.courseId}&chapterId=${nextChapterId}`,
-        );
+        navigate(`/mentor/question-banks/${bankRes.bank.id}`);
         return;
       }
 
@@ -152,17 +157,17 @@ export default function useQuestionBankDetailBootstrap() {
     [bank, navigate],
   );
 
+  const isReady = !loading && loadedBankId === String(questionBankId) && Boolean(bank);
+
   return {
     questionBankId,
-    isPathListMode,
-    loading,
+    loading: !isReady && !notFound,
     notFound,
     bank,
-    bankPaths,
     setBank,
     course,
-    coursePaths,
-    pathsLoading,
+    courseChapters,
+    chaptersLoading,
     sections,
     setSections,
     sectionErrors,
@@ -174,10 +179,8 @@ export default function useQuestionBankDetailBootstrap() {
     persistedQuestionIds,
     setPersistedQuestionIds,
     questionSnapshotRef,
-    workspaceKey: `${questionBankId}-${chapterIdFromUrl || 'paths'}`,
-    reloadBank: loadData,
-    openPath,
-    backToPathList,
+    workspaceKey: questionBankId ?? '',
+    reloadBank: loadBank,
     selectChapter,
   };
 }

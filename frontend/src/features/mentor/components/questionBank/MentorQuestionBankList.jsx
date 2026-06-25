@@ -1,11 +1,10 @@
-import { memo } from 'react';
 import { Box, alpha } from '@mui/material';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import MentorQuestionBankRow from './MentorQuestionBankRow';
 import EmptyState from '@/shared/ui/EmptyState';
 import Loading from '@/shared/ui/Loading';
 
-function MentorQuestionBankList({
+export default function MentorQuestionBankList({
   items = [],
   loading = false,
   hasAnyItems = true,
@@ -48,10 +47,8 @@ function MentorQuestionBankList({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       {items.map((item) => (
-        <MentorQuestionBankRow key={item.CourseId} item={item} />
+        <MentorQuestionBankRow key={item.courseId} item={item} />
       ))}
     </Box>
   );
 }
-
-export default memo(MentorQuestionBankList);
