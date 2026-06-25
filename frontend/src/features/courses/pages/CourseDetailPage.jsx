@@ -448,10 +448,17 @@ export default function CourseDetailPage() {
         // Kiểm tra xem có dữ liệu không
         if (result.success && result.data && result.data.length > 0) {
           const dbData = result.data[0];
-          // 1. Xử lý ảnh lỗi (quét cả biến thumbnail viết thường lẫn hoa)
+          // 1. Xử lý ảnh lỗi và tạo URL tuyệt đối
           let courseImage = dbData.thumbnail || dbData.Thumbnail;
-          if (courseImage === 'CHƯA FIX LỖI ẢNH') {
+          if (courseImage === 'CHƯA FIX LỖI ẢNH' || !courseImage) {
             courseImage = null;
+          } else {
+            let val = String(courseImage).trim();
+            if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image') || val.startsWith('blob:')) {
+              courseImage = val;
+            } else {
+              courseImage = `http://localhost:5000${val.startsWith('/') ? val : '/' + val}`;
+            }
           }
           // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
           const mappedCourse = {
@@ -459,7 +466,7 @@ export default function CourseDetailPage() {
             title: dbData.CourseName,
             description: dbData.Description,
             shortDescription: dbData.Description,
-            thumbnail: dbData.Thumbnail,
+            thumbnail: courseImage,
             category: dbData.CategoryDisplayName,
             categoryId: dbData.CategoryId,
             level: dbData.LevelDisplayName,
