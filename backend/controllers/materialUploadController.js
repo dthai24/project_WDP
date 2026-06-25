@@ -1,4 +1,4 @@
-const { uploadDocumentFile, uploadTextHtml } = require('../services/cloudinaryService');
+const { uploadAudioFile, uploadDocumentFile, uploadTextHtml } = require('../services/cloudinaryService');
 
 function mapUploadErrorMessage(error) {
   if (error?.statusCode === 400) return error.message;
@@ -30,6 +30,14 @@ async function uploadMaterial(req, res) {  try {
       });
     }
 
+    if (type === 'AUDIO') {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'Không nhận được file audio.' });
+      }
+      const data = await uploadAudioFile(req.file);
+      return res.json({ success: true, data: { ...data, materialType: 'AUDIO' } });
+    }
+
     if (type === 'TEXT') {
       const html = req.body?.html ?? req.body?.content;
       const title = req.body?.title;
@@ -44,7 +52,7 @@ async function uploadMaterial(req, res) {  try {
 
     return res.status(400).json({
       success: false,
-      message: 'type phải là TEXT hoặc DOC.',
+      message: 'type phải là TEXT, DOC hoặc AUDIO.',
     });
   } catch (error) {
     console.error('[uploadMaterial]', error.message);

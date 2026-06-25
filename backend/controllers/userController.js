@@ -28,7 +28,7 @@ const getProfile = async (req, res) => {
     const catReq = new sql.Request();
     catReq.input('userId', sql.Int, userId);
     const catResult = await catReq.query(`
-       SELECT c.CategoryId, c.DisplayName 
+       SELECT c.CategoryId, c.DisplayName, c.DisplayName 
       FROM User_Categories uc
       INNER JOIN Categories c ON uc.CategoryId = c.CategoryId
       WHERE uc.UserId = @userId
