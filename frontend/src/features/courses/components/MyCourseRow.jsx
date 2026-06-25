@@ -47,6 +47,7 @@ import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
+import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import MyCourseProgressSummary from "./MyCourseProgressSummary";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
@@ -61,17 +62,6 @@ const ghostIconSx = {
   transition: "all 0.2s ease",
   "&:hover": { bgcolor: "rgba(15,23,42,0.04)" },
 };
-
-function getImageUrl(thumbnail) {
-  if (!thumbnail) return '';
-  let value = String(thumbnail).trim();
-  if (value === 'CHƯA FIX LỖI ẢNH') return '';
-  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image') || value.startsWith('blob:')) {
-    return value;
-  }
-  const BASE_IMG_URL = "http://localhost:5000";
-  return `${BASE_IMG_URL}${value.startsWith('/') ? value : '/' + value}`;
-}
 
 function normalizeCourse(course = {}) {
   const progress = course.progressPercentage ?? course.progress ?? 0;
@@ -280,39 +270,18 @@ export default function MyCourseRow({
           pr: { xs: 2, md: canExpand || isSavedRow ? 7 : 2.25 },
         }}
       >
-        <Box
+        <ThumbnailImage
+          src={data.thumbnail}
+          label={data.courseName}
+          alt={data.courseName}
+          iconSize={20}
           sx={{
             width: { xs: "100%", md: 160 },
             flexShrink: 0,
             aspectRatio: "16 / 9",
             borderRadius: "12px",
-            overflow: "hidden",
-            bgcolor: alpha(theme.palette.primary.main, 0.06),
-            backgroundImage: getImageUrl(data.thumbnail) ? `url("${getImageUrl(data.thumbnail)}")` : "none",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
-        >
-          {!data.thumbnail && (
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                color: "primary.main",
-              }}
-            >
-              <MenuBookOutlinedIcon sx={{ fontSize: 20 }} />
-            </Box>
-          )}
-        </Box>
+        />
 
         <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1.25 }}>
           <Typography

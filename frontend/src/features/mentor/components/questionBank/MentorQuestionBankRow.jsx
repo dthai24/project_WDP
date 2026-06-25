@@ -23,7 +23,7 @@ import {
   formatMentorCourseDate,
   truncateText,
 } from '@/features/mentor/utils/mentorCourseUtils';
-import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
+import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 import { resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
 const TEXT = '#0F172A';
@@ -87,38 +87,6 @@ function getStatusChip(status) {
   };
 }
 
-const CourseThumbnail = memo(function CourseThumbnail({ thumbnail, courseName }) {
-  const imageUrl = resolveCourseThumbnailUrl(thumbnail);
-
-  return (
-    <Box
-      sx={{
-        width: { xs: '100%', sm: 112 },
-        height: { xs: 140, sm: 72 },
-        borderRadius: '14px',
-        flexShrink: 0,
-        overflow: 'hidden',
-        bgcolor: alpha(PRIMARY, 0.1),
-        display: 'grid',
-        placeItems: 'center',
-      }}
-    >
-      {imageUrl ? (
-        <Box
-          component="img"
-          src={imageUrl}
-          alt={courseName ? `Ảnh khóa học ${courseName}` : 'Ảnh khóa học'}
-          loading="lazy"
-          decoding="async"
-          sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-      ) : (
-        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
-      )}
-    </Box>
-  );
-});
-
 const MetricItem = memo(function MetricItem({ icon: Icon, label, value, iconColor }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
@@ -176,7 +144,18 @@ function MentorQuestionBankRow({ item }) {
 
   return (
     <Box sx={{ ...ROW_SX, boxShadow: theme.ios18?.shadow?.sm }}>
-      <CourseThumbnail thumbnail={item.Thumbnail} courseName={item.CourseName} />
+      <ThumbnailImage
+        src={item.Thumbnail}
+        label={item.CourseName}
+        alt={item.CourseName}
+        iconSize={28}
+        sx={{
+          width: { xs: '100%', sm: 112 },
+          height: { xs: 140, sm: 72 },
+          borderRadius: '14px',
+          flexShrink: 0,
+        }}
+      />
 
       <Box sx={{ flex: 1, minWidth: 0, pr: { xs: item.LevelDisplayName ? 18 : 10, md: 0 } }}>
         <Typography

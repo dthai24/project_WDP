@@ -1,15 +1,12 @@
 import { Box, Typography } from '@mui/material';
-import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import {
   COURSE_THUMBNAIL_ASPECT,
   CREATE_CARD_SX,
   MUTED,
-  PRIMARY,
   TEXT,
-} from './mentorCourseCreateStyles';
-import MentorCardSectionTitle from './MentorCardSectionTitle';
+} from './mentorCourseCreateStyles';import MentorCardSectionTitle from './MentorCardSectionTitle';
+import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 import { formatMentorCourseDate, isCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
-import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
 
 function InfoRow({ label, value }) {
   return (
@@ -26,10 +23,6 @@ function InfoRow({ label, value }) {
 
 export default function MentorCourseOverviewTab({ course }) {
   const published = isCoursePublished(course);
-  const thumbnail = resolveCourseThumbnailUrl(
-    course.Thumbnail,
-    course.CourseUpdateAt ?? course.UpdatedAt ?? course.CourseCreateAt,
-  );
 
   return (
     <Box sx={CREATE_CARD_SX}>
@@ -42,29 +35,19 @@ export default function MentorCourseOverviewTab({ course }) {
           gap: 2.5,
         }}
       >
-        <Box
+        <ThumbnailImage
+          src={course.Thumbnail}
+          label={course.CourseName}
+          alt={course.CourseName}
+          cacheKey={course.CourseUpdateAt ?? course.UpdatedAt ?? course.CourseCreateAt}
+          iconSize={40}
           sx={{
             width: '100%',
             aspectRatio: String(COURSE_THUMBNAIL_ASPECT),
             borderRadius: '16px',
-            overflow: 'hidden',
-            bgcolor: 'rgba(15,23,42,0.04)',
             border: '1px solid rgba(15,23,42,0.08)',
-            display: 'grid',
-            placeItems: 'center',
           }}
-        >
-          {course.Thumbnail ? (
-            <Box
-              component="img"
-              src={thumbnail}
-              alt={course.CourseName}
-              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            <MenuBookOutlinedIcon sx={{ fontSize: 40, color: PRIMARY, opacity: 0.65 }} />
-          )}
-        </Box>
+        />
 
         <Box>
           <InfoRow label="Tên khóa học" value={course.CourseName} />

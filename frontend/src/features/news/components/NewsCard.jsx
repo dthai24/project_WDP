@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { resolveCategoryChipSx } from '@/shared/catalog/catalogRegistry';
 import { formatNewsDate } from '@/features/admin/utils/adminNewsUtils';
 import { buildNewsDetailPath } from '@/features/news/utils/newsListParams';
+import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 
 const PRIMARY = '#0891B2';
 const TEXT = '#0F172A';
@@ -55,45 +56,17 @@ export default function NewsCard({ article, listSearchParams }) {
         },
       }}
     >
-      <Box
-        sx={{
-          height: 180,
-          overflow: 'hidden',
-          position: 'relative',
-          bgcolor: alpha(PRIMARY, 0.05),
+      <ThumbnailImage
+        src={article.thumbnail}
+        label={article.title}
+        alt={article.title}
+        iconSize={36}
+        sx={{ height: 180, width: '100%' }}
+        imgSx={{
+          transition: 'transform 0.4s ease',
+          '.MuiBox-root:hover &': { transform: 'scale(1.04)' },
         }}
-      >
-        {article.thumbnail ? (
-          <Box
-            component="img"
-            src={article.thumbnail}
-            alt={article.title}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-              transition: 'transform 0.4s ease',
-              '.MuiBox-root:hover &': { transform: 'scale(1.04)' },
-            }}
-            onError={(e) => {
-              e.target.style.display = 'none';
-            }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <MenuBookOutlinedIcon sx={{ fontSize: 36, color: alpha(PRIMARY, 0.3) }} />
-          </Box>
-        )}
-      </Box>
+      />
 
       <Box sx={{ p: 2.25 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25, flexWrap: 'wrap' }}>

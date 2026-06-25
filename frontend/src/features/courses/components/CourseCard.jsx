@@ -16,6 +16,7 @@ import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
 
 // Local Components & Utils
 import AppButton from "@/shared/ui/AppButton";
+import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import CourseBookmarkButton from "./CourseBookmarkButton";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
@@ -126,57 +127,6 @@ function getMyCoursesStatusChip(progress) {
 
 /* ─── sub-components ─── */
 
-function getImageUrl(thumbnail) {
-  if (!thumbnail) return '';
-  let value = String(thumbnail).trim();
-  if (value === 'CHƯA FIX LỖI ẢNH') return '';
-  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image') || value.startsWith('blob:')) {
-    return value;
-  }
-  const BASE_IMG_URL = "http://localhost:5000";
-  return `${BASE_IMG_URL}${value.startsWith('/') ? value : '/' + value}`;
-}
-
-function CourseThumbnail({ thumbnail }) {
-  const theme = useTheme();
-  const imageUrl = getImageUrl(thumbnail);
-
-  return (
-    <Box
-      sx={{
-        width: "100%",
-        aspectRatio: "16 / 9",
-        overflow: "hidden",
-        bgcolor: alpha(theme.palette.primary.main, 0.06),
-        backgroundImage: imageUrl ? `url("${imageUrl}")` : "none",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      {!thumbnail && (
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            bgcolor: alpha(theme.palette.primary.main, 0.1),
-            color: "primary.main",
-          }}
-        >
-          <MenuBookOutlinedIcon sx={{ fontSize: 24 }} />
-        </Box>
-      )}
-    </Box>
-  );
-}
-
 function MetaInline({ icon: Icon, label }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -253,7 +203,13 @@ export default function CourseCard({
       {/* 
       ================= Hình thu nhỏ ==========================================
        */}
-      <CourseThumbnail thumbnail={data.thumbnail} />
+      <ThumbnailImage
+        src={data.thumbnail}
+        label={data.courseName}
+        alt={data.courseName}
+        iconSize={24}
+        sx={{ width: "100%", aspectRatio: "16 / 9", flexShrink: 0 }}
+      />
       {/* {console.log("huhusdfasdfdasf", data.thumbnail)} */}
 
       {/* ── Nội dung thẻ ── */}
