@@ -535,6 +535,24 @@ const clearCourseContent = async (courseId) => {
   request.input("courseId", sql.Int, Number(courseId));
 
   await request.query(`
+        DELETE qc
+        FROM Question_Choices qc
+        INNER JOIN Questions q ON qc.QuestionId = q.QuestionId
+        INNER JOIN Questions_Path qp ON q.Question_Path_Id = qp.Question_Path_Id
+        INNER JOIN Paths p ON qp.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE q
+        FROM Questions q
+        INNER JOIN Questions_Path qp ON q.Question_Path_Id = qp.Question_Path_Id
+        INNER JOIN Paths p ON qp.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
+        DELETE qp
+        FROM Questions_Path qp
+        INNER JOIN Paths p ON qp.PathId = p.PathId
+        WHERE p.CourseId = @courseId;
+
         DELETE un
         FROM User_Nodes un
         INNER JOIN Path_Nodes pn ON un.NodeId = pn.NodeId
