@@ -61,12 +61,70 @@ const geminiService = {
   },
 
   async streamResponse(userMessage, conversationHistory = [], onChunk) {
-    // For now, use generateResponse and call onChunk with full response
+    if (!userMessage.trim()) {
+      throw new Error("Tin nhắn không được để trống");
+    }
+
+    console.log("📤 Starting response stream from server...");
+
+    const response = await fetch(`${API_BASE_URL}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: userMessage,
+        history: conversationHistory,
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(
+        data.message || data.error || `Server error: ${response.status}`
+      );
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
     try {
-      const response = await this.generateResponse(userMessage, conversationHistory);
-      onChunk(response);
-    } catch (error) {
-      throw error;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+          const rawData = trimmed.substring(6);
+          if (rawData === "[DONE]") {
+            console.log("✅ Stream completed");
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(rawData);
+            if (parsed.text) {
+              onChunk(parsed.text);
+            } else if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+          } catch (jsonErr) {
+            console.warn("Failed to parse JSON stream chunk:", jsonErr);
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
     }
   },
 };
