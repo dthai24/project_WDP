@@ -20,3 +20,4 @@ backend/package-lock.json
 frontend/package-lock.json
 package-lock.json
 backend/config/db.js
+/.agents
