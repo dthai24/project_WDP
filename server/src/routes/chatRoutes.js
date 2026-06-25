@@ -18,13 +18,13 @@ Khi trả lời:
 - Viết ngắn gọn, sử dụng bullet points, in đậm từ khóa quan trọng và emojis tinh tế (🚀, 🎓, 🌟).
 - Nếu người dùng hỏi câu hỏi ngoài phạm vi học tiếng Anh hoặc hệ thống English Master, hãy từ chối một cách lịch sự, giải thích rõ giới hạn phạm vi hỗ trợ của trợ lý và hướng dẫn họ quay trở lại mục tiêu học tập tiếng Anh.`;
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const GEMINI_FALLBACK_MODELS = [
   GEMINI_MODEL,
-  "gemini-1.5-flash",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
   "gemini-2.0-flash-lite",
+  "gemini-1.5-flash",
 ].filter((model, index, models) => model && models.indexOf(model) === index);
 const MAX_HISTORY_MESSAGES = 12;
 
@@ -91,6 +91,8 @@ function isRetryableGeminiError(error) {
   return (
     message.includes("503") ||
     message.includes("429") ||
+    message.includes("404") ||
+    message.includes("not found") ||
     message.includes("high demand") ||
     message.includes("quota") ||
     message.includes("service unavailable") ||
