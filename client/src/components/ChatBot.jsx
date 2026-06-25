@@ -6,6 +6,7 @@ import {
   setError,
   clearError,
   resetChat,
+  updateLastMessageText,
 } from "../redux/chatSlice";
 import geminiService from "../services/geminiService";
 import "./ChatBot.css";
@@ -99,12 +100,27 @@ export default function ChatBot({ isOpen, onClose }) {
           text: msg.text,
         }));
 
-      const response = await geminiService.generateResponse(
+      // Add a placeholder bot message that we will stream text into
+      dispatch(addMessage({ text: "...", sender: "bot" }));
+      
+      let accumulatedText = "";
+      let isFirstChunk = true;
+      
+      await geminiService.streamResponse(
         messageToSend,
-        conversationHistory
+        conversationHistory,
+        (chunk) => {
+          if (isFirstChunk) {
+            isFirstChunk = false;
+            accumulatedText = chunk; // Replace the initial placeholder "..."
+            dispatch(setLoading(false));
+          } else {
+            accumulatedText += chunk;
+          }
+          dispatch(updateLastMessageText(accumulatedText));
+        }
       );
-
-      dispatch(addMessage({ text: response, sender: "bot" }));
+      
       dispatch(setLoading(false));
     } catch (err) {
       console.error("Chat error:", err);

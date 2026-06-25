@@ -18,12 +18,12 @@ Khi trả lời:
 - Viết ngắn gọn, sử dụng bullet points, in đậm từ khóa quan trọng và emojis tinh tế (🚀, 🎓, 🌟).
 - Nếu người dùng hỏi câu hỏi ngoài phạm vi học tiếng Anh hoặc hệ thống English Master, hãy từ chối một cách lịch sự, giải thích rõ giới hạn phạm vi hỗ trợ của trợ lý và hướng dẫn họ quay trở lại mục tiêu học tập tiếng Anh.`;
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 const GEMINI_FALLBACK_MODELS = [
   GEMINI_MODEL,
+  "gemini-1.5-flash",
+  "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
-  "gemini-flash-lite-latest",
-  "gemini-flash-latest",
   "gemini-2.0-flash-lite",
 ].filter((model, index, models) => model && models.indexOf(model) === index);
 const MAX_HISTORY_MESSAGES = 12;
@@ -119,7 +119,9 @@ router.post("/chat", async (req, res) => {
     console.log("📤 Sending to Gemini API...");
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const isStream = req.body.stream === true;
     let result;
+    let resultStream;
     let usedModel = GEMINI_MODEL;
     let lastError;
 
@@ -138,7 +140,11 @@ router.post("/chat", async (req, res) => {
           history: buildGeminiHistory(history),
         });
 
-        result = await chat.sendMessage(cleanMessage);
+        if (isStream) {
+          resultStream = await chat.sendMessageStream(cleanMessage);
+        } else {
+          result = await chat.sendMessage(cleanMessage);
+        }
         usedModel = modelName;
         break;
       } catch (error) {
@@ -149,6 +155,36 @@ router.post("/chat", async (req, res) => {
           throw error;
         }
       }
+    }
+
+    if (isStream) {
+      if (!resultStream) {
+        throw lastError || new Error("Gemini Streaming API failed");
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      let hasSentData = false;
+      try {
+        for await (const chunk of resultStream.stream) {
+          const chunkText = chunk.text();
+          if (chunkText) {
+            hasSentData = true;
+            res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+          }
+        }
+        res.write("data: [DONE]\n\n");
+        res.end();
+      } catch (streamError) {
+        console.error("❌ Error during streaming:", streamError);
+        if (!hasSentData) {
+          res.write(`data: ${JSON.stringify({ error: "Streaming failed" })}\n\n`);
+        }
+        res.end();
+      }
+      return;
     }
 
     if (!result) {

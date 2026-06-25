@@ -41,6 +41,12 @@ const chatSlice = createSlice({
       state.error = null;
       state.loading = false;
     },
+    updateLastMessageText: (state, action) => {
+      const lastMessage = state.messages[state.messages.length - 1];
+      if (lastMessage && lastMessage.sender === "bot") {
+        lastMessage.text = action.payload;
+      }
+    },
   },
 });
 
@@ -50,5 +56,6 @@ export const {
   setError,
   clearError,
   resetChat,
+  updateLastMessageText,
 } = chatSlice.actions;
 export default chatSlice.reducer;
