@@ -10,7 +10,7 @@ import MentorCourseContentBuilder from '@/features/mentor/components/course/Ment
 import MentorContentOverview from '@/features/mentor/components/course/MentorContentOverview';
 import MentorCourseLeaveDialog from '@/features/mentor/components/course/MentorCourseLeaveDialog';
 import MentorChapterDraftDialog from '@/features/mentor/components/course/MentorChapterDraftDialog';
-import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { MUTED, PAGE_TITLE_SX, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { useMentorCourseLeaveGuard } from '@/features/mentor/hooks/useMentorCourseLeaveGuard';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
 import { getUser } from '@/features/auth/utils/authUtils';
@@ -526,17 +526,7 @@ export default function MentorEditCourseContentPage() {
         </Typography>
       </Breadcrumbs>
 
-      <Typography
-        component="h1"
-        sx={{
-          fontSize: { xs: 24, sm: 28 },
-          fontWeight: 800,
-          color: TEXT,
-          letterSpacing: '-0.02em',
-          mb: 1.75,
-          maxWidth: 720,
-        }}
-      >
+      <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 1.75, maxWidth: 720 }}>
         Chỉnh sửa nội dung khóa học
       </Typography>
 

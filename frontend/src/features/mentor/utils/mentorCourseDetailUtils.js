@@ -67,6 +67,7 @@ export const MENTOR_COURSE_DETAIL_TABS = {
   COURSE: 'course',
   CONTENT: 'content',
   STUDENTS: 'students',
+  COMMENTS: 'comments',
 };
 
 export function parseMentorCourseDetailTab(searchParams) {
@@ -77,6 +78,9 @@ export function parseMentorCourseDetailTab(searchParams) {
   }
   if (tab === MENTOR_COURSE_DETAIL_TABS.STUDENTS) {
     return MENTOR_COURSE_DETAIL_TABS.STUDENTS;
+  }
+  if (tab === MENTOR_COURSE_DETAIL_TABS.COMMENTS) {
+    return MENTOR_COURSE_DETAIL_TABS.COMMENTS;
   }
   return MENTOR_COURSE_DETAIL_TABS.COURSE;
 }

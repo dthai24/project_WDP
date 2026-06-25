@@ -18,12 +18,18 @@ import {
   FormControlLabel,
   Checkbox
 } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import AppButton from "@/shared/ui/AppButton";
+import { toast } from "@/shared/ui/Toast";
 import ChangePasswordDialog from "@/features/auth/components/ChangePasswordDialog";
 import { underlineFieldSx as valueUnderlineSx } from "@/shared/ui/UnderlineFieldPopup";
 import ProfileImageCropDialog from "@/shared/ProfileImageCropDialog";
+import { fetchUserProfile, uploadUserAvatar } from "@/features/profile/services/profileService";
+import {
+  getStoredAvatarUrl,
+  persistUserAvatar,
+} from "@/features/profile/utils/profileAvatarUtils";
 
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
@@ -283,19 +289,16 @@ const getInitialUser = () => {
   }
 };
 
-const getInitialAvatar = () => {
-  try {
-    const explicitAvatar = localStorage.getItem("avatarUrl");
-    if (explicitAvatar) return explicitAvatar;
-    const userObj = getInitialUser();
-    return userObj?.avatarUrl || null;
-  } catch (e) {
-    return null;
-  }
-};
+const getInitialAvatar = () => getStoredAvatarUrl();
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 export default function ProfilePage() {
+  const location = useLocation();
+  const isAdminShell = location.pathname.startsWith('/admin');
+  const breadcrumbHome = isAdminShell
+    ? { to: '/admin/accounts', label: 'Quản trị' }
+    : { to: '/home', label: 'Trang chủ' };
+
   const currentUser = useMemo(() => getInitialUser(), []);
 
   const [profile, setProfile] = useState(INITIAL_PROFILE);
@@ -317,14 +320,14 @@ export default function ProfilePage() {
 
     const fetchProfile = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/users/profile", {
-          headers: {
-            "x-user-id": cUser.userId
-          }
-        });
-        const data = await response.json();
+        const data = await fetchUserProfile();
         const p = data?.profile;
         if (data?.success && p) {
+          if (p.avatarUrl) {
+            const resolvedAvatar = persistUserAvatar(p.avatarUrl);
+            setAvatarUrl(resolvedAvatar);
+          }
+
           setProfile(prev => ({
             ...prev,
             name: data.profile.name || "",
@@ -421,53 +424,99 @@ export default function ProfilePage() {
   // ==========================================
   const fileInputRef = useRef(null);
   const [tempImageSrc, setTempImageSrc] = useState(null);
-  /**
-   * Hàm: handleAvatarSelected
-   * Tác dụng: Bắt file từ thẻ input và chuyển thành URL tạm để đưa vào khung cắt
-   */
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleAvatarSelected = (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file ảnh hợp lệ.');
+      return;
+    }
+
     setTempImageSrc(URL.createObjectURL(file));
     setCropperOpen(true);
   };
-  /**
-   * Hàm: handleAvatarUpload
-   * Tác dụng: Nhận ảnh đã cắt (Base64), chuyển thành file và Upload lên Server
-   */
-  const handleAvatarUpload = async (croppedBase64) => {
+
+  const mergeAvatarWithFrame = (faceBase64, frameUrl) => {
+    return new Promise((resolve, reject) => {
+      const FRAME_SIZE = 500;
+      const FACE_SIZE = 380;
+      const FACE_X = (FRAME_SIZE - FACE_SIZE) / 2;
+      const FACE_Y = (FRAME_SIZE - FACE_SIZE) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = FRAME_SIZE;
+      canvas.height = FRAME_SIZE;
+      const ctx = canvas.getContext('2d');
+      const faceImg = new Image();
+      faceImg.crossOrigin = 'Anonymous';
+      faceImg.src = faceBase64;
+
+      faceImg.onload = () => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(
+          FACE_X + FACE_SIZE / 2,
+          FACE_Y + FACE_SIZE / 2,
+          FACE_SIZE / 2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(faceImg, FACE_X, FACE_Y, FACE_SIZE, FACE_SIZE);
+        ctx.restore();
+
+        const frameImg = new Image();
+        frameImg.crossOrigin = 'Anonymous';
+        frameImg.src = frameUrl;
+        frameImg.onload = () => {
+          ctx.drawImage(frameImg, 0, 0, FRAME_SIZE, FRAME_SIZE);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        frameImg.onerror = () => reject('Lỗi tải Khung');
+      };
+      faceImg.onerror = () => reject('Lỗi tải Mặt');
+    });
+  };
+
+  const handleAvatarUpload = async ({ faceBase64, frameUrl }) => {
+    if (!currentUser?.userId) {
+      toast.error('Vui lòng đăng nhập lại để cập nhật ảnh đại diện.');
+      return;
+    }
+
     try {
-      // 1. Convert base64 sang định dạng Blob chuẩn
-      const res = await fetch(croppedBase64);
+      localStorage.setItem('rawAvatar', faceBase64);
+      localStorage.setItem('rawFrame', frameUrl || '');
+
+      const mergedBase64 = frameUrl ? await mergeAvatarWithFrame(faceBase64, frameUrl) : faceBase64;
+      const res = await fetch(mergedBase64);
       const blob = await res.blob();
+      const data = await uploadUserAvatar(blob);
 
-      // 2. Gói file vào FormData để gửi lên API
-      const formData = new FormData();
-      formData.append("avatar", blob, "avatar.png");
-
-      // 3. Gửi Server
-      const response = await fetch("http://localhost:5000/api/users/avatar", {
-        method: "POST",
-        headers: { "x-user-id": currentUser.userId },
-        body: formData,
-      });
-      const data = await response.json();
-
-      // 4. Nếu thành công -> Đóng popup & Cập nhật UI
-      if (data.success) {
-        const finalUrl = data.avatarUrl.startsWith('http') ? data.avatarUrl : `http://localhost:5000${data.avatarUrl}`;
-        setAvatarUrl(finalUrl);
-        setProfile((prev) => ({ ...prev, avatarUrl: finalUrl }));
-        localStorage.setItem('avatarUrl', finalUrl);
-        window.dispatchEvent(new Event('storage'));
-
-        // Đóng popup và reset biến tạm
-        setCropperOpen(false);
-        setTempImageSrc(null);
+      if (!data.success) {
+        toast.error(data.message ?? 'Không thể cập nhật ảnh đại diện');
+        return;
       }
+
+      const finalUrl = persistUserAvatar(data.avatarUrl);
+      setAvatarUrl(finalUrl);
+      setProfile((prev) => ({ ...prev, avatarUrl: finalUrl }));
+      toast.success('Đã cập nhật ảnh đại diện');
+
+      setCropperOpen(false);
+      if (tempImageSrc?.startsWith('blob:')) {
+        URL.revokeObjectURL(tempImageSrc);
+      }
+      setTempImageSrc(null);
     } catch (err) {
-      console.error("Upload error:", err);
-      alert("Tải ảnh thất bại!");
+      console.error('Upload error:', err);
+      toast.error('Tải ảnh thất bại');
     }
   };
 
@@ -515,7 +564,7 @@ export default function ProfilePage() {
       >
         <MuiLink
           component={Link}
-          to="/home"
+          to={breadcrumbHome.to}
           underline="none"
           sx={{
             fontSize: 13,
@@ -528,7 +577,7 @@ export default function ProfilePage() {
           }}
         >
           <HomeOutlinedIcon sx={{ fontSize: 14 }} />
-          Trang chủ
+          {breadcrumbHome.label}
         </MuiLink>
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
           Hồ sơ cá nhân
@@ -552,13 +601,15 @@ export default function ProfilePage() {
         {/* Avatar */}
         <Tooltip title="Đổi ảnh đại diện" placement="bottom">
           <Box
-            onClick={() => setCropperOpen(true)}
+            onClick={handleAvatarClick}
             sx={{
               position: "relative",
               width: { xs: 72, md: 88 },
               height: { xs: 72, md: 88 },
               flexShrink: 0,
               cursor: "pointer",
+              borderRadius: "50%",
+              overflow: "hidden",
               "&:hover .avatar-cam-overlay": { opacity: 1 },
             }}
           >
@@ -570,7 +621,8 @@ export default function ProfilePage() {
                 sx={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "contain",
+                  objectFit: "cover",
+                  borderRadius: "50%",
                 }}
               />
             ) : (
@@ -864,12 +916,16 @@ export default function ProfilePage() {
         ref={fileInputRef}
         onChange={handleAvatarSelected}
       />
-      {/* ── Popup cắt ảnh chuẩn form Mentor ── */}
+      {/* 🚀 Popup cắt ảnh chuẩn form Mentor 🚀 */}
       <ProfileImageCropDialog
         open={cropperOpen}
-        imageSrc={tempImageSrc}
+        imageSrc={tempImageSrc || localStorage.getItem('rawAvatar') || ''}
+        initialFrame={localStorage.getItem('rawFrame') || ''}
         onClose={() => {
           setCropperOpen(false);
+          if (tempImageSrc?.startsWith('blob:')) {
+            URL.revokeObjectURL(tempImageSrc);
+          }
           setTempImageSrc(null);
         }}
         onSave={handleAvatarUpload}

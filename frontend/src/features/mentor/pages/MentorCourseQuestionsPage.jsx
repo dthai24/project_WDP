@@ -24,6 +24,11 @@ import {
 } from '@/features/mentor/services/questionBankService';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
 
+import {
+  PAGE_DESCRIPTION_SX,
+  PAGE_TITLE_SX,
+} from '@/features/mentor/components/course/mentorCourseCreateStyles';
+
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
 const PRIMARY = '#0891B2';
@@ -45,7 +50,7 @@ function BankRow({ bank, onManage }) {
       }}
     >
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT, mb: 0.35 }}>
+        <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEXT, mb: 0.35 }}>
           {bank.chapterTitle || bank.title || `Chương #${bank.chapterId}`}
         </Typography>
         <Typography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
@@ -182,21 +187,12 @@ export default function MentorCourseQuestionsPage() {
         </AppButton>
       </Box>
 
-      <Typography
-        component="h1"
-        sx={{
-          fontSize: { xs: 22, sm: 26 },
-          fontWeight: 800,
-          color: TEXT,
-          letterSpacing: '-0.02em',
-          mb: 0.75,
-        }}
-      >
+      <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 0.75 }}>
         Ngân hàng câu hỏi theo chương
       </Typography>
-      <Typography sx={{ fontSize: 14, color: MUTED, mb: 2.5, maxWidth: 720, lineHeight: 1.55 }}>
+      <Typography sx={{ ...PAGE_DESCRIPTION_SX, mb: 2.5 }}>
         Khóa học:{' '}
-        <Box component="span" sx={{ fontWeight: 700, color: TEXT }}>
+        <Box component="span" sx={{ fontWeight: 600, color: TEXT }}>
           {courseName}
         </Box>
       </Typography>

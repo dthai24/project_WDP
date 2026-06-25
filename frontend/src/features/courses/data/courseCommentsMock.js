@@ -39,6 +39,14 @@ export function mapApiComment(row) {
     content: row.Content,
     createdAt: row.CreatedAt,
     userId: row.UserId,
+    isInstructor: Boolean(row.IsInstructor),
+    reply: row.ReplyContent
+      ? {
+          content: row.ReplyContent,
+          repliedAt: row.ReplyAt,
+          repliedByName: row.ReplyByName || 'Mentor',
+        }
+      : null,
   };
 }
 
