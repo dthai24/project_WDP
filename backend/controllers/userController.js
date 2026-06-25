@@ -11,7 +11,7 @@ const getProfile = async (req, res) => {
 
     // 1. Lấy thông tin cơ bản + Mục tiêu + Level ID
     const userResult = await userReq.query(`
-      SELECT FullName, Email, Phone, DateOfBirth, CreatedAt, CurrentLevelId, LearningGoal
+      SELECT FullName, Email, Phone, DateOfBirth, CreatedAt, CurrentLevelId, LearningGoal, AvatarUrl
       FROM Users
       WHERE UserId = @userId
     `);
@@ -58,6 +58,7 @@ const getProfile = async (req, res) => {
         joinedAt: user.CreatedAt,
         currentLevel: levelName,
         learningGoal: user.LearningGoal,
+        avatarUrl: user.AvatarUrl || null,
         categories: interestedCategories,
         stats: { learning: stats.learning || 0, completed: stats.completed || 0 }
       }

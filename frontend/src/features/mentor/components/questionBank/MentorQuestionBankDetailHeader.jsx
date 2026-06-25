@@ -22,7 +22,7 @@ import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCardMenu from '@/features/mentor/components/course/MentorChapterCardMenu';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
-import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
+import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 import { resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 import {
   TEST_SKILL_LABELS,
@@ -68,37 +68,6 @@ function StatInline({ icon: Icon, label, value, iconColor }) {
           {value}
         </Box>
       </Typography>
-    </Box>
-  );
-}
-
-function CourseThumbnail({ thumbnail, courseName, cacheKey }) {
-  const imageUrl = resolveCourseThumbnailUrl(thumbnail, cacheKey);
-
-  return (
-    <Box
-      sx={{
-        width: { xs: '100%', md: 52 },
-        height: { xs: 120, md: 52 },
-        borderRadius: { xs: '14px', md: '14px' },
-        flexShrink: 0,
-        overflow: 'hidden',
-        bgcolor: alpha(PRIMARY, 0.12),
-        backgroundImage: imageUrl ? `url("${imageUrl}")` : 'none',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        display: 'grid',
-        placeItems: 'center',
-      }}
-    >
-      {!imageUrl && (
-        <QuizOutlinedIcon
-          sx={{ fontSize: 24, color: PRIMARY, display: { xs: 'none', md: 'block' } }}
-        />
-      )}
-      {!imageUrl && courseName ? (
-        <Typography sx={{ display: 'none' }}>{courseName}</Typography>
-      ) : null}
     </Box>
   );
 }
@@ -376,10 +345,19 @@ export default function MentorQuestionBankDetailHeader({
           }}
         >
           {isCreateMode && course ? (
-            <CourseThumbnail
-              thumbnail={course.Thumbnail}
-              courseName={resolvedCourseName}
+            <ThumbnailImage
+              src={course.Thumbnail}
+              label={resolvedCourseName}
+              alt={resolvedCourseName}
               cacheKey={course.UpdatedAt}
+              icon={QuizOutlinedIcon}
+              iconSize={24}
+              sx={{
+                width: { xs: '100%', md: 52 },
+                height: { xs: 120, md: 52 },
+                borderRadius: '14px',
+                flexShrink: 0,
+              }}
             />
           ) : (
             <Box

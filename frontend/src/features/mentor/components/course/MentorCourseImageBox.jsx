@@ -12,7 +12,13 @@ import {
 import MentorCourseImageCropDialog from './MentorCourseImageCropDialog';
 import { MUTED, PRIMARY, SECTION_TITLE_SX } from './mentorCourseCreateStyles';
 
-export default function MentorCourseImageBox({ value, error, onChange, disabled }) {
+export default function MentorCourseImageBox({
+  value,
+  error,
+  onChange,
+  disabled,
+  title = 'Ảnh đại diện khóa học',
+}) {
   const inputRef = useRef(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [draftImage, setDraftImage] = useState('');
@@ -57,7 +63,7 @@ export default function MentorCourseImageBox({ value, error, onChange, disabled 
 
   return (
     <Box sx={{ height: '100%' }}>
-      <Typography sx={SECTION_TITLE_SX}>Ảnh đại diện khóa học</Typography>
+      <Typography sx={SECTION_TITLE_SX}>{title}</Typography>
 
       <Box
         sx={{

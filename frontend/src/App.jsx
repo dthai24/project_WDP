@@ -9,6 +9,7 @@ import TestPage from '@/features/dev/Test';
 import CourseListPage from '@/features/courses/pages/CourseListPage';
 import CourseDetailPage from '@/features/courses/pages/CourseDetailPage';
 import CourseLearningPage from '@/features/learning/pages/CourseLearningPage';
+import CourseTestPage from '@/features/learning/pages/CourseTestPage';
 import MyCoursesListPage from '@/features/learning/pages/MyCoursesListPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
@@ -30,6 +31,13 @@ import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuest
 import AdminAccountManagementPage from '@/features/admin/pages/AdminAccountManagementPage';
 import AdminCategoryManagementPage from '@/features/admin/pages/AdminCategoryManagementPage';
 import AdminLevelManagementPage from '@/features/admin/pages/AdminLevelManagementPage';
+import AdminNewsManagementPage from '@/features/admin/pages/AdminNewsManagementPage';
+import AdminNewsCreatePage from '@/features/admin/pages/AdminNewsCreatePage';
+import AdminNewsCreateContentPage from '@/features/admin/pages/AdminNewsCreateContentPage';
+import AdminNewsEditPage from '@/features/admin/pages/AdminNewsEditPage';
+import AdminNewsEditContentPage from '@/features/admin/pages/AdminNewsEditContentPage';
+import NewsListPage from '@/features/news/pages/NewsListPage';
+import NewsDetailPage from '@/features/news/pages/NewsDetailPage';
 
 import MainLayout from '@/shared/layout/MainLayout';
 import MentorLayout from '@/shared/layout/MentorLayout';
@@ -126,11 +134,47 @@ export default function App() {
           }
         />
         <Route
-          path="profile"
+          path="my-courses/:courseId/test/:scope/:chapterId?"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <CourseTestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="news"
           element={
             <ProtectedRoute
               allowedRoles={['Student', 'Admin']}
               roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+            >
+              <NewsListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="news/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student', 'Admin']}
+              roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+            >
+              <NewsDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={{
+                ...STUDENT_SHELL_BLOCK_REDIRECTS,
+                Admin: '/admin/profile',
+              }}
             >
               <ProfilePage />
             </ProtectedRoute>
@@ -151,6 +195,12 @@ export default function App() {
         <Route path="accounts" element={<AdminAccountManagementPage />} />
         <Route path="categories" element={<AdminCategoryManagementPage />} />
         <Route path="levels" element={<AdminLevelManagementPage />} />
+        <Route path="news/create/content" element={<AdminNewsCreateContentPage />} />
+        <Route path="news/create" element={<AdminNewsCreatePage />} />
+        <Route path="news/:newsId/edit/content" element={<AdminNewsEditContentPage />} />
+        <Route path="news/:newsId/edit" element={<AdminNewsEditPage />} />
+        <Route path="news" element={<AdminNewsManagementPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<AdminShellFallbackRedirect />} />
       </Route>
 
