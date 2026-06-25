@@ -5,12 +5,12 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
   border: none;
   color: white;
   font-size: 26px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 8px 24px rgba(219, 39, 119, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,7 +20,7 @@
 
 .floating-chat-btn:hover {
   transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.45);
+  box-shadow: 0 12px 30px rgba(219, 39, 119, 0.45);
 }
 
 .floating-chat-btn:active {
@@ -48,7 +48,7 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: rgba(99, 102, 241, 0.25);
+  background: rgba(236, 72, 153, 0.25);
   animation: pulse-ring 2s infinite;
 }
 
