@@ -50,13 +50,39 @@ function normalizeBank(bank) {
 }
 
 function getAllBanks() {
-  const stored = loadStoredBanks();
-  const storedIds = new Set(stored.map((b) => b.id));
-  const seeded = mentorQuestionBankSeed
-    .map(normalizeBank)
-    .filter(Boolean)
-    .filter((b) => !storedIds.has(b.id));
-  return [...stored.map(normalizeBank).filter(Boolean), ...seeded];
+  const stored = loadStoredBanks().map(normalizeBank).filter(Boolean);
+  const seedBanks = mentorQuestionBankSeed.map(normalizeBank).filter(Boolean);
+  const seedById = new Map(seedBanks.map((bank) => [bank.id, bank]));
+
+  const merged = stored.map((bank) => {
+    const seed = seedById.get(bank.id);
+    if (!seed) return bank;
+
+    const storedQuestionCount = countSectionQuestions(bank.sections);
+    const seedQuestionCount = countSectionQuestions(seed.sections);
+    if (storedQuestionCount === 0 && seedQuestionCount > 0) {
+      return seed;
+    }
+    return bank;
+  });
+
+  const mergedIds = new Set(merged.map((bank) => bank.id));
+  seedBanks.forEach((seed) => {
+    if (!mergedIds.has(seed.id)) {
+      merged.push(seed);
+    }
+  });
+
+  return merged;
+}
+
+/** Xóa bank đã lưu localStorage — dùng khi cần load lại seed mock từ git. */
+export function resetQuestionBankMockStorage() {
+  try {
+    localStorage.removeItem(QB_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 function nextId() {

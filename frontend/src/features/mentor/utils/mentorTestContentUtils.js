@@ -18,7 +18,7 @@ export const TEST_SKILLS = [TEST_SKILL_LISTENING, TEST_SKILL_READING, TEST_SKILL
 export const TEST_SKILL_LABELS = {
   [TEST_SKILL_LISTENING]: 'Nghe',
   [TEST_SKILL_READING]: 'Đọc',
-  [TEST_SKILL_WRITING]: 'Trắc nghiệm',
+  [TEST_SKILL_WRITING]: 'Từ vựng / Ngữ pháp',
 };
 
 export const TEST_SKILL_QB_LABELS = TEST_SKILL_LABELS;
@@ -476,8 +476,7 @@ export function createQuestionBankSkillSections() {
 
 /** Giữ dữ liệu bank hiện có, bổ sung bài trống cho kỹ năng còn thiếu. */
 export function ensureQuestionBankSkillSections(sections = []) {
-  const normalized = consolidateWritingSections(sections);
-  const persistedSections = getNonEmptyQuestionBankSections(normalized);
+  const persistedSections = getNonEmptyQuestionBankSections(sections);
   return TEST_SKILLS.flatMap((skill) => {
     const skillSections = getSectionsBySkill(persistedSections, skill);
     return skillSections.length > 0 ? skillSections : [createEmptyTestSection(skill)];
@@ -501,16 +500,22 @@ export function getSectionBaiNumber(section, sections = []) {
 
 export function getQuestionBankSectionNameFallback(section, sections = []) {
   const index = getSectionBaiNumber(section, sections);
+  if (section?.SkillType === TEST_SKILL_WRITING) {
+    return `Nhóm ${index}`;
+  }
   return `Bài số ${index}`;
 }
 
 export function getQuestionBankSectionNamePlaceholder(section) {
+  if (section?.SkillType === TEST_SKILL_WRITING) {
+    return 'Chưa có tên nhóm';
+  }
   return 'Chưa có tên bài';
 }
 
-/** Trắc nghiệm (WRITING) dùng một list phẳng — không thêm/xóa bài con. */
-export function supportsQuestionBankMultiSection(skillType) {
-  return skillType !== TEST_SKILL_WRITING;
+/** Nghe / Đọc / Từ vựng–Ngữ pháp đều có thể có nhiều bài hoặc nhóm. */
+export function supportsQuestionBankMultiSection(_skillType) {
+  return true;
 }
 
 /** Gộp mọi section WRITING thành một (migrate data cũ có nhiều nhóm). */
