@@ -21,6 +21,7 @@ import {
 import { Link } from "react-router-dom";
 
 import AppButton from "@/shared/ui/AppButton";
+import { toast } from "@/shared/ui/Toast";
 import ChangePasswordDialog from "@/features/auth/components/ChangePasswordDialog";
 import { underlineFieldSx as valueUnderlineSx } from "@/shared/ui/UnderlineFieldPopup";
 import ProfileImageCropDialog from "@/shared/ProfileImageCropDialog";
@@ -495,9 +496,9 @@ export default function ProfilePage() {
       // LƯU LẠI KHUNG ĐÃ CHỌN VÀO MÁY
       localStorage.setItem('rawFrame', frameUrl || "");
 
-      // 2. Chạy hàm ghép mặt vào Khung (nếu user không chọn khung thì nó chỉ trả về ảnh mặt gốc)
+      // 2. Chạy hàm ghép mặt vào Khung
       const mergedBase64 = frameUrl ? await mergeAvatarWithFrame(faceBase64, frameUrl) : faceBase64;
-      const res = await fetch(mergedBase64); // ĐÃ SỬA: Dùng ảnh đã ghép khung (mergedBase64) thay vì ảnh gốc
+      const res = await fetch(mergedBase64);
       const blob = await res.blob();
 
       // 2. Gói file vào FormData để gửi lên API
@@ -523,15 +524,16 @@ export default function ProfilePage() {
         // Đóng popup và reset biến tạm
         setCropperOpen(false);
         setTempImageSrc(null);
-        
-        // Tự động tải lại trang sau nửa giây để cập nhật đồng bộ toàn giao diện
+        toast.success("Cập nhật ảnh đại diện thành công!");
+
+        // Tự động tải lại trang sau nửa giây để cập nhật đồng bộ
         setTimeout(() => {
           window.location.reload();
         }, 500);
       }
     } catch (err) {
       console.error("Upload error:", err);
-      alert("Tải ảnh thất bại!");
+      alert("Tải ảnh thất bại: " + (err.message || err));
     }
   };
 
@@ -931,9 +933,7 @@ export default function ProfilePage() {
       {/* 🚀 Popup cắt ảnh chuẩn form Mentor 🚀 */}
       <ProfileImageCropDialog
         open={cropperOpen}
-        // Dùng ảnh gốc đã lưu trong máy làm hình nền, nếu chưa có thì để trống
         imageSrc={tempImageSrc || localStorage.getItem('rawAvatar') || ""}
-        // Lấy lại khung cũ từ máy
         initialFrame={localStorage.getItem('rawFrame') || ""}
         onClose={() => {
           setCropperOpen(false);
