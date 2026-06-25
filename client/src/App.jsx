@@ -1,87 +1,38 @@
 import React, { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import HomePage from "./pages/Home/HomePage";
-import LoginPage from "./pages/Auth/LoginPage";
-import AdminRoutes from "./routes/admin-routes";
+import AppRoutes from "./routes/AppRoutes";
+import ChatBot from "./components/ChatBot";
+import FloatingChatButton from "./components/FloatingChatButton";
 
-function MainRoutes({ currentUser, handleLogin, handleLogout }) {
-  const navigate = useNavigate();
-
-  return (
-    <Routes>
-      {/* Main Public Route */}
-      <Route
-        path="/"
-        element={
-          <HomePage
-            currentUser={currentUser}
-            onLoginClick={() => navigate("/login")}
-            onLogout={handleLogout}
-          />
-        }
-      />
-
-      <Route
-        path="/login"
-        element={
-          currentUser ? (
-            (currentUser.email === "minh@gmail.com" || (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))) ? (
-              <Navigate to="/admin" replace />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          ) : (
-            <LoginPage
-              onLogin={handleLogin}
-              onBackHome={() => navigate("/")}
-            />
-          )
-        }
-      />
-
-      {/* Admin Dashboard Subsystem Route Group */}
-      <Route path="/admin/*" element={<AdminRoutes />} />
-
-      {/* Fallback Redirect to Home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-}
-
-function App() {
+export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("learnpath_user");
+    const savedUser = localStorage.getItem("lexiora_user");
     if (savedUser) {
-      try {
-        setCurrentUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error("Error parsing saved user session:", error);
-        localStorage.removeItem("learnpath_user");
-      }
+      setCurrentUser(JSON.parse(savedUser));
     }
   }, []);
 
   const handleLogin = (userSession) => {
     setCurrentUser(userSession);
-    localStorage.setItem("learnpath_user", JSON.stringify(userSession));
+    localStorage.setItem("lexiora_user", JSON.stringify(userSession));
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem("learnpath_user");
+    localStorage.removeItem("lexiora_user");
   };
 
   return (
-    <BrowserRouter>
-      <MainRoutes
+    <>
+      <AppRoutes
         currentUser={currentUser}
-        handleLogin={handleLogin}
-        handleLogout={handleLogout}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
       />
-    </BrowserRouter>
+      <FloatingChatButton onClick={() => setIsChatOpen(true)} />
+      <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+    </>
   );
 }
-
-export default App;
