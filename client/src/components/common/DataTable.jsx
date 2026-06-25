@@ -11,6 +11,9 @@ export default function DataTable({
   filters = [],
   onFilterChange = () => {},
   loading = false,
+  sortColumn = "",
+  sortDirection = "",
+  onSort = () => {},
 }) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -85,9 +88,17 @@ export default function DataTable({
                   {columns.map((col) => (
                     <th
                       key={col.key}
-                      className={`px-6 py-4 md:table-cell ${col.className || ""}`}
+                      onClick={() => col.sortable && onSort(col.key)}
+                      className={`px-6 py-4 md:table-cell ${col.sortable ? "cursor-pointer select-none hover:bg-slate-100/50" : ""} ${col.className || ""}`}
                     >
-                      {col.label}
+                      <div className="flex items-center gap-1">
+                        <span>{col.label}</span>
+                        {col.sortable && (
+                          <span className="text-slate-455 font-mono text-[10px] ml-1">
+                            {sortColumn === col.key ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                          </span>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>

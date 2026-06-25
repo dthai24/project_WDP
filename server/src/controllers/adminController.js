@@ -462,17 +462,14 @@ const getCategoryHistory = async (req, res) => {
 // Get Users with pagination, search, role, status filters (Whitelisted to core 4 accounts)
 const getUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "", role = "", isBlocked = "" } = req.query;
+    const { page = 1, limit = 10, search = "", role = "", isBlocked = "", sortBy = "", sortOrder = "" } = req.query;
     
-    // Core whitelist emails to exclude sample junk accounts
-    const whitelist = ["minh@gmail.com", "admin@gmail.com", "mentor@gmail.com", "student@gmail.com"];
-    
-    // Base filter: Only show whitelist emails
-    const filter = { email: { $in: whitelist } };
+    // Base filter: Exclude Guests completely from listings
+    const filter = { role: { $ne: "Guest" } };
 
     if (search.trim()) {
       filter.$and = [
-        { email: { $in: whitelist } },
+        { role: { $ne: "Guest" } },
         {
           $or: [
             { name: { $regex: search, $options: "i" } },
@@ -504,8 +501,27 @@ const getUsers = async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const skipNum = (pageNum - 1) * limitNum;
 
+    // Define sort configuration
+    let sortObj = { createdAt: -1 }; // Default chronological sort
+    if (sortBy) {
+      let sortField = sortBy;
+      if (sortBy === "user" || sortBy === "name") {
+        sortField = "name";
+      } else if (sortBy === "role") {
+        sortField = "roles.roleId";
+      } else if (sortBy === "xp") {
+        sortField = "xp";
+      } else if (sortBy === "streak") {
+        sortField = "streak";
+      } else if (sortBy === "status" || sortBy === "isBlocked") {
+        sortField = "isBlocked";
+      }
+      const order = sortOrder === "desc" ? -1 : 1;
+      sortObj = { [sortField]: order };
+    }
+
     const total = await User.countDocuments(filter);
-    const data = await User.find(filter).sort({ createdAt: -1 }).skip(skipNum).limit(limitNum);
+    const data = await User.find(filter).sort(sortObj).skip(skipNum).limit(limitNum);
     const pages = Math.ceil(total / limitNum);
 
     return res.status(200).json({
