@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import StreakBadge from "@/shared/ui/StreakBadge";
 import { Box, Chip, Divider, Typography, alpha, useTheme } from "@mui/material";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
@@ -305,41 +306,7 @@ function CategoryChip({ category }) {
   );
 }
 
-function StreakBadge({ userId }) {
-  const [streak, setStreak] = useState(0);
 
-  useEffect(() => {
-    if (!userId) return;
-    fetch("http://localhost:5000/api/courses/streak", {
-      headers: { "x-user-id": String(userId) },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setStreak(data.streak || 0);
-      })
-      .catch(() => {});
-  }, [userId]);
-
-  return (
-    <Box
-      sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 0.5,
-        px: 1.25,
-        py: 0.5,
-        borderRadius: "99px",
-        bgcolor: "rgba(234,88,12,0.10)",
-        border: "1px solid rgba(234,88,12,0.20)",
-      }}
-    >
-      <Typography sx={{ fontSize: 16, lineHeight: 1 }}>🔥</Typography>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#EA580C" }}>
-        {streak} ngày
-      </Typography>
-    </Box>
-  );
-}
 
 /* ─── Section 1: Hero ────────────────────────────────────── */
 
@@ -1489,20 +1456,7 @@ export default function HomePage() {
       }}
     >
       {/* Greeting */}
-      <Typography
-        sx={{
-          fontSize: 13,
-          color: MUTED,
-          fontWeight: 500,
-          mb: { xs: 2.5, md: 3 },
-        }}
-      >
-        Xin chào,{" "}
-        <Box component="span" sx={{ color: PRIMARY, fontWeight: 700 }}>
-          {displayName}
-        </Box>{" "}
-      </Typography>
-      <StreakBadge userId={user.userId} />
+      <StreakBadge userId={user.userId} variant="yellowBox" displayName={displayName} />
 
       {/* Hero spans the full wide container */}
       <HeroSection onExplore={handleExplore} />

@@ -8,21 +8,23 @@ function ymd(date) {
 }
 
 function computeStreak(dateStrings) {
-  console.log("dateStrings =", dateStrings);
-  console.log("today =", ymd(new Date()));
-  if (!dateStrings.length) return 0;
+  if (!dateStrings.length) return { streak: 0, hasStudiedToday: false };
   const set = new Set(dateStrings);
   const cursor = new Date();
-  if (!set.has(ymd(cursor))) {
+  
+  const todayStr = ymd(cursor);
+  const hasStudiedToday = set.has(todayStr);
+  
+  if (!hasStudiedToday) {
     cursor.setDate(cursor.getDate() - 1);
-    if (!set.has(ymd(cursor))) return 0;
+    if (!set.has(ymd(cursor))) return { streak: 0, hasStudiedToday };
   }
   let streak = 0;
   while (set.has(ymd(cursor))) {
     streak++;
     cursor.setDate(cursor.getDate() - 1);
   }
-  return streak;
+  return { streak, hasStudiedToday };
 }
 
 async function getStreak(userId) {
