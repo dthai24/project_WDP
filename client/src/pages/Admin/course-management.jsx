@@ -13,6 +13,27 @@ const CourseManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [submittingId, setSubmittingId] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [categoriesOptions, setCategoriesOptions] = useState([]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await adminApi.getCategories({ limit: 100 });
+        if (res && res.success) {
+          const opts = (res.data || []).map(cat => ({
+            value: cat.code || cat.categoryName,
+            label: `${cat.code || cat.categoryName} - ${cat.name || cat.displayName}`
+          }));
+          setCategoriesOptions(opts);
+        }
+      } catch (err) {
+        console.error("Error loading categories for course management filter:", err);
+      }
+    };
+    loadCategories();
+  }, []);
 
   const fetchCourses = async (pageNum = 1, searchVal = "", statusVal = "", categoryVal = "") => {
     setLoading(true);
@@ -189,14 +210,7 @@ const CourseManagement = () => {
               key: "category",
               label: "All tag levels",
               value: categoryFilter,
-              options: [
-                { value: "ewp", label: "ewp - Working Professionals" },
-                { value: "efk", label: "efk - Kids English" },
-                { value: "ghse", label: "ghse - High School English" },
-                { value: "IELTS", label: "IELTS Prep" },
-                { value: "TOEIC", label: "TOEIC Prep" },
-                { value: "APTIS", label: "APTIS Prep" }
-              ]
+              options: categoriesOptions
             },
             {
               key: "status",

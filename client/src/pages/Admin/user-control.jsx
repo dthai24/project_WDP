@@ -19,7 +19,10 @@ const UserControl = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [viewLoadingId, setViewLoadingId] = useState(null);
 
-  const fetchUsers = async (pageNum = 1, searchVal = "", roleVal = "", statusVal = "") => {
+  const [sortColumn, setSortColumn] = useState("");
+  const [sortDirection, setSortDirection] = useState(""); // "asc", "desc", or ""
+
+  const fetchUsers = async (pageNum = 1, searchVal = "", roleVal = "", statusVal = "", sortByVal = "", sortDirVal = "") => {
     setLoading(true);
     setError(false);
     try {
@@ -28,7 +31,9 @@ const UserControl = () => {
         limit: 10,
         search: searchVal,
         role: roleVal,
-        isBlocked: statusVal
+        isBlocked: statusVal,
+        sortBy: sortByVal || undefined,
+        sortOrder: sortDirVal || undefined
       });
       if (res && res.success) {
         setUsers(res.data || []);
@@ -45,8 +50,23 @@ const UserControl = () => {
   };
 
   useEffect(() => {
-    fetchUsers(1, search, roleFilter, statusFilter);
+    fetchUsers(1, search, roleFilter, statusFilter, sortColumn, sortDirection);
   }, []);
+
+  const handleSort = (columnKey) => {
+    let nextDirection = "asc";
+    if (sortColumn === columnKey) {
+      if (sortDirection === "asc") {
+        nextDirection = "desc";
+      } else if (sortDirection === "desc") {
+        nextDirection = ""; // Reset sorting
+      }
+    }
+    const nextCol = nextDirection ? columnKey : "";
+    setSortColumn(nextCol);
+    setSortDirection(nextDirection);
+    fetchUsers(1, search, roleFilter, statusFilter, nextCol, nextDirection);
+  };
 
   const handleToggleBlock = async (userId, currentBlockedStatus) => {
     const action = currentBlockedStatus ? "unblock" : "block";
@@ -89,6 +109,7 @@ const UserControl = () => {
     {
       key: "name",
       label: "User",
+      sortable: true,
       render: (u) => (
         <div>
           <div className="font-bold text-slate-800">{u.name || u.fullName}</div>
@@ -100,6 +121,7 @@ const UserControl = () => {
     {
       key: "role",
       label: "Role",
+      sortable: true,
       render: (u) => {
         let color = "bg-slate-100 text-slate-655 border-slate-200";
         let text = "Student";
@@ -120,20 +142,27 @@ const UserControl = () => {
     {
       key: "xp",
       label: "XP Points",
+      sortable: true,
       render: (u) => (
-        <span className="font-bold text-slate-800">{u.xp !== undefined ? u.xp : 0} XP</span>
+        <span className="font-bold text-slate-800">
+          {u.role === "Admin" || u.role === "Mentor" ? "-" : `${u.xp !== undefined ? u.xp : 0} XP`}
+        </span>
       )
     },
     {
       key: "streak",
       label: "Streak",
+      sortable: true,
       render: (u) => (
-        <span className="text-slate-600 text-sm font-semibold">{u.streak !== undefined ? u.streak : 0} days</span>
+        <span className="text-slate-600 text-sm font-semibold">
+          {u.role === "Admin" || u.role === "Mentor" ? "-" : `${u.streak !== undefined ? u.streak : 0} days`}
+        </span>
       )
     },
     {
       key: "isBlocked",
       label: "Status",
+      sortable: true,
       render: (u) => (
         <span className={`px-2.5 py-0.5 border rounded-lg text-xs font-bold ${
           u.isBlocked
@@ -212,11 +241,11 @@ const UserControl = () => {
           columns={columns}
           data={users}
           pagination={pagination}
-          onPageChange={(page) => fetchUsers(page, search, roleFilter, statusFilter)}
+          onPageChange={(page) => fetchUsers(page, search, roleFilter, statusFilter, sortColumn, sortDirection)}
           searchPlaceholder="Search by user name or email..."
           onSearch={(val) => {
             setSearch(val);
-            fetchUsers(1, val, roleFilter, statusFilter);
+            fetchUsers(1, val, roleFilter, statusFilter, sortColumn, sortDirection);
           }}
           filters={[
             {
@@ -242,12 +271,15 @@ const UserControl = () => {
           onFilterChange={(key, val) => {
             if (key === "role") {
               setRoleFilter(val);
-              fetchUsers(1, search, val, statusFilter);
+              fetchUsers(1, search, val, statusFilter, sortColumn, sortDirection);
             } else if (key === "isBlocked") {
               setStatusFilter(val);
-              fetchUsers(1, search, roleFilter, val);
+              fetchUsers(1, search, roleFilter, val, sortColumn, sortDirection);
             }
           }}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          onSort={handleSort}
           loading={loading}
         />
       )}

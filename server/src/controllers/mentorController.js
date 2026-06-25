@@ -124,17 +124,19 @@ const reviewApplication = async (req, res) => {
 
     // Nếu phê duyệt thành công, cấp quyền Mentor cho tài khoản gmail đó
     if (status === "approved") {
-      const User = require("../models/User");
+      const User = require("../models/userModel");
       let user = await User.findOne({ email: application.email.toLowerCase() });
       if (user) {
         user.role = "Mentor";
+        user.roles = [{ roleId: 2, roleName: "Mentor" }];
         await user.save();
       } else {
         user = new User({
           email: application.email.toLowerCase(),
           name: application.fullName,
           password: "123456", // mật khẩu mặc định là 123456
-          role: "Mentor"
+          role: "Mentor",
+          roles: [{ roleId: 2, roleName: "Mentor" }]
         });
         await user.save();
       }

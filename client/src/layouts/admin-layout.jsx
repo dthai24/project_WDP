@@ -1,108 +1,96 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { healthApi, adminApi } from "../services/api";
 import {
   LayoutDashboard,
+  CheckSquare,
+  Folder,
   Users,
-  FolderTree,
   BookOpen,
-  History,
-  Bell,
-  Search,
-  User,
   Menu,
-  ChevronDown,
-  Award
+  X,
+  Bell,
+  LogOut,
+  MailOpen,
+  Mail,
+  Loader2
 } from "lucide-react";
 
 const AdminLayout = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   const navigate = useNavigate();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
 
-  const [unreadCount, setUnreadCount] = useState(0);
+  // Notifications dropdown states
   const [notifications, setNotifications] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  const [adminEmail, setAdminEmail] = useState("admin@gmail.com");
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Load admin email from localStorage
+  // Periodic health check pinging server/database status
   useEffect(() => {
-    const savedUser = localStorage.getItem("lexiora_user");
-    if (savedUser) {
+    const checkStatus = async () => {
       try {
-        const user = JSON.parse(savedUser);
-        if (user && user.email) {
-          setAdminEmail(user.email);
-        }
+        await healthApi.checkHealth();
+        setIsConnected(true);
       } catch (e) {
-        console.error(e);
+        setIsConnected(false);
       }
-    }
-  }, []);
-
-  // Fetch unread count for the notification bell
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:5000/api/mentor/applications/unread-count");
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.count);
-      }
-    } catch (error) {
-      console.error("Lỗi fetch unread count:", error);
-    }
-  };
-
-  // Fetch recent applications for the dropdown list
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:5000/api/mentor/applications");
-      if (response.ok) {
-        const data = await response.json();
-        // Lấy 5 đơn mới nhất làm thông báo
-        setNotifications(data.slice(0, 5));
-      }
-    } catch (error) {
-      console.error("Lỗi fetch notifications:", error);
-    }
-  };
-
-  // Poll for new requests every 10 seconds
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 10000);
+    };
+    
+    checkStatus();
+    const interval = setInterval(checkStatus, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
+  // Fetch header notifications
+  const fetchHeaderNotifications = async () => {
+    setNotifLoading(true);
+    try {
+      const res = await adminApi.getNotifications();
+      if (res && res.success) {
+        const notifs = res.data || [];
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter(n => !n.isRead).length);
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleBellClick = async () => {
-    const nextState = !isDropdownOpen;
-    setIsDropdownOpen(nextState);
-    if (nextState) {
-      // Khi mở ra: load thông báo và đánh dấu đã xem để xóa chấm đỏ
-      await fetchNotifications();
-      try {
-        await fetch("http://127.0.0.1:5000/api/mentor/applications/mark-read", {
-          method: "POST"
-        });
-        setUnreadCount(0);
-      } catch (err) {
-        console.error("Lỗi đánh dấu đã xem:", err);
-      }
+    } catch (err) {
+      console.error("Error fetching header notifications:", err);
+    } finally {
+      setNotifLoading(false);
     }
   };
 
-  // Sidebar navigation items
+  useEffect(() => {
+    fetchHeaderNotifications();
+    const interval = setInterval(fetchHeaderNotifications, 30000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("learnpath_token");
+    const userStr = localStorage.getItem("learnpath_user") || localStorage.getItem("lexiora_user");
+    let user = null;
+    try {
+      user = userStr ? JSON.parse(userStr) : null;
+    } catch (e) {
+      console.error("Error parsing user session:", e);
+    }
+
+    const isWhitelisted = user && (user.email === "admin@gmail.com" || user.email === "minh@gmail.com");
+    const isAdminUser = isWhitelisted || (user && (user.role === "Admin" || (Array.isArray(user.roles) && user.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))));
+    
+    if (isWhitelisted && token) {
+      return; // Grant bypass access, skip redirection and token clean-out
+    }
+
+    if (!token || !user || !isAdminUser) {
+      localStorage.clear();
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const menuItems = [
     {
       path: "/admin",
@@ -110,215 +98,304 @@ const AdminLayout = () => {
       icon: LayoutDashboard
     },
     {
-      path: "/admin/users",
-      label: "Manage Users",
-      icon: Users
-    },
-    {
-      path: "/admin/mentors",
-      label: "Mentor Requests",
-      icon: Award
-    },
-    {
-      path: "/admin/categories",
-      label: "Manage Categories",
-      icon: FolderTree
-    },
-    {
       path: "/admin/courses",
       label: "Course Management",
       icon: BookOpen
     },
     {
-      path: "/admin/history",
-      label: "Update History",
-      icon: History
+      path: "/admin/approvals",
+      label: "Approvals & Status",
+      icon: CheckSquare
+    },
+    {
+      path: "/admin/categories",
+      label: "Category Management",
+      icon: Folder
+    },
+    {
+      path: "/admin/users",
+      label: "User Control",
+      icon: Users
     }
   ];
 
+  const toggleMobileSidebar = () => {
+    setIsMobileOpen(!isMobileOpen);
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
+
+  const handleToggleReadHeader = async (id, currentRead) => {
+    try {
+      const res = await adminApi.toggleNotificationReadStatus(id, !currentRead);
+      if (res && res.success) {
+        setNotifications(prev =>
+          prev.map(n => (n._id === id ? { ...n, isRead: !currentRead } : n))
+        );
+        setUnreadCount(prev => (currentRead ? prev + 1 : prev - 1));
+      }
+    } catch (err) {
+      console.error("Error toggling read status in header:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    const unreadNotifications = notifications.filter(n => !n.isRead);
+    try {
+      await Promise.all(
+        unreadNotifications.map(n => adminApi.toggleNotificationReadStatus(n._id, true))
+      );
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Error marking all notifications as read:", err);
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-800 antialiased overflow-hidden">
-      {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-slate-300 border-r border-slate-800 shrink-0">
-        {/* Sidebar Brand */}
-        <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-800">
-          <img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+    <div className="flex h-screen bg-slate-50/40 text-slate-800 font-sans overflow-hidden">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 bg-white text-slate-850 shrink-0 border-r border-slate-150/70 shadow-xs">
+        {/* Brand */}
+        <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-100 bg-slate-50/30">
+          <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-650 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/10">
+            <span className="text-white font-extrabold text-sm">L</span>
+          </div>
           <div>
-            <h1 className="font-semibold text-white tracking-wide text-sm">English Master</h1>
-            <p className="text-xs text-indigo-400 font-medium">Admin Portal</p>
+            <h1 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">English Master</h1>
+            <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">System Admin</p>
           </div>
         </div>
 
-        {/* Sidebar Menu */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+        {/* Menu */}
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto bg-white/40">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            // Handle active state
             const isActive = currentPath === item.path;
 
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium ${
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-semibold border ${
                   isActive
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                    : "hover:bg-slate-800 hover:text-slate-100 text-slate-400"
+                    ? "bg-blue-50/60 text-blue-600 border-blue-100/70 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-transparent"
                 }`}
               >
-                <Icon
-                  className={`w-5 h-5 transition-transform duration-200 group-hover:scale-110 ${
-                    isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
-                  }`}
-                />
+                <Icon className="w-4 h-4" />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/40">
-          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800/50 cursor-pointer transition-colors duration-200">
-            <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 border border-slate-700">
-              <User className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-200 truncate">Administrator</p>
-              <p className="text-[10px] text-slate-500 truncate">{adminEmail}</p>
-            </div>
-          </div>
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50/20">
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 text-red-700 transition-all text-xs font-bold uppercase tracking-wider shadow-xs active:scale-[0.98]"
+          >
+            <LogOut className="w-4 h-4 text-red-500" />
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 h-16 bg-white border-b border-slate-200 shrink-0 shadow-sm">
-          {/* Left section: Search & Mobile menu trigger */}
-          <div className="flex items-center gap-4 flex-1">
-            <button className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors">
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="relative max-w-md hidden sm:block w-full">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                <Search className="w-4 h-4" />
-              </span>
-              <input
-                type="text"
-                placeholder="Search resources, users, paths..."
-                className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              />
+      {/* Mobile Sidebar Modal */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-250">
+          <div className="w-64 bg-white text-slate-800 h-full flex flex-col animate-in slide-in-from-left duration-250 border-r border-slate-150/70 shadow-xl">
+            <div className="flex items-center justify-between px-6 h-16 border-b border-slate-100 bg-slate-50/30">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-650 rounded-lg flex items-center justify-center shadow-md">
+                  <span className="text-white font-extrabold text-sm">L</span>
+                </div>
+                <h1 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">English Master</h1>
+              </div>
+              <button onClick={toggleMobileSidebar} className="text-slate-400 hover:text-slate-655">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto bg-white/40">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentPath === item.path;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={toggleMobileSidebar}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-semibold border ${
+                      isActive
+                        ? "bg-blue-50/60 text-blue-600 border-blue-100/70 shadow-xs"
+                        : "text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-transparent"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50/20">
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 text-red-700 transition-all text-xs font-bold uppercase tracking-wider shadow-xs active:scale-[0.98]"
+              >
+                <LogOut className="w-4 h-4 text-red-500" />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Right section: User Profile & Actions */}
+      {/* Main Area */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* Header */}
+        <header className="flex items-center justify-between px-6 h-16 border-b border-slate-150/70 bg-white/70 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-4">
-            {/* Back to Home Button */}
-            <Link
-              to="/"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition-all duration-200"
+            <button
+              onClick={toggleMobileSidebar}
+              className="md:hidden p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-all shadow-xs"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span>Ve trang chu</span>
-            </Link>
-
-            {/* Notification Button */}
-            <div className="relative" ref={dropdownRef}>
-              <button 
-                onClick={handleBellClick}
-                className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors focus:outline-none"
+              <Menu className="w-4 h-4" />
+            </button>
+            <h2 className="text-xs uppercase tracking-wider text-slate-400 font-bold hidden sm:block">
+              English Master / System Administrator
+            </h2>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {/* Notification Bell Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setNotifDropdownOpen(!notifDropdownOpen);
+                  if (!notifDropdownOpen) {
+                    fetchHeaderNotifications();
+                  }
+                }}
+                className="relative p-2 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-600 transition-all shadow-xs active:scale-[0.98]"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-4 h-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white font-extrabold text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white ring-1 ring-red-500/20">
+                    {unreadCount}
+                  </span>
                 )}
               </button>
 
-              {/* Notification Dropdown Menu */}
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2.5 w-80 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 py-2 antialiased">
-                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                    <span className="font-bold text-sm text-slate-800">Thông báo mới</span>
-                    {unreadCount > 0 && (
-                      <span className="text-[10px] bg-rose-50 text-rose-600 font-semibold px-2 py-0.5 rounded-full">
-                        {unreadCount} mới
-                      </span>
-                    )}
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-xs text-slate-400">
-                        Không có yêu cầu ứng tuyển nào gần đây.
-                      </div>
-                    ) : (
-                      notifications.map((app) => (
-                        <div 
-                          key={app._id}
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            navigate("/admin/mentors");
-                          }}
-                          className="px-4 py-3 hover:bg-slate-55/50 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50 last:border-0 flex flex-col gap-0.5"
+              {notifDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setNotifDropdownOpen(false)}
+                  />
+                  
+                  <div className="absolute right-0 mt-2.5 w-80 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150 text-slate-800 max-h-[420px] flex flex-col">
+                    {/* Header */}
+                    <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                      <span className="font-extrabold text-xs text-slate-900 uppercase tracking-wider">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllRead}
+                          className="text-[10px] text-blue-600 hover:text-blue-700 font-bold transition-all"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-xs text-slate-800 truncate max-w-[150px]">
-                              {app.fullName}
-                            </span>
-                            <span className="text-[9px] text-slate-400">
-                              {new Date(app.createdAt).toLocaleDateString("vi-VN")}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 truncate">
-                            Đăng ký Mentor: {app.bio}
-                          </p>
-                          <span className={`self-start text-[9px] font-bold px-1.5 py-0.5 rounded-md mt-1 ${
-                            app.status === "pending" 
-                              ? "bg-amber-50 text-amber-600" 
-                              : app.status === "approved" 
-                              ? "bg-emerald-50 text-emerald-600" 
-                              : "bg-rose-50 text-rose-600"
-                          }`}>
-                            {app.status === "pending" ? "Đang chờ duyệt" : app.status === "approved" ? "Đã duyệt" : "Từ chối"}
-                          </span>
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Notification Feed */}
+                    <div className="flex-1 overflow-y-auto divide-y divide-slate-100 max-h-[300px]">
+                      {notifLoading && notifications.length === 0 ? (
+                        <div className="py-8 flex flex-col items-center justify-center text-slate-400 gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-550" />
+                          <span className="text-xs font-semibold">Loading feed...</span>
                         </div>
-                      ))
-                    )}
+                      ) : notifications.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 text-xs font-medium">
+                          No alerts available.
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif._id}
+                            className={`p-3.5 hover:bg-slate-50/30 transition-all flex gap-3 relative group ${
+                              !notif.isRead ? "bg-blue-50/10 border-l-2 border-l-blue-655" : "border-l-2 border-l-transparent"
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
+                              !notif.isRead 
+                                ? "bg-blue-50 text-blue-600 border-blue-100/50" 
+                                : "bg-slate-50 text-slate-400 border-slate-100"
+                            }`}>
+                              {notif.isRead ? <MailOpen className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-bold text-xs text-slate-800 truncate">{notif.title}</span>
+                                <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">
+                                  {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ""}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-normal mt-0.5 line-clamp-2">
+                                {notif.message}
+                              </p>
+                              
+                              <div className="mt-1.5 flex justify-end">
+                                <button
+                                  onClick={() => handleToggleReadHeader(notif._id, notif.isRead)}
+                                  className="text-[9px] font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                                >
+                                  {notif.isRead ? "Mark Unread" : "Mark Read"}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-4 py-2.5 bg-slate-50/30 border-t border-slate-100 text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        {unreadCount} UNREAD ALERTS
+                      </span>
+                    </div>
                   </div>
-                  <div 
-                    onClick={() => {
-                      setIsDropdownOpen(false);
-                      navigate("/admin/mentors");
-                    }}
-                    className="px-4 py-2 border-t border-slate-100 text-center text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer hover:bg-slate-50"
-                  >
-                    Xem tất cả hồ sơ đăng ký
-                  </div>
-                </div>
+                </>
               )}
             </div>
 
-            <div className="h-6 w-px bg-slate-200"></div>
-
-            {/* Profile Dropdown */}
-            <button className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/10">
-                AD
+            {isConnected ? (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-100 bg-emerald-50/70 text-[10px] font-bold text-emerald-700 transition-all duration-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                SERVER CONNECTED
               </div>
-              <div className="text-left hidden md:block">
-                <p className="text-xs font-semibold text-slate-700">Nguyen Nhat Minh</p>
-                <p className="text-[10px] text-slate-400 font-medium">Super Admin</p>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-red-100 bg-red-50/70 text-[10px] font-bold text-red-700 transition-all duration-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse animate-duration-1000"></span>
+                SERVER DISCONNECTED
               </div>
-              <ChevronDown className="w-4 h-4 text-slate-400 hidden md:block" />
-            </button>
+            )}
           </div>
         </header>
 
-        {/* Dashboard Dynamic View Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50">
-          <Outlet />
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/20">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
