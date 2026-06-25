@@ -8,7 +8,8 @@ const INVALID_THUMBNAIL_MARKERS = new Set([
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export function sanitizeThumbnail(thumbnail) {
-  const value = String(thumbnail ?? '').trim();
+  let value = String(thumbnail ?? '').trim();
+  value = value.replace(/\\/g, '/');
   if (!value || INVALID_THUMBNAIL_MARKERS.has(value)) return '';
   return value;
 }
@@ -26,7 +27,8 @@ export function resolveThumbnailUrl(thumbnail, cacheKey) {
     return value;
   }
 
-  let url = `${API_URL}${value.startsWith('/') ? value : `/${value}`}`;
+  const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  let url = `${baseUrl}${value.startsWith('/') ? value : `/${value}`}`;
   if (cacheKey != null && cacheKey !== '') {
     const separator = url.includes('?') ? '&' : '?';
     url = `${url}${separator}v=${encodeURIComponent(String(cacheKey))}`;

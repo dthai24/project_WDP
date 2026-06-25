@@ -1063,7 +1063,7 @@ export default function HomePage() {
             category: row.CategoryName ?? "",
             level: row.LevelName ?? "",
             progressPercentage: row.ProgressPercentage ?? 0,
-            thumbnail: row.thumbnail || row.Thumbnail || null,
+            thumbnail: (row.thumbnail || row.Thumbnail) === 'CHƯA FIX LỖI ẢNH' ? null : (row.thumbnail || row.Thumbnail || null),
             currentStage: null,
             currentLesson: null,
             lastActivity: null,
@@ -1152,7 +1152,7 @@ export default function HomePage() {
           rating: c.Rating ?? 4.5,
           studentCount: c.TotalStudents ?? 0,
           totalLessons: c.TotalLessons ?? 0,
-          thumbnail: c.thumbnail || c.Thumbnail || null,
+          thumbnail: (c.thumbnail || c.Thumbnail) === 'CHƯA FIX LỖI ẢNH' ? null : (c.thumbnail || c.Thumbnail || null),
         })),
       );
     };
