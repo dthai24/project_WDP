@@ -50,7 +50,7 @@ function normalizeCourse(course = {}) {
     checkEnrolled = true; // Đang học dở thì chắc chắn là đã đăng ký
   }
   // 3. Xử lý ảnh Thumbnail bị lỗi
-  let courseImage = course.Thumbnail;
+  let courseImage = course.thumbnail || course.Thumbnail;
   if (courseImage === 'CHƯA FIX LỖI ẢNH') {
     courseImage = null;
   }

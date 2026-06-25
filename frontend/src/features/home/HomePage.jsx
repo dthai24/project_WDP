@@ -794,7 +794,7 @@ function PathsSection() {
             nodeCount: p.TotalNodes ?? 0,
             courseName: p.CourseName ?? "",
             rating: p.Rating ?? 0,
-            thumbnail: p.Thumbnail ?? null,
+            thumbnail: p.thumbnail || p.Thumbnail || null,
             accent: "#0891B2",
           })),
         );
@@ -1428,7 +1428,7 @@ export default function HomePage() {
             category: row.CategoryName ?? "",
             level: row.LevelName ?? "",
             progressPercentage: row.ProgressPercentage ?? 0,
-            thumbnail: row.Thumbnail ?? null,
+            thumbnail: row.thumbnail || row.Thumbnail || null,
             currentStage: null,
             currentLesson: null,
             lastActivity: null,
@@ -1471,7 +1471,7 @@ export default function HomePage() {
           rating: c.Rating ?? 4.5,
           studentCount: c.TotalStudents ?? 0,
           totalLessons: c.TotalLessons ?? 0,
-          thumbnail: c.Thumbnail ?? null,
+          thumbnail: c.thumbnail || c.Thumbnail || null,
         })),
       );
     };
