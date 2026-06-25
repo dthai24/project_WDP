@@ -20,7 +20,58 @@ import {
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const QB_STORAGE_KEY = 'mentor_question_banks_v1';
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
+const QB_LIST_CACHE_TTL_MS = 60_000;
+
+let banksApiCache = null;
+let mentorCoursesApiCache = null;
+
+export function invalidateQuestionBankListCache() {
+  banksApiCache = null;
+  mentorCoursesApiCache = null;
+}
+
+function readBanksCache() {
+  if (!banksApiCache) return null;
+  if (Date.now() - banksApiCache.fetchedAt > QB_LIST_CACHE_TTL_MS) {
+    banksApiCache = null;
+    return null;
+  }
+  return banksApiCache.banks;
+}
+
+function writeBanksCache(banks) {
+  banksApiCache = { banks, fetchedAt: Date.now() };
+}
+
+function readMentorCoursesCache() {
+  if (!mentorCoursesApiCache) return null;
+  if (Date.now() - mentorCoursesApiCache.fetchedAt > QB_LIST_CACHE_TTL_MS) {
+    mentorCoursesApiCache = null;
+    return null;
+  }
+  return mentorCoursesApiCache.courses;
+}
+
+function writeMentorCoursesCache(courses) {
+  mentorCoursesApiCache = { courses, fetchedAt: Date.now() };
+}
+
+async function fetchMentorCoursesCached(options = {}) {
+  const { force = false } = options;
+  if (!force) {
+    const cached = readMentorCoursesCache();
+    if (cached) {
+      return { ok: true, courses: cached, total: cached.length };
+    }
+  }
+
+  const res = await fetchMentorCourses();
+  if (res.ok) {
+    writeMentorCoursesCache(Array.isArray(res.courses) ? res.courses : []);
+  }
+  return res;
+}
 
 function getAuthHeaders() {
   const userId = getUser()?.userId;

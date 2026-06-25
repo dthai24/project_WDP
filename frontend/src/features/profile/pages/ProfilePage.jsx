@@ -422,6 +422,10 @@ export default function ProfilePage() {
   // ==========================================
   const fileInputRef = useRef(null);
   const [tempImageSrc, setTempImageSrc] = useState(null);
+  const handleAvatarClick = () => {
+    setCropperOpen(true);
+  };
+
   /**
    * Hàm: handleAvatarSelected
    * Tác dụng: Bắt file từ thẻ input và chuyển thành URL tạm để đưa vào khung cắt
