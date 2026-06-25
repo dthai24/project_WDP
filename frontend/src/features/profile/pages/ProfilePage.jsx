@@ -431,14 +431,73 @@ export default function ProfilePage() {
     setTempImageSrc(URL.createObjectURL(file));
     setCropperOpen(true);
   };
+
+  const mergeAvatarWithFrame = (faceBase64, frameUrl) => {
+    return new Promise((resolve, reject) => {
+      // 1. Giả sử ảnh Frame của bạn là 500x500
+      const FRAME_SIZE = 500;
+      // 2. Kích thước cái mặt bạn muốn thu nhỏ/phóng to để vừa cái lỗ
+      const FACE_SIZE = 380;
+      // 3. Tọa độ X, Y để đẩy cái mặt vào đúng giữa lỗ khung
+      const FACE_X = (FRAME_SIZE - FACE_SIZE) / 2; // Canh giữa theo chiều ngang (ra 60)
+      const FACE_Y = (FRAME_SIZE - FACE_SIZE) / 2; // Canh giữa theo chiều dọc (ra 60)
+      const canvas = document.createElement("canvas");
+      canvas.width = FRAME_SIZE;
+      canvas.height = FRAME_SIZE;
+      const ctx = canvas.getContext("2d");
+      // Load ảnh Khung trước để lấy kích thước thật (nếu muốn auto) hoặc vẽ sau
+      const faceImg = new Image();
+      faceImg.crossOrigin = "Anonymous";
+      faceImg.src = faceBase64;
+
+      faceImg.onload = () => {
+        // CẮT HÌNH TRÒN CHO ẢNH MẶT (Vì gốc 400x400 là hình vuông)
+        ctx.save();
+        ctx.beginPath();
+        // Vẽ 1 vòng tròn ngay tại vị trí lỗ khung
+        ctx.arc(
+          FACE_X + FACE_SIZE / 2,
+          FACE_Y + FACE_SIZE / 2,
+          FACE_SIZE / 2,
+          0,
+          Math.PI * 2
+        );
+        ctx.closePath();
+        ctx.clip(); // Cắt mọi thứ nằm ngoài vòng tròn này
+        // Vẽ ảnh mặt vào đúng tọa độ và thu nhỏ lại bằng FACE_SIZE
+        ctx.drawImage(faceImg, FACE_X, FACE_Y, FACE_SIZE, FACE_SIZE);
+        ctx.restore(); // Hủy chế độ cắt tròn để vẽ Khung hình vuông đè lên
+        // Load và vẽ ảnh Khung đè lên trên cùng
+        const frameImg = new Image();
+        frameImg.crossOrigin = "Anonymous";
+        frameImg.src = frameUrl;
+        frameImg.onload = () => {
+          // Vẽ Khung 500x500 đè lên trên cái mặt đã bị cắt tròn
+          ctx.drawImage(frameImg, 0, 0, FRAME_SIZE, FRAME_SIZE);
+
+          // Xuất kết quả
+          resolve(canvas.toDataURL("image/png"));
+        };
+        frameImg.onerror = () => reject("Lỗi tải Khung");
+      };
+      faceImg.onerror = () => reject("Lỗi tải Mặt");
+    });
+  };
   /**
    * Hàm: handleAvatarUpload
    * Tác dụng: Nhận ảnh đã cắt (Base64), chuyển thành file và Upload lên Server
    */
-  const handleAvatarUpload = async (croppedBase64) => {
+  const handleAvatarUpload = async ({ faceBase64, frameUrl }) => {
+
     try {
-      // 1. Convert base64 sang định dạng Blob chuẩn
-      const res = await fetch(croppedBase64);
+      // Lưu lại mặt gốc vào máy để lần sau mở lên đổi khung không bị dính khung cũ
+      localStorage.setItem('rawAvatar', faceBase64);
+      // LƯU LẠI KHUNG ĐÃ CHỌN VÀO MÁY
+      localStorage.setItem('rawFrame', frameUrl || "");
+
+      // 2. Chạy hàm ghép mặt vào Khung (nếu user không chọn khung thì nó chỉ trả về ảnh mặt gốc)
+      const mergedBase64 = frameUrl ? await mergeAvatarWithFrame(faceBase64, frameUrl) : faceBase64;
+      const res = await fetch(mergedBase64); // ĐÃ SỬA: Dùng ảnh đã ghép khung (mergedBase64) thay vì ảnh gốc
       const blob = await res.blob();
 
       // 2. Gói file vào FormData để gửi lên API
@@ -464,6 +523,11 @@ export default function ProfilePage() {
         // Đóng popup và reset biến tạm
         setCropperOpen(false);
         setTempImageSrc(null);
+        
+        // Tự động tải lại trang sau nửa giây để cập nhật đồng bộ toàn giao diện
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       }
     } catch (err) {
       console.error("Upload error:", err);
@@ -864,10 +928,13 @@ export default function ProfilePage() {
         ref={fileInputRef}
         onChange={handleAvatarSelected}
       />
-      {/* ── Popup cắt ảnh chuẩn form Mentor ── */}
+      {/* 🚀 Popup cắt ảnh chuẩn form Mentor 🚀 */}
       <ProfileImageCropDialog
         open={cropperOpen}
-        imageSrc={tempImageSrc}
+        // Dùng ảnh gốc đã lưu trong máy làm hình nền, nếu chưa có thì để trống
+        imageSrc={tempImageSrc || localStorage.getItem('rawAvatar') || ""}
+        // Lấy lại khung cũ từ máy
+        initialFrame={localStorage.getItem('rawFrame') || ""}
         onClose={() => {
           setCropperOpen(false);
           setTempImageSrc(null);
