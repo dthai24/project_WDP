@@ -23,7 +23,7 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import AppButton from '@/shared/ui/AppButton';
 import SearchBox from '@/shared/ui/SearchBox';
-import { resolveCourseThumbnailUrl } from '@/features/mentor/utils/mentorCourseImageUtils';
+import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
 import { resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
@@ -198,32 +198,6 @@ function FilterMenu({ anchorEl, open, onClose, options, value, onSelect }) {
         );
       })}
     </Menu>
-  );
-}
-
-function CourseThumbnail({ thumbnail, courseName }) {
-  const imageUrl = resolveCourseThumbnailUrl(thumbnail);
-
-  return (
-    <Box
-      sx={{
-        width: 44,
-        height: 44,
-        borderRadius: '14px',
-        flexShrink: 0,
-        overflow: 'hidden',
-        bgcolor: alpha('#0891B2', 0.08),
-        backgroundImage: imageUrl ? `url("${imageUrl}")` : 'none',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {!imageUrl && <MenuBookOutlinedIcon sx={{ fontSize: 22, color: '#0891B2' }} />}
-      {!imageUrl && courseName && <Typography sx={{ display: 'none' }}>{courseName}</Typography>}
-    </Box>
   );
 }
 
@@ -511,9 +485,17 @@ export default function MentorSelectCourseForQBDialog({
                     },
                   }}
                 >
-                  <CourseThumbnail
-                    thumbnail={course.Thumbnail ?? course.thumbnail}
-                    courseName={course.CourseName}
+                  <ThumbnailImage
+                    src={course.Thumbnail ?? course.thumbnail}
+                    label={course.CourseName}
+                    alt={course.CourseName}
+                    iconSize={22}
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '14px',
+                      flexShrink: 0,
+                    }}
                   />
 
                   <Box sx={{ flex: 1, minWidth: 0 }}>

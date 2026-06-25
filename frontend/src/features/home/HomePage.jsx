@@ -21,6 +21,7 @@ import {
 } from "@/shared/catalog/catalogRegistry";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
+import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import LearningGoalStickyNote from "@/features/home/components/LearningGoalStickyNote";
 import heroImg from "@/asset/image/herosection.png";
 // Thêm import
@@ -279,7 +280,7 @@ function CategoryChip({ category }) {
 
 const HERO_IMG = heroImg;
 
-function HeroSection({ onExplore }) {
+function HeroSection({ onExplore, onViewNews }) {
   return (
     <Box
       sx={{
@@ -397,10 +398,10 @@ function HeroSection({ onExplore }) {
           </AppButton>
           <AppButton
             variant="outlined"
-            disabled
-            sx={{ px: 3, py: 1.25, fontSize: 14, opacity: 0.65 }}
+            onClick={onViewNews}
+            sx={{ px: 3, py: 1.25, fontSize: 14 }}
           >
-            Xem lộ trình
+            Xem tin tức
           </AppButton>
         </Box>
       </Box>
@@ -481,25 +482,20 @@ function ContinueSection({ course, onContinue, onExplore }) {
           }}
         >
           {/* Thumbnail */}
-          {course.thumbnail && (
-            <Box
-              component="img"
-              src={course.thumbnail}
-              alt={course.courseName}
-              sx={{
-                display: { xs: "none", sm: "block" },
-                width: { sm: 100, md: 120 },
-                height: { sm: 75, md: 90 },
-                borderRadius: "12px",
-                objectFit: "cover",
-                flexShrink: 0,
-                boxShadow: "0 4px 16px rgba(8,145,178,0.12)",
-              }}
-              onError={(e) => {
-                e.target.style.display = "none";
-              }}
-            />
-          )}
+          <ThumbnailImage
+            src={course.thumbnail}
+            label={course.courseName}
+            alt={course.courseName}
+            iconSize={28}
+            sx={{
+              display: { xs: "none", sm: "block" },
+              width: { sm: 100, md: 120 },
+              height: { sm: 75, md: 90 },
+              borderRadius: "12px",
+              flexShrink: 0,
+              boxShadow: "0 4px 16px rgba(8,145,178,0.12)",
+            }}
+          />
 
           {/* Content */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -733,44 +729,18 @@ function NewsSection() {
                 bgcolor: alpha(PRIMARY, 0.05),
               }}
             >
-              {item.thumbnail ? (
-                <Box
-                  component="img"
-                  src={item.thumbnail}
-                  alt={item.title}
-                  sx={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                    transition: "transform 0.4s ease",
-                    ".MuiBox-root:hover &": { transform: "scale(1.04)" },
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                  }}
-                />
-              ) : (
-                <Box
-                  sx={{
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {item.type === "path" ? (
-                    <RouteOutlinedIcon
-                      sx={{ fontSize: 36, color: alpha(item.accent ?? PRIMARY, 0.45) }}
-                    />
-                  ) : (
-                    <MenuBookOutlinedIcon
-                      sx={{ fontSize: 36, color: alpha(PRIMARY, 0.3) }}
-                    />
-                  )}
-                </Box>
-              )}
+            <ThumbnailImage
+              src={item.thumbnail}
+              label={item.title}
+              alt={item.title}
+              icon={item.type === "path" ? RouteOutlinedIcon : MenuBookOutlinedIcon}
+              iconSize={36}
+              sx={{ height: 180, width: "100%" }}
+              imgSx={{
+                transition: "transform 0.4s ease",
+                ".MuiBox-root:hover &": { transform: "scale(1.04)" },
+              }}
+            />
               {item.type === "path" && item.thumbnail && (
                 <Box
                   sx={{
@@ -933,38 +903,13 @@ function CourseHomeCard({ course, onClick }) {
         },
       }}
     >
-      {/* Thumbnail */}
-      <Box
-        sx={{
-          height: 160,
-          overflow: "hidden",
-          bgcolor: alpha(PRIMARY, 0.06),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {course.thumbnail ? (
-          <Box
-            component="img"
-            src={course.thumbnail}
-            alt={course.courseName}
-            sx={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
-            onError={(e) => {
-              e.target.style.display = "none";
-            }}
-          />
-        ) : (
-          <MenuBookOutlinedIcon
-            sx={{ fontSize: 36, color: alpha(PRIMARY, 0.3) }}
-          />
-        )}
-      </Box>
+      <ThumbnailImage
+        src={course.thumbnail}
+        label={course.courseName}
+        alt={course.courseName}
+        iconSize={36}
+        sx={{ height: 160, width: "100%" }}
+      />
 
       {/* Content */}
       <Box sx={{ p: 2 }}>
@@ -1291,6 +1236,7 @@ export default function HomePage() {
   }, [user?.userId]);
 
   const handleExplore = () => navigate("/courses");
+  const handleViewNews = () => navigate("/news");
   const handleMyCourses = () => navigate("/my-courses");
   const handleContinue = (course) =>
     navigate(`/my-courses/${course.courseId}/learn`);
@@ -1338,7 +1284,7 @@ export default function HomePage() {
       }}
     >
       <Box sx={{ position: "relative", overflow: "visible" }}>
-        <HeroSection onExplore={handleExplore} />
+        <HeroSection onExplore={handleExplore} onViewNews={handleViewNews} />
 
         <Box
           sx={{
