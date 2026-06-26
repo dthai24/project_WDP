@@ -88,11 +88,17 @@ export default function LoginPage({ onLogin, onBackHome }) {
 
       if (response.ok) {
         const userSession = {
-          email: data.email,
-          name: data.name,
-          role: data.role,
+          email: data.user ? data.user.email : data.email,
+          name: data.user ? data.user.name : data.name,
+          role: data.user ? data.user.role : data.role,
+          roles: data.user ? data.user.roles : data.roles,
           loggedInAt: new Date().toISOString(),
         };
+
+        if (data.token) {
+          localStorage.setItem("learnpath_token", data.token);
+          localStorage.setItem("learnpath_user", JSON.stringify(data.user || userSession));
+        }
 
         onLogin(userSession);
         setIsSubmitting(false);
