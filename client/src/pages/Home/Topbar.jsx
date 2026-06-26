@@ -10,27 +10,27 @@ export function TopBar({ currentUser }) {
     {
       id: 1,
       title: 'Đã đến giờ ôn tập',
-      desc: 'Chương 3: Chuẩn hóa dữ liệu',
+      desc: 'Chương 3: Thì Hiện tại hoàn thành',
       time: '10 phút trước',
       unread: true,
     },
     {
       id: 2,
       title: 'Kết quả Quiz mới',
-      desc: 'Bạn đạt 85% bài kiểm tra SQL',
+      desc: 'Bạn đạt 85% bài kiểm tra Thì Tiếng Anh',
       time: '2 giờ trước',
       unread: false,
     },
     {
       id: 3,
       title: 'Tài liệu đã xử lý xong',
-      desc: 'Bài giảng hệ CSDL.pdf đã sẵn sàng',
+      desc: 'Bài giảng Ngữ pháp IELTS.pdf đã sẵn sàng',
       time: 'Hôm qua',
       unread: false,
     },
   ]
   return (
-    <header className="h-16 bg-white/70 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0">
+    <header className="h-16 bg-white/70 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-4 md:px-8 relative z-30 flex-shrink-0">
       <div className="flex-1 max-w-xl relative">
         <div
           className={`flex items-center bg-slate-50/80 rounded-full px-4 py-2 border transition-all ${isSearchFocused ? 'border-primary/50 ring-4 ring-primary/5' : 'border-slate-200/60'}`}
@@ -93,7 +93,7 @@ export function TopBar({ currentUser }) {
                   y: 10,
                   scale: 0.95,
                 }}
-                className="absolute right-0 top-full mt-2 w-80 bg-card rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
+                className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
               >
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                   <h3 className="font-semibold text-text-primary">Thông báo</h3>
