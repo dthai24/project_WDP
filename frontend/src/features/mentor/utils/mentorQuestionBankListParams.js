@@ -8,7 +8,6 @@ export const QB_LIST_DEFAULTS = {
 };
 
 const QB_PARAM_KEYS = ['q', 'status', 'questionStatus', 'sort', 'page', 'pageSize'];
-const VALID_STATUS = new Set(['all', 'published', 'draft']);
 const VALID_QUESTION_STATUS = new Set(['all', 'has_draft', 'all_published', 'empty']);
 const VALID_SORT = new Set(['updated_desc', 'name_asc', 'questions_desc']);
 
@@ -91,13 +90,11 @@ export function buildQBActiveChips(filters, options = {}) {
   return chips;
 }
 
-function matchesQuestionStatus(item, questionStatus) {
+function matchesQuestionStatus(totalQuestion, totalQuestionIsPublic, questionStatus) {
   if (questionStatus === 'all') return true;
-  const total = item.totalQuestionCount ?? 0;
-  const draft = item.draftQuestionCount ?? 0;
-  if (questionStatus === 'empty') return total === 0;
-  if (questionStatus === 'has_draft') return draft > 0;
-  if (questionStatus === 'all_published') return total > 0 && draft === 0;
+  if (questionStatus === 'empty') return Number(totalQuestion) === 0;
+  if (questionStatus === 'has_draft') return Number(totalQuestion) - Number(totalQuestionIsPublic) > 0;
+  if (questionStatus === 'all_published') return Number(totalQuestion) === Number(totalQuestionIsPublic) && Number(totalQuestion) > 0;
   return true;
 }
 
@@ -106,21 +103,21 @@ export function filterAndSortQBItems(items, query = {}) {
   const keyword = q.trim().toLowerCase();
 
   let result = items.filter((item) => {
-    if (status !== 'all' && item.status !== status) return false;
-    if (!matchesQuestionStatus(item, questionStatus)) return false;
+    if (status !== 'all' && item.IsPublished !== status) return false;
+    if (!matchesQuestionStatus(item.TotalQuestion, item.TotalQuestionIsPublic, questionStatus)) return false;
     if (keyword) {
-      const haystack = [item.courseName, item.description].filter(Boolean).join(' ').toLowerCase();
+      const haystack = [item.CourseName, item.CourseDescription].filter(Boolean).join(' ').toLowerCase();
       if (!haystack.includes(keyword)) return false;
     }
     return true;
   });
 
   result = [...result].sort((a, b) => {
-    if (sort === 'name_asc') return (a.courseName ?? '').localeCompare(b.courseName ?? '', 'vi');
-    if (sort === 'questions_desc') return (b.totalQuestionCount ?? 0) - (a.totalQuestionCount ?? 0);
+    if (sort === 'name_asc') return (a.CourseName ?? '').localeCompare(b.CourseName ?? '', 'vi');
+    if (sort === 'questions_desc') return (b.TotalQuestion ?? 0) - (a.TotalQuestion ?? 0);
     return (
-      new Date(b.questionBankUpdatedAt ?? 0).getTime() -
-      new Date(a.questionBankUpdatedAt ?? 0).getTime()
+      new Date(b.UpdatedAt ?? 0).getTime() -
+      new Date(a.UpdatedAt ?? 0).getTime()
     );
   });
 
@@ -133,7 +130,7 @@ export function paginateQBItems(items, page, pageSize) {
   const safePage = Math.min(Math.max(1, page), totalPages);
   const start = (safePage - 1) * pageSize;
   return {
-    items: items.slice(start, start + pageSize),
+    listQuestionBank: items.slice(start, start + pageSize),
     totalItems,
     totalPages,
     page: safePage,

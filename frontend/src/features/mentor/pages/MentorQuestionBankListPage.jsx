@@ -29,13 +29,14 @@ import {
   paginateQBItems,
   QB_LIST_DEFAULTS,
 } from '@/features/mentor/utils/mentorQuestionBankListParams';
+import axios from 'axios';
 
 const PAGE_SIZE = QB_LIST_PAGE_SIZE;
 
 export default function MentorQuestionBankListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [items, setItems] = useState([]);
+  const [listQuestionBank, setListQuestionBank] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectDialogOpen, setSelectDialogOpen] = useState(false);
   const [coursesWithoutQB, setCoursesWithoutQB] = useState([]);
@@ -48,16 +49,27 @@ export default function MentorQuestionBankListPage() {
     [queryState]
   );
 
+
+  // ________Fetch List Courses'summaries has question bank_______________
   useEffect(() => {
     let isMounted = true;
 
     const loadItems = async () => {
       try {
+        const userRaw = localStorage.getItem('user') //user is stored in localStorage with type is JSON string 
+        // // const userId = JSON.parse(user)
+        // console.log(typeof user)
+        const user = JSON.parse(userRaw)
         setLoading(true);
-        const res = await getQuestionBankListSummaries();
-        if (isMounted && res.ok) {
-          setItems(res.items);
-        }
+        const res = await axios.get("http://localhost:5000/api/question-bank/getAllBankOfMentor", {
+          params: {
+            userId: user.userId
+          }
+        })
+        setListQuestionBank(res.data.questionBanks)
+        console.log(res)
+      } catch (err) {
+        console.error(err.message)
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -71,12 +83,22 @@ export default function MentorQuestionBankListPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!selectDialogOpen) return;
-    fetchCoursesForQB().then((res) => {
-      if (res.ok) setCoursesWithoutQB(res.courses);
-    });
-  }, [selectDialogOpen]);
+  //_____________________Fetch Data_______________________
+  // useEffect(async () => {
+  //   // console.log(localStorage.getItem('user'))
+  //   const user = localStorage.getItem('user').json()
+  //   if (!selectDialogOpen) return;
+
+  //   const res = await fetchCoursesForQB((user.userId))
+
+  //   if(res.success) {
+  //     setCoursesWithoutQB
+  //   }
+
+  //   // .then((res) => {
+  //   //   if (res.ok) setCoursesWithoutQB(res.courses);
+  //   // });
+  // }, [selectDialogOpen]);
 
   const updateQuery = (patch) => {
     setSearchParams(
@@ -85,11 +107,13 @@ export default function MentorQuestionBankListPage() {
     );
   };
 
+  //__________Filter List Question Bank
   const filteredItems = useMemo(
-    () => filterAndSortQBItems(items, queryState),
-    [items, queryState]
+    () => filterAndSortQBItems(listQuestionBank, queryState),
+    [listQuestionBank, queryState]
   );
 
+  //___________After filter -> pagination
   const pagination = useMemo(
     () => paginateQBItems(filteredItems, queryState.page, PAGE_SIZE),
     [filteredItems, queryState.page]
@@ -183,9 +207,9 @@ export default function MentorQuestionBankListPage() {
       />
 
       <MentorQuestionBankList
-        items={pagination.items}
+        listQuestionBank={pagination.listQuestionBank}
         loading={loading}
-        hasAnyItems={items.length > 0}
+        hasAnyItems={listQuestionBank.length > 0}
         showReset={showReset}
         onReset={handleReset}
       />
