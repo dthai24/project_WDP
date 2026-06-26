@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5050/api";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api";
 const REQUEST_TIMEOUT_MS = 45000;
 
 const geminiService = {
@@ -51,7 +51,7 @@ const geminiService = {
       }
 
       if (error.message === "Failed to fetch") {
-        throw new Error("Không kết nối được backend. Hãy kiểm tra server có đang chạy ở http://localhost:5050 không.");
+        throw new Error("Không kết nối được backend. Hãy kiểm tra server có đang chạy ở http://localhost:5000 không.");
       }
 
       throw error;

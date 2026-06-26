@@ -131,7 +131,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
         <div className="card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-text-primary tracking-tight">
-              Chào bạn quay trở lại, <span className="text-primary">{currentUser.name}</span> 👋
+              Chào bạn quay trở lại, <span className="text-primary">{currentUser.name}</span> 
             </h2>
             <p className="text-xs text-text-secondary font-medium">
               Phương pháp học ngắt quãng SRS giúp bạn ghi nhớ từ vựng vĩnh viễn.
