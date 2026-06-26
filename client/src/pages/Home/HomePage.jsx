@@ -363,16 +363,24 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                 </div>
               </div>
               {currentUser.role === "Learner" && (
-                <button
-                  onClick={() => setCurrentView(currentView === "profile" ? "dashboard" : "profile")}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
-                    currentView === "profile"
-                      ? "bg-primary text-white shadow-sm shadow-primary/20"
-                      : "bg-surface-muted text-text-secondary hover:text-primary border border-border/40"
-                  }`}
-                >
-                  {currentView === "profile" ? "Trang chủ" : "Hồ sơ"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentView(currentView === "profile" ? "dashboard" : "profile")}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+                      currentView === "profile"
+                        ? "bg-primary text-white shadow-sm shadow-primary/20"
+                        : "bg-surface-muted text-text-secondary hover:text-primary border border-border/40"
+                    }`}
+                  >
+                    {currentView === "profile" ? "Trang chủ" : "Hồ sơ"}
+                  </button>
+                  <button
+                    onClick={() => navigate("/dashboard")}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-dark transition-all duration-200 shadow-sm shadow-primary/10"
+                  >
+                    Dashboard Học viên
+                  </button>
+                </div>
               )}
               {currentUser.role !== "Learner" && (
                 <button

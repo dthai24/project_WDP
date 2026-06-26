@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Search, Bell, Settings, X, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-export function TopBar() {
+export function TopBar({ currentUser }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
@@ -123,11 +123,11 @@ export function TopBar() {
 
         <div className="hidden md:flex items-center gap-3 pl-4 border-l border-slate-200">
           <div className="text-right">
-            <p className="text-sm font-semibold text-text-primary">Alex Chen</p>
-            <p className="text-xs text-slate-500">Khoa học Máy tính, Năm 3</p>
+            <p className="text-sm font-semibold text-text-primary">{currentUser?.name || 'Alex Chen'}</p>
+            <p className="text-xs text-slate-500">{currentUser?.role === 'Learner' ? 'Học viên' : currentUser?.role === 'Mentor' ? 'Mentor' : 'Quản trị viên'}</p>
           </div>
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
-            AC
+            {(currentUser?.name || 'Alex Chen').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
         </div>
       </div>
