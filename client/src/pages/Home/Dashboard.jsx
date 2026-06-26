@@ -22,7 +22,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './Topbar'
 import { Profile } from './Profile'
-export function Dashboard() {
+export function Dashboard({ currentUser, onLogout }) {
   const [isOpen, setIsOpen] = useState(true)
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [timeLeft, setTimeLeft] = useState({
@@ -123,13 +123,15 @@ export function Dashboard() {
         setIsOpen={setIsOpen}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
+        currentUser={currentUser}
       />
       <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
-        <TopBar />
+        <TopBar currentUser={currentUser} />
         {currentPage === 'profile' ? (
           <Profile
-            onLogout={() => navigate('/login')}
+            onLogout={onLogout || (() => navigate('/'))}
             setCurrentPage={setCurrentPage}
+            currentUser={currentUser}
           />
         ) : (
           <motion.div
@@ -196,7 +198,7 @@ export function Dashboard() {
                   Bạn có muốn nhận thông báo nhắc nhở lịch học, kết quả quiz và
                   cập nhật mới qua email{' '}
                   <span className="font-semibold text-primary">
-                    alex@stanford.edu
+                    {currentUser?.email || 'alex@stanford.edu'}
                   </span>{' '}
                   không?
                 </p>
@@ -241,7 +243,7 @@ export function Dashboard() {
         <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
         <div className="relative z-10 mb-6 md:mb-0">
           <h1 className="text-2xl md:text-3xl font-bold mb-2">
-            Chào mừng trở lại, Alex! 🎯
+            Chào mừng trở lại, {currentUser?.name || 'Alex'}! 🎯
           </h1>
           <p className="text-white/80">
             Bạn đã sẵn sàng 73% cho kỳ thi Hệ cơ sở dữ liệu.

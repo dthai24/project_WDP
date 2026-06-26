@@ -93,6 +93,7 @@ export function Sidebar({
   setIsOpen,
   currentPage,
   setCurrentPage,
+  currentUser,
 }) {
   return (
     <motion.aside
@@ -184,7 +185,7 @@ export function Sidebar({
         >
           <div className="w-8 h-8 rounded-full bg-slate-700 flex-shrink-0 overflow-hidden">
             <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'Alex'}`}
               alt="Avatar"
               className="w-full h-full"
             />
@@ -192,7 +193,7 @@ export function Sidebar({
           {isOpen && (
             <div className="flex-1 text-left overflow-hidden">
               <p className="text-sm font-medium text-white truncate">
-                Alex Chen
+                {currentUser?.name || 'Alex Chen'}
               </p>
               <p className="text-xs text-slate-400 truncate">Hồ sơ</p>
             </div>
