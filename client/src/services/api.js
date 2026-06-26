@@ -101,6 +101,22 @@ export const adminApi = {
   processMentorRegistration: async (regId, status, rejectReason = "") => {
     const response = await api.patch(`/api/admin/mentors/registrations/${regId}`, { status, rejectReason });
     return response.data;
+  },
+
+  // Notifications Control
+  getNotifications: async () => {
+    const response = await api.get("/api/admin/notifications");
+    return response.data;
+  },
+
+  toggleNotificationReadStatus: async (id, isRead) => {
+    const response = await api.patch(`/api/admin/notifications/${id}/read`, { isRead });
+    return response.data;
+  },
+
+  markAllNotificationsRead: async () => {
+    const response = await api.post("/api/admin/notifications/mark-all-read");
+    return response.data;
   }
 };
 
