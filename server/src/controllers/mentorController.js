@@ -101,6 +101,15 @@ const markAllRead = async (req, res) => {
   }
 };
 
+const generateRandomPassword = (length = 8) => {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
 // Phê duyệt hoặc Từ chối hồ sơ kèm gửi mail theo mẫu
 const reviewApplication = async (req, res) => {
   try {
@@ -122,23 +131,30 @@ const reviewApplication = async (req, res) => {
 
     await application.save();
 
+    let randomPassword = "";
+    let isNewUser = false;
+
     // Nếu phê duyệt thành công, cấp quyền Mentor cho tài khoản gmail đó
     if (status === "approved") {
       const User = require("../models/User");
+
       let user = await User.findOne({ email: application.email.toLowerCase() });
       if (user) {
         user.role = "Mentor";
         await user.save();
+        console.log(`Đã nâng cấp quyền Mentor thành công cho tài khoản có sẵn: ${application.email}`);
       } else {
+        isNewUser = true;
+        randomPassword = generateRandomPassword(8);
         user = new User({
           email: application.email.toLowerCase(),
           name: application.fullName,
-          password: "123456", // mật khẩu mặc định là 123456
+          password: randomPassword, // mật khẩu ngẫu nhiên mới cho guest
           role: "Mentor"
         });
         await user.save();
+        console.log(`Đã tạo tài khoản Mentor mới cho khách hàng ${application.email} với mật khẩu ngẫu nhiên: ${randomPassword}`);
       }
-      console.log(`Đã cấp quyền Mentor thành công cho tài khoản ${application.email}`);
     }
 
     // Nội dung email thông báo kết quả duyệt
@@ -151,7 +167,7 @@ const reviewApplication = async (req, res) => {
       : "<span style='color: #ef4444; font-weight: bold;'>KHÔNG ĐƯỢC CHẤP NHẬN</span>";
 
     const emailHtml = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded-xl">
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
         <h2 style="color: #2563eb;">Chào ${application.fullName},</h2>
         <p>Ban quản trị hệ thống <strong>English Master</strong> đã xem xét hồ sơ ứng tuyển làm Mentor của bạn.</p>
         <p>Kết quả xét duyệt: Trạng thái hồ sơ của bạn là ${statusText}.</p>
@@ -161,7 +177,25 @@ const reviewApplication = async (req, res) => {
         </div>
 
         ${status === "approved" 
-          ? "<p>Chào mừng bạn gia nhập đội ngũ Mentor của English Master! Bạn có thể đăng nhập tài khoản để bắt đầu xây dựng lộ trình học và hỗ trợ các học viên.</p>" 
+          ? `
+            <p>Chào mừng bạn gia nhập đội ngũ Mentor của English Master! Bạn có thể đăng nhập tài khoản để bắt đầu xây dựng lộ trình học và hỗ trợ các học viên.</p>
+            ${isNewUser 
+              ? `
+                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; margin: 20px 0; border-radius: 8px;">
+                  <p style="margin: 0; font-weight: bold; color: #166534;">Thông tin đăng nhập của bạn:</p>
+                  <p style="margin: 5px 0 0 0;"><strong>Tài khoản (Email):</strong> ${application.email}</p>
+                  <p style="margin: 5px 0 0 0;"><strong>Mật khẩu mới:</strong> <code style="background-color: #dcfce7; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #15803d; font-family: monospace; font-size: 14px;">${randomPassword}</code></p>
+                </div>
+                `
+              : `
+                <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 8px;">
+                  <p style="margin: 0; font-weight: bold; color: #1e3a8a;">Thông tin đăng nhập của bạn:</p>
+                  <p style="margin: 5px 0 0 0;">Tài khoản của bạn đã được nâng cấp lên quyền <strong>Mentor</strong>.</p>
+                  <p style="margin: 5px 0 0 0;">Vui lòng sử dụng <strong>Email và Mật khẩu hiện tại</strong> của bạn để đăng nhập vào hệ thống.</p>
+                </div>
+                `
+            }
+            `
           : "<p>Cảm ơn bạn đã quan tâm. Chúng tôi hy vọng có cơ hội hợp tác với bạn trong các đợt ứng tuyển sau khi bạn bổ sung thêm năng lực hoặc chứng chỉ.</p>"
         }
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
