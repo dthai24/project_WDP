@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Sparkles, ArrowLeft, Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 const testAccounts = [
   {
@@ -46,15 +47,15 @@ export default function LoginPage({ onLogin, onBackHome }) {
     const nextErrors = {};
 
     if (!formData.email.trim()) {
-      nextErrors.email = "Email is required.";
+      nextErrors.email = "Vui lòng nhập địa chỉ email.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      nextErrors.email = "Please enter a valid email.";
+      nextErrors.email = "Định dạng email không hợp lệ.";
     }
 
     if (!formData.password) {
-      nextErrors.password = "Password is required.";
+      nextErrors.password = "Vui lòng nhập mật khẩu.";
     } else if (formData.password.length < 6) {
-      nextErrors.password = "Password must be at least 6 characters.";
+      nextErrors.password = "Mật khẩu phải chứa ít nhất 6 ký tự.";
     }
 
     setErrors(nextErrors);
@@ -131,171 +132,150 @@ export default function LoginPage({ onLogin, onBackHome }) {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-800 font-sans">
-      <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="hidden lg:flex relative overflow-hidden bg-slate-950 px-12 py-10 text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(37,99,235,0.35),transparent_34%),radial-gradient(circle_at_78%_72%,rgba(14,165,233,0.22),transparent_32%)]" />
-          <div className="relative z-10 flex h-full w-full flex-col justify-between">
-            <button
-              type="button"
-              onClick={onBackHome}
-              className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
+    <main 
+      className="min-h-screen text-text-primary font-sans antialiased flex items-center justify-center p-6 relative overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg, #fff5f5 0%, #fff0f3 30%, #fdf2f8 60%, #faf5ff 100%)"
+      }}
+    >
+      {/* Decorative background spots */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-200/20 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Back to home button (absolute top-left) */}
+      <div className="absolute top-6 left-6 z-10">
+        <button
+          type="button"
+          onClick={onBackHome}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-text-secondary hover:text-primary transition-colors bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-border/40 shadow-sm"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Quay lại Trang chủ
+        </button>
+      </div>
+
+      {/* Centered Login Card */}
+      <div className="w-full max-w-md bg-white/70 backdrop-blur-md border border-rose-100/40 p-8 sm:p-10 rounded-[2.5rem] shadow-xl shadow-rose-500/5 space-y-8 relative z-10 transition-all duration-300 hover:shadow-rose-500/10">
+        
+        {/* Header section (Centered logo & titles) */}
+        <div className="flex flex-col items-center text-center space-y-1.5">
+          <img 
+            src="/images/logo.png" 
+            alt="English Master Logo" 
+            className="w-20 h-20 object-contain hover:scale-105 transition-transform duration-300 mb-2" 
+          />
+          <p className="text-[10px] font-black uppercase tracking-widest text-primary pt-2.5">
+            Chào mừng quay trở lại
+          </p>
+          <h2 className="text-2xl font-black tracking-tight text-text-primary">
+            Đăng nhập tài khoản
+          </h2>
+          <p className="text-xs leading-relaxed text-text-secondary max-w-xs">
+            Đăng nhập để tiếp tục bài học và đồng bộ tiến trình học tập của bạn.
+          </p>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {errors.form && (
+            <div className="rounded-2xl border border-red-100 bg-red-50/80 px-4 py-3 text-xs font-bold text-red-600">
+              {errors.form}
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="email"
+              className="block text-xs font-bold text-text-primary"
             >
-              <span aria-hidden="true">←</span>
-              Home
-            </button>
-
-            <div className="max-w-xl">
-              <div className="mb-6 flex items-center gap-3">
-                <img src="/images/logo.png" alt="English Master Logo" className="w-11 h-11 object-contain" />
-                <span className="text-2xl font-extrabold tracking-tight">
-                  English Master
-                </span>
+              Địa chỉ Email
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-muted">
+                <Mail className="w-4 h-4" />
               </div>
-              <h1 className="text-5xl font-extrabold leading-tight tracking-tight">
-                Continue your learning roadmap with one secure sign in.
-              </h1>
-              <p className="mt-6 max-w-lg text-lg leading-8 text-slate-300">
-                Access courses, mentor roadmaps, quiz progress, XP streaks, and
-                personalized recommendations from a single account.
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+                placeholder="name@domain.com"
+                className={`w-full rounded-2xl border bg-white pl-10 pr-4 py-3 text-xs outline-none transition-all placeholder:text-text-muted/60 focus:ring-4 ${
+                  errors.email
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-100"
+                    : "border-border focus:border-primary focus:ring-primary/10"
+                }`}
+              />
+            </div>
+            {errors.email && (
+              <p className="text-xs font-bold text-red-500">
+                {errors.email}
               </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold">24+</p>
-                <p className="mt-1 text-slate-300">roadmaps</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold">1.2k</p>
-                <p className="mt-1 text-slate-300">learners</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold">98%</p>
-                <p className="mt-1 text-slate-300">progress saved</p>
-              </div>
-            </div>
+            )}
           </div>
-        </section>
 
-        <section className="flex items-center justify-center px-5 py-10 sm:px-8">
-          <div className="w-full max-w-md">
-            <button
-              type="button"
-              onClick={onBackHome}
-              className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-blue-600 lg:hidden"
-            >
-              <span aria-hidden="true">←</span>
-              Home
-            </button>
-
-            <div className="mb-8">
-              <div className="lg:hidden mb-4">
-                <img src="/images/logo.png" alt="English Master Logo" className="w-12 h-12 object-contain" />
-              </div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-                Welcome back
-              </p>
-              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">
-                Login to English Master
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Use your account to resume lessons and keep every milestone in
-                sync.
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {errors.form && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                  {errors.form}
-                </div>
-              )}
-
-              <div>
-                <label
-                  htmlFor="email"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                >
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  autoComplete="email"
-                  placeholder="student@gmail.com"
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${
-                    errors.email
-                      ? "border-red-300 focus:border-red-500 focus:ring-red-100"
-                      : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                  }`}
-                />
-                {errors.email && (
-                  <p className="mt-2 text-sm font-medium text-red-600">
-                    {errors.email}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-semibold text-slate-700"
-                  >
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsPasswordVisible((prev) => !prev)}
-                    className="text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
-                  >
-                    {isPasswordVisible ? "Hide" : "Show"}
-                  </button>
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={isPasswordVisible ? "text" : "password"}
-                  value={formData.password}
-                  onChange={handleChange}
-                  autoComplete="current-password"
-                  placeholder="Enter your password"
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-4 ${
-                    errors.password
-                      ? "border-red-300 focus:border-red-500 focus:ring-red-100"
-                      : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                  }`}
-                />
-                {errors.password && (
-                  <p className="mt-2 text-sm font-medium text-red-600">
-                    {errors.password}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
-                >
-                  Forgot password?
-                </button>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition-all hover:-translate-y-0.5 hover:bg-blue-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="block text-xs font-bold text-text-primary"
               >
-                {isSubmitting ? "Signing in..." : "Sign in"}
+                Mật khẩu
+              </label>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-muted">
+                <Lock className="w-4 h-4" />
+              </div>
+              <input
+                id="password"
+                name="password"
+                type={isPasswordVisible ? "text" : "password"}
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+                placeholder="Nhập mật khẩu của bạn"
+                className={`w-full rounded-2xl border bg-white pl-10 pr-10 py-3 text-xs outline-none transition-all placeholder:text-text-muted/60 focus:ring-4 ${
+                  errors.password
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-100"
+                    : "border-border focus:border-primary focus:ring-primary/10"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setIsPasswordVisible((prev) => !prev)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-text-muted hover:text-text-primary transition-colors"
+              >
+                {isPasswordVisible ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
               </button>
-            </form>
+            </div>
+            {errors.password && (
+              <p className="text-xs font-bold text-red-500">
+                {errors.password}
+              </p>
+            )}
           </div>
-        </section>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="text-xs font-bold text-primary hover:text-primary-light transition-colors"
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full btn-primary py-3.5 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-bold text-xs"
+          >
+            {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
+          </button>
+        </form>
+
       </div>
     </main>
   );
