@@ -18,10 +18,12 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 const mentorRoutes = require("./routes/mentorRoutes");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 app.use("/api/mentor", mentorRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", chatRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Simple health check route
 app.get("/api/health", (req, res) => {
@@ -41,48 +43,17 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/learning_path";
-const User = require("./models/User");
-
-const seedUsers = async () => {
-  try {
-    const count = await User.countDocuments();
-    if (count === 0) {
-      await User.create([
-        {
-          email: "admin@gmail.com",
-          password: "123456",
-          name: "Admin User",
-          role: "Admin"
-        },
-        {
-          email: "student@gmail.com",
-          password: "123456",
-          name: "Student User",
-          role: "Learner"
-        },
-        {
-          email: "mentor@gmail.com",
-          password: "123456",
-          name: "Mentor User",
-          role: "Mentor"
-        }
-      ]);
-      console.log("Database seeded successfully with default accounts.");
-    }
-  } catch (err) {
-    console.error("Error seeding default users:", err);
-  }
-};
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/wdp";
+const { seedDatabase } = require("./controllers/authController");
 
 mongoose
   .connect(MONGODB_URI)
   .then(async () => {
     console.log("Successfully connected to MongoDB.");
-    await seedUsers();
+    await seedDatabase();
   })
   .catch((error) => {
-    console.warn("MongoDB connection skipped:", error.message);
+    console.warn("MongoDB connection failed:", error.message);
   });
 
 app.listen(PORT, () => {
