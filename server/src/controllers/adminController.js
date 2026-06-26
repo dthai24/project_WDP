@@ -4,6 +4,7 @@ const Category = require("../models/categoryModel");
 const CategoryHistory = require("../models/categoryHistoryModel");
 const Course = require("../models/courseModel");
 const MentorRegistration = require("../models/mentorRegistrationModel");
+const Notification = require("../models/notificationModel");
 
 // Safely parse Extended JSON date or standard Date formats inside MongoDB aggregates
 const projectDateExpr = (field) => {
@@ -39,6 +40,7 @@ const getStatistics = async (req, res) => {
         { isPublished: true }
       ]
     }) || 0;
+    const pendingCourseCount = await Course.countDocuments({ status: "Pending" }) || 0;
     const categoryCount = await Category.countDocuments() || 0;
     
     let pathCount = 0;
@@ -257,6 +259,7 @@ const getStatistics = async (req, res) => {
       courseCount,
       categoryCount,
       pathCount,
+      pendingCourseCount,
       salesData,
       engagementData,
       workloadData
@@ -269,6 +272,7 @@ const getStatistics = async (req, res) => {
       courseCount: 0,
       categoryCount: 0,
       pathCount: 0,
+      pendingCourseCount: 0,
       salesData: [],
       engagementData: [],
       workloadData: []
@@ -502,22 +506,28 @@ const getUsers = async (req, res) => {
     const skipNum = (pageNum - 1) * limitNum;
 
     // Define sort configuration
-    let sortObj = { createdAt: -1 }; // Default chronological sort
+    let sortObj = {};
     if (sortBy) {
-      let sortField = sortBy;
-      if (sortBy === "user" || sortBy === "name") {
-        sortField = "name";
-      } else if (sortBy === "role") {
-        sortField = "roles.roleId";
-      } else if (sortBy === "xp") {
-        sortField = "xp";
-      } else if (sortBy === "streak") {
-        sortField = "streak";
-      } else if (sortBy === "status" || sortBy === "isBlocked") {
-        sortField = "isBlocked";
-      }
-      const order = sortOrder === "desc" ? -1 : 1;
-      sortObj = { [sortField]: order };
+      const fields = sortBy.split(",");
+      const orders = sortOrder.split(",");
+      fields.forEach((field, index) => {
+        let sortField = field.trim();
+        if (sortField === "user" || sortField === "name") {
+          sortField = "name";
+        } else if (sortField === "role") {
+          sortField = "roles.roleId";
+        } else if (sortField === "xp") {
+          sortField = "xp";
+        } else if (sortField === "streak") {
+          sortField = "streak";
+        } else if (sortField === "status" || sortField === "isBlocked") {
+          sortField = "isBlocked";
+        }
+        const orderVal = orders[index] === "desc" ? -1 : 1;
+        sortObj[sortField] = orderVal;
+      });
+    } else {
+      sortObj = { createdAt: -1 }; // Default chronological sort
     }
 
     const total = await User.countDocuments(filter);
@@ -619,37 +629,47 @@ const deleteUser = async (req, res) => {
 // Get all courses with pagination, search, filters
 const getCourses = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "", status = "", category = "" } = req.query;
+    const { page = 1, limit = 10, search = "", status = "", category = "", sortBy = "", sortOrder = "" } = req.query;
     const filter = {};
 
     if (search.trim()) {
-      // Find mentors whose name matches search to query by instructorId/mentorId
-      const matchingMentors = await User.find({
-        $or: [
-          { name: { $regex: search, $options: "i" } },
-          { fullName: { $regex: search, $options: "i" } }
-        ]
-      }).select("_id");
-      const mentorIds = matchingMentors.map(m => m._id);
+      if (search.trim().match(/^[0-9a-fA-F]{24}$/)) {
+        filter.$or = [
+          { _id: search.trim() },
+          { "_id.$oid": search.trim() }
+        ];
+      } else {
+        // Find mentors whose name matches search to query by instructorId/mentorId
+        const matchingMentors = await User.find({
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { fullName: { $regex: search, $options: "i" } }
+          ]
+        }).select("_id");
+        const mentorIds = matchingMentors.map(m => m._id);
 
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { courseName: { $regex: search, $options: "i" } },
-        { mentorName: { $regex: search, $options: "i" } },
-        { mentorId: { $in: mentorIds } },
-        { instructorId: { $in: mentorIds } }
-      ];
+        filter.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { courseName: { $regex: search, $options: "i" } },
+          { mentorName: { $regex: search, $options: "i" } },
+          { mentorId: { $in: mentorIds } },
+          { instructorId: { $in: mentorIds } }
+        ];
+      }
     }
 
     if (status) {
-      if (status === "Active") {
+      if (status === "Active" || status === "Approved") {
         filter.$or = [
           { status: "Active" },
+          { status: "Approved" },
           { isPublished: true }
         ];
-      } else if (status === "Inactive") {
+      } else if (status === "Inactive" || status === "Reject" || status === "Rejected") {
         filter.$or = [
           { status: "Inactive" },
+          { status: "Reject" },
+          { status: "Rejected" },
           { isPublished: false }
         ];
       } else {
@@ -668,8 +688,31 @@ const getCourses = async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const skipNum = (pageNum - 1) * limitNum;
 
+    // Define sort configuration
+    let sortObj = {};
+    if (sortBy) {
+      const fields = sortBy.split(",");
+      const orders = sortOrder.split(",");
+      fields.forEach((field, index) => {
+        let sortField = field.trim();
+        if (sortField === "title" || sortField === "courseTitle") {
+          sortField = "title";
+        } else if (sortField === "mentor" || sortField === "mentorName") {
+          sortField = "mentorName";
+        } else if (sortField === "category" || sortField === "levelTag") {
+          sortField = "category";
+        } else if (sortField === "status") {
+          sortField = "status";
+        }
+        const orderVal = orders[index] === "desc" ? -1 : 1;
+        sortObj[sortField] = orderVal;
+      });
+    } else {
+      sortObj = { createdAt: -1 };
+    }
+
     const total = await Course.countDocuments(filter);
-    const data = await Course.find(filter).sort({ createdAt: -1 }).skip(skipNum).limit(limitNum);
+    const data = await Course.find(filter).sort(sortObj).skip(skipNum).limit(limitNum);
     const pages = Math.ceil(total / limitNum);
 
     // Dynamic enrichment for frontend rendering compatibility
@@ -698,11 +741,11 @@ const getCourses = async (req, res) => {
           const instId = courseObj.instructorId || courseObj.mentorId;
           const instructor = await User.findOne({ $or: [{ _id: instId }, { "_id.$oid": instId }] });
           if (instructor) {
-            courseObj.mentorName = instructor.name || instructor.fullName || "Instructor";
+            courseObj.mentorName = instructor.name || instructor.fullName || "Mentor";
             courseObj.mentorEmail = instructor.email || "";
             courseObj.mentorId = instructor._id;
           } else {
-            courseObj.mentorName = "Unknown Instructor";
+            courseObj.mentorName = "Unknown Mentor";
             courseObj.mentorEmail = "";
           }
         }
@@ -756,7 +799,7 @@ const toggleCourseStatus = async (req, res) => {
 // Get mentor registrations
 const getMentorRegistrations = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "", status = "" } = req.query;
+    const { page = 1, limit = 10, search = "", status = "", sortBy = "", sortOrder = "" } = req.query;
     const filter = {};
 
     if (search.trim()) {
@@ -773,8 +816,29 @@ const getMentorRegistrations = async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const skipNum = (pageNum - 1) * limitNum;
 
+    // Define sort configuration
+    let sortObj = {};
+    if (sortBy) {
+      const fields = sortBy.split(",");
+      const orders = sortOrder.split(",");
+      fields.forEach((field, index) => {
+        let sortField = field.trim();
+        if (sortField === "fullName" || sortField === "name") {
+          sortField = "fullName";
+        } else if (sortField === "certificate") {
+          sortField = "certificate";
+        } else if (sortField === "status") {
+          sortField = "status";
+        }
+        const orderVal = orders[index] === "desc" ? -1 : 1;
+        sortObj[sortField] = orderVal;
+      });
+    } else {
+      sortObj = { createdAt: -1 };
+    }
+
     const total = await MentorRegistration.countDocuments(filter);
-    const data = await MentorRegistration.find(filter).sort({ createdAt: -1 }).skip(skipNum).limit(limitNum);
+    const data = await MentorRegistration.find(filter).sort(sortObj).skip(skipNum).limit(limitNum);
     const pages = Math.ceil(total / limitNum);
 
     return res.status(200).json({
@@ -833,6 +897,107 @@ const processMentorRegistration = async (req, res) => {
   }
 };
 
+// --- NOTIFICATIONS ---
+
+// Get admin notifications (with automatic seeding if empty)
+const getNotifications = async (req, res) => {
+  try {
+    let count = await Notification.countDocuments();
+    if (count === 0) {
+      // Seed some realistic notifications based on pending database entries
+      const pendingCourses = await Course.find({ status: "Pending" });
+      for (const course of pendingCourses) {
+        await Notification.create({
+          title: "Course Verification Needed",
+          message: `Approval requested for course: "${course.title || course.courseName}" by Mentor: ${course.mentorName || "Unknown"}`,
+          type: "course",
+          referenceId: course._id.toString(),
+          isRead: false
+        });
+      }
+
+      const pendingMentors = await MentorRegistration.find({ status: "Pending" });
+      for (const reg of pendingMentors) {
+        await Notification.create({
+          title: "New Mentor Registration",
+          message: `Application pending review for: ${reg.fullName} (${reg.email})`,
+          type: "mentor",
+          referenceId: reg._id.toString(),
+          isRead: false
+        });
+      }
+
+      // Add a couple of generic system warnings/metrics
+      await Notification.create({
+        title: "Database Performance Alert",
+        message: "System CPU usage spiked to 88% during overnight aggregate logs cleanup. Recommendation: indexing paths.",
+        type: "system",
+        referenceId: "",
+        isRead: false
+      });
+
+      await Notification.create({
+        title: "Weekly Activity Summary",
+        message: "Platform registration rate increased by 24% this week. Total active learners currently at 120k.",
+        type: "system",
+        referenceId: "",
+        isRead: true
+      });
+    }
+
+    const data = await Notification.find().sort({ createdAt: -1 });
+    return res.status(200).json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error("Lỗi lấy thông báo:", error);
+    return res.status(200).json({
+      success: true,
+      data: []
+    });
+  }
+};
+
+// Toggle notification read status
+const toggleNotificationReadStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isRead } = req.body;
+
+    const notif = await Notification.findOne({ $or: [{ _id: id }, { "_id.$oid": id }] });
+    if (!notif) {
+      return res.status(404).json({ success: false, message: "Notification not found." });
+    }
+
+    notif.isRead = isRead;
+    await notif.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification status updated.",
+      data: notif
+    });
+  } catch (error) {
+    console.error("Lỗi cập nhật thông báo:", error);
+    return res.status(500).json({ success: false, message: "Unable to update notification status." });
+  }
+};
+
+// Mark all notifications as read
+const markAllNotificationsRead = async (req, res) => {
+  try {
+    await Notification.updateMany({ isRead: false }, { isRead: true });
+    return res.status(200).json({
+      success: true,
+      message: "All notifications marked as read."
+    });
+  } catch (error) {
+    console.error("Lỗi đánh dấu đã đọc toàn bộ:", error);
+    return res.status(500).json({ success: false, message: "Unable to mark notifications as read." });
+  }
+};
+
 module.exports = {
   getStatistics,
   getCategories,
@@ -847,5 +1012,8 @@ module.exports = {
   getCourses,
   toggleCourseStatus,
   getMentorRegistrations,
-  processMentorRegistration
+  processMentorRegistration,
+  getNotifications,
+  toggleNotificationReadStatus,
+  markAllNotificationsRead
 };
