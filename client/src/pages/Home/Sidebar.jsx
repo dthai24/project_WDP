@@ -100,9 +100,9 @@ export function Sidebar({
       animate={{
         width: isOpen ? 256 : 80,
       }}
-      className="h-full bg-sidebar text-white flex flex-col relative z-20 flex-shrink-0 transition-all duration-300"
+      className="h-full bg-white/70 backdrop-blur-md text-slate-800 flex flex-col relative z-20 flex-shrink-0 border-r border-rose-100/40 transition-all duration-300"
     >
-      <div className="p-4 flex items-center justify-between h-16 border-b border-slate-800">
+      <div className="p-4 flex items-center justify-between h-16 border-b border-slate-100">
         <div
           className={`flex items-center gap-3 overflow-hidden ${!isOpen && 'justify-center w-full'}`}
         >
@@ -129,7 +129,7 @@ export function Sidebar({
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute -right-3 top-6 bg-slate-800 text-white rounded-full p-1 border border-slate-700 hover:bg-slate-700 z-30"
+        className="absolute -right-3 top-6 bg-white text-slate-600 rounded-full p-1 border border-slate-200 hover:bg-slate-50 z-30 shadow-sm"
       >
         {isOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
       </button>
@@ -142,13 +142,13 @@ export function Sidebar({
             <button
               key={item.id}
               onClick={() => setCurrentPage(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl relative group transition-colors ${isActive ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl relative group transition-all ${isActive ? 'text-primary font-bold' : 'text-slate-600 hover:text-primary hover:bg-rose-50/50'}`}
               title={!isOpen ? item.label : undefined}
             >
               {isActive && (
                 <motion.div
                   layoutId="sidebar-active"
-                  className="absolute inset-0 bg-primary/20 rounded-xl border-l-4 border-primary-light"
+                  className="absolute inset-0 bg-primary/5 rounded-xl border-l-4 border-primary"
                   initial={false}
                   transition={{
                     type: 'spring',
@@ -159,7 +159,7 @@ export function Sidebar({
               )}
               <Icon
                 size={20}
-                className={`relative z-10 flex-shrink-0 ${isActive ? 'text-primary-light' : ''}`}
+                className={`relative z-10 flex-shrink-0 ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-primary transition-colors'}`}
               />
 
               {isOpen && (
@@ -178,10 +178,10 @@ export function Sidebar({
         })}
       </div>
 
-      <div className="p-4 border-t border-slate-800 space-y-3">
+      <div className="p-4 border-t border-slate-100 space-y-3">
         <button
           onClick={() => setCurrentPage('profile')}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-800 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-rose-50/50 transition-colors"
         >
           <div className="w-8 h-8 rounded-full bg-slate-700 flex-shrink-0 overflow-hidden">
             <img
@@ -192,10 +192,10 @@ export function Sidebar({
           </div>
           {isOpen && (
             <div className="flex-1 text-left overflow-hidden">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm font-semibold text-slate-800 truncate">
                 {currentUser?.name || 'Alex Chen'}
               </p>
-              <p className="text-xs text-slate-400 truncate">Hồ sơ</p>
+              <p className="text-xs text-slate-500 truncate">Hồ sơ</p>
             </div>
           )}
         </button>

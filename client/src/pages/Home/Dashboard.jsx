@@ -117,7 +117,12 @@ export function Dashboard({ currentUser, onLogout }) {
     },
   }
   return (
-    <div className="min-h-screen flex bg-slate-950 text-white">
+    <div 
+      className="min-h-screen flex text-slate-800 font-sans antialiased w-full"
+      style={{
+        background: "linear-gradient(135deg, #fff5f5 0%, #fff0f3 30%, #fdf2f8 60%, #faf5ff 100%)"
+      }}
+    >
       <Sidebar
         isOpen={isOpen}
         setIsOpen={setIsOpen}
@@ -254,14 +259,14 @@ export function Dashboard({ currentUser, onLogout }) {
         </div>
 
         {/* Countdown Timer */}
-        <div className="relative z-10 bg-sidebar/40 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center group">
+        <div className="relative z-10 bg-white/30 backdrop-blur-md rounded-2xl p-4 border border-white/40 text-center group shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <p className="text-xs font-semibold text-white/70 tracking-wider uppercase">
+            <p className="text-xs font-bold text-slate-600 tracking-wider uppercase">
               {examName}
             </p>
             <button
               onClick={() => setIsEditingExam(true)}
-              className="text-white/50 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+              className="text-slate-500 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
             >
               <Edit2 size={12} />
             </button>
@@ -289,7 +294,7 @@ export function Dashboard({ currentUser, onLogout }) {
                 <div className="bg-white text-primary font-bold text-xl md:text-2xl w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center shadow-inner">
                   {item.value.toString().padStart(2, '0')}
                 </div>
-                <span className="text-[10px] mt-1 text-white/80">
+                <span className="text-[10px] mt-1 text-slate-600 font-bold">
                   {item.label}
                 </span>
               </div>
@@ -306,7 +311,7 @@ export function Dashboard({ currentUser, onLogout }) {
             variants={itemVariants}
             className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
-            <div className="bg-card rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+            <div className="bg-white/75 backdrop-blur-md rounded-2xl p-5 border border-rose-100/50 shadow-sm hover:shadow-md hover:border-rose-200/60 transition-all flex items-center gap-4">
               <div className="relative w-16 h-16 flex-shrink-0">
                 <svg
                   className="w-full h-full transform -rotate-90"
@@ -341,7 +346,7 @@ export function Dashboard({ currentUser, onLogout }) {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+            <div className="bg-white/75 backdrop-blur-md rounded-2xl p-5 border border-rose-100/50 shadow-sm hover:shadow-md hover:border-rose-200/60 transition-all flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent flex-shrink-0">
                 <Flame size={24} />
               </div>
@@ -356,7 +361,7 @@ export function Dashboard({ currentUser, onLogout }) {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+            <div className="bg-white/75 backdrop-blur-md rounded-2xl p-5 border border-rose-100/50 shadow-sm hover:shadow-md hover:border-rose-200/60 transition-all flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success flex-shrink-0">
                 <Brain size={24} />
               </div>
@@ -377,7 +382,7 @@ export function Dashboard({ currentUser, onLogout }) {
           {/* Tasks */}
           <motion.div
             variants={itemVariants}
-            className="bg-card rounded-2xl p-6 border border-slate-100 shadow-sm"
+            className="bg-white/75 backdrop-blur-md rounded-2xl p-6 border border-rose-100/50 shadow-sm"
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-bold text-text-primary">
@@ -439,7 +444,7 @@ export function Dashboard({ currentUser, onLogout }) {
           {/* Streak Calendar (Simplified) */}
           <motion.div
             variants={itemVariants}
-            className="bg-card rounded-2xl p-6 border border-slate-100 shadow-sm"
+            className="bg-white/75 backdrop-blur-md rounded-2xl p-6 border border-rose-100/50 shadow-sm"
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">
               Tính nhất quán học tập
@@ -484,7 +489,7 @@ export function Dashboard({ currentUser, onLogout }) {
         <div className="space-y-6">
           <motion.div
             variants={itemVariants}
-            className="bg-card rounded-2xl p-6 border border-slate-100 shadow-sm"
+            className="bg-white/75 backdrop-blur-md rounded-2xl p-6 border border-rose-100/50 shadow-sm"
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">
               Thao tác nhanh
@@ -545,39 +550,39 @@ export function Dashboard({ currentUser, onLogout }) {
           {/* Payment Gateway Mock */}
           <motion.div
             variants={itemVariants}
-            className="bg-gradient-to-br from-slate-900 to-sidebar rounded-2xl p-6 text-white shadow-xl relative overflow-hidden"
+            className="bg-gradient-to-br from-rose-500 via-pink-500 to-primary rounded-2xl p-6 text-white shadow-lg shadow-rose-500/20 relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/30 rounded-full blur-3xl"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
             <div className="flex justify-between items-start mb-6 relative z-10">
               <div>
                 <h3 className="font-bold text-lg flex items-center gap-2">
                   <CreditCard size={20} /> Nâng cấp Pro
                 </h3>
-                <p className="text-xs text-slate-300 mt-1">
+                <p className="text-xs text-rose-100 mt-1">
                   Mở khóa tất cả tính năng AI
                 </p>
               </div>
-              <span className="bg-accent text-sidebar text-xs font-bold px-2 py-1 rounded">
+              <span className="bg-amber-400 text-rose-950 text-xs font-bold px-2 py-1 rounded">
                 PRO
               </span>
             </div>
             <div className="space-y-2 mb-6 relative z-10">
-              <div className="flex items-center gap-2 text-sm text-slate-200">
-                <CheckCircle2 size={14} className="text-success-light" /> Không
+              <div className="flex items-center gap-2 text-sm text-rose-100">
+                <CheckCircle2 size={14} className="text-emerald-300" /> Không
                 giới hạn Quiz AI
               </div>
-              <div className="flex items-center gap-2 text-sm text-slate-200">
-                <CheckCircle2 size={14} className="text-success-light" />{' '}
+              <div className="flex items-center gap-2 text-sm text-rose-100">
+                <CheckCircle2 size={14} className="text-emerald-300" />{' '}
                 Podcast bài giảng dài
               </div>
-              <div className="flex items-center gap-2 text-sm text-slate-200">
-                <CheckCircle2 size={14} className="text-success-light" /> Mentor
+              <div className="flex items-center gap-2 text-sm text-rose-100">
+                <CheckCircle2 size={14} className="text-emerald-300" /> Mentor
                 1-1 ưu tiên
               </div>
             </div>
             <button
               onClick={() => setCurrentPage('pricing')}
-              className="w-full bg-white text-sidebar font-bold py-2.5 rounded-xl hover:bg-slate-100 transition-colors relative z-10"
+              className="w-full bg-white text-primary font-bold py-2.5 rounded-xl hover:bg-rose-50 transition-colors relative z-10 shadow-md"
             >
               Nâng cấp ngay - 99k/tháng
             </button>
