@@ -50,8 +50,9 @@ const PILL_CHIP_SX = {
   },
 };
 
-function getStatusChip(status) {
-  if (status === 'published') {
+//_______Status Chip IsPublished Course______________________
+function getStatusChip(IsPublished) {
+  if (IsPublished) {
     return {
       label: 'Đã xuất bản',
       sx: {
@@ -71,7 +72,7 @@ function getStatusChip(status) {
   };
 }
 
-function CourseThumbnail({ courseName }) {
+function CourseThumbnail({ courseName, thumbnail }) {
   return (
     <Box
       sx={{
@@ -85,7 +86,22 @@ function CourseThumbnail({ courseName }) {
         placeItems: 'center',
       }}
     >
-      <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
+      {thumbnail ?
+        <Box
+          component="img"
+          src={`http://localhost:5000${thumbnail}`}
+          alt={courseName || 'Course thumbnail'}
+          sx={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+        :
+        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
+      }
+
       {courseName && <Typography sx={{ display: 'none' }}>{courseName}</Typography>}
     </Box>
   );
@@ -102,27 +118,27 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
   );
 }
 
-export default function MentorQuestionBankRow({ item }) {
+export default function MentorQuestionBankRow({ bankItem }) {
   const theme = useTheme();
   const navigate = useNavigate();
-  const statusChip = getStatusChip(item.status);
+  const statusChip = getStatusChip(bankItem.IsPublished);
 
   const handleManageQuestions = async () => {
-    const res = await getQuestionBanksByCourse(item.courseId);
-    const banks = res.ok ? res.banks : [];
+    // const res = await getQuestionBanksByCourse(bankItem.CourseId);
+    // const banks = res.ok ? res.banks : [];
 
-    if (banks.length === 0) {
-      toast.info('Chưa có ngân hàng câu hỏi cho khóa học này.');
-      navigate(`/mentor/question-banks/create?courseId=${item.courseId}`);
-      return;
-    }
+    // if (banks.length === 0) {
+    //   toast.info('Chưa có ngân hàng câu hỏi cho khóa học này.');
+    //   navigate(`/mentor/question-banks/create?courseId=${bank.CourseId}`);
+    //   return;
+    // }
 
-    if (banks.length === 1) {
-      navigate(`/mentor/question-banks/${banks[0].id}`);
-      return;
-    }
+    // if (banks.length === 1) {
+    //   navigate(`/mentor/question-banks/${banks[0].id}`);
+    //   return;
+    // }
 
-    navigate(`/mentor/courses/${item.courseId}/questions`);
+    // navigate(`/mentor/courses/${bank.courseId}/questions`);
   };
 
   return (
@@ -140,7 +156,7 @@ export default function MentorQuestionBankRow({ item }) {
         gap: { xs: 1.75, md: 2.5 },
       }}
     >
-      <CourseThumbnail courseName={item.courseName} />
+      <CourseThumbnail courseName={bankItem.CourseName} thumbnail={bankItem.Thumbnail} />
 
       <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
         <Typography
@@ -153,7 +169,7 @@ export default function MentorQuestionBankRow({ item }) {
             mb: 0.75,
           }}
         >
-          {item.courseName}
+          {bankItem.CourseName}
         </Typography>
 
         <Typography
@@ -168,38 +184,39 @@ export default function MentorQuestionBankRow({ item }) {
             overflow: 'hidden',
           }}
         >
-          {truncateText(item.description, 140)}
+          {truncateText(bankItem.CourseDescription, 140)}
         </Typography>
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
           <MetricItem
             icon={QuizOutlinedIcon}
-            label="Tổng câu hỏi"
-            value={item.totalQuestionCount ?? 0}
+            label="Tổng câu hỏi: "
+            value={bankItem.TotalQuestion ?? 0}
             iconColor={METRIC_COLORS.total}
           />
           <MetricItem
             icon={CheckCircleOutlineRoundedIcon}
-            label="Đã xuất bản"
-            value={item.publishedQuestionCount ?? 0}
+            label="Đã xuất bản: "
+            value={bankItem.TotalQuestionIsPublic ?? 0}
             iconColor={METRIC_COLORS.published}
           />
           <MetricItem
             icon={EditNoteRoundedIcon}
             label="Bản nháp"
-            value={item.draftQuestionCount ?? 0}
+            value={Number(bankItem.TotalQuestion) - Number(bankItem.TotalQuestionIsPublic) ?? 0}
             iconColor={METRIC_COLORS.draft}
           />
           <MetricItem
             icon={RouteOutlinedIcon}
             label="Chương có câu hỏi"
-            value={item.chapterWithQuestionCount ?? 0}
+            value={bankItem.PathHasQuestion ?? 0}
             iconColor={METRIC_COLORS.chapters}
           />
           <MetricItem
             icon={AssignmentOutlinedIcon}
             label="Quiz/Test"
-            value={item.quizCount ?? 0}
+            //___quizCount is Null, can only fix by sql query____________________________________________________________
+            value={bankItem.quizCount ?? 0}
             iconColor={METRIC_COLORS.quiz}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
@@ -209,7 +226,7 @@ export default function MentorQuestionBankRow({ item }) {
             <Typography sx={{ fontSize: 12, color: MUTED }}>
               Cập nhật ngân hàng:{' '}
               <Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>
-                {formatMentorCourseDate(item.questionBankUpdatedAt)}
+                {formatMentorCourseDate(bankItem.UpdatedAt)}
               </Box>
             </Typography>
           </Box>

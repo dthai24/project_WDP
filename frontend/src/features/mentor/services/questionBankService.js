@@ -348,6 +348,7 @@ export async function getCourseChapterBankStats(courseId) {
   };
 }
 
+//__________List Course's Question Bank summaries______________
 export async function getQuestionBankListSummaries() {
   const banks = getAllBanks();
   const byCourse = new Map();
@@ -457,8 +458,14 @@ export async function updateQuestionBank(id, patch) {
   return { ok: true, bank: banks[idx] };
 }
 
+//____________Fetch course has Question Bank_______________
 export async function fetchCoursesForQB() {
-  return { ok: true, courses: mentorCoursesMock };
+  try {
+
+  } catch (error) {
+
+  }
+  // return { ok: true, courses: mentorCoursesMock };
 }
 
 export async function fetchCourseForQB(courseId) {

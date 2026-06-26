@@ -51,11 +51,10 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor =
         height: 34,
         px: 1.25,
         pr: 0.75,
-        border: `1px solid ${
-          hasValue
-            ? alpha(theme.palette.primary.main, 0.22)
-            : alpha(theme.palette.primary.main, 0.1)
-        }`,
+        border: `1px solid ${hasValue
+          ? alpha(theme.palette.primary.main, 0.22)
+          : alpha(theme.palette.primary.main, 0.1)
+          }`,
         borderRadius: theme.ios18?.radius?.pill ?? 9999,
         bgcolor: alpha(theme.palette.primary.main, 0.04),
         color: hasValue ? theme.palette.text.primary : MUTED,
@@ -190,6 +189,7 @@ export default function MentorQuestionBankToolbar({
   onReset,
   activeFilterChips = [],
   onRemoveFilterChip,
+  // Filter Pay Attention to 3 line below
   statusOptions = mentorQuestionBankFilterOptionsMock.statusOptions,
   questionStatusOptions = mentorQuestionBankFilterOptionsMock.questionStatusOptions,
   sortOptions = mentorQuestionBankFilterOptionsMock.sortOptions,
@@ -276,6 +276,7 @@ export default function MentorQuestionBankToolbar({
         </Box>
       </Box>
 
+      {/* Filter Menu IsPublished Course */}
       <FilterMenu
         anchorEl={statusAnchor}
         open={Boolean(statusAnchor)}
@@ -284,6 +285,7 @@ export default function MentorQuestionBankToolbar({
         value={statusFilter}
         onSelect={onStatusChange}
       />
+      {/* Filter Menu TotalQuestionIsPublic Question */}
       <FilterMenu
         anchorEl={questionStatusAnchor}
         open={Boolean(questionStatusAnchor)}
@@ -292,6 +294,7 @@ export default function MentorQuestionBankToolbar({
         value={questionStatusFilter}
         onSelect={onQuestionStatusChange}
       />
+      {/* Filter Menu By Question's UpdatedAt  */}
       <FilterMenu
         anchorEl={sortAnchor}
         open={Boolean(sortAnchor)}

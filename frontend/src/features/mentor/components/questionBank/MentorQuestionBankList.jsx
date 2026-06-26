@@ -5,7 +5,7 @@ import EmptyState from '@/shared/ui/EmptyState';
 import Loading from '@/shared/ui/Loading';
 
 export default function MentorQuestionBankList({
-  items = [],
+  listQuestionBank = [],
   loading = false,
   hasAnyItems = true,
   showReset = false,
@@ -15,7 +15,7 @@ export default function MentorQuestionBankList({
     return <Loading message="Đang tải ngân hàng câu hỏi..." />;
   }
 
-  if (items.length === 0) {
+  if (listQuestionBank.length === 0) {
     return (
       <Box
         sx={{
@@ -46,8 +46,8 @@ export default function MentorQuestionBankList({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      {items.map((item) => (
-        <MentorQuestionBankRow key={item.courseId} item={item} />
+      {listQuestionBank.map((bank) => (
+        <MentorQuestionBankRow key={bank.CourseId} bankItem={bank} />
       ))}
     </Box>
   );
