@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Search, Bell, Settings, X, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 export function TopBar({ currentUser }) {
@@ -56,6 +57,15 @@ export function TopBar({ currentUser }) {
       </div>
 
       <div className="flex items-center gap-4 ml-4">
+        {currentUser?.role === 'Learner' && (
+          <Link
+            to="/become-mentor"
+            className="text-xs font-bold text-slate-600 hover:text-primary transition-all bg-rose-50/60 hover:bg-rose-100/40 border border-rose-100/60 px-3.5 py-1.5 rounded-full shadow-sm hover:shadow active:scale-[0.98] mr-1 flex items-center gap-1"
+          >
+            🎓 Become a Mentor
+          </Link>
+        )}
+
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
