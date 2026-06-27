@@ -203,7 +203,7 @@ export default function MentorQuestionBankRow({ bankItem }) {
           <MetricItem
             icon={EditNoteRoundedIcon}
             label="Bản nháp"
-            value={Number(bankItem.TotalQuestion) - Number(bankItem.TotalQuestionIsPublic) ?? 0}
+            value={Number(bankItem.TotalQuestion) - Number(bankItem.TotalQuestionIsPublic)}
             iconColor={METRIC_COLORS.draft}
           />
           <MetricItem

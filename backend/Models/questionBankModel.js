@@ -21,7 +21,7 @@ c.IsPublished,
 c.Thumbnail
 
 from Courses c
-left join Question_Bank qb
+RIGHT join Question_Bank qb
 on  c.CourseId = qb.CourseId
 left join Questions_Path qp
 on qp.BankId = qb.BankId

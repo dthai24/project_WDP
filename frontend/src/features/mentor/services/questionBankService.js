@@ -459,14 +459,14 @@ export async function updateQuestionBank(id, patch) {
 }
 
 //____________Fetch course has Question Bank_______________
-export async function fetchCoursesForQB() {
-  try {
+// export async function fetchCoursesForQB() {
+//   try {
 
-  } catch (error) {
+//   } catch (error) {
 
-  }
-  // return { ok: true, courses: mentorCoursesMock };
-}
+//   }
+//   // return { ok: true, courses: mentorCoursesMock };
+// }
 
 export async function fetchCourseForQB(courseId) {
   const course = mentorCoursesMock.find((c) => String(c.courseId) === String(courseId));
