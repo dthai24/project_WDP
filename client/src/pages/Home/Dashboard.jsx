@@ -536,8 +536,6 @@ export function Dashboard({ currentUser, onLogout }) {
     const userEmail = currentUser.email;
     if (essayText && essayText.trim().length > 0) {
       localStorage.setItem(`lexiora_essay_backup_${userEmail}`, essayText);
-    } else {
-      localStorage.removeItem(`lexiora_essay_backup_${userEmail}`);
     }
   }, [essayText, currentUser]);
 
