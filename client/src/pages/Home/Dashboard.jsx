@@ -246,7 +246,7 @@ const KNOWLEDGE_NODES = [
 
 export function Dashboard({ currentUser, onLogout }) {
   const [isOpen, setIsOpen] = useState(true)
-  const [currentPage, setCurrentPage] = useState('dashboard')
+  const [currentPage, _setCurrentPage] = useState('dashboard')
   
   // Timer state
   const [timeLeft, setTimeLeft] = useState({
@@ -276,6 +276,74 @@ export function Dashboard({ currentUser, onLogout }) {
   const [quizScore, setQuizScore] = useState(0)
   const [answerSubmitted, setAnswerSubmitted] = useState(false)
   const [quizCompleted, setQuizCompleted] = useState(false)
+
+  const [pendingPage, setPendingPage] = useState(null)
+
+  // Custom page transition blocker if quiz is active
+  const setCurrentPage = (page) => {
+    if (quizStarted && !quizCompleted) {
+      setPendingPage(page);
+    } else {
+      _setCurrentPage(page);
+    }
+  }
+
+  // 1. Auto-save quiz progress to localStorage
+  useEffect(() => {
+    if (!currentUser) return;
+    const userEmail = currentUser.email;
+    if (quizStarted && !quizCompleted) {
+      const state = {
+        quizStarted,
+        currentQuestion,
+        selectedAnswer,
+        quizScore,
+        answerSubmitted,
+        quizCompleted,
+      };
+      localStorage.setItem(`lexiora_quiz_backup_${userEmail}`, JSON.stringify(state));
+    } else if (quizCompleted) {
+      localStorage.removeItem(`lexiora_quiz_backup_${userEmail}`);
+    }
+  }, [quizStarted, currentQuestion, selectedAnswer, quizScore, answerSubmitted, quizCompleted, currentUser]);
+
+  // 2. Auto-restore quiz progress from localStorage on mount
+  useEffect(() => {
+    if (!currentUser) return;
+    const userEmail = currentUser.email;
+    const savedStateStr = localStorage.getItem(`lexiora_quiz_backup_${userEmail}`);
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        if (savedState.quizStarted && !savedState.quizCompleted) {
+          setQuizStarted(savedState.quizStarted);
+          setCurrentQuestion(savedState.currentQuestion);
+          setSelectedAnswer(savedState.selectedAnswer);
+          setQuizScore(savedState.quizScore);
+          setAnswerSubmitted(savedState.answerSubmitted);
+          setQuizCompleted(savedState.quizCompleted);
+          _setCurrentPage('quiz'); // Auto redirect to quiz if active
+        }
+      } catch (err) {
+        console.error("Failed to restore quiz state:", err);
+      }
+    }
+  }, [currentUser]);
+
+  // 3. Browser tab/window close warning (beforeunload)
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (quizStarted && !quizCompleted) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [quizStarted, quizCompleted]);
 
   // Documents & Chatbot States
   const [selectedDocId, setSelectedDocId] = useState(1)
@@ -2778,6 +2846,45 @@ export function Dashboard({ currentUser, onLogout }) {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Blocker Custom Fullscreen Overlay Modal */}
+      {pendingPage && (
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full border border-rose-100 shadow-2xl flex flex-col items-center text-center space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
+              <svg className="w-8 h-8 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-extrabold text-slate-800 text-base">Bạn đang làm dở bài Quiz!</h3>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Bạn có chắc chắn muốn chuyển hướng? Tiến trình bài làm hiện tại của bạn sẽ được tự động lưu lại.
+              </p>
+            </div>
+
+            <div className="flex gap-3 w-full pt-2">
+              <button
+                onClick={() => setPendingPage(null)}
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-2xl active:scale-95 transition-all"
+              >
+                Tiếp tục làm bài
+              </button>
+              <button
+                onClick={() => {
+                  const targetPage = pendingPage;
+                  setPendingPage(null);
+                  _setCurrentPage(targetPage);
+                }}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shadow-md shadow-rose-500/10"
+              >
+                Rời đi & Lưu bài
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

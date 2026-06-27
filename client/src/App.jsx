@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import AppRoutes from "./routes/AppRoutes";
 import ChatBot from "./components/ChatBot";
 import FloatingChatButton from "./components/FloatingChatButton";
+import SecuritySessionHandler from "./components/SecuritySessionHandler";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -41,6 +42,10 @@ export default function App() {
 
   return (
     <>
+      <SecuritySessionHandler
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
       <AppRoutes
         currentUser={currentUser}
         onLogin={handleLogin}
