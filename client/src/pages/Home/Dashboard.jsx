@@ -501,30 +501,34 @@ export function Dashboard({ currentUser, onLogout }) {
     }
   }, [quizStarted, currentQuestion, selectedAnswer, quizScore, answerSubmitted, quizCompleted, currentUser]);
 
-  // 2. Check for saved quiz or essay progress on mount
+  // 2. Check for saved quiz or essay progress when entering the respective page
   useEffect(() => {
     if (!currentUser) return;
     const userEmail = currentUser.email;
-    const quizBackup = localStorage.getItem(`lexiora_quiz_backup_${userEmail}`);
-    const essayBackup = localStorage.getItem(`lexiora_essay_backup_${userEmail}`);
 
-    if (quizBackup) {
-      try {
-        const parsed = JSON.parse(quizBackup);
-        if (parsed.quizStarted && !parsed.quizCompleted) {
-          setSavedQuizProgress(parsed);
-          setRestoreType('quiz');
-          setShowRestoreModal(true);
+    if (currentPage === 'quiz') {
+      const quizBackup = localStorage.getItem(`lexiora_quiz_backup_${userEmail}`);
+      if (quizBackup) {
+        try {
+          const parsed = JSON.parse(quizBackup);
+          if (parsed.quizStarted && !parsed.quizCompleted) {
+            setSavedQuizProgress(parsed);
+            setRestoreType('quiz');
+            setShowRestoreModal(true);
+          }
+        } catch (e) {
+          console.error("Error parsing quiz backup:", e);
         }
-      } catch (e) {
-        console.error("Error parsing quiz backup:", e);
       }
-    } else if (essayBackup && essayBackup.trim().length > 0) {
-      setSavedEssayProgress(essayBackup);
-      setRestoreType('essay');
-      setShowRestoreModal(true);
+    } else if (currentPage === 'essay') {
+      const essayBackup = localStorage.getItem(`lexiora_essay_backup_${userEmail}`);
+      if (essayBackup && essayBackup.trim().length > 0 && essayText === '') {
+        setSavedEssayProgress(essayBackup);
+        setRestoreType('essay');
+        setShowRestoreModal(true);
+      }
     }
-  }, [currentUser]);
+  }, [currentPage, currentUser]);
 
   // 3. Auto-save essay draft to localStorage
   useEffect(() => {
@@ -3230,6 +3234,8 @@ export function Dashboard({ currentUser, onLogout }) {
                 onClick={() => {
                   const targetPage = pendingPage;
                   setPendingPage(null);
+                  setQuizStarted(false);
+                  setEssayText('');
                   _setCurrentPage(targetPage);
                 }}
                 className="flex-1 py-3 px-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shadow-md shadow-rose-500/10"
