@@ -80,8 +80,197 @@ const QUIZ_QUESTIONS = [
     ],
     answer: 3,
     explanation: "Hành động 'finish' xảy ra và hoàn thành TRƯỚC một hành động khác trong quá khứ ('arrived'), nên dùng thì Quá khứ hoàn thành (had + V3/ed)."
+  },
+  {
+    id: 4,
+    question: "If I _______ you, I would take that job offer immediately.",
+    options: ["am", "was", "were", "would be"],
+    answer: 2,
+    explanation: "Đây là câu điều kiện loại 2 diễn tả giả định không có thật ở hiện tại. Động từ to-be chia là 'were' cho tất cả các ngôi."
+  },
+  {
+    id: 5,
+    question: "The man _______ you met yesterday is my English teacher.",
+    options: ["which", "whom", "whose", "whoever"],
+    answer: 1,
+    explanation: "'Whom' làm tân ngữ chỉ người thay thế cho 'The man' đứng trước."
+  },
+  {
+    id: 6,
+    question: "I wish I _______ more time to travel last summer.",
+    options: ["have", "had", "would have", "had had"],
+    answer: 3,
+    explanation: "Câu ước ở quá khứ (wish in the past) dùng cấu trúc 'had + V3/ed'. Ở đây động từ chính là 'have' nên chia thành 'had had'."
+  },
+  {
+    id: 7,
+    question: "She asked me where I _______ from.",
+    options: ["come", "came", "have come", "will come"],
+    answer: 1,
+    explanation: "Trong câu gián tiếp (Reported Speech), mệnh đề hỏi cần được lùi thì từ Hiện tại đơn (come) sang Quá khứ đơn (came)."
+  },
+  {
+    id: 8,
+    question: "We are looking forward to _______ you at the conference next week.",
+    options: ["meet", "meeting", "met", "be met"],
+    answer: 1,
+    explanation: "Cấu trúc 'look forward to' đi kèm với V-ing (to ở đây là giới từ)."
+  },
+  {
+    id: 9,
+    question: "This is the most _______ book I have ever read.",
+    options: ["interest", "interested", "interesting", "interestingly"],
+    answer: 2,
+    explanation: "Dùng tính từ đuôi '-ing' (interesting) để chỉ tính chất, đặc điểm của sự vật (cuốn sách)."
+  },
+  {
+    id: 10,
+    question: "He drove _______ to avoid causing an accident in the heavy rain.",
+    options: ["careful", "carefully", "careless", "carelessly"],
+    answer: 1,
+    explanation: "Dùng trạng từ 'carefully' để bổ nghĩa cho động từ thường 'drove'."
+  },
+  {
+    id: 11,
+    question: "They have built a new school in this village _______ last year.",
+    options: ["for", "since", "during", "in"],
+    answer: 1,
+    explanation: "Dùng 'since' đi kèm với mốc thời gian 'last year' trong thì Hiện tại hoàn thành."
+  },
+  {
+    id: 12,
+    question: "If it rains tomorrow, we _______ the outdoor picnic.",
+    options: ["cancel", "would cancel", "will cancel", "canceled"],
+    answer: 2,
+    explanation: "Câu điều kiện loại 1 diễn tả sự việc có thể xảy ra ở hiện tại hoặc tương lai: If + S + V(s/es), S + will + V-inf."
+  },
+  {
+    id: 13,
+    question: "English _______ all over the world by millions of people.",
+    options: ["is spoken", "speaks", "is speaking", "has spoken"],
+    answer: 0,
+    explanation: "Câu bị động ở thì Hiện tại đơn: S + am/is/are + V3/ed. Chủ ngữ 'English' là danh từ không đếm được."
+  },
+  {
+    id: 14,
+    question: "My father suggested _______ by train to enjoy the scenery.",
+    options: ["go", "to go", "going", "gone"],
+    answer: 2,
+    explanation: "Cấu trúc 'suggest + V-ing' đề nghị làm một việc gì đó."
+  },
+  {
+    id: 15,
+    question: "The girl _______ dog was lost was crying on the street.",
+    options: ["who", "whom", "whose", "which"],
+    answer: 2,
+    explanation: "Dùng đại từ quan hệ sở hữu 'whose' đứng trước danh từ 'dog' để chỉ sự sở hữu (chú chó của cô gái)."
+  },
+  {
+    id: 16,
+    question: "He is not used to _______ early in the morning.",
+    options: ["get up", "getting up", "got up", "to get up"],
+    answer: 1,
+    explanation: "Cấu trúc 'be/get used to + V-ing' diễn tả việc quen với việc gì đó ở hiện tại."
+  },
+  {
+    id: 17,
+    question: "Choose the word whose underlined part is pronounced differently: pl<u>ay</u>ed, stay<u>ed</u>, call<u>ed</u>, want<u>ed</u>.",
+    options: ["played", "stayed", "called", "wanted"],
+    answer: 3,
+    explanation: "wanted phát âm là /id/, các từ còn lại phát âm tận cùng là /d/."
+  },
+  {
+    id: 18,
+    question: "The exam was _______ difficult than we had expected.",
+    options: ["much", "more", "most", "as"],
+    answer: 1,
+    explanation: "Dùng cấu trúc so sánh hơn với tính từ dài 'difficult': S + V + more + adj + than."
+  },
+  {
+    id: 19,
+    question: "We decided not to go out because of the _______ rain.",
+    options: ["heavy", "strong", "hardly", "big"],
+    answer: 0,
+    explanation: "Mưa lớn/nặng hạt trong tiếng Anh thường đi kèm tính từ 'heavy' (heavy rain)."
+  },
+  {
+    id: 20,
+    question: "Neither my sisters nor my brother _______ ready to go yet.",
+    options: ["is", "are", "were", "have been"],
+    answer: 0,
+    explanation: "Trong cấu trúc 'Neither... nor...', động từ chia theo chủ ngữ gần nhất đứng sau 'nor' (my brother - số ít)."
+  },
+  {
+    id: 21,
+    question: "The children are excited _______ going to the zoo this weekend.",
+    options: ["about", "with", "at", "for"],
+    answer: 0,
+    explanation: "Cấu trúc 'excited about' hào hứng, phấn khích về việc gì."
+  },
+  {
+    id: 22,
+    question: "By next month, she _______ English for five years.",
+    options: ["will learn", "will have learned", "has learned", "is learning"],
+    answer: 1,
+    explanation: "Dùng thì Tương lai hoàn thành (will have + V3/ed) để diễn tả hành động sẽ hoàn thành trước một mốc thời gian trong tương lai."
+  },
+  {
+    id: 23,
+    question: "The meeting _______ because of the storm.",
+    options: ["postponed", "was postponed", "has postponed", "is postponing"],
+    answer: 1,
+    explanation: "Bị động quá khứ đơn: cuộc họp đã bị hoãn lại (was postponed)."
+  },
+  {
+    id: 24,
+    question: "He ran as fast as he could, _______ he still missed the bus.",
+    options: ["but", "and", "so", "because"],
+    answer: 0,
+    explanation: "Dùng liên từ chỉ sự tương phản 'but' (nhưng)."
+  },
+  {
+    id: 25,
+    question: "You _______ smoke in the hospital; it is strictly prohibited.",
+    options: ["don't have to", "mustn't", "needn't", "shouldn't"],
+    answer: 1,
+    explanation: "Dùng 'mustn't' để chỉ sự cấm đoán (prohibited)."
+  },
+  {
+    id: 26,
+    question: "Although he was very tired, _______ he finished his homework.",
+    options: ["but", "however", "he still", "so"],
+    answer: 2,
+    explanation: "Trong tiếng Anh, đã dùng 'Although' ở đầu câu thì không dùng 'but' ở vế sau. Ta chọn 'he still' để bổ nghĩa cho hành động."
+  },
+  {
+    id: 27,
+    question: "She is the student _______ won the first prize in the competition.",
+    options: ["whom", "who", "which", "whose"],
+    answer: 1,
+    explanation: "Dùng đại từ quan hệ 'who' làm chủ ngữ chỉ người thay thế cho 'the student'."
+  },
+  {
+    id: 28,
+    question: "He is looking _______ a new job since he was laid off last week.",
+    options: ["after", "for", "at", "up"],
+    answer: 1,
+    explanation: "Cụm động từ 'look for' nghĩa là tìm kiếm (a new job)."
+  },
+  {
+    id: 29,
+    question: "If you had studied harder, you _______ the final exam yesterday.",
+    options: ["would pass", "will pass", "would have passed", "passed"],
+    answer: 2,
+    explanation: "Câu điều kiện loại 3 giả định trái ngược quá khứ: If + S + had + V3, S + would have + V3."
+  },
+  {
+    id: 30,
+    question: "I don't mind _______ you with your homework if you need help.",
+    options: ["help", "to help", "helping", "helped"],
+    answer: 2,
+    explanation: "Cấu trúc 'mind + V-ing' phiền hoặc ngại làm việc gì đó."
   }
-]
+];
 
 // Flashcards constant
 const FLASHCARDS = [
@@ -278,10 +467,11 @@ export function Dashboard({ currentUser, onLogout }) {
   const [quizCompleted, setQuizCompleted] = useState(false)
 
   const [pendingPage, setPendingPage] = useState(null)
+  const [essayText, setEssayText] = useState('')
 
-  // Custom page transition blocker if quiz is active
+  // Custom page transition blocker if quiz is active or essay has content
   const setCurrentPage = (page) => {
-    if (quizStarted && !quizCompleted) {
+    if ((quizStarted && !quizCompleted) || (currentPage === 'essay' && essayText.trim().length > 0)) {
       setPendingPage(page);
     } else {
       _setCurrentPage(page);
@@ -330,10 +520,31 @@ export function Dashboard({ currentUser, onLogout }) {
     }
   }, [currentUser]);
 
-  // 3. Browser tab/window close warning (beforeunload)
+  // 3. Auto-save essay draft to localStorage
+  useEffect(() => {
+    if (!currentUser) return;
+    const userEmail = currentUser.email;
+    if (essayText && essayText.trim().length > 0) {
+      localStorage.setItem(`lexiora_essay_backup_${userEmail}`, essayText);
+    } else {
+      localStorage.removeItem(`lexiora_essay_backup_${userEmail}`);
+    }
+  }, [essayText, currentUser]);
+
+  // 4. Auto-restore essay draft from localStorage on mount
+  useEffect(() => {
+    if (!currentUser) return;
+    const userEmail = currentUser.email;
+    const savedEssay = localStorage.getItem(`lexiora_essay_backup_${userEmail}`);
+    if (savedEssay) {
+      setEssayText(savedEssay);
+    }
+  }, [currentUser]);
+
+  // 5. Browser tab/window close warning (beforeunload)
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (quizStarted && !quizCompleted) {
+      if ((quizStarted && !quizCompleted) || (currentPage === 'essay' && essayText.trim().length > 0)) {
         e.preventDefault();
         e.returnValue = "";
         return "";
@@ -1215,27 +1426,35 @@ export function Dashboard({ currentUser, onLogout }) {
                   <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
                     <Brain size={44} className="animate-bounce" />
                   </div>
-                  <h2 className="text-xl font-bold text-slate-800">Sẵn sàng thử thách bản thân?</h2>
+                  <h2 className="text-xl font-bold text-slate-800">Chọn Chế Độ Luyện Tập</h2>
                   <p className="text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
-                    Bài kiểm tra gồm 3 câu hỏi nhanh về cấu trúc ngữ pháp phổ biến. Nhận ngay 20 XP cho mỗi câu trả lời đúng và thêm 15 XP thưởng nếu trả lời đúng tuyệt đối!
+                    Kiểm tra và nâng cao trình độ tiếng Anh thông qua hình thức Trắc nghiệm củng cố hoặc Viết bài luận Essay tự luận.
                   </p>
                   <div className="bg-rose-50/50 p-4 rounded-2xl border border-rose-100 max-w-sm mx-auto text-left text-xs space-y-2 text-slate-600">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 size={16} className="text-success" /> Câu hỏi trắc nghiệm khách quan
+                      <CheckCircle2 size={16} className="text-success" /> Trắc nghiệm: 30 câu hỏi đa dạng chủ đề ngữ pháp
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 size={16} className="text-success" /> Phản hồi đáp án ngay lập tức
+                      <CheckCircle2 size={16} className="text-success" /> Tự luận: Luyện viết Essay theo chủ đề IELTS
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 size={16} className="text-success" /> Phân tích giải nghĩa nâng cao (chỉ Premium)
+                      <CheckCircle2 size={16} className="text-success" /> Tự động lưu tiến trình và cảnh báo đóng tab
                     </div>
                   </div>
-                  <button
-                    onClick={() => setQuizStarted(true)}
-                    className="btn-primary text-sm"
-                  >
-                    Bắt đầu làm bài
-                  </button>
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => setQuizStarted(true)}
+                      className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow"
+                    >
+                      Bắt đầu làm Trắc nghiệm
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage('essay')}
+                      className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow"
+                    >
+                      Luyện viết Essay tự luận
+                    </button>
+                  </div>
                 </div>
               ) : quizCompleted ? (
                 <div className="bg-white rounded-3xl p-8 border border-rose-100/50 shadow-sm max-w-2xl mx-auto text-center space-y-6">
@@ -1249,12 +1468,12 @@ export function Dashboard({ currentUser, onLogout }) {
 
                   <div className="bg-slate-50 py-6 px-8 rounded-3xl border border-slate-100 max-w-sm mx-auto grid grid-cols-2 gap-4">
                     <div className="text-center border-r border-slate-200">
-                      <div className="text-3xl font-extrabold text-primary">{quizScore} / 3</div>
+                      <div className="text-3xl font-extrabold text-primary">{quizScore} / {QUIZ_QUESTIONS.length}</div>
                       <div className="text-xs text-slate-400 font-semibold mt-1">Câu trả lời đúng</div>
                     </div>
                     <div className="text-center">
                       <div className="text-3xl font-extrabold text-success">
-                        +{quizScore * 20 + (quizScore === 3 ? 15 : 0)} XP
+                        +{quizScore * 20 + (quizScore === QUIZ_QUESTIONS.length ? 15 : 0)} XP
                       </div>
                       <div className="text-xs text-slate-400 font-semibold mt-1">Điểm tích lũy nhận</div>
                     </div>
@@ -1284,15 +1503,15 @@ export function Dashboard({ currentUser, onLogout }) {
                   {/* Left panel: Active Question */}
                   <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-rose-100/50 shadow-sm space-y-6">
                     <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-                      <span>CÂU HỎI {currentQuestion + 1} / 3</span>
-                      <span className="text-primary">{Math.round(((currentQuestion + 1) / 3) * 100)}% HOÀN THÀNH</span>
+                      <span>CÂU HỎI {currentQuestion + 1} / {QUIZ_QUESTIONS.length}</span>
+                      <span className="text-primary">{Math.round(((currentQuestion + 1) / QUIZ_QUESTIONS.length) * 100)}% HOÀN THÀNH</span>
                     </div>
 
                     {/* Progress Fill */}
                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                       <div 
                         className="h-full bg-primary transition-all duration-300"
-                        style={{ width: `${((currentQuestion + 1) / 3) * 100}%` }}
+                        style={{ width: `${((currentQuestion + 1) / QUIZ_QUESTIONS.length) * 100}%` }}
                       ></div>
                     </div>
 
@@ -2839,6 +3058,86 @@ export function Dashboard({ currentUser, onLogout }) {
                       </button>
                     </div>
                   </div>
+                )}
+
+                {currentPage === 'essay' && (
+                  <motion.div
+                    key="essay"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setCurrentPage('quiz')
+                        }}
+                        className="p-2 hover:bg-rose-50 rounded-full text-slate-500 hover:text-primary transition-all active:scale-90"
+                      >
+                        <ArrowLeft size={20} />
+                      </button>
+                      <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Luyện Viết Essay Tự Luận</h1>
+                        <p className="text-sm text-slate-500">Viết bài luận ngắn và hệ thống sẽ tự động lưu nháp cho bạn.</p>
+                      </div>
+                    </div>
+
+                    <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 border border-rose-100/50 shadow-sm space-y-6">
+                      <div className="bg-rose-50/40 border border-rose-100 p-5 rounded-2xl">
+                        <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider text-primary mb-2 flex items-center gap-2">
+                          <Edit2 size={16} /> Đề bài Essay (IELTS Writing Task 2)
+                        </h3>
+                        <p className="text-slate-700 text-sm font-semibold leading-relaxed">
+                          "Some people think that online learning is more effective than traditional classroom learning. To what extent do you agree or disagree with this opinion?"
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs font-bold text-slate-400">
+                          <span>BÀI VIẾT CỦA BẠN (Hệ thống tự động lưu nháp)</span>
+                          <span className="text-primary font-mono">{essayText.trim().split(/\s+/).filter(Boolean).length} từ</span>
+                        </div>
+                        <textarea
+                          value={essayText}
+                          onChange={(e) => setEssayText(e.target.value)}
+                          placeholder="Nhập nội dung bài luận của bạn tại đây (tối thiểu 150 từ)..."
+                          className="w-full h-80 p-5 rounded-2xl border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-slate-700 text-sm resize-none leading-relaxed transition-all"
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2">
+                        <div className="text-slate-400 text-[10px] flex items-center gap-1.5 font-medium">
+                          <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Đã lưu tự động
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => {
+                              setEssayText("");
+                              localStorage.removeItem(`lexiora_essay_backup_${currentUser.email}`);
+                              alert("Đã xóa bản nháp thành công.");
+                            }}
+                            className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all"
+                          >
+                            Xóa nháp
+                          </button>
+                          <button
+                            onClick={() => {
+                              alert("Chúc mừng! Bài luận của bạn đã được nộp thành công và đang chờ Mentor chấm điểm.");
+                              setEssayText("");
+                              localStorage.removeItem(`lexiora_essay_backup_${currentUser.email}`);
+                              setCurrentPage('dashboard');
+                            }}
+                            disabled={essayText.trim().length === 0}
+                            className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50"
+                          >
+                            Nộp bài luận
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
 
               </div>
