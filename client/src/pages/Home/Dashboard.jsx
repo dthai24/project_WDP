@@ -2385,6 +2385,88 @@ export function Dashboard({ currentUser, onLogout }) {
             </motion.div>
           )}
 
+          {/* Essay Writing Practice Page */}
+          {currentPage === 'essay' && (
+            <motion.div
+              key="essay"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6 pb-20"
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setCurrentPage('quiz')
+                  }}
+                  className="p-2 hover:bg-rose-50 rounded-full text-slate-500 hover:text-primary transition-all active:scale-90"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">Luyện Viết Essay Tự Luận</h1>
+                  <p className="text-sm text-slate-500">Viết bài luận ngắn và hệ thống sẽ tự động lưu nháp cho bạn.</p>
+                </div>
+              </div>
+
+              <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 border border-rose-100/50 shadow-sm space-y-6">
+                <div className="bg-rose-50/40 border border-rose-100 p-5 rounded-2xl">
+                  <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider text-primary mb-2 flex items-center gap-2">
+                    <Edit2 size={16} /> Đề bài Essay (IELTS Writing Task 2)
+                  </h3>
+                  <p className="text-slate-700 text-sm font-semibold leading-relaxed">
+                    "Some people think that online learning is more effective than traditional classroom learning. To what extent do you agree or disagree with this opinion?"
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold text-slate-400">
+                    <span>BÀI VIẾT CỦA BẠN (Hệ thống tự động lưu nháp)</span>
+                    <span className="text-primary font-mono">{essayText.trim().split(/\s+/).filter(Boolean).length} từ</span>
+                  </div>
+                  <textarea
+                    value={essayText}
+                    onChange={(e) => setEssayText(e.target.value)}
+                    placeholder="Nhập nội dung bài luận của bạn tại đây (tối thiểu 150 từ)..."
+                    className="w-full p-5 rounded-2xl border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-slate-700 text-sm resize-none leading-relaxed transition-all"
+                    style={{ height: '320px', minHeight: '200px' }}
+                  />
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <div className="text-slate-400 text-[10px] flex items-center gap-1.5 font-medium">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Đã lưu tự động
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setEssayText("");
+                        localStorage.removeItem(`lexiora_essay_backup_${currentUser.email}`);
+                        alert("Đã xóa bản nháp thành công.");
+                      }}
+                      className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all"
+                    >
+                      Xóa nháp
+                    </button>
+                    <button
+                      onClick={() => {
+                        alert("Chúc mừng! Bài luận của bạn đã được nộp thành công và đang chờ Mentor chấm điểm.");
+                        setEssayText("");
+                        localStorage.removeItem(`lexiora_essay_backup_${currentUser.email}`);
+                        setCurrentPage('dashboard');
+                      }}
+                      disabled={essayText.trim().length === 0}
+                      className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50"
+                    >
+                      Nộp bài luận
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* General fallback view for remaining pages (Knowledge map, readiness score, progress details, podcast, video, community, mentor support) */}
           {['knowledge', 'readiness', 'progress', 'community', 'podcast', 'video', 'mentor'].includes(currentPage) && (
             <motion.div
@@ -3054,87 +3136,6 @@ export function Dashboard({ currentUser, onLogout }) {
                       </button>
                     </div>
                   </div>
-                )}
-
-                {currentPage === 'essay' && (
-                  <motion.div
-                    key="essay"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="space-y-6"
-                  >
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => {
-                          setCurrentPage('quiz')
-                        }}
-                        className="p-2 hover:bg-rose-50 rounded-full text-slate-500 hover:text-primary transition-all active:scale-90"
-                      >
-                        <ArrowLeft size={20} />
-                      </button>
-                      <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Luyện Viết Essay Tự Luận</h1>
-                        <p className="text-sm text-slate-500">Viết bài luận ngắn và hệ thống sẽ tự động lưu nháp cho bạn.</p>
-                      </div>
-                    </div>
-
-                    <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 border border-rose-100/50 shadow-sm space-y-6">
-                      <div className="bg-rose-50/40 border border-rose-100 p-5 rounded-2xl">
-                        <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider text-primary mb-2 flex items-center gap-2">
-                          <Edit2 size={16} /> Đề bài Essay (IELTS Writing Task 2)
-                        </h3>
-                        <p className="text-slate-700 text-sm font-semibold leading-relaxed">
-                          "Some people think that online learning is more effective than traditional classroom learning. To what extent do you agree or disagree with this opinion?"
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-bold text-slate-400">
-                          <span>BÀI VIẾT CỦA BẠN (Hệ thống tự động lưu nháp)</span>
-                          <span className="text-primary font-mono">{essayText.trim().split(/\s+/).filter(Boolean).length} từ</span>
-                        </div>
-                        <textarea
-                          value={essayText}
-                          onChange={(e) => setEssayText(e.target.value)}
-                          placeholder="Nhập nội dung bài luận của bạn tại đây (tối thiểu 150 từ)..."
-                          className="w-full p-5 rounded-2xl border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-slate-700 text-sm resize-none leading-relaxed transition-all"
-                          style={{ height: '320px', minHeight: '200px' }}
-                        />
-                      </div>
-
-                      <div className="flex justify-between items-center pt-2">
-                        <div className="text-slate-400 text-[10px] flex items-center gap-1.5 font-medium">
-                          <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                          Đã lưu tự động
-                        </div>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => {
-                              setEssayText("");
-                              localStorage.removeItem(`lexiora_essay_backup_${currentUser.email}`);
-                              alert("Đã xóa bản nháp thành công.");
-                            }}
-                            className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all"
-                          >
-                            Xóa nháp
-                          </button>
-                          <button
-                            onClick={() => {
-                              alert("Chúc mừng! Bài luận của bạn đã được nộp thành công và đang chờ Mentor chấm điểm.");
-                              setEssayText("");
-                              localStorage.removeItem(`lexiora_essay_backup_${currentUser.email}`);
-                              setCurrentPage('dashboard');
-                            }}
-                            disabled={essayText.trim().length === 0}
-                            className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50"
-                          >
-                            Nộp bài luận
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
                 )}
 
               </div>
