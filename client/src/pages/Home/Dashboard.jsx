@@ -468,6 +468,10 @@ export function Dashboard({ currentUser, onLogout }) {
 
   const [pendingPage, setPendingPage] = useState(null)
   const [essayText, setEssayText] = useState('')
+  const [savedQuizProgress, setSavedQuizProgress] = useState(null)
+  const [savedEssayProgress, setSavedEssayProgress] = useState(null)
+  const [showRestoreModal, setShowRestoreModal] = useState(false)
+  const [restoreType, setRestoreType] = useState(null)
 
   // Custom page transition blocker if quiz is active or essay has content
   const setCurrentPage = (page) => {
@@ -497,26 +501,28 @@ export function Dashboard({ currentUser, onLogout }) {
     }
   }, [quizStarted, currentQuestion, selectedAnswer, quizScore, answerSubmitted, quizCompleted, currentUser]);
 
-  // 2. Auto-restore quiz progress from localStorage on mount
+  // 2. Check for saved quiz or essay progress on mount
   useEffect(() => {
     if (!currentUser) return;
     const userEmail = currentUser.email;
-    const savedStateStr = localStorage.getItem(`lexiora_quiz_backup_${userEmail}`);
-    if (savedStateStr) {
+    const quizBackup = localStorage.getItem(`lexiora_quiz_backup_${userEmail}`);
+    const essayBackup = localStorage.getItem(`lexiora_essay_backup_${userEmail}`);
+
+    if (quizBackup) {
       try {
-        const savedState = JSON.parse(savedStateStr);
-        if (savedState.quizStarted && !savedState.quizCompleted) {
-          setQuizStarted(savedState.quizStarted);
-          setCurrentQuestion(savedState.currentQuestion);
-          setSelectedAnswer(savedState.selectedAnswer);
-          setQuizScore(savedState.quizScore);
-          setAnswerSubmitted(savedState.answerSubmitted);
-          setQuizCompleted(savedState.quizCompleted);
-          _setCurrentPage('quiz'); // Auto redirect to quiz if active
+        const parsed = JSON.parse(quizBackup);
+        if (parsed.quizStarted && !parsed.quizCompleted) {
+          setSavedQuizProgress(parsed);
+          setRestoreType('quiz');
+          setShowRestoreModal(true);
         }
-      } catch (err) {
-        console.error("Failed to restore quiz state:", err);
+      } catch (e) {
+        console.error("Error parsing quiz backup:", e);
       }
+    } else if (essayBackup && essayBackup.trim().length > 0) {
+      setSavedEssayProgress(essayBackup);
+      setRestoreType('essay');
+      setShowRestoreModal(true);
     }
   }, [currentUser]);
 
@@ -530,16 +536,6 @@ export function Dashboard({ currentUser, onLogout }) {
       localStorage.removeItem(`lexiora_essay_backup_${userEmail}`);
     }
   }, [essayText, currentUser]);
-
-  // 4. Auto-restore essay draft from localStorage on mount
-  useEffect(() => {
-    if (!currentUser) return;
-    const userEmail = currentUser.email;
-    const savedEssay = localStorage.getItem(`lexiora_essay_backup_${userEmail}`);
-    if (savedEssay) {
-      setEssayText(savedEssay);
-    }
-  }, [currentUser]);
 
   // 5. Browser tab/window close warning (beforeunload)
   useEffect(() => {
@@ -3102,7 +3098,8 @@ export function Dashboard({ currentUser, onLogout }) {
                           value={essayText}
                           onChange={(e) => setEssayText(e.target.value)}
                           placeholder="Nhập nội dung bài luận của bạn tại đây (tối thiểu 150 từ)..."
-                          className="w-full h-80 p-5 rounded-2xl border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-slate-700 text-sm resize-none leading-relaxed transition-all"
+                          className="w-full p-5 rounded-2xl border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-slate-700 text-sm resize-none leading-relaxed transition-all"
+                          style={{ height: '320px', minHeight: '200px' }}
                         />
                       </div>
 
@@ -3145,6 +3142,64 @@ export function Dashboard({ currentUser, onLogout }) {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Restore Progress Modal */}
+      {showRestoreModal && (
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full border border-rose-100 shadow-2xl flex flex-col items-center text-center space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center shadow-inner">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-extrabold text-slate-800 text-base">Phát hiện bài làm chưa hoàn thành!</h3>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Bạn có một bài làm {restoreType === 'quiz' ? 'Trắc nghiệm' : 'Essay tự luận'} lưu trữ trước đó. Bạn có muốn tiếp tục bài làm này không?
+              </p>
+            </div>
+
+            <div className="flex gap-3 w-full pt-2">
+              <button
+                onClick={() => {
+                  const userEmail = currentUser?.email;
+                  if (restoreType === 'quiz') {
+                    localStorage.removeItem(`lexiora_quiz_backup_${userEmail}`);
+                  } else {
+                    localStorage.removeItem(`lexiora_essay_backup_${userEmail}`);
+                    setEssayText("");
+                  }
+                  setShowRestoreModal(false);
+                }}
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-2xl active:scale-95 transition-all"
+              >
+                Làm bài mới
+              </button>
+              <button
+                onClick={() => {
+                  if (restoreType === 'quiz' && savedQuizProgress) {
+                    setQuizStarted(savedQuizProgress.quizStarted);
+                    setCurrentQuestion(savedQuizProgress.currentQuestion);
+                    setSelectedAnswer(savedQuizProgress.selectedAnswer);
+                    setQuizScore(savedQuizProgress.quizScore);
+                    setAnswerSubmitted(savedQuizProgress.answerSubmitted);
+                    setQuizCompleted(savedQuizProgress.quizCompleted);
+                    _setCurrentPage('quiz');
+                  } else if (restoreType === 'essay' && savedEssayProgress) {
+                    setEssayText(savedEssayProgress);
+                    _setCurrentPage('essay');
+                  }
+                  setShowRestoreModal(false);
+                }}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-primary to-rose-600 hover:from-primary-dark text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shadow-md"
+              >
+                Tiếp tục bài làm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Blocker Custom Fullscreen Overlay Modal */}
       {pendingPage && (
