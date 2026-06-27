@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Search, Bell, Settings, X, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-export function TopBar() {
+export function TopBar({ currentUser }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
@@ -9,30 +10,30 @@ export function TopBar() {
     {
       id: 1,
       title: 'Đã đến giờ ôn tập',
-      desc: 'Chương 3: Chuẩn hóa dữ liệu',
+      desc: 'Chương 3: Thì Hiện tại hoàn thành',
       time: '10 phút trước',
       unread: true,
     },
     {
       id: 2,
       title: 'Kết quả Quiz mới',
-      desc: 'Bạn đạt 85% bài kiểm tra SQL',
+      desc: 'Bạn đạt 85% bài kiểm tra Thì Tiếng Anh',
       time: '2 giờ trước',
       unread: false,
     },
     {
       id: 3,
       title: 'Tài liệu đã xử lý xong',
-      desc: 'Bài giảng hệ CSDL.pdf đã sẵn sàng',
+      desc: 'Bài giảng Ngữ pháp IELTS.pdf đã sẵn sàng',
       time: 'Hôm qua',
       unread: false,
     },
   ]
   return (
-    <header className="h-16 bg-card border-b border-slate-200 flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0">
+    <header className="h-16 bg-white/70 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-4 md:px-8 relative z-30 flex-shrink-0">
       <div className="flex-1 max-w-xl relative">
         <div
-          className={`flex items-center bg-bg rounded-full px-4 py-2 border transition-colors ${isSearchFocused ? 'border-primary-light ring-2 ring-primary-light/20' : 'border-transparent'}`}
+          className={`flex items-center bg-slate-50/80 rounded-full px-4 py-2 border transition-all ${isSearchFocused ? 'border-primary/50 ring-4 ring-primary/5' : 'border-slate-200/60'}`}
         >
           <Search size={18} className="text-slate-400" />
           <input
@@ -56,10 +57,19 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center gap-4 ml-4">
+        {currentUser?.role === 'Learner' && (
+          <Link
+            to="/become-mentor"
+            className="text-xs font-bold text-slate-600 hover:text-primary transition-all bg-rose-50/60 hover:bg-rose-100/40 border border-rose-100/60 px-3.5 py-1.5 rounded-full shadow-sm hover:shadow active:scale-[0.98] mr-1 flex items-center gap-1"
+          >
+            🎓 Become a Mentor
+          </Link>
+        )}
+
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative"
+            className="p-2 text-slate-500 hover:bg-rose-50/50 rounded-full transition-colors relative"
           >
             <Bell size={20} />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full border-2 border-card"></span>
@@ -83,7 +93,7 @@ export function TopBar() {
                   y: 10,
                   scale: 0.95,
                 }}
-                className="absolute right-0 top-full mt-2 w-80 bg-card rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
+                className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
               >
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                   <h3 className="font-semibold text-text-primary">Thông báo</h3>
@@ -123,11 +133,11 @@ export function TopBar() {
 
         <div className="hidden md:flex items-center gap-3 pl-4 border-l border-slate-200">
           <div className="text-right">
-            <p className="text-sm font-semibold text-text-primary">Alex Chen</p>
-            <p className="text-xs text-slate-500">Khoa học Máy tính, Năm 3</p>
+            <p className="text-sm font-semibold text-text-primary">{currentUser?.name || 'Alex Chen'}</p>
+            <p className="text-xs text-slate-500">{currentUser?.role === 'Learner' ? 'Học viên' : currentUser?.role === 'Mentor' ? 'Mentor' : 'Quản trị viên'}</p>
           </div>
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
-            AC
+            {(currentUser?.name || 'Alex Chen').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
         </div>
       </div>
