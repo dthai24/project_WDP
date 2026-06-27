@@ -49,7 +49,7 @@ const AdminLayout = () => {
   // Fetch unread count for the notification bell
   const fetchUnreadCount = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/api/mentor/applications/unread-count");
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications/unread-count`);
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.count);
@@ -63,7 +63,7 @@ const AdminLayout = () => {
   const fetchHeaderNotifications = async () => {
     setNotifLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:5000/api/mentor/applications");
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications`);
       if (response.ok) {
         const data = await response.json();
         const mapped = data.slice(0, 8).map(app => ({
@@ -162,7 +162,7 @@ const AdminLayout = () => {
 
   const handleToggleReadHeader = async (id, currentRead) => {
     try {
-      await fetch("http://127.0.0.1:5000/api/mentor/applications/mark-read", {
+      await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications/mark-read`, {
         method: "POST"
       });
       setNotifications(prev =>
@@ -176,7 +176,7 @@ const AdminLayout = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      await fetch("http://127.0.0.1:5000/api/mentor/applications/mark-read", {
+      await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications/mark-read`, {
         method: "POST"
       });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
