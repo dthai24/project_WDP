@@ -43,7 +43,7 @@ export default function MentorRequests() {
   const fetchApplications = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:5000/api/mentor/applications");
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications`);
       if (response.ok) {
         const data = await response.json();
         setApplications(data);
@@ -97,7 +97,7 @@ export default function MentorRequests() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`http://127.0.0.1:5000/api/mentor/applications/${selectedApp._id}/review`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications/${selectedApp._id}/review`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -295,7 +295,7 @@ export default function MentorRequests() {
             </div>
             <div className="p-6 bg-slate-950 flex items-center justify-center max-h-[500px]">
               <img 
-                src={`http://127.0.0.1:5000${showCertificateModal.certificatePath}`} 
+                src={`${process.env.REACT_APP_API_URL || "http://localhost:5050"}${showCertificateModal.certificatePath}`} 
                 alt="Certificate" 
                 className="max-h-[450px] max-w-full object-contain rounded-lg shadow-lg"
                 onError={(e) => {
