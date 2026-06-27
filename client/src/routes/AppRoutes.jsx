@@ -4,6 +4,7 @@ import HomePage from "../pages/Home/HomePage";
 import LoginPage from "../pages/Auth/LoginPage";
 import CreateCourse from "../pages/Mentor/CreateCourse";
 import BecomeMentor from "../pages/Mentor/BecomeMentor"; 
+import { Dashboard } from "../pages/Home/Dashboard";
 import AdminRoutes from "./admin-routes"; 
 
 export default function AppRoutes({ currentUser, onLogin, onLogout }) {
@@ -15,11 +16,18 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
       <Route 
         path="/" 
         element={
-          <HomePage 
-            currentUser={currentUser} 
-            onLogout={onLogout} 
-            onLoginClick={() => navigate("/login")} 
-          />
+          currentUser?.role === "Learner" ? (
+            <Dashboard 
+              currentUser={currentUser} 
+              onLogout={onLogout} 
+            />
+          ) : (
+            <HomePage 
+              currentUser={currentUser} 
+              onLogout={onLogout} 
+              onLoginClick={() => navigate("/login")} 
+            />
+          )
         } 
       />
 
@@ -30,7 +38,17 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
           <LoginPage 
             onLogin={(userSession) => {
               onLogin(userSession);
-              navigate("/"); 
+              const isAdmin = userSession && (
+                userSession.email === "admin@gmail.com" ||
+                userSession.email === "minh@gmail.com" ||
+                userSession.role === "Admin" ||
+                (Array.isArray(userSession.roles) && userSession.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))
+              );
+              if (isAdmin) {
+                navigate("/admin");
+              } else {
+                navigate("/");
+              }
             }} 
             onBackHome={() => navigate("/")} 
           />
@@ -55,6 +73,17 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
           <CreateCourse 
             currentUser={currentUser} 
             onBackDashboard={() => navigate("/")} 
+          />
+        } 
+      />
+
+      {/* Student Dashboard */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <Dashboard 
+            currentUser={currentUser} 
+            onLogout={onLogout} 
           />
         } 
       />

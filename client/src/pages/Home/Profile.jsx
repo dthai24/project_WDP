@@ -178,7 +178,7 @@ export function Profile({ onLogout, setCurrentPage, currentUser }) {
             <div className="p-4 rounded-2xl border border-slate-100 hover:border-primary/30 transition-colors flex justify-between items-center group cursor-pointer">
               <div>
                 <h3 className="font-bold text-slate-900 mb-1">
-                  Hệ cơ sở dữ liệu
+                  Tiếng Anh Giao Tiếp & Grammar
                 </h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1">
                   <Clock size={12} /> Còn 12 ngày
@@ -191,7 +191,7 @@ export function Profile({ onLogout, setCurrentPage, currentUser }) {
 
             <div className="p-4 rounded-2xl border border-slate-100 hover:border-orange-200 transition-colors flex justify-between items-center group cursor-pointer">
               <div>
-                <h3 className="font-bold text-slate-900 mb-1">Thuật toán</h3>
+                <h3 className="font-bold text-slate-900 mb-1">IELTS Academic Writing & Speaking</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1">
                   <Clock size={12} /> Tháng sau
                 </p>
@@ -203,7 +203,7 @@ export function Profile({ onLogout, setCurrentPage, currentUser }) {
 
             <div className="p-4 rounded-2xl border border-slate-100 hover:border-green-200 transition-colors flex justify-between items-center group cursor-pointer">
               <div>
-                <h3 className="font-bold text-slate-900 mb-1">Hệ điều hành</h3>
+                <h3 className="font-bold text-slate-900 mb-1">Tiếng Anh THPT Quốc Gia</h3>
                 <p className="text-xs text-green-600 font-medium flex items-center gap-1">
                   🎯 Điểm A
                 </p>
