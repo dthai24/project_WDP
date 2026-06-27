@@ -10,7 +10,7 @@ export const QB_LIST_DEFAULTS = {
 const QB_PARAM_KEYS = ['q', 'status', 'questionStatus', 'sort', 'page', 'pageSize'];
 const VALID_QUESTION_STATUS = new Set(['all', 'has_draft', 'all_published', 'empty']);
 const VALID_SORT = new Set(['updated_desc', 'name_asc', 'questions_desc']);
-
+const VALID_STATUS = new Set(['all', 'draft', 'published'])
 function parsePage(value) {
   const page = Number.parseInt(value ?? '1', 10);
   return Number.isFinite(page) && page > 0 ? page : 1;
@@ -98,12 +98,23 @@ function matchesQuestionStatus(totalQuestion, totalQuestionIsPublic, questionSta
   return true;
 }
 
+const normalizationStatus = (bankStatus) => {
+  if (bankStatus !== 'all') {
+    return bankStatus === 'published' ? true : false;
+  }
+
+  return bankStatus;
+};
+
 export function filterAndSortQBItems(items, query = {}) {
   const { q = '', status = 'all', questionStatus = 'all', sort = 'updated_desc' } = query;
   const keyword = q.trim().toLowerCase();
 
+  const formatStatus = normalizationStatus(status);
+
   let result = items.filter((item) => {
-    if (status !== 'all' && item.IsPublished !== status) return false;
+    // if (item.TotalQuestion === 0) return false;
+    if (status !== 'all' && item.IsPublished !== formatStatus) return false;
     if (!matchesQuestionStatus(item.TotalQuestion, item.TotalQuestionIsPublic, questionStatus)) return false;
     if (keyword) {
       const haystack = [item.CourseName, item.CourseDescription].filter(Boolean).join(' ').toLowerCase();

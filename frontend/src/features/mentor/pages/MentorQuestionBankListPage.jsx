@@ -15,10 +15,7 @@ import MentorQuestionBankListPagination, {
 } from '@/features/mentor/components/questionBank/MentorQuestionBankListPagination';
 import MentorSelectCourseForQBDialog from '@/features/mentor/components/questionBank/MentorSelectCourseForQBDialog';
 import { mentorQuestionBankFilterOptionsMock } from '@/features/mentor/data/mentorQuestionBankMock';
-import {
-  fetchCoursesForQB,
-  getQuestionBankListSummaries,
-} from '@/features/mentor/services/questionBankService';
+
 import {
   parseQBListParams,
   hasActiveQBFilters,
@@ -61,13 +58,29 @@ export default function MentorQuestionBankListPage() {
         // console.log(typeof user)
         const user = JSON.parse(userRaw)
         setLoading(true);
-        const res = await axios.get("http://localhost:5000/api/question-bank/getAllBankOfMentor", {
-          params: {
-            userId: user.userId
-          }
+        console.log(user)
+        // Fetch API to get all question bank of mentor
+        const [bankRes, courseRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/question-bank/getAllBankOfMentor", {
+            params: {
+              userId: user.userId
+            }
+          }),
+          axios.post("http://localhost:5000/api/courses/my-courses", {
+            userId: user.userId,
+            roleName: user.roles[0]
+          })
+        ]);
+        // list course has question bank
+        setListQuestionBank(bankRes.data.questionBanks)
+        // list course has not question bank
+        const listAllCourse = courseRes.data.data;
+        const listCourseWithBank = bankRes.data.questionBanks;
+        const listCourseNoBank = listAllCourse.filter((course) => {
+          return listCourseWithBank.filter((c) => c.CourseId === course.CourseId).length > 0 ? false : true
         })
-        setListQuestionBank(res.data.questionBanks)
-        console.log(res)
+        setCoursesWithoutQB(listCourseNoBank);
+        // console.log(res)
       } catch (err) {
         console.error(err.message)
       } finally {
@@ -82,23 +95,6 @@ export default function MentorQuestionBankListPage() {
       isMounted = false;
     };
   }, []);
-
-  //_____________________Fetch Data_______________________
-  // useEffect(async () => {
-  //   // console.log(localStorage.getItem('user'))
-  //   const user = localStorage.getItem('user').json()
-  //   if (!selectDialogOpen) return;
-
-  //   const res = await fetchCoursesForQB((user.userId))
-
-  //   if(res.success) {
-  //     setCoursesWithoutQB
-  //   }
-
-  //   // .then((res) => {
-  //   //   if (res.ok) setCoursesWithoutQB(res.courses);
-  //   // });
-  // }, [selectDialogOpen]);
 
   const updateQuery = (patch) => {
     setSearchParams(
@@ -236,7 +232,7 @@ export default function MentorQuestionBankListPage() {
         onClose={() => setSelectDialogOpen(false)}
         courses={coursesWithoutQB}
         onSelect={(course) =>
-          navigate(`/mentor/question-banks/create?courseId=${course.courseId}`)
+          navigate(`/mentor/question-banks/create?courseId=${course.CourseId}`)
         }
       />
     </Box>

@@ -15,7 +15,9 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import SearchBox from '@/shared/ui/SearchBox';
-
+const TEXT = '#0F172A';
+const MUTED = '#64748B';
+const PRIMARY = '#0891B2';
 export default function MentorSelectCourseForQBDialog({
   open,
   onClose,
@@ -27,8 +29,12 @@ export default function MentorSelectCourseForQBDialog({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return courses;
-    return courses.filter((c) => c.courseName?.toLowerCase().includes(q));
+    // if (!q) return courses;
+    return courses
+      .filter((c) => c.CourseName?.toLowerCase().includes(q))
+      .toSorted((a, b) => {
+        return new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime();
+      });
   }, [courses, search]);
 
   const handleSelect = (course) => {
@@ -41,6 +47,42 @@ export default function MentorSelectCourseForQBDialog({
     setSearch('');
     onClose();
   };
+
+
+  function CourseThumbnail({ courseName, thumbnail }) {
+    return (
+      <Box
+        sx={{
+          width: { xs: '100%', sm: 112 },
+          height: { xs: 140, sm: 72 },
+          borderRadius: '14px',
+          flexShrink: 0,
+          overflow: 'hidden',
+          bgcolor: alpha(PRIMARY, 0.1),
+          display: 'grid',
+          placeItems: 'center',
+        }}
+      >
+        {thumbnail ?
+          <Box
+            component="img"
+            src={`http://localhost:5000${thumbnail}`}
+            alt={courseName || 'Course thumbnail'}
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+          :
+          <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
+        }
+
+        {courseName && <Typography sx={{ display: 'none' }}>{courseName}</Typography>}
+      </Box>
+    );
+  }
 
   return (
     <Dialog
@@ -151,7 +193,7 @@ export default function MentorSelectCourseForQBDialog({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {filtered.map((course) => (
               <Box
-                key={course.courseId}
+                key={course.CourseId}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -170,20 +212,11 @@ export default function MentorSelectCourseForQBDialog({
                   },
                 }}
               >
-                <Box
-                  sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '14px',
-                    bgcolor: alpha('#0891B2', 0.08),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <MenuBookOutlinedIcon sx={{ fontSize: 22, color: '#0891B2' }} />
-                </Box>
+                {/*_____________THUMBNAIL */}
+                <CourseThumbnail
+                  courseName={course.CourseName}
+                  thumbnail={course.Thumbnail}>
+                </CourseThumbnail>
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography
@@ -197,13 +230,19 @@ export default function MentorSelectCourseForQBDialog({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {course.courseName}
+                    {course.CourseName}
                   </Typography>
-                  {(course.categoryName || course.levelName) && (
+                  {(course.CategoryDisplayName || course.LevelDisplayName) && (
                     <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.25 }}>
-                      {[course.categoryName, course.levelName].filter(Boolean).join(' · ')}
+                      {[course.CategoryDisplayName, course.LevelDisplayName].join(' · ')}
                     </Typography>
                   )}
+                  <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.25 }}>
+                    Create At: {course.CreatedAt}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.25 }}>
+                    Update At: {course.UpdatedAt}
+                  </Typography>
                 </Box>
 
                 <AppButton
