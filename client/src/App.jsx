@@ -24,6 +24,21 @@ export default function App() {
     localStorage.removeItem("lexiora_user");
   };
 
+  const userRole = currentUser?.role;
+  const isUserAdmin = currentUser && (
+    userRole === "Admin" ||
+    currentUser.email === "admin@gmail.com" ||
+    currentUser.email === "minh@gmail.com" ||
+    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))
+  );
+
+  const isUserMentor = currentUser && (
+    userRole === "Mentor" ||
+    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 2 || r.roleName === "Mentor"))
+  );
+
+  const shouldShowChatbot = !isUserAdmin && !isUserMentor;
+
   return (
     <>
       <AppRoutes
@@ -31,8 +46,12 @@ export default function App() {
         onLogin={handleLogin}
         onLogout={handleLogout}
       />
-      <FloatingChatButton onClick={() => setIsChatOpen(true)} />
-      <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      {shouldShowChatbot && (
+        <>
+          <FloatingChatButton onClick={() => setIsChatOpen(true)} />
+          <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        </>
+      )}
     </>
   );
 }
