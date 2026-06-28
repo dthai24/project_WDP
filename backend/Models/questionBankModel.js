@@ -317,6 +317,169 @@ async function insertQuestion(tx, questionPathId, question) {
   }
 }
 
+async function updateQuestionInPlace(tx, questionId, question) {
+  const req = new sql.Request(tx);
+  req.input('questionId', sql.Int, questionId);
+  req.input('title', sql.NVarChar(sql.MAX), question.Title);
+  req.input('isActive', sql.Bit, question.IsActive === false ? 0 : 1);
+  req.input('typeId', sql.Int, question.TypeId);
+  req.input('url', sql.NVarChar(sql.MAX), question.URL ?? null);
+  req.input('order', sql.Int, question.Order);
+  await req.query(`
+    UPDATE Questions
+    SET Title = @title, IsActive = @isActive, TypeId = @typeId, URL = @url, [Order] = @order
+    WHERE QuestionId = @questionId
+  `);
+
+  const deleteChoicesReq = new sql.Request(tx);
+  deleteChoicesReq.input('questionId', sql.Int, questionId);
+  await deleteChoicesReq.query(`DELETE FROM Question_Choices WHERE QuestionId = @questionId`);
+
+  for (const choice of question.Choices ?? []) {
+    const choiceReq = new sql.Request(tx);
+    choiceReq.input('questionId', sql.Int, questionId);
+    choiceReq.input('title', sql.NVarChar(250), choice.Title);
+    choiceReq.input('order', sql.Int, choice.Order);
+    choiceReq.input('isTrue', sql.Bit, choice.IsTrue ? 1 : 0);
+    await choiceReq.query(`
+      INSERT INTO Question_Choices (QuestionId, Title, [Order], IsTrue)
+      VALUES (@questionId, @title, @order, @isTrue)
+    `);
+  }
+}
+
+/** Cập nhật câu hỏi đã thay đổi / thêm mới / xóa trong 1 chương. */
+async function updatePathQuestions({
+  courseId,
+  pathId,
+  instructorId,
+  bankDescription,
+  questions = [],
+  deletedQuestionIds = [],
+}) {
+  if (!courseId || !pathId || !instructorId) {
+    const error = new Error('Thiếu courseId, pathId hoặc instructorId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const access = await assertCoursePath(courseId, pathId, instructorId);
+  if (!access.ok) {
+    const error = new Error(access.message);
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const updates = questions.filter((q) => Number(q.QuestionId) > 0);
+  const inserts = questions.filter((q) => !Number(q.QuestionId));
+  const deletes = [...new Set((deletedQuestionIds ?? []).map((id) => Number(id)).filter((id) => id > 0))];
+
+  if (!updates.length && !inserts.length && !deletes.length) {
+    const error = new Error('Không có thay đổi để lưu.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const duplicates = findDuplicateTitles([...updates, ...inserts]);
+  if (duplicates.length) {
+    const error = new Error(`Câu hỏi trùng tiêu đề: ${duplicates.join('; ')}`);
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const pool = await sql.connect();
+  const tx = new sql.Transaction(pool);
+  await tx.begin();
+
+  try {
+    await ensureQuestionTypes(tx);
+    const mappedUpdates = await mapQuestionsTypeIds(updates, tx);
+    const mappedInserts = await mapQuestionsTypeIds(inserts, tx);
+
+    const bankReq = new sql.Request(tx);
+    bankReq.input('courseId', sql.Int, courseId);
+    const bankRow = await bankReq.query(`SELECT BankId FROM Question_Bank WHERE CourseId = @courseId`);
+    const bankId = bankRow.recordset[0]?.BankId;
+    if (!bankId) {
+      const error = new Error('Chương chưa có ngân hàng câu hỏi.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (bankDescription != null) {
+      const updateReq = new sql.Request(tx);
+      updateReq.input('bankId', sql.Int, bankId);
+      updateReq.input('bankDescription', sql.NVarChar(200), bankDescription);
+      await updateReq.query(`
+        UPDATE Question_Bank
+        SET BankDescription = COALESCE(@bankDescription, BankDescription), UpdatedAt = SYSDATETIME()
+        WHERE BankId = @bankId
+      `);
+    }
+
+    let questionPathId = await getQuestionPathId(bankId, pathId, tx);
+    if (!questionPathId) {
+      questionPathId = await insertQuestionPath(tx, bankId, pathId);
+    }
+
+    for (const questionId of deletes) {
+      const checkReq = new sql.Request(tx);
+      checkReq.input('questionId', sql.Int, questionId);
+      checkReq.input('questionPathId', sql.Int, questionPathId);
+      const checkRes = await checkReq.query(`
+        SELECT QuestionId FROM Questions
+        WHERE QuestionId = @questionId AND Question_Path_Id = @questionPathId
+      `);
+      if (!checkRes.recordset[0]) continue;
+
+      const deleteChoicesReq = new sql.Request(tx);
+      deleteChoicesReq.input('questionId', sql.Int, questionId);
+      await deleteChoicesReq.query(`DELETE FROM Question_Choices WHERE QuestionId = @questionId`);
+
+      const deleteQuestionReq = new sql.Request(tx);
+      deleteQuestionReq.input('questionId', sql.Int, questionId);
+      await deleteQuestionReq.query(`DELETE FROM Questions WHERE QuestionId = @questionId`);
+    }
+
+    for (const question of mappedUpdates) {
+      const verifyReq = new sql.Request(tx);
+      verifyReq.input('questionId', sql.Int, question.QuestionId);
+      verifyReq.input('questionPathId', sql.Int, questionPathId);
+      const verifyRes = await verifyReq.query(`
+        SELECT QuestionId FROM Questions
+        WHERE QuestionId = @questionId AND Question_Path_Id = @questionPathId
+      `);
+      if (!verifyRes.recordset[0]) {
+        const error = new Error(`Không tìm thấy câu hỏi #${question.QuestionId}.`);
+        error.statusCode = 404;
+        throw error;
+      }
+      await updateQuestionInPlace(tx, question.QuestionId, question);
+    }
+
+    for (const question of mappedInserts) {
+      await insertQuestion(tx, questionPathId, question);
+    }
+
+    await tx.commit();
+    return {
+      BankId: bankId,
+      PathId: pathId,
+      CourseId: courseId,
+      UpdatedCount: mappedUpdates.length,
+      CreatedCount: mappedInserts.length,
+      DeletedCount: deletes.length,
+    };
+  } catch (error) {
+    try {
+      await tx.rollback();
+    } catch {
+      // ignore rollback error
+    }
+    throw error;
+  }
+}
+
 /** Tạo ngân hàng câu hỏi cho 1 chương (lần đầu). */
 async function savePathQuestions({ courseId, pathId, instructorId, isPublished, bankDescription, questions }) {
   if (!courseId || !pathId || !instructorId) {
@@ -509,6 +672,7 @@ module.exports = {
   getBankQuestions,
   getPathQuestions,
   savePathQuestions,
+  updatePathQuestions,
   setQuestionActiveStatus,
   deleteQuestionById,
   setAllPathQuestionsActive,

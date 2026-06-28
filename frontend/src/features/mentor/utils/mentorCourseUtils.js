@@ -290,6 +290,40 @@ export function paginateMentorCourses(courses, page, pageSize) {
   };
 }
 
+/** Thứ tự chương (1-based) trong outline khóa học. */
+export function getChapterOrder(chapters = [], chapterId) {
+  const index = chapters.findIndex(
+    (chapter) => String(chapter.PathId) === String(chapterId),
+  );
+  if (index < 0) return null;
+  return chapters[index]?.Order ?? index + 1;
+}
+
+/** Hiển thị chương dạng "Chương 1: Tên chương". */
+export function formatChapterDisplayLabel({ order, title = '', pathId } = {}) {
+  const trimmedTitle = String(title ?? '').trim();
+  if (/^Chương\s+\d+/i.test(trimmedTitle)) return trimmedTitle;
+
+  const orderLabel =
+    order != null && order > 0
+      ? `Chương ${order}`
+      : pathId != null
+        ? `Chương #${pathId}`
+        : null;
+
+  if (!orderLabel) return trimmedTitle || 'Chương';
+  if (!trimmedTitle) return orderLabel;
+  return `${orderLabel}: ${trimmedTitle}`;
+}
+
+export function resolveChapterDisplayLabel(chapters = [], chapterId, title = '') {
+  return formatChapterDisplayLabel({
+    order: getChapterOrder(chapters, chapterId),
+    title,
+    pathId: chapterId,
+  });
+}
+
 export function formatMentorCourseDate(value) {
   if (!value) return '—';
   try {

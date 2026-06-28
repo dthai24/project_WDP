@@ -7,6 +7,7 @@ const {
   getBankQuestions,
   getBankPaths,
   createPathQuestions,
+  patchPathQuestions,
   patchQuestionActive,
   deletePathQuestion,
   patchAllQuestionsActive,
@@ -22,6 +23,7 @@ router.get('/getAll', getAllQuestionBankByMentorId);
 router.get('/courses/:courseId/path-banks', getCoursePathBanks);
 router.get('/courses/:courseId/paths/:pathId/questions', getPathQuestions);
 router.post('/courses/:courseId/paths/:pathId/questions', createPathQuestions);
+router.patch('/courses/:courseId/paths/:pathId/questions', patchPathQuestions);
 router.patch('/courses/:courseId/paths/:pathId/questions/active-all', patchAllQuestionsActive);
 router.patch('/courses/:courseId/paths/:pathId/questions/:questionId/active', patchQuestionActive);
 router.delete('/courses/:courseId/paths/:pathId/questions/:questionId', deletePathQuestion);

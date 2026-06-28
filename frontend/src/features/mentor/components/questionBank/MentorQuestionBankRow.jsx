@@ -126,21 +126,13 @@ function MentorQuestionBankRow({ item }) {
   );
 
   const handleManageQuestions = useCallback(() => {
-    const bankIds = item.BankIds ?? [];
-
-    if (bankIds.length === 0) {
-      toast.info('Chưa có ngân hàng câu hỏi cho khóa học này.');
-      navigate(`/mentor/question-banks/create?courseId=${item.CourseId}`);
-      return;
-    }
-
-    if (bankIds.length === 1) {
-      navigate(`/mentor/question-banks/${bankIds[0]}?courseId=${item.CourseId}`);
+    if (!item.CourseId) {
+      toast.info('Không xác định được khóa học.');
       return;
     }
 
     navigate(`/mentor/courses/${item.CourseId}/questions`);
-  }, [item.BankIds, item.CourseId, navigate]);
+  }, [item.CourseId, navigate]);
 
   return (
     <Box sx={{ ...ROW_SX, boxShadow: theme.ios18?.shadow?.sm }}>

@@ -31,8 +31,10 @@ import { PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateS
 import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
 import {
   SCORING_MODE_AUTO,
+  buildQuestionBaselineMap,
   buildQuestionSnapshotMap,
   collectPersistedQuestionIds,
+  collectQuestionChangeSet,
   countActiveQuestionsBySkill,
   createQuestionBankSection,
   ensureQuestionBankSkillSections,
@@ -49,7 +51,7 @@ import {
   validatePublishedQuestionBankIntegrity,
   validateTestMaterial,
 } from '@/features/mentor/utils/mentorTestContentUtils';
-import { updateQuestionBank } from '@/features/mentor/services/questionBankService';
+import { updatePathQuestions } from '@/features/mentor/services/questionBankService';
 
 const PUBLISHED_COURSE_QB_HINT =
   'Khóa học đã xuất bản: chỉ thêm câu hỏi mới, không sửa/xóa câu hỏi cũ. Có thể tắt "Dùng cho quiz" để ẩn câu cũ khỏi quiz/test mới — lịch sử học viên không bị ảnh hưởng.';
@@ -94,6 +96,8 @@ export default function MentorQuestionBankDetailPage() {
     persistedQuestionIds,
     setPersistedQuestionIds,
     questionSnapshotRef,
+    questionBaselineMap,
+    setQuestionBaselineMap,
     workspaceKey,
     openPath,
     backToPathList,
@@ -109,6 +113,14 @@ export default function MentorQuestionBankDetailPage() {
     () => countActiveQuestionsBySkill(sections),
     [sections],
   );
+
+  const questionChanges = useMemo(
+    () => collectQuestionChangeSet(sections, questionBaselineMap),
+    [sections, questionBaselineMap],
+  );
+
+  const hasPendingQuestionChanges =
+    questionChanges.dirtyTempIds.size > 0 || questionChanges.deletedQuestionIds.length > 0;
 
   const skillSections = useMemo(
     () => getSectionsBySkill(sections, activeSkill),
@@ -136,6 +148,22 @@ export default function MentorQuestionBankDetailPage() {
       setActiveSectionId(skillSections[0].tempId);
     }
   }, [activeSection, skillSections, setActiveSectionId]);
+
+  useEffect(() => {
+    if (!isEditorMode || loading) return;
+    const questionId = searchParams.get('questionId');
+    if (!questionId) return;
+
+    const questionTempId = `question-${questionId}`;
+    const section = sections.find((item) =>
+      (item.Questions ?? []).some((question) => String(question.tempId) === questionTempId),
+    );
+    if (!section) return;
+
+    setActiveSkill(section.SkillType);
+    setActiveSectionId(section.tempId);
+    scrollToQuestionBankItem({ type: 'question', questionTempId });
+  }, [isEditorMode, loading, searchParams, sections, setActiveSectionId, setActiveSkill]);
 
   const handleSectionChange = (tempId, nextSection) => {
     setSections((prev) => prev.map((s) => (s.tempId === tempId ? nextSection : s)));
@@ -224,6 +252,11 @@ export default function MentorQuestionBankDetailPage() {
   const handleSave = async () => {
     if (!bank) return;
 
+    if (!hasPendingQuestionChanges) {
+      toast.info('Không có thay đổi để lưu.');
+      return;
+    }
+
     if (coursePublished) {
       const integrity = validatePublishedQuestionBankIntegrity(
         sections,
@@ -245,14 +278,13 @@ export default function MentorQuestionBankDetailPage() {
     setSubmitting(true);
     try {
       const bankTitle = bank.title?.trim() || bank.chapterTitle?.trim() || '';
-      const sectionsPayload = mapSectionsForSave(
-        getNonEmptyQuestionBankSections(consolidateWritingSections(sections)),
-      );
+      const sectionsForSave = consolidateWritingSections(sections);
 
-      const res = await updateQuestionBank(bank.id, {
-        title: bankTitle,
+      const res = await updatePathQuestions(bank.courseId, bank.chapterId, {
+        sections: sectionsForSave,
+        dirtyTempIds: questionChanges.dirtyTempIds,
+        deletedQuestionIds: questionChanges.deletedQuestionIds,
         chapterTitle: bank.chapterTitle ?? bankTitle,
-        sections: sectionsPayload,
       });
 
       if (!res.ok) {
@@ -260,11 +292,15 @@ export default function MentorQuestionBankDetailPage() {
         return;
       }
 
-      const nextSections = ensureQuestionBankSkillSections(res.bank.sections ?? sectionsPayload);
-      setBank(res.bank);
+      const nextSections = ensureQuestionBankSkillSections(res.bank?.sections ?? sectionsForSave);
+      const nextBaseline = buildQuestionBaselineMap(nextSections);
+      if (res.bank) {
+        setBank(res.bank);
+      }
       setSections(nextSections);
       setPersistedQuestionIds(collectPersistedQuestionIds(nextSections));
       questionSnapshotRef.current = buildQuestionSnapshotMap(nextSections);
+      setQuestionBaselineMap(nextBaseline);
       toast.success('Đã lưu thay đổi.');
     } catch {
       toast.error('Đã xảy ra lỗi. Vui lòng thử lại.');
@@ -276,6 +312,7 @@ export default function MentorQuestionBankDetailPage() {
   const footerActions = (
     <AppButton
       loading={submitting}
+      disabled={!hasPendingQuestionChanges}
       startIcon={<SaveOutlinedIcon sx={{ fontSize: 16 }} />}
       onClick={handleSave}
       sx={{
@@ -329,6 +366,10 @@ export default function MentorQuestionBankDetailPage() {
       );
       return;
     }
+    if (!isPathListMode && !isEditorMode && bank?.courseId) {
+      navigate(`/mentor/courses/${bank.courseId}/questions`);
+      return;
+    }
     if (!isPathListMode && bank?.courseId) {
       backToPathList();
       return;
@@ -373,12 +414,17 @@ export default function MentorQuestionBankDetailPage() {
   }
 
   if (isPathListMode) {
+    const courseCategory = [course?.CategoryDisplayName, course?.LevelDisplayName]
+      .filter(Boolean)
+      .join(' · ');
+
     return (
       <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
         <MentorQuestionBankPathsView
           bank={bank}
           paths={bankPaths}
           courseName={course?.CourseName ?? bank.courseTitle}
+          courseCategory={courseCategory}
           updatedAt={bank.updatedAt}
           onOpenPath={openPath}
           onBack={() => navigate('/mentor/question-banks')}
@@ -393,6 +439,10 @@ export default function MentorQuestionBankDetailPage() {
   }
 
   if (!isEditorMode) {
+    const courseCategory = [course?.CategoryDisplayName, course?.LevelDisplayName]
+      .filter(Boolean)
+      .join(' · ');
+
     return (
       <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
         <MentorChapterQuestionListView
@@ -400,9 +450,11 @@ export default function MentorQuestionBankDetailPage() {
           courseId={bank.courseId}
           chapterId={bank.chapterId}
           chapterTitle={bank.chapterTitle}
+          chapterDisplayLabel={bank.chapterDisplayLabel}
           courseName={course?.CourseName ?? bank.courseTitle}
+          courseCategory={courseCategory}
           questions={bank.questionList ?? []}
-          onBack={backToPathList}
+          onBack={backToCourseQuestions}
           onReload={reloadBank}
           onEditQuestion={(question) =>
             navigate(
@@ -417,7 +469,11 @@ export default function MentorQuestionBankDetailPage() {
     );
   }
 
-  const bankTitle = bank.title?.trim() || bank.chapterTitle?.trim() || 'Ngân hàng câu hỏi';
+  const bankTitle =
+    bank.chapterDisplayLabel ||
+    bank.title?.trim() ||
+    bank.chapterTitle?.trim() ||
+    'Ngân hàng câu hỏi';
   const courseCategory = [course?.CategoryDisplayName, course?.LevelDisplayName]
     .filter(Boolean)
     .join(' · ');

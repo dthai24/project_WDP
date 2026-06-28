@@ -199,16 +199,56 @@ export function buildQuestionContentSnapshot(question) {
   return JSON.stringify(content);
 }
 
-export function buildQuestionSnapshotMap(sections = []) {
+export function buildQuestionBaselineMap(sections = []) {
   const map = new Map();
   (sections ?? []).forEach((section) => {
     getFilledTestQuestions(section?.Questions).forEach((question) => {
-      if (question.tempId) {
-        map.set(question.tempId, buildQuestionContentSnapshot(question));
-      }
+      if (!question.tempId) return;
+      map.set(question.tempId, {
+        snapshot: buildQuestionContentSnapshot(question),
+        questionId: question.QuestionId ?? null,
+      });
     });
   });
   return map;
+}
+
+export function buildQuestionSnapshotMap(sections = []) {
+  const map = new Map();
+  buildQuestionBaselineMap(sections).forEach((baseline, tempId) => {
+    map.set(tempId, baseline.snapshot);
+  });
+  return map;
+}
+
+export function isQuestionDirty(question, baselineMap) {
+  if (!question?.tempId || !isFilledTestQuestion(question)) return false;
+  const baseline = baselineMap?.get(question.tempId);
+  if (!baseline) return true;
+  return buildQuestionContentSnapshot(question) !== baseline.snapshot;
+}
+
+/** tempId đã sửa / mới + QuestionId đã xóa so với baseline. */
+export function collectQuestionChangeSet(sections = [], baselineMap = new Map()) {
+  const dirtyTempIds = new Set();
+  const deletedQuestionIds = [];
+
+  (sections ?? []).forEach((section) => {
+    getFilledTestQuestions(section?.Questions).forEach((question) => {
+      if (isQuestionDirty(question, baselineMap)) {
+        dirtyTempIds.add(question.tempId);
+      }
+    });
+  });
+
+  baselineMap.forEach((baseline, tempId) => {
+    const stillExists = getAllQuestions(sections).some((question) => question.tempId === tempId);
+    if (!stillExists && baseline.questionId) {
+      deletedQuestionIds.push(baseline.questionId);
+    }
+  });
+
+  return { dirtyTempIds, deletedQuestionIds };
 }
 
 export function validatePublishedQuestionBankIntegrity(sections, snapshotMap) {

@@ -791,6 +791,106 @@ export async function createQuestionBank(payload) {
   }
 }
 
+export async function updatePathQuestions(courseId, chapterId, payload = {}) {
+  const userId = getUser()?.userId ?? getUser()?.UserId;
+  if (!userId) {
+    return { ok: false, message: 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.' };
+  }
+
+  const resolvedCourseId = Number(courseId);
+  const resolvedPathId = Number(chapterId);
+  const sections = payload.sections ?? [];
+  const dirtyTempIds = payload.dirtyTempIds ?? null;
+  const deletedQuestionIds = payload.deletedQuestionIds ?? [];
+
+  if (!Number.isInteger(resolvedCourseId) || !Number.isInteger(resolvedPathId)) {
+    return { ok: false, message: 'courseId hoặc chapterId không hợp lệ.' };
+  }
+
+  if (
+    (!dirtyTempIds || dirtyTempIds.size === 0) &&
+    (!deletedQuestionIds || deletedQuestionIds.length === 0)
+  ) {
+    return { ok: false, message: 'Không có thay đổi để lưu.' };
+  }
+
+  try {
+    let sectionsWithAudio;
+    try {
+      sectionsWithAudio = await uploadListeningFilesInSections(sections);
+    } catch (uploadError) {
+      return {
+        ok: false,
+        message: uploadError?.message ?? 'Không thể tải file nghe lên.',
+      };
+    }
+
+    const audioError = validateListeningSectionsHaveAudio(
+      sectionsWithAudio.filter((section) =>
+        (section.Questions ?? []).some(
+          (question) => dirtyTempIds?.has(question.tempId) && question.isActive !== false,
+        ),
+      ),
+    );
+    if (audioError) {
+      return { ok: false, message: audioError };
+    }
+
+    const apiBody = buildQuestionBankApiPayload(sectionsWithAudio, {
+      isPublished: false,
+      bankDescription: payload.chapterTitle ?? null,
+      dirtyTempIds,
+      deletedQuestionIds,
+    });
+
+    if (!apiBody.Questions.length && !apiBody.DeletedQuestionIds.length) {
+      return { ok: false, message: 'Không có thay đổi hợp lệ để lưu.' };
+    }
+
+    const response = await fetch(
+      `${API_BASE}/questionBank/courses/${resolvedCourseId}/paths/${resolvedPathId}/questions`,
+      {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(apiBody),
+      },
+    );
+
+    const rawText = await response.text();
+    let data = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      return {
+        ok: false,
+        message: `Phản hồi không hợp lệ (HTTP ${response.status}).`,
+      };
+    }
+
+    if (!response.ok || !data.success) {
+      return {
+        ok: false,
+        message: data.message ?? `Lưu thay đổi thất bại (HTTP ${response.status}).`,
+      };
+    }
+
+    invalidateQuestionBankListCache();
+
+    const fetchRes = await fetchPathQuestionBank(resolvedCourseId, resolvedPathId);
+    if (fetchRes.ok) {
+      return { ok: true, bank: fetchRes.bank, data: data.data };
+    }
+
+    return { ok: true, data: data.data };
+  } catch (error) {
+    console.error('[updatePathQuestions]', error);
+    return {
+      ok: false,
+      message: error?.message ?? 'Lỗi kết nối khi lưu thay đổi.',
+    };
+  }
+}
+
 export async function updateQuestionBank(id, patch) {
   const banks = loadStoredBanks();
   const idx = banks.findIndex((b) => b.id === id);

@@ -15,6 +15,7 @@ function normalizeQuestionsBody(rawQuestions) {
   if (!Array.isArray(rawQuestions)) return [];
   return rawQuestions
     .map((item, index) => ({
+      QuestionId: Number(item.QuestionId) > 0 ? Number(item.QuestionId) : null,
       TypeId: Number(item.TypeId),
       Title: String(item.Title ?? '').trim(),
       URL: item.URL ? String(item.URL).trim() : null,
@@ -166,6 +167,41 @@ const createPathQuestions = async (req, res) => {
   }
 };
 
+const patchPathQuestions = async (req, res) => {
+  try {
+    const { instructorId, courseId, pathId } = parseCoursePathIds(req);
+
+    if (!instructorId) {
+      return res.status(401).json({ success: false, message: 'Thiếu x-user-id.' });
+    }
+    if (!courseId || !pathId) {
+      return res.status(400).json({ success: false, message: 'courseId hoặc pathId không hợp lệ.' });
+    }
+
+    const questions = normalizeQuestionsBody(req.body?.Questions);
+    const deletedQuestionIds = Array.isArray(req.body?.DeletedQuestionIds)
+      ? req.body.DeletedQuestionIds.map((id) => Number(id)).filter((id) => id > 0)
+      : [];
+
+    const data = await questionBankModel.updatePathQuestions({
+      courseId,
+      pathId,
+      instructorId,
+      bankDescription: req.body?.BankDescription ?? null,
+      questions,
+      deletedQuestionIds,
+    });
+
+    return res.json({ success: true, message: 'Đã lưu thay đổi câu hỏi.', data });
+  } catch (error) {
+    console.error('[patchPathQuestions]', error);
+    return res.status(error.statusCode ?? 500).json({
+      success: false,
+      message: error.message || 'Lỗi server khi cập nhật câu hỏi.',
+    });
+  }
+};
+
 const patchQuestionActive = async (req, res) => {
   try {
     const { instructorId, courseId, pathId } = parseCoursePathIds(req);
@@ -241,6 +277,7 @@ module.exports = {
   getBankQuestions,
   getBankPaths,
   createPathQuestions,
+  patchPathQuestions,
   patchQuestionActive,
   deletePathQuestion,
   patchAllQuestionsActive,
