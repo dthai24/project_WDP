@@ -94,13 +94,12 @@ const Dashboard = () => {
       desc: "English level tracks",
       link: "/admin/categories"
     },
-    {
       label: "Mentor Applications",
       value: stats.pathCount,
       icon: Award,
       color: "from-purple-500 to-pink-500",
       desc: "Pending approvals queue",
-      link: "/admin/approvals"
+      link: "/admin/approvals?tab=mentors"
     }
   ];
 

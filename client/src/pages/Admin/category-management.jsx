@@ -39,7 +39,6 @@ const CategoryManagement = () => {
   // Confirmation Modal state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteCatData, setDeleteCatData] = useState(null);
-
   const fetchCategories = async (pageNum = 1, searchQuery = "") => {
     setLoading(true);
     setError(false);
@@ -149,6 +148,8 @@ const CategoryManagement = () => {
       alert(err.response?.data?.message || "Failed to delete category.");
     } finally {
       setDeleteCatData(null);
+    }
+  };
     }
   };
 
@@ -294,20 +295,6 @@ const CategoryManagement = () => {
         <div className="p-6 border border-red-100 rounded-2xl bg-red-50/50 flex items-center gap-3 text-red-700 shadow-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div className="text-sm font-semibold">API connection error. Please verify the backend service or database status.</div>
-        </div>
-      ) : activeTab === "list" ? (
-        <DataTable
-          columns={categoryColumns}
-          data={categories}
-          pagination={pagination}
-          onPageChange={(page) => fetchCategories(page, search)}
-          searchPlaceholder="Search by level code or category name..."
-          onSearch={(val) => {
-            setSearch(val);
-            fetchCategories(1, val);
-          }}
-          loading={loading}
-        />
       ) : (
         <DataTable
           columns={historyColumns}
@@ -498,6 +485,30 @@ const CategoryManagement = () => {
             </form>
           </div>
         </div>
+      )}
+        </div>
+      ) : activeTab === "list" ? (
+        <DataTable
+          columns={categoryColumns}
+          data={categories}
+          pagination={pagination}
+          onPageChange={(page) => fetchCategories(page, search)}
+          searchPlaceholder="Search by level code or category name..."
+          onSearch={(val) => {
+            setSearch(val);
+            fetchCategories(1, val);
+          }}
+          loading={loading}
+        />
+      ) : (
+        <DataTable
+          columns={historyColumns}
+          data={historyLogs}
+          pagination={historyPagination}
+          onPageChange={(page) => fetchHistory(page)}
+          searchPlaceholder="Search not available in history"
+          loading={loading}
+        />
       )}
 
       {/* Confirmation Modal */}

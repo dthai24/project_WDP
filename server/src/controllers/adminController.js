@@ -631,45 +631,6 @@ const getCourses = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "", status = "", category = "", sortBy = "", sortOrder = "" } = req.query;
     const filter = {};
-
-    if (search.trim()) {
-      if (search.trim().match(/^[0-9a-fA-F]{24}$/)) {
-        filter.$or = [
-          { _id: search.trim() },
-          { "_id.$oid": search.trim() }
-        ];
-      } else {
-        // Find mentors whose name matches search to query by instructorId/mentorId
-        const matchingMentors = await User.find({
-          $or: [
-            { name: { $regex: search, $options: "i" } },
-            { fullName: { $regex: search, $options: "i" } }
-          ]
-        }).select("_id");
-        const mentorIds = matchingMentors.map(m => m._id);
-
-        filter.$or = [
-          { title: { $regex: search, $options: "i" } },
-          { courseName: { $regex: search, $options: "i" } },
-          { mentorName: { $regex: search, $options: "i" } },
-          { mentorId: { $in: mentorIds } },
-          { instructorId: { $in: mentorIds } }
-        ];
-      }
-    }
-
-    if (status) {
-      if (status === "Active" || status === "Approved") {
-        filter.$or = [
-          { status: "Active" },
-          { status: "Approved" },
-          { isPublished: true }
-        ];
-      } else if (status === "Inactive" || status === "Reject" || status === "Rejected") {
-        filter.$or = [
-          { status: "Inactive" },
-          { status: "Reject" },
-          { status: "Rejected" },
           { isPublished: false }
         ];
       } else {
@@ -741,11 +702,11 @@ const getCourses = async (req, res) => {
           const instId = courseObj.instructorId || courseObj.mentorId;
           const instructor = await User.findOne({ $or: [{ _id: instId }, { "_id.$oid": instId }] });
           if (instructor) {
-            courseObj.mentorName = instructor.name || instructor.fullName || "Mentor";
+            courseObj.mentorName = instructor.name || instructor.fullName || "Instructor";
             courseObj.mentorEmail = instructor.email || "";
             courseObj.mentorId = instructor._id;
           } else {
-            courseObj.mentorName = "Unknown Mentor";
+            courseObj.mentorName = "Unknown Instructor";
             courseObj.mentorEmail = "";
           }
         }
@@ -997,7 +958,6 @@ const markAllNotificationsRead = async (req, res) => {
     return res.status(500).json({ success: false, message: "Unable to mark notifications as read." });
   }
 };
-
 module.exports = {
   getStatistics,
   getCategories,

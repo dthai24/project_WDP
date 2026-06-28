@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { healthApi, adminApi } from "../services/api";
 import {
@@ -13,7 +13,8 @@ import {
   LogOut,
   MailOpen,
   Mail,
-  Loader2
+  Loader2,
+  Award
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -61,15 +62,34 @@ const AdminLayout = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch unread count for the notification bell
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications/unread-count`);
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.count);
+      }
+    } catch (error) {
+      console.error("Lỗi fetch unread count:", error);
+    }
+  };
+
   // Fetch header notifications
   const fetchHeaderNotifications = async () => {
     setNotifLoading(true);
     try {
-      const res = await adminApi.getNotifications();
-      if (res && res.success) {
-        const notifs = res.data || [];
-        setNotifications(notifs);
-        setUnreadCount(notifs.filter(n => !n.isRead).length);
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications`);
+      if (response.ok) {
+        const data = await response.json();
+        const mapped = data.slice(0, 8).map(app => ({
+          _id: app._id,
+          title: `Đăng ký Mentor: ${app.fullName}`,
+          message: `Giới thiệu: ${app.bio}`,
+          isRead: app.isReadByAdmin || app.status !== "pending",
+          createdAt: app.createdAt
+        }));
+        setNotifications(mapped);
       }
     } catch (err) {
       console.error("Error fetching header notifications:", err);
@@ -79,9 +99,16 @@ const AdminLayout = () => {
   };
 
   useEffect(() => {
+    fetchUnreadCount();
+    const intervalUnread = setInterval(fetchUnreadCount, 10000);
+    
     fetchHeaderNotifications();
-    const interval = setInterval(fetchHeaderNotifications, 30000); // refresh every 30s
-    return () => clearInterval(interval);
+    const intervalNotifs = setInterval(fetchHeaderNotifications, 30000);
+    
+    return () => {
+      clearInterval(intervalUnread);
+      clearInterval(intervalNotifs);
+    };
   }, []);
 
   useEffect(() => {
@@ -92,6 +119,7 @@ const AdminLayout = () => {
       user = userStr ? JSON.parse(userStr) : null;
     } catch (e) {
       console.error("Error parsing user session:", e);
+    }
     }
 
     const isWhitelisted = user && (user.email === "admin@gmail.com" || user.email === "minh@gmail.com");
@@ -120,10 +148,14 @@ const AdminLayout = () => {
     },
     {
       path: "/admin/approvals",
-      label: "Mentor Approval List",
+      label: "Approvals & Status",
       icon: CheckSquare
     },
     {
+      path: "/admin/mentors",
+      label: "Mentor Requests",
+      icon: Award
+    },
       path: "/admin/categories",
       label: "Category Management",
       icon: Folder
@@ -181,7 +213,6 @@ const AdminLayout = () => {
       navigate("/admin/approvals");
     }
   };
-
   return (
     <div className="flex h-screen bg-slate-50/40 text-slate-800 font-sans overflow-hidden">
       {/* Desktop Sidebar */}
@@ -287,7 +318,7 @@ const AdminLayout = () => {
       {/* Main Area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 h-16 border-b border-slate-150/70 bg-white/70 backdrop-blur-md shrink-0">
+        <header className="flex items-center justify-between px-6 h-16 border-b border-slate-150/70 bg-white/70 backdrop-blur-md shrink-0 relative z-30">
           <div className="flex items-center gap-4">
             <button
               onClick={toggleMobileSidebar}
@@ -302,6 +333,7 @@ const AdminLayout = () => {
           
           <div className="flex items-center gap-4">
             {/* Notification Bell Dropdown */}
+            <div className="flex items-center gap-4">
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => {
@@ -321,76 +353,138 @@ const AdminLayout = () => {
               </button>
 
               {notifDropdownOpen && (
-                <div className="absolute right-0 mt-2.5 w-80 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150 text-slate-800 max-h-[420px] flex flex-col">
-                  {/* Header */}
-                  <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
-                    <span className="font-extrabold text-xs text-slate-900 uppercase tracking-wider">Notifications</span>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={handleMarkAllRead}
-                        className="text-[10px] text-blue-600 hover:text-blue-700 font-bold transition-all"
-                      >
-                        ✓ Mark as read
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Notification Feed */}
-                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 max-h-[300px]">
-                    {notifLoading && notifications.length === 0 ? (
-                      <div className="py-8 flex flex-col items-center justify-center text-slate-400 gap-2">
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-550" />
-                        <span className="text-xs font-semibold">Loading feed...</span>
-                      </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="py-12 text-center text-slate-400 text-xs font-medium">
-                        No alerts available.
-                      </div>
-                    ) : (
-                      notifications.map((notif) => (
-                        <div
-                          key={notif._id}
-                          onClick={() => handleNotificationClick(notif)}
-                          className={`p-3.5 hover:bg-slate-50/30 transition-all flex gap-3 relative group cursor-pointer ${
-                            !notif.isRead 
-                              ? "bg-blue-50/50 border-l-2 border-l-blue-600" 
-                              : "bg-white border-l-2 border-l-transparent"
-                          }`}
+<>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setNotifDropdownOpen(false)}
+                  />
+                  
+                  <div className="absolute right-0 mt-2.5 w-80 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-150 text-slate-800 max-h-[420px] flex flex-col">
+                    {/* Header */}
+                    <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                      <span className="font-extrabold text-xs text-slate-900 uppercase tracking-wider">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllRead}
+                          className="text-[10px] text-blue-600 hover:text-blue-700 font-bold transition-all"
                         >
-                          <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
-                            !notif.isRead 
-                              ? "bg-blue-50 text-blue-600 border-blue-100/50" 
-                              : "bg-slate-50 text-slate-400 border-slate-100"
-                          }`}>
-                            {notif.isRead ? <MailOpen className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
-                          </div>
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-1.5">
-                              <span className="font-bold text-xs text-slate-800 truncate">{notif.title}</span>
-                              <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">
-                                {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ""}
-                              </span>
+                    {/* Notification Feed */}
+                    <div className="flex-1 overflow-y-auto divide-y divide-slate-100 max-h-[300px]">
+                      {notifLoading && notifications.length === 0 ? (
+                        <div className="py-8 flex flex-col items-center justify-center text-slate-400 gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-550" />
+                          <span className="text-xs font-semibold">Loading feed...</span>
+                        </div>
+                      ) : notifications.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 text-xs font-medium">
+                          No alerts available.
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif._id}
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`p-3.5 hover:bg-slate-50/30 transition-all flex gap-3 relative group cursor-pointer ${
+                              !notif.isRead 
+                                ? "bg-blue-50/50 border-l-2 border-l-blue-600" 
+                                : "bg-white border-l-2 border-l-transparent"
+                            }`}>
+                            <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
+                              !notif.isRead 
+                                ? "bg-blue-50 text-blue-600 border-blue-100/50" 
+                                : "bg-slate-50 text-slate-400 border-slate-100"
+                            }`}>
+                              {notif.isRead ? <MailOpen className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
                             </div>
-                            <p className="text-[11px] text-slate-500 leading-normal mt-0.5 line-clamp-2">
-                              {notif.message}
-                            </p>
-                            
-                            <div className="mt-1.5 flex justify-end">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleReadHeader(notif._id, notif.isRead);
-                                }}
-                                className="text-[9px] font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
-                              >
-                                {notif.isRead ? "Mark Unread" : "Mark Read"}
-                              </button>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-bold text-xs text-slate-800 truncate">{notif.title}</span>
+                                <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">
+                                  {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ""}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-normal mt-0.5 line-clamp-2">
+                                {notif.message}
+                              </p>
+                              
+                              <div className="mt-1.5 flex justify-end">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleReadHeader(notif._id, notif.isRead);
+                                  }}
+                                  className="text-[9px] font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                                >
+                                  {notif.isRead ? "Mark Unread" : "Mark Read"}
+                                </button>
+                              </div>
                             </div>
                           </div>
+                        ))
+                      )}
+                    </div>
                         </div>
-                      ))
-                    )}
+                      ) : notifications.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 text-xs font-medium">
+                          No alerts available.
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif._id}
+                            onClick={() => {
+                              setNotifDropdownOpen(false);
+                              navigate("/admin/mentors");
+                            }}
+                            className={`p-3.5 hover:bg-slate-55/30 transition-all flex gap-3 relative group cursor-pointer ${
+                              !notif.isRead ? "bg-blue-50/10 border-l-2 border-l-blue-655" : "border-l-2 border-l-transparent"
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
+                              !notif.isRead 
+                                ? "bg-blue-50 text-blue-600 border-blue-100/50" 
+                                : "bg-slate-50 text-slate-400 border-slate-100"
+                            }`}>
+                              {notif.isRead ? <MailOpen className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-bold text-xs text-slate-800 truncate">{notif.title}</span>
+                                <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">
+                                  {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ""}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-normal mt-0.5 line-clamp-2">
+                                {notif.message}
+                              </p>
+                              
+                              <div className="mt-1.5 flex justify-end">
+                                <button
+                                  onClick={() => handleToggleReadHeader(notif._id, notif.isRead)}
+                                  className="text-[9px] font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                                >
+                                  {notif.isRead ? "Mark Unread" : "Mark Read"}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-4 py-2.5 bg-slate-50/30 border-t border-slate-100 text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        {unreadCount} UNREAD ALERTS
+                      </span>
+                    </div>
                   </div>
 
                   {/* Footer */}
@@ -400,6 +494,7 @@ const AdminLayout = () => {
                     </span>
                   </div>
                 </div>
+
               )}
             </div>
 

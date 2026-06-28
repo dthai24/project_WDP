@@ -1,110 +1,80 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ArrowRight, ChevronDown, Brain, Sparkles,
-  Gamepad2, Layers, Flame, Award, BookOpen, Globe, Heart,
-  Play, Plus, Gamepad, Calendar, Compass, Menu, X, Zap,
-  Target, ChevronRight
-} from "lucide-react";
+
+import { Menu, X, Flame, Zap, Target, BookOpen, Play, Plus, Gamepad, Calendar, Compass, ArrowRight, Brain, Sparkles, Gamepad2, Layers, ChevronRight, Star, Award, Globe, Search, Bell, ChevronDown, GraduationCap, Trophy, Shield } from "lucide-react";
 import { Profile } from "./Profile";
+import ProfilePopup from "../../components/common/ProfilePopup";
+import StreakTracker from "../../components/common/StreakTracker";
+import { getStreakData, getWeekHistory } from "../../services/data";
+
+import {
+  HeroSection, CategoriesSection, FeaturedCoursesSection, StatsBanner, SRSMethodSection, FeaturesSection,
+  PlatformFeaturesSection, RoadmapsSection, FAQSection, CTASection, Footer
+} from "./LandingSections";
+import CourseList from "../Learner/CourseList";
+import CourseDetail from "../Learner/CourseDetail";
+import CoursePlayer from "../Learner/CoursePlayer";
+import QuizPage from "../Learner/QuizPage";
+import CompletionPage from "../Learner/CompletionPage";
+import MyLearning from "../Learner/MyLearning";
+import StudentDashboard from "../Learner/StudentDashboard";
+import PaymentPage from "../Learner/PaymentPage";
+
 
 export default function HomePage({ currentUser, onLoginClick, onLogout }) {
   const navigate = useNavigate();
-  const [activeFaq, setActiveFaq] = useState(null);
-  const [currentView, setCurrentView] = useState("dashboard");
+  const [currentView, setCurrentView] = useState(currentUser?.role === "Learner" ? "dashboard" : "my-learning");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [navStack, setNavStack] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCurriculum, setSelectedCurriculum] = useState(null);
+  const [quizConfig, setQuizConfig] = useState(null);
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const [showStreak, setShowStreak] = useState(false);
+  const streakData = getStreakData();
+  const weekHistory = getWeekHistory();
 
-  const toggleFaq = (index) => {
-    setActiveFaq(activeFaq === index ? null : index);
+  // Intercept browser back button to use navStack instead of navigating away
+
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (navStack.length > 0) {
+        e.preventDefault();
+        handleBack();
+        // Push state back to prevent leaving the app
+        window.history.pushState(null, "", window.location.pathname);
+      }
+    };
+    // Push initial state so popstate fires on back
+    window.history.pushState(null, "", window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [navStack.length]);
+
+  const handleNavigate = (view, params = {}) => {
+
+    setNavStack(prev => [...prev, { view: currentView, course: selectedCourse, curriculum: selectedCurriculum, quizConfig }]);
+    setCurrentView(view);
+    if (params.course) setSelectedCourse(params.course);
+    if (params.curriculum) setSelectedCurriculum(params.curriculum);
+    if (params.quizConfig) setQuizConfig(params.quizConfig);
   };
 
-  const stats = [
-    { value: "120.000+", label: "Người học tin dùng" },
-    { value: "60+", label: "Lộ trình TOEIC & IELTS" },
-    { value: "10 Triệu+", label: "Từ vựng đã thuộc" },
-    { value: "98.5%", label: "Tỷ lệ nhớ từ dài hạn" }
-  ];
-
-  const roadmaps = [
-    {
-      title: "Ôn thi TOEIC",
-      badge: "ETS 2026",
-      desc: "Từ vựng phân chia theo level 450+, 650+, 850+. Giáo trình Hackers TOEIC, ETS mới nhất.",
-      icon: "target",
-      color: "from-rose-500 to-pink-600"
-    },
-    {
-      title: "Ôn thi IELTS",
-      badge: "IELTS 7.5+",
-      desc: "Kho từ vựng IELTS Academic và General theo chủ đề thông dụng.",
-      icon: "award",
-      color: "from-purple-500 to-indigo-600"
-    },
-    {
-      title: "THPT Quốc Gia",
-      badge: "Lớp 10-12",
-      desc: "Đầy đủ từ vựng theo sách giáo khoa Global Success lớp 10, 11, 12.",
-      icon: "book",
-      color: "from-pink-500 to-purple-600"
-    },
-    {
-      title: "Giao tiếp & Phổ thông",
-      badge: "Oxford 3000",
-      desc: "Lộ trình chuẩn từ A1, A2 đến B2, C1 theo khung tham chiếu châu Âu.",
-      icon: "globe",
-      color: "from-rose-500 to-orange-600"
+  const handleBack = () => {
+    const prev = navStack[navStack.length - 1];
+    if (prev) {
+      setCurrentView(prev.view);
+      setSelectedCourse(prev.course);
+      setSelectedCurriculum(prev.curriculum);
+      setQuizConfig(prev.quizConfig);
+      setNavStack(prev => prev.slice(0, -1));
     }
-  ];
-
-  const features = [
-    {
-      title: "Flashcard Thông Minh",
-      desc: "Học từ vựng qua thẻ ghi nhớ thông minh với đầy đủ phát âm chuẩn, nghĩa tiếng Việt, ví dụ thực tế.",
-      icon: Layers,
-      color: "text-primary bg-primary/5 border-primary/10"
-    },
-    {
-      title: "Lặp Lại Ngắt Quãng (SRS)",
-      desc: "Thuật toán SRS tự động đo lường độ quên của bạn để nhắc nhở ôn tập vào đúng thời điểm vàng.",
-      icon: Brain,
-      color: "text-purple-600 bg-purple-50 border-purple-100"
-    },
-    {
-      title: "6 Chế Độ Game Tương Tác",
-      desc: "Tránh nhàm chán bằng cách vừa chơi vừa học: Ghép cặp, Trắc nghiệm phản xạ, Word Scramble.",
-      icon: Gamepad2,
-      color: "text-rose-600 bg-rose-50 border-rose-100"
-    },
-    {
-      title: "Cá Nhân Hóa Bằng AI",
-      desc: "Tạo bộ từ vựng riêng của bạn từ Excel hoặc để AI gợi ý định nghĩa, câu ví dụ.",
-      icon: Sparkles,
-      color: "text-violet-600 bg-violet-50 border-violet-100"
-    }
-  ];
-
-  const faqs = [
-    {
-      q: "English Master hoạt động theo phương pháp nào?",
-      a: "English Master áp dụng phương pháp Lặp Lại Ngắt Quãng (Spaced Repetition System - SRS) lấy cảm hứng từ thuật toán Anki. Hệ thống tự động phân tích lịch sử học của bạn và đưa các từ khó lặp lại nhiều lần, trong khi giãn cách thời gian ôn tập của các từ dễ, giúp bạn nhớ sâu và lưu giữ vào trí nhớ dài hạn."
-    },
-    {
-      q: "Nền tảng này có hoàn toàn miễn phí không?",
-      a: "Có! Bạn hoàn toàn có thể tự học từ vựng, tự tạo flashcard và luyện tập toàn bộ 6 chế độ game hoàn toàn miễn phí."
-    },
-    {
-      q: "Tôi có thể tự tạo học liệu (bộ từ vựng) riêng không?",
-      a: "Hoàn toàn được. Bạn có thể tự tạo các deck từ vựng bằng cách nhập thủ công, nhập từ file Excel hoặc sử dụng trợ lý AI của English Master để dịch nghĩa và tự sinh câu ví dụ cực kỳ nhanh chóng."
-    },
-    {
-      q: "Làm thế nào để trở thành Mentor của English Master?",
-      a: "Chúng tôi luôn chào đón các chuyên gia ngôn ngữ. Bạn chỉ cần click vào nút 'Trở thành Mentor' dưới chân trang hoặc trên thanh công cụ, điền thông tin và tải lên chứng chỉ (IELTS, TOEIC...). Ban quản trị sẽ duyệt và nâng cấp tài khoản của bạn trong 24 giờ."
-    }
-  ];
+  };
 
   const renderDashboard = () => {
     const myDecks = [
-      { id: 1, title: "Từ vựng IELTS Academic", count: 180, learned: 112, review: 12 },
+      { id: 1, title: "Tu vung IELTS Academic", count: 180, learned: 112, review: 12 },
       { id: 2, title: "ETS TOEIC Vocab 2026", count: 320, learned: 154, review: 6 },
       { id: 3, title: "English for Communication (B2)", count: 95, learned: 82, review: 0 }
     ];
@@ -120,21 +90,71 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
     ];
 
     const quickGames = [
-      { title: "Nối từ (Memory Match)", desc: "Ghép đôi từ và nghĩa", icon: Gamepad2, color: "bg-pink-50 text-pink-600 border-pink-100" },
-      { title: "Trắc nghiệm Phản xạ", desc: "Chọn nghĩa từ nhanh", icon: Sparkles, color: "bg-purple-50 text-purple-600 border-purple-100" },
-      { title: "Word Scramble", desc: "Sắp xếp chữ cái thành từ", icon: Layers, color: "bg-rose-50 text-rose-600 border-rose-100" },
-      { title: "Listening Challenge", desc: "Nghe phát âm điền từ", icon: Brain, color: "bg-violet-50 text-violet-600 border-violet-100" }
+      { title: "Noi tu (Memory Match)", desc: "Ghep doi tu va nghia", icon: Gamepad2, color: "bg-pink-50 text-pink-600 border-pink-100" },
+      { title: "Trac nghiem Phan xa", desc: "Chon nghia tu nhanh", icon: Sparkles, color: "bg-purple-50 text-purple-600 border-purple-100" },
+      { title: "Word Scramble", desc: "Sap xep chu cai thanh tu", icon: Layers, color: "bg-rose-50 text-rose-600 border-rose-100" },
+      { title: "Listening Challenge", desc: "Nghe phat am dien tu", icon: Brain, color: "bg-violet-50 text-violet-600 border-violet-100" }
+    ];
+
+    const roadmaps = [
+      { title: "On thi TOEIC", badge: "ETS 2026", desc: "Tu vung phan chia theo level 450+, 650+, 850+.", icon: "target", color: "from-rose-500 to-pink-600" },
+      { title: "On thi IELTS", badge: "IELTS 7.5+", desc: "Kho tu vung IELTS Academic va General.", icon: "award", color: "from-purple-500 to-indigo-600" },
+      { title: "THPT Quoc Gia", badge: "Lop 10-12", desc: "Day du tu vung theo sach giao khoa.", icon: "book", color: "from-pink-500 to-purple-600" },
+      { title: "Giao tiep", badge: "Oxford 3000", desc: "Lo trinh chuan tu A1 den C1.", icon: "globe", color: "from-rose-500 to-orange-600" }
     ];
 
     return (
       <div className="section-container py-10 space-y-10">
+        {/* Streak Banner */}
+        <button
+          onClick={() => setShowStreak(true)}
+          className="w-full bg-white rounded-2xl border border-border/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-4 flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 bg-gradient-to-br from-orange-400 to-red-500 text-white px-4 py-2.5 rounded-xl shadow-sm shadow-orange-200">
+              <Flame className="w-5 h-5" />
+              <span className="text-lg font-black">{streakData.currentStreak}</span>
+            </div>
+            <div className="text-left">
+              <p className="text-xs font-bold text-text-primary">Chuoi hoc tap</p>
+              <p className="text-[10px] text-text-muted">
+                {streakData.currentStreak > 0
+                  ? `Duy tri ${streakData.currentStreak} ngay lien tiep`
+                  : "Bat dau chuoi hoc tap hom nay"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2">
+              {weekHistory.map((day, i) => (
+                <div
+                  key={i}
+                  className={`w-6 h-6 rounded-md flex items-center justify-center text-[8px] font-bold transition-all ${
+                    day.studied
+                      ? "bg-gradient-to-br from-orange-400 to-red-500 text-white"
+                      : "bg-surface-muted text-text-muted"
+                  }`}
+                >
+                  {day.studied ? <Flame className="w-3 h-3" /> : day.day.slice(0, 1)}
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary">
+              <Trophy className="w-3.5 h-3.5" />
+              <span>{streakData.totalXp.toLocaleString()} XP</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </button>
+
         <div className="card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-text-primary tracking-tight">
-              Chào bạn quay trở lại, <span className="text-primary">{currentUser.name}</span> 👋
+              Chao ban quay tro lai, <span className="text-primary">{currentUser.name}</span>
             </h2>
             <p className="text-xs text-text-secondary font-medium">
-              Phương pháp học ngắt quãng SRS giúp bạn ghi nhớ từ vựng vĩnh viễn.
+              Phuong phap hoc ngat quang SRS giup ban ghi nho tu vung vinh vien.
             </p>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto scrollbar-hide pb-1 md:pb-0">
@@ -142,21 +162,21 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
               <Flame className="w-4 h-4 text-primary" />
               <div className="text-left">
                 <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest leading-none">Streak</p>
-                <p className="text-sm font-black text-primary leading-none mt-1">15 ngày</p>
+                <p className="text-sm font-black text-primary leading-none mt-1">15 ngay</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-purple-50 px-4 py-2.5 rounded-2xl border border-purple-100/50 shrink-0">
               <Zap className="w-4 h-4 text-purple-600" />
               <div className="text-left">
-                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest leading-none">Học lực</p>
+                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest leading-none">Hoc luc</p>
                 <p className="text-sm font-black text-purple-600 leading-none mt-1">2,450 XP</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-amber-50 px-4 py-2.5 rounded-2xl border border-amber-100/50 shrink-0">
               <Target className="w-4 h-4 text-amber-600" />
               <div className="text-left">
-                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none">Mục tiêu</p>
-                <p className="text-sm font-black text-amber-600 leading-none mt-1">20 từ/ngày</p>
+                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none">Muc tieu</p>
+                <p className="text-sm font-black text-amber-600 leading-none mt-1">20 tu/ngay</p>
               </div>
             </div>
           </div>
@@ -171,28 +191,28 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                 <div className="space-y-3">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-bold uppercase tracking-wider">
                     <Brain className="w-3.5 h-3.5" />
-                    <span>Thuật toán SRS</span>
+                    <span>Thuat toan SRS</span>
                   </div>
                   <h3 className="text-3xl font-black tracking-tight leading-tight">
-                    Hôm nay bạn có 18 từ cần ôn tập!
+                    Hom nay ban co 18 tu can on tap!
                   </h3>
                   <p className="text-sm text-white/70 max-w-md font-medium">
-                    Hãy duy trì nhịp học hàng ngày để ngăn chặn đường cong lãng quên tự nhiên của não bộ.
+                    Hay duy tri nhip hoc hang ngay de ngan chan duong cong lang quen tu nhien cua nao bo.
                   </p>
                 </div>
                 <button className="bg-white text-primary hover:bg-rose-50 px-6 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-[0.97] transition-all flex items-center gap-2 shrink-0">
                   <Play className="w-4 h-4 fill-primary" />
-                  <span>Ôn tập ngay</span>
+                  <span>On tap ngay</span>
                 </button>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-black text-text-primary tracking-tight">Bộ từ vựng của tôi</h3>
+                <h3 className="text-lg font-black text-text-primary tracking-tight">Bo tu vung cua toi</h3>
                 <button className="btn-ghost btn-sm flex items-center gap-1">
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Tạo bộ mới</span>
+                  <span>Tao bo moi</span>
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -204,16 +224,16 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                         <div className="flex items-center justify-between">
                           <BookOpen className="w-5 h-5 text-primary" />
                           {deck.review > 0 ? (
-                            <span className="badge-primary">Cần ôn: {deck.review}</span>
+                            <span className="badge-primary">Can on: {deck.review}</span>
                           ) : (
-                            <span className="badge-success">Đã hoàn thành</span>
+                            <span className="badge-success">Da hoan thanh</span>
                           )}
                         </div>
                         <h4 className="font-bold text-text-primary text-sm leading-snug">{deck.title}</h4>
                         <div className="space-y-1">
                           <div className="flex justify-between text-[10px] text-text-secondary font-bold">
-                            <span>Tiến trình</span>
-                            <span>{deck.learned}/{deck.count} từ ({percentage}%)</span>
+                            <span>Tien trinh</span>
+                            <span>{deck.learned}/{deck.count} tu ({percentage}%)</span>
                           </div>
                           <div className="progress-bar">
                             <div className="progress-fill" style={{ width: `${percentage}%` }} />
@@ -222,10 +242,10 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                       </div>
                       <div className="mt-6 grid grid-cols-2 gap-3">
                         <button className="py-2 rounded-xl text-[11px] font-bold bg-primary/5 hover:bg-primary/10 text-primary border border-primary/10 transition-colors text-center">
-                          Học từ mới
+                          Hoc tu moi
                         </button>
                         <button className="py-2 rounded-xl text-[11px] font-bold bg-text-primary hover:bg-text-primary/90 text-white transition-colors text-center">
-                          Luyện tập
+                          Luyen tap
                         </button>
                       </div>
                     </div>
@@ -240,9 +260,9 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
               <div className="flex justify-between items-center">
                 <h4 className="font-bold text-text-primary text-sm tracking-tight flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-primary" />
-                  <span>Tiến trình tuần này</span>
+                  <span>Tien trinh tuan nay</span>
                 </h4>
-                <span className="badge-primary">Streak: 15 ngày</span>
+                <span className="badge-primary">Streak: 15 ngay</span>
               </div>
               <div className="grid grid-cols-7 gap-2.5 text-center">
                 {weeklyActivity.map((activity, index) => (
@@ -253,7 +273,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                         ? "bg-primary text-white border-primary shadow-sm shadow-primary/10"
                         : "bg-surface-muted text-text-muted border-border"
                     }`}>
-                      {activity.active ? "✓" : ""}
+                      {activity.active ? "V" : ""}
                     </div>
                     {activity.active && (
                       <p className="text-[9px] font-bold text-primary leading-none">+{activity.count}</p>
@@ -266,7 +286,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
             <div className="space-y-4">
               <h4 className="font-bold text-text-primary text-sm tracking-tight flex items-center gap-1.5">
                 <Gamepad className="w-4 h-4 text-primary" />
-                <span>Trò chơi luyện phản xạ</span>
+                <span>Tro choi luyen phan xa</span>
               </h4>
               <div className="grid grid-cols-1 gap-3">
                 {quickGames.map((game, index) => {
@@ -293,9 +313,9 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
           <div className="text-left max-w-xl space-y-1">
             <h3 className="text-lg font-black text-text-primary tracking-tight flex items-center gap-1.5">
               <Compass className="w-5 h-5 text-primary" />
-              <span>Khám phá thêm lộ trình chuẩn</span>
+              <span>Kham pha them lo trinh chuan</span>
             </h3>
-            <p className="text-xs text-text-secondary">Các khóa học được xây dựng theo chuẩn ETS TOEIC và IELTS Academic.</p>
+            <p className="text-xs text-text-secondary">Cac khoa hoc duoc xay dung theo chuan ETS TOEIC va IELTS Academic.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {roadmaps.map((item, index) => (
@@ -314,7 +334,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                   <p className="text-[10px] text-text-secondary leading-relaxed">{item.desc}</p>
                 </div>
                 <button className="mt-4 w-full py-2 bg-primary/5 hover:bg-primary hover:text-white rounded-xl text-[10px] font-bold text-primary border border-primary/10 transition-all duration-200 text-center flex items-center justify-center gap-1">
-                  <span>Khám phá</span>
+                  <span>Kham pha</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
@@ -327,92 +347,151 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
 
   return (
     <div className="min-h-screen bg-surface-muted text-text-primary font-sans selection:bg-primary/15 antialiased overflow-x-hidden">
-      <nav className="sticky top-0 z-50 glass-strong border-b border-border/40 px-6 lg:px-16 py-3 flex justify-between items-center">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => {
-          if (currentUser) setCurrentView("dashboard");
-          else navigate("/");
-        }}>
-          <img src="/images/logo.png" alt="English Master" className="w-9 h-9 object-contain" />
-          <span className="text-xl font-black text-text-primary tracking-tight">English Master</span>
-        </div>
-
-        <div className="hidden md:flex items-center gap-8 font-semibold text-sm text-text-secondary">
-          <a href="#features" className="hover:text-primary transition-colors">Tính năng</a>
-          <a href="#methods" className="hover:text-primary transition-colors">Phương pháp SRS</a>
-          <a href="#roadmaps" className="hover:text-primary transition-colors">Lộ trình học</a>
-          <a href="#faq" className="hover:text-primary transition-colors">Hỏi đáp</a>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {(!currentUser || currentUser.role !== "Mentor") && (
-            <Link to="/become-mentor" className="hidden sm:inline-block text-sm font-semibold text-text-secondary hover:text-primary transition-colors">
-              Trở thành Mentor
-            </Link>
-          )}
-          {currentUser ? (
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 bg-surface-muted rounded-2xl px-3 py-1.5 border border-border/40">
-                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-black">
-                  {currentUser.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+      {/* NAVIGATION - Coursera-style */}
+      <nav className="sticky top-0 z-50 bg-white border-b border-border/40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 lg:px-16">
+          <div className="flex items-center justify-between h-16">
+            {/* Left: Logo + Categories */}
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-2.5 cursor-pointer shrink-0" onClick={() => {
+                if (currentUser) setCurrentView(currentUser?.role === "Learner" ? "dashboard" : "my-learning");
+                else navigate("/");
+              }}>
+                <img src="/images/logo.png" alt="English Master" className="w-8 h-8 object-contain" />
+                <span className="text-lg font-black text-text-primary tracking-tight hidden sm:inline">English Master</span>
+              </div>
+              {!currentUser && (
+                <div className="hidden lg:flex items-center gap-1">
+                  <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-text-secondary hover:text-primary hover:bg-surface-muted transition-all">
+                    <span>Danh muc</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <div className="text-left">
-                  <p className="text-xs font-bold text-text-primary leading-tight">{currentUser.name}</p>
-                  <p className="text-[9px] font-semibold text-primary leading-tight">
-                    {currentUser.role === "Admin" ? "Quản trị viên" : currentUser.role === "Mentor" ? "Giảng viên" : "Học viên"}
-                  </p>
+              )}
+            </div>
+
+            {/* Center: Search bar (guest only) */}
+            {!currentUser && (
+              <div className="hidden md:flex flex-1 max-w-md mx-6">
+                <div className="w-full flex items-center gap-2 bg-surface-muted rounded-xl border border-border/60 px-4 py-2 hover:border-primary/20 transition-colors">
+                  <Search className="w-4 h-4 text-text-muted shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Tim kiem khoa hoc..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted font-medium"
+                  />
                 </div>
               </div>
-              {currentUser.role === "Learner" && (
-                <button
-                  onClick={() => setCurrentView(currentView === "profile" ? "dashboard" : "profile")}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
-                    currentView === "profile"
-                      ? "bg-primary text-white shadow-sm shadow-primary/20"
-                      : "bg-surface-muted text-text-secondary hover:text-primary border border-border/40"
-                  }`}
-                >
-                  {currentView === "profile" ? "Trang chủ" : "Hồ sơ"}
-                </button>
-              )}
-              {currentUser.role !== "Learner" && (
-                <button
-                  onClick={() => {
-                    if (currentUser.role === "Admin") navigate("/admin");
-                    else if (currentUser.role === "Mentor") navigate("/create-roadmap");
-                  }}
-                  className="px-3 py-2 rounded-xl text-xs font-bold bg-surface-muted text-text-secondary hover:text-primary border border-border/40 transition-all duration-200"
-                >
-                  {currentUser.role === "Mentor" ? "Dashboard" : "Trang chủ"}
-                </button>
-              )}
-              <button
-                onClick={onLogout}
-                className="px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 transition-all duration-200 flex items-center gap-1.5"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
-                <span className="hidden sm:inline">Đăng xuất</span>
-              </button>
-            </div>
-          ) : (
+            )}
+
+            {/* Right: Nav links + Auth */}
             <div className="flex items-center gap-3">
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-text-secondary hover:text-primary">
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-              <button onClick={onLoginClick} className="btn-primary">Đăng nhập</button>
+              {!currentUser && (
+                <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-text-secondary">
+                  <a href="#features" className="hover:text-primary transition-colors">Tinh nang</a>
+                  <a href="#roadmaps" className="hover:text-primary transition-colors">Lo trinh</a>
+                  <Link to="/become-mentor" className="hover:text-primary transition-colors">Day hoc</Link>
+                </div>
+              )}
+
+              {currentUser ? (
+                <div className="flex items-center gap-2">
+                  {currentUser.role === "Learner" && (
+                    <>
+                      <button
+                        onClick={() => setCurrentView("my-learning")}
+                        className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                          currentView === "my-learning"
+                            ? "bg-primary text-white shadow-sm shadow-primary/20"
+                            : "bg-surface-muted text-text-secondary hover:text-primary border border-border/40"
+                        }`}
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>Khoa hoc</span>
+                      </button>
+
+                      <button
+                        onClick={() => setCurrentView("course-list")}
+                        className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                          currentView === "course-list"
+                            ? "bg-primary text-white shadow-sm shadow-primary/20"
+                            : "bg-surface-muted text-text-secondary hover:text-primary border border-border/40"
+                        }`}
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                        <span>Kham pha</span>
+                      </button>
+                    </>
+                  )}
+                  <button className="w-9 h-9 rounded-full bg-surface-muted border border-border/60 flex items-center justify-center text-text-secondary hover:text-primary hover:border-primary/30 transition-all">
+                    <Bell className="w-4 h-4" />
+                  </button>
+                  <div
+                    onClick={() => setShowProfilePopup(true)}
+                    className="hidden sm:flex items-center gap-2 bg-surface-muted rounded-2xl px-3 py-1.5 border border-border/40 cursor-pointer hover:bg-surface-muted/80 transition-all"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-black">
+                      {currentUser.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-text-primary leading-tight">{currentUser.name}</p>
+                      <p className="text-[9px] font-semibold text-primary leading-tight">
+                        {currentUser.role === "Admin" ? "Quan tri vien" : currentUser.role === "Mentor" ? "Giang vien" : "Hoc vien"}
+                      </p>
+                    </div>
+                  </div>
+                  {currentUser.role !== "Learner" && (
+                    <button
+                      onClick={() => {
+                        if (currentUser.role === "Admin") navigate("/admin");
+                        else if (currentUser.role === "Mentor") navigate("/create-roadmap");
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-bold bg-surface-muted text-text-secondary hover:text-primary border border-border/40 transition-all duration-200"
+                    >
+                      {currentUser.role === "Mentor" ? "Dashboard" : "Trang chu"}
+                    </button>
+                  )}
+                  <button
+                    onClick={onLogout}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 transition-all duration-200 flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                    </svg>
+                    <span className="hidden sm:inline">Dang xuat</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-text-secondary hover:text-primary">
+                    {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                  <button onClick={onLoginClick} className="btn-primary">Dang nhap</button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </nav>
 
+      {/* Mobile menu */}
       {mobileMenuOpen && !currentUser && (
-        <div className="md:hidden glass-strong border-b border-border/40 px-6 py-4 space-y-3">
-          <a href="#features" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Tính năng</a>
-          <a href="#methods" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Phương pháp SRS</a>
-          <a href="#roadmaps" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Lộ trình học</a>
-          <a href="#faq" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Hỏi đáp</a>
-          <Link to="/become-mentor" className="block text-sm font-semibold text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Trở thành Mentor</Link>
+        <div className="md:hidden bg-white border-b border-border/40 px-6 py-4 space-y-3 shadow-sm">
+          <div className="flex items-center gap-2 bg-surface-muted rounded-xl border border-border/60 px-4 py-2.5 mb-3">
+            <Search className="w-4 h-4 text-text-muted shrink-0" />
+            <input
+              type="text"
+              placeholder="Tim kiem khoa hoc..."
+              className="w-full bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted font-medium"
+            />
+          </div>
+          <a href="#features" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Tinh nang</a>
+          <a href="#methods" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Phuong phap SRS</a>
+          <a href="#roadmaps" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Lo trinh hoc</a>
+          <a href="#faq" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Hoi dap</a>
+          <Link to="/become-mentor" className="block text-sm font-semibold text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Tro thanh Mentor</Link>
         </div>
       )}
 
@@ -423,270 +502,65 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
               <Profile onLogout={onLogout} setCurrentPage={(page) => setCurrentView(page === "dashboard" ? "dashboard" : "profile")} currentUser={currentUser} />
             </div>
           </div>
+        ) : currentView === "dashboard" ? (
+          <StudentDashboard onNavigate={handleNavigate} />
+        ) : currentView === "my-learning" ? (
+          <MyLearning onNavigate={handleNavigate} />
+        ) : currentView === "course-list" ? (
+          <CourseList onNavigate={handleNavigate} />
+        ) : currentView === "course-detail" && selectedCourse ? (
+          <CourseDetail course={selectedCourse} onNavigate={handleNavigate} onBack={handleBack} />
+        ) : currentView === "course-player" && selectedCourse ? (
+          <CoursePlayer course={selectedCourse} curriculum={selectedCurriculum || []} onNavigate={handleNavigate} onBack={handleBack} />
+        ) : currentView === "quiz" ? (
+          <QuizPage course={selectedCourse} moduleTitle={quizConfig?.moduleTitle} onNavigate={handleNavigate} onBack={handleBack} isFinal={quizConfig?.isFinal} />
+        ) : currentView === "payment" && selectedCourse ? (
+          <PaymentPage course={selectedCourse} onNavigate={handleNavigate} onBack={handleBack} />
+        ) : currentView === "completion" && selectedCourse ? (
+          <CompletionPage course={selectedCourse} onNavigate={handleNavigate} onBack={handleBack} />
         ) : (
+
           renderDashboard()
         )
       ) : (
         <>
-          <section className="relative px-6 lg:px-16 pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden bg-gradient-to-br from-surface-alt via-surface-muted to-purple-50/30">
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-[0%] right-[-5%] w-[45%] h-[45%] bg-purple-200/15 rounded-full blur-[130px] pointer-events-none" />
-            <div className="relative z-10 section-container grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              <div className="lg:col-span-7 space-y-8 text-left">
-                <div className="eyebrow">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Giải pháp học tiếng Anh số 1</span>
-                </div>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-text-primary tracking-tight leading-[1.12]">
-                  Học từ vựng thông minh <br />
-                  <span className="text-primary">Hiệu quả gấp 3 lần</span>
-                </h1>
-                <p className="text-base sm:text-lg text-text-secondary leading-relaxed max-w-xl font-medium">
-                  English Master kết hợp phương pháp <strong className="text-primary font-extrabold">Lặp lại ngắt quãng (SRS)</strong> cùng hệ thống Flashcard thông minh và trò chơi tương tác. Giúp bạn nhớ từ vựng vĩnh viễn, bứt phá band điểm TOEIC, IELTS dễ dàng!
-                </p>
-                <div className="pt-2 flex flex-col sm:flex-row gap-4">
-                  <button onClick={currentUser ? () => {
-                    if (currentUser.role === "Admin") navigate("/admin");
-                    else if (currentUser.role === "Mentor") navigate("/create-roadmap");
-                    else navigate("/");
-                  } : onLoginClick} className="btn-primary btn-lg">
-                    <span>Học miễn phí ngay</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  {(!currentUser || currentUser.role !== "Mentor") && (
-                    <button onClick={() => navigate("/become-mentor")} className="btn-secondary btn-lg">
-                      Đăng ký giảng dạy (Mentor)
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="lg:col-span-5 w-full flex justify-center relative">
-                <div className="w-full max-w-sm card-elevated p-6 relative overflow-hidden transition-all duration-300 hover:shadow-primary/25 hover:border-primary/20 hover:-translate-y-1">
-                  <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-6">
-                    <span className="text-[10px] uppercase font-bold text-primary tracking-wider">Từ vựng TOEIC</span>
-                    <span className="w-2 h-2 rounded-full bg-success"></span>
-                  </div>
-                  <div className="space-y-4 text-center py-6">
-                    <span className="text-xs font-bold text-primary/60">Từ vựng hôm nay</span>
-                    <h3 className="text-4xl font-extrabold text-text-primary tracking-tight">accomplish</h3>
-                    <p className="text-xs text-text-muted font-mono">/e'kAm.plIS/ (verb)</p>
-                    <div className="py-2.5 px-5 bg-primary/5 text-primary font-bold rounded-2xl text-sm inline-block border border-primary/10">
-                      Đạt được, hoàn thành xuất sắc
-                    </div>
-                    <p className="text-xs text-text-secondary italic text-center max-w-xs mx-auto">
-                      "We managed to accomplish the task before the deadline."
-                    </p>
-                  </div>
-                  <div className="border-t border-border/40 pt-4 flex items-center justify-between text-xs text-text-muted font-semibold">
-                    <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5 text-primary fill-primary" /> Trí nhớ dài hạn</span>
-                    <span>Ôn lại sau 3 ngày</span>
-                  </div>
-                </div>
-                <div className="absolute -top-4 -right-4 bg-text-primary text-white rounded-2xl py-2.5 px-4 shadow-lg text-xs font-black flex items-center gap-1.5">
-                  <Flame className="w-4 h-4 text-accent" />
-                  <span>Streak: 15 ngày</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white border-y border-border/30 py-12">
-            <div className="section-container grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-              {stats.map((stat, index) => (
-                <div key={index} className="card-hover p-6 text-center space-y-2">
-                  <p className="text-3xl sm:text-4xl font-black text-primary tracking-tight">{stat.value}</p>
-                  <p className="text-xs font-bold text-text-muted uppercase tracking-widest">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section id="methods" className="section-container section-padding">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              <div className="lg:col-span-5 space-y-6">
-                <div className="eyebrow">
-                  <Brain className="w-3.5 h-3.5" />
-                  <span>Khoa học trí nhớ</span>
-                </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight leading-[1.2]">
-                  Lặp Lại Ngắt Quãng <br />
-                  <span className="text-primary">Spaced Repetition</span> là gì?
-                </h2>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                  Theo nghiên cứu về <strong className="text-text-primary font-bold">Đường cong lãng quên (Forgetting Curve)</strong> của Hermann Ebbinghaus, bộ não con người có xu hướng quên 80% kiến thức mới sau vài ngày.
-                </p>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                  Hệ thống của <strong className="text-primary font-semibold">English Master</strong> sẽ tính toán thời gian và tự động đưa ra các từ vựng ôn tập <strong className="text-text-primary font-bold">ngay trước thời điểm bạn chuẩn bị quên</strong>. Phương pháp này giúp chuyển thông tin từ trí nhớ ngắn hạn sang trí nhớ dài hạn hiệu quả nhất.
-                </p>
-              </div>
-              <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="card-hover p-6 text-center space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg mx-auto">1</div>
-                  <h4 className="font-bold text-text-primary text-sm">Học qua Flashcard</h4>
-                  <p className="text-xs text-text-secondary">Xem từ mới đầy đủ phát âm, ví dụ, hình ảnh minh họa sinh động.</p>
-                </div>
-                <div className="card-hover p-6 text-center space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-lg mx-auto">2</div>
-                  <h4 className="font-bold text-text-primary text-sm">Thuật toán Phân Tích</h4>
-                  <p className="text-xs text-text-secondary">Hệ thống đánh giá độ khó của từ và theo dõi tần suất tương tác của bạn.</p>
-                </div>
-                <div className="card-hover p-6 text-center space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-lg mx-auto">3</div>
-                  <h4 className="font-bold text-text-primary text-sm">Nhắc Nhở Đúng Lúc</h4>
-                  <p className="text-xs text-text-secondary">Từ vựng xuất hiện lại đúng lúc bạn chuẩn bị quên để ghi nhớ vĩnh viễn.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section id="roadmaps" className="bg-primary/5 border-y border-border/30 section-padding">
-            <div className="section-container space-y-12">
-              <div className="text-center max-w-xl mx-auto space-y-3">
-                <h2 className="text-3xl font-black text-text-primary tracking-tight">Thư viện lộ trình học phong phú</h2>
-                <p className="text-xs text-primary font-bold uppercase tracking-wider">Lựa chọn lộ trình phù hợp với mục tiêu của bạn</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {roadmaps.map((item, index) => (
-                  <div key={index} className="card-hover p-6 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-lg`}>
-                          {item.icon === "target" && <Target className="w-6 h-6" />}
-                          {item.icon === "award" && <Award className="w-6 h-6" />}
-                          {item.icon === "book" && <BookOpen className="w-6 h-6" />}
-                          {item.icon === "globe" && <Globe className="w-6 h-6" />}
-                        </div>
-                        <span className="badge-primary">{item.badge}</span>
-                      </div>
-                      <h4 className="font-bold text-text-primary text-sm">{item.title}</h4>
-                      <p className="text-xs text-text-secondary leading-relaxed">{item.desc}</p>
-                    </div>
-                    <button className="mt-4 w-full py-2.5 bg-primary/5 hover:bg-primary hover:text-white rounded-xl text-xs font-bold text-primary border border-primary/10 transition-all duration-200 text-center flex items-center justify-center gap-1">
-                      <span>Khám phá</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* FEATURES */}
-          <section id="features" className="section-container section-padding">
-            <div className="space-y-12">
-              <div className="text-center max-w-xl mx-auto space-y-3">
-                <div className="eyebrow inline-flex mx-auto">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Tính năng nổi bật</span>
-                </div>
-                <h2 className="text-3xl font-black text-text-primary tracking-tight">
-                  Tại sao chọn English Master?
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {features.map((feature, index) => {
-                  const Icon = feature.icon;
-                  return (
-                    <div key={index} className="card-hover p-6 flex items-start gap-5">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${feature.color}`}>
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <h3 className="font-bold text-text-primary text-sm">{feature.title}</h3>
-                        <p className="text-xs text-text-secondary leading-relaxed">{feature.desc}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-
-          {/* FAQ */}
-          <section id="faq" className="bg-white border-y border-border/30 section-padding">
-            <div className="section-container max-w-3xl mx-auto space-y-10">
-              <div className="text-center space-y-3">
-                <h2 className="text-3xl font-black text-text-primary tracking-tight">
-                  Câu hỏi thường gặp
-                </h2>
-                <p className="text-sm text-text-secondary">
-                  Những thắc mắc phổ biến về English Master
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {faqs.map((faq, index) => (
-                  <div key={index} className="card overflow-hidden">
-                    <button
-                      onClick={() => toggleFaq(index)}
-                      className="w-full p-5 flex items-center justify-between text-left hover:bg-surface-muted/50 transition-colors"
-                    >
-                      <span className="font-bold text-text-primary text-sm pr-4">{faq.q}</span>
-                      <ChevronDown className={`w-4 h-4 text-text-muted shrink-0 transition-transform duration-300 ${
-                        activeFaq === index ? "rotate-180" : ""
-                      }`} />
-                    </button>
-                    <div className={`overflow-hidden transition-all duration-300 ${
-                      activeFaq === index ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                    }`}>
-                      <p className="px-5 pb-5 text-xs text-text-secondary leading-relaxed">
-                        {faq.a}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* FOOTER */}
-          <footer className="bg-text-primary text-white section-padding">
-            <div className="section-container">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-                <div className="md:col-span-2 space-y-4">
-                  <div className="flex items-center gap-2.5">
-                    <img src="/images/logo.png" alt="English Master" className="w-9 h-9 object-contain brightness-0 invert" />
-                    <span className="text-xl font-black tracking-tight">English Master</span>
-                  </div>
-                  <p className="text-sm text-white/60 max-w-md leading-relaxed">
-                    English Master là hệ sinh thái học tiếng Anh không đồng bộ, dựa trên phương pháp Lặp Lại Ngắt Quãng (SRS) giúp bạn ghi nhớ từ vựng vĩnh viễn.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Sản phẩm</h4>
-                  <ul className="space-y-2.5">
-                    <li><a href="#features" className="text-sm text-white/70 hover:text-white transition-colors">Tính năng</a></li>
-                    <li><a href="#roadmaps" className="text-sm text-white/70 hover:text-white transition-colors">Lộ trình học</a></li>
-                    <li><a href="#methods" className="text-sm text-white/70 hover:text-white transition-colors">Phương pháp SRS</a></li>
-                    <li><Link to="/become-mentor" className="text-sm text-white/70 hover:text-white transition-colors">Trở thành Mentor</Link></li>
-                  </ul>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Hỗ trợ</h4>
-                  <ul className="space-y-2.5">
-                    <li><a href="#faq" className="text-sm text-white/70 hover:text-white transition-colors">Hỏi đáp</a></li>
-                    <li><span className="text-sm text-white/40 cursor-not-allowed">Chính sách bảo mật</span></li>
-                    <li><span className="text-sm text-white/40 cursor-not-allowed">Điều khoản sử dụng</span></li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p className="text-xs text-white/40">
-                  &copy; 2026 English Master. Tất cả quyền được bảo lưu.
-                </p>
-                <div className="flex items-center gap-4 text-xs text-white/40">
-                  <span>Được xây dựng bởi <strong className="text-white/60">English Master Team</strong></span>
-                </div>
-              </div>
-            </div>
-          </footer>
+          <HeroSection onLoginClick={onLoginClick} />
+          <CategoriesSection />
+          <FeaturedCoursesSection />
+          <StatsBanner />
+          <SRSMethodSection />
+          <FeaturesSection />
+          <PlatformFeaturesSection />
+          <RoadmapsSection />
+          <FAQSection />
+          <CTASection onLoginClick={onLoginClick} />
+          <Footer />
         </>
+      )}
+
+      {/* Profile Popup */}
+      {showProfilePopup && (
+        <ProfilePopup
+          currentUser={currentUser}
+          onLogout={onLogout}
+          onClose={() => setShowProfilePopup(false)}
+          onNavigate={(view) => {
+            setCurrentView(view);
+          }}
+        />
+      )}
+
+      {/* Streak Tracker Popup */}
+      {showStreak && (
+        <StreakTracker
+          onClose={() => setShowStreak(false)}
+          onStudy={(result) => {
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );
 }
+
+

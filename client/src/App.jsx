@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import AppRoutes from "./routes/AppRoutes";
 import ChatBot from "./components/ChatBot";
 import FloatingChatButton from "./components/FloatingChatButton";
+import SecuritySessionHandler from "./components/SecuritySessionHandler";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -24,15 +25,38 @@ export default function App() {
     localStorage.removeItem("lexiora_user");
   };
 
+  const userRole = currentUser?.role;
+  const isUserAdmin = currentUser && (
+    userRole === "Admin" ||
+    currentUser.email === "admin@gmail.com" ||
+    currentUser.email === "minh@gmail.com" ||
+    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))
+  );
+
+  const isUserMentor = currentUser && (
+    userRole === "Mentor" ||
+    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 2 || r.roleName === "Mentor"))
+  );
+
+  const shouldShowChatbot = !isUserAdmin && !isUserMentor;
+
   return (
     <>
+      <SecuritySessionHandler
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
       <AppRoutes
         currentUser={currentUser}
         onLogin={handleLogin}
         onLogout={handleLogout}
       />
-      <FloatingChatButton onClick={() => setIsChatOpen(true)} />
-      <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      {shouldShowChatbot && (
+        <>
+          <FloatingChatButton onClick={() => setIsChatOpen(true)} />
+          <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        </>
+      )}
     </>
   );
 }
