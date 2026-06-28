@@ -115,16 +115,16 @@ function OutlineNavItem({
 }
 
 export default function MentorQuestionBankCourseOutline({
-  coursePaths = [],
-  pathsLoading = false,
-  selectedPathId = '',
+  courseChapters = [],
+  chaptersLoading = false,
+  selectedChapterId = '',
   chapterError = '',
   courseId = '',
   hint = 'Chọn chương để tạo bộ câu hỏi. Danh sách bài học chỉ để tham khảo nội dung.',
-  onPathSelect,
+  onChapterSelect,
   onChapterQuizSetup,
 }) {
-  if (pathsLoading) {
+  if (chaptersLoading) {
     return (
       <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
         <Loading size={24} />
@@ -132,7 +132,7 @@ export default function MentorQuestionBankCourseOutline({
     );
   }
 
-  if (coursePaths.length === 0) {
+  if (courseChapters.length === 0) {
     return (
       <Box
         sx={{
@@ -184,34 +184,34 @@ export default function MentorQuestionBankCourseOutline({
           mr: -0.25,
         }}
       >
-        {coursePaths.map((path, pathIndex) => {
-          const nodes = path.Nodes ?? [];
-          const isSelected = String(path.PathId) === String(selectedPathId);
+        {courseChapters.map((chapter, chapterIndex) => {
+          const lessons = chapter.lessons ?? [];
+          const isSelected = String(chapter.chapterId) === String(selectedChapterId);
 
           return (
-            <Box key={path.PathId} sx={{ mb: 0.35 }}>
+            <Box key={chapter.chapterId} sx={{ mb: 0.35 }}>
               <OutlineNavItem
-                label={`Chương ${pathIndex + 1}: ${path.PathName}`}
-                meta={nodes.length > 0 ? `${nodes.length} bài học` : 'Chưa có bài học'}
+                label={`Chương ${chapterIndex + 1}: ${chapter.chapterTitle}`}
+                meta={lessons.length > 0 ? `${lessons.length} bài học` : 'Chưa có bài học'}
                 icon={MenuBookRoundedIcon}
                 iconColor={CHAPTER_THEME.color}
                 selected={isSelected}
-                onClick={() => onPathSelect?.(String(path.PathId))}
+                onClick={() => onChapterSelect?.(String(chapter.chapterId))}
                 trailing={
                   onChapterQuizSetup ? (
                     <MentorChapterCardMenu
                       onQuizSetup={() =>
-                        onChapterQuizSetup(path, pathIndex)
+                        onChapterQuizSetup(chapter, chapterIndex)
                       }
                     />
                   ) : null
                 }
               />
 
-              {nodes.map((node, nodeIndex) => (
+              {lessons.map((lesson, lessonIndex) => (
                 <OutlineNavItem
-                  key={node.NodeId}
-                  label={`Bài ${nodeIndex + 1}: ${node.NodeName}`}
+                  key={lesson.lessonId}
+                  label={`Bài ${lessonIndex + 1}: ${lesson.lessonTitle}`}
                   icon={PlayLessonRoundedIcon}
                   iconColor={LESSON_THEME.color}
                   indent={1}
@@ -230,13 +230,13 @@ export function MentorQuestionBankCourseOutlinePanel({
   courseName = '',
   courseCategory = '',
   chapterTitle = '',
-  coursePaths = [],
-  pathsLoading = false,
-  selectedPathId = '',
+  courseChapters = [],
+  chaptersLoading = false,
+  selectedChapterId = '',
   chapterError = '',
   courseId = '',
   hint,
-  onPathSelect,
+  onChapterSelect,
   onChapterQuizSetup,
   onCourseQuizSetup,
 }) {
@@ -284,13 +284,13 @@ export function MentorQuestionBankCourseOutlinePanel({
       </Box>
 
       <MentorQuestionBankCourseOutline
-        coursePaths={coursePaths}
-        pathsLoading={pathsLoading}
-        selectedPathId={selectedPathId}
+        courseChapters={courseChapters}
+        chaptersLoading={chaptersLoading}
+        selectedChapterId={selectedChapterId}
         chapterError={chapterError}
         courseId={courseId}
         hint={hint}
-        onPathSelect={onPathSelect}
+        onChapterSelect={onChapterSelect}
         onChapterQuizSetup={onChapterQuizSetup}
       />
     </Box>

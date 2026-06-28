@@ -44,117 +44,6 @@ function getUser() {
   }
 }
 
-/* ─── mock data ──────────────────────────────────────────── */
-
-const MOCK_CONTINUE_COURSE = {
-  courseId: 3,
-  courseName: "Luyện viết IELTS Task 2",
-  category: "IELTS",
-  level: "Nâng cao",
-  instructor: "Trần Quốc Huy",
-  progressPercentage: 68,
-  currentStage: 3,
-  currentLesson: 9,
-  lastActivity: "Hôm qua",
-  thumbnail:
-    "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=600&q=75",
-  currentLessonDetail: {
-    stage: "Chương 3: Luyện đề nâng cao",
-    lesson: "Bài 9",
-    title: "Từ nối & cohesion devices",
-  },
-};
-
-const MOCK_PATHS = [
-  {
-    id: 1,
-    title: "Mất gốc tiếng Anh",
-    description: "Xây dựng lại nền tảng phát âm, ngữ pháp và từ vựng từ đầu.",
-    courseCount: 4,
-    thumbnail:
-      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70",
-    accent: "#38BDF8",
-  },
-  {
-    id: 2,
-    title: "Giao tiếp hằng ngày",
-    description: "Thực hành hội thoại, từ vựng thực tế và kỹ năng nghe–nói.",
-    courseCount: 5,
-    thumbnail:
-      "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&q=70",
-    accent: "#0891B2",
-  },
-  {
-    id: 3,
-    title: "IELTS Writing",
-    description:
-      "Chinh phục Task 1 và Task 2 với lộ trình từ cơ bản đến nâng cao.",
-    courseCount: 6,
-    thumbnail:
-      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&q=70",
-    accent: "#7C3AED",
-  },
-  {
-    id: 4,
-    title: "TOEIC nền tảng",
-    description: "Luyện nghe, đọc và chiến lược làm bài thi TOEIC hiệu quả.",
-    courseCount: 5,
-    thumbnail:
-      "https://images.unsplash.com/photo-1588702547919-26089e690ecc?w=400&q=70",
-    accent: "#EA580C",
-  },
-];
-
-const MOCK_COURSES = [
-  {
-    courseId: 1,
-    courseName: "Kỹ năng thuyết trình tiếng Anh cho sinh viên",
-    category: "Giao tiếp",
-    level: "Cơ bản",
-    instructor: "Hoàng Thùy Linh",
-    rating: 4.7,
-    studentCount: 1240,
-    totalLessons: 12,
-    thumbnail:
-      "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=500&q=75",
-  },
-  {
-    courseId: 2,
-    courseName: "Tiếng Anh Thương Mại & Giao Tiếp Công Sở",
-    category: "Giao tiếp",
-    level: "Trung cấp",
-    instructor: "Nguyễn Minh An",
-    rating: 4.8,
-    studentCount: 980,
-    totalLessons: 8,
-    thumbnail:
-      "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=500&q=75",
-  },
-  {
-    courseId: 3,
-    courseName: "Luyện viết IELTS Task 2",
-    category: "IELTS",
-    level: "Nâng cao",
-    instructor: "Trần Quốc Huy",
-    rating: 4.9,
-    studentCount: 2100,
-    totalLessons: 16,
-    thumbnail:
-      "https://images.unsplash.com/photo-1456513080510-7bf93a163b78?w=500&q=75",
-  },
-  {
-    courseId: 4,
-    courseName: "Phát âm chuẩn & Intonation",
-    category: "Phát âm",
-    level: "Trung cấp",
-    instructor: "Đỗ Khánh Vy",
-    rating: 4.6,
-    studentCount: 760,
-    totalLessons: 10,
-    thumbnail:
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&q=75",
-  },
-];
 
 const BENEFITS = [
   {
@@ -634,7 +523,7 @@ function NewsSection() {
             excerpt: p.Description ?? "",
             category: "Lộ trình",
             date: null,
-            thumbnail: p.Thumbnail ?? null,
+            thumbnail: p.thumbnail || p.Thumbnail || null,
             accent: "#0891B2",
             nodeCount: p.TotalNodes ?? 0,
           })),
@@ -1174,7 +1063,7 @@ export default function HomePage() {
             category: row.CategoryName ?? "",
             level: row.LevelName ?? "",
             progressPercentage: row.ProgressPercentage ?? 0,
-            thumbnail: row.Thumbnail ?? null,
+            thumbnail: (row.thumbnail || row.Thumbnail) === 'CHƯA FIX LỖI ẢNH' ? null : (row.thumbnail || row.Thumbnail || null),
             currentStage: null,
             currentLesson: null,
             lastActivity: null,
@@ -1263,7 +1152,7 @@ export default function HomePage() {
           rating: c.Rating ?? 4.5,
           studentCount: c.TotalStudents ?? 0,
           totalLessons: c.TotalLessons ?? 0,
-          thumbnail: c.Thumbnail ?? null,
+          thumbnail: (c.thumbnail || c.Thumbnail) === 'CHƯA FIX LỖI ẢNH' ? null : (c.thumbnail || c.Thumbnail || null),
         })),
       );
     };

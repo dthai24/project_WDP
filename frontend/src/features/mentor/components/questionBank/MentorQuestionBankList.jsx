@@ -1,12 +1,11 @@
-import { memo } from 'react';
 import { Box, alpha } from '@mui/material';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import MentorQuestionBankRow from './MentorQuestionBankRow';
 import EmptyState from '@/shared/ui/EmptyState';
 import Loading from '@/shared/ui/Loading';
 
-function MentorQuestionBankList({
-  items = [],
+export default function MentorQuestionBankList({
+  listQuestionBank = [],
   loading = false,
   hasAnyItems = true,
   showReset = false,
@@ -16,7 +15,7 @@ function MentorQuestionBankList({
     return <Loading message="Đang tải ngân hàng câu hỏi..." />;
   }
 
-  if (items.length === 0) {
+  if (listQuestionBank.length === 0) {
     return (
       <Box
         sx={{
@@ -47,11 +46,9 @@ function MentorQuestionBankList({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      {items.map((item) => (
-        <MentorQuestionBankRow key={item.CourseId} item={item} />
+      {listQuestionBank.map((bank) => (
+        <MentorQuestionBankRow key={bank.CourseId} bankItem={bank} />
       ))}
     </Box>
   );
 }
-
-export default memo(MentorQuestionBankList);

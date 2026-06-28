@@ -175,7 +175,7 @@ async function fetchQuestionBanksFromApi(options = {}) {
   }
 
   try {
-    const response = await axios.get(`${API_BASE}/questionBank/getAll`, {
+    const response = await axios.get(`${API_BASE}/question-bank/getAll`, {
       headers: getAuthHeaders(),
     });
 
@@ -468,7 +468,7 @@ export async function getQuestionBanks() {
 export async function fetchPathQuestionBank(courseId, chapterId) {
   try {
     const response = await fetch(
-      `${API_BASE}/questionBank/courses/${Number(courseId)}/paths/${Number(chapterId)}/questions`,
+      `${API_BASE}/question-bank/courses/${Number(courseId)}/paths/${Number(chapterId)}/questions`,
       { headers: getAuthHeaders() },
     );
     const data = await response.json().catch(() => ({}));
@@ -487,7 +487,7 @@ export async function fetchPathQuestionBank(courseId, chapterId) {
 /** Danh sách Questions_Path của 1 bank. */
 export async function fetchBankPathList(bankId) {
   try {
-    const response = await fetch(`${API_BASE}/questionBank/${Number(bankId)}/paths`, {
+    const response = await fetch(`${API_BASE}/question-bank/${Number(bankId)}/paths`, {
       headers: getAuthHeaders(),
     });
     const data = await response.json().catch(() => ({}));
@@ -523,7 +523,7 @@ export async function fetchQuestionBankById(bankId, { chapterId } = {}) {
   }
   try {
     const response = await fetch(
-      `${API_BASE}/questionBank/${Number(bankId)}/questions?pathId=${Number(chapterId)}`,
+      `${API_BASE}/question-bank/${Number(bankId)}/questions?pathId=${Number(chapterId)}`,
       { headers: getAuthHeaders() },
     );
     const data = await response.json().catch(() => ({}));
@@ -549,7 +549,7 @@ export async function getQuestionBankById(bankId, { courseId, chapterId } = {}) 
 
 async function chapterQuestionsRequest(courseId, chapterId, suffix, options = {}) {
   const response = await fetch(
-    `${API_BASE}/questionBank/courses/${Number(courseId)}/paths/${Number(chapterId)}/questions${suffix}`,
+    `${API_BASE}/question-bank/courses/${Number(courseId)}/paths/${Number(chapterId)}/questions${suffix}`,
     {
       ...options,
       headers: { ...getAuthHeaders(), ...(options.headers ?? {}) },
@@ -600,7 +600,7 @@ export async function getQuestionBankByChapter(courseId, chapterId) {
 export async function getQuestionBanksByCourse(courseId) {
   try {
     const response = await fetch(
-      `${API_BASE}/questionBank/courses/${Number(courseId)}/path-banks`,
+      `${API_BASE}/question-bank/courses/${Number(courseId)}/path-banks`,
       { headers: getAuthHeaders() },
     );
     const data = await response.json().catch(() => ({}));
@@ -736,7 +736,7 @@ export async function createQuestionBank(payload) {
     }
 
     const response = await fetch(
-      `${API_BASE}/questionBank/courses/${courseId}/paths/${pathId}/questions`,
+      `${API_BASE}/question-bank/courses/${courseId}/paths/${pathId}/questions`,
       {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -848,7 +848,7 @@ export async function updatePathQuestions(courseId, chapterId, payload = {}) {
     }
 
     const response = await fetch(
-      `${API_BASE}/questionBank/courses/${resolvedCourseId}/paths/${resolvedPathId}/questions`,
+      `${API_BASE}/question-bank/courses/${resolvedCourseId}/paths/${resolvedPathId}/questions`,
       {
         method: 'PATCH',
         headers: getAuthHeaders(),
