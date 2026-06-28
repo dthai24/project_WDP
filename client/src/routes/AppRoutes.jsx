@@ -32,13 +32,13 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
           <LoginPage 
             onLogin={(userSession) => {
               onLogin(userSession);
-              const isAdmin = userSession && (
-                userSession.email === "admin@gmail.com" ||
-                userSession.email === "minh@gmail.com" ||
-                userSession.role === "Admin" ||
+              const isAdminUser = userSession && (
+                userSession.email === "minh@gmail.com" || 
+                userSession.email === "admin@gmail.com" || 
+                userSession.role === "Admin" || 
                 (Array.isArray(userSession.roles) && userSession.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))
               );
-              if (isAdmin) {
+              if (isAdminUser) {
                 navigate("/admin");
               } else {
                 navigate("/");

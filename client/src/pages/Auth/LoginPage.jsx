@@ -84,27 +84,27 @@ export default function LoginPage({ onLogin, onBackHome }) {
         })
       });
 
-      const data = await response.json();
+      const res = await response.json();
 
-      if (response.ok) {
+      if (response.ok && res && res.success) {
         const userSession = {
-          email: data.user ? data.user.email : data.email,
-          name: data.user ? data.user.name : data.name,
-          role: data.user ? data.user.role : data.role,
-          roles: data.user ? data.user.roles : data.roles,
+          email: res.user.email,
+          name: res.user.name,
+          role: res.user.role,
+          roles: res.user.roles,
           loggedInAt: new Date().toISOString(),
         };
 
-        if (data.token) {
-          localStorage.setItem("learnpath_token", data.token);
-          localStorage.setItem("learnpath_user", JSON.stringify(data.user || userSession));
-        }
-
+        // Save JWT token and user info under both keys
+        localStorage.setItem("learnpath_token", res.token);
+        localStorage.setItem("learnpath_user", JSON.stringify(userSession));
+        localStorage.setItem("lexiora_user", JSON.stringify(userSession));
+        
         onLogin(userSession);
         setIsSubmitting(false);
         return;
       } else {
-        throw new Error(data.message || "Tài khoản không chính xác.");
+        throw new Error(res.message || "Tài khoản không chính xác.");
       }
 
     } catch (error) {
@@ -129,6 +129,11 @@ export default function LoginPage({ onLogin, onBackHome }) {
         email: account.email,
         name: account.name,
         role: account.role,
+        roles: account.email === "admin@gmail.com" || account.role === "Admin"
+          ? [{ roleId: 3, roleName: "Admin" }]
+          : (account.email === "mentor@gmail.com" || account.role === "Mentor"
+            ? [{ roleId: 2, roleName: "Mentor" }]
+            : [{ roleId: 1, roleName: "Student" }]),
         loggedInAt: new Date().toISOString(),
       };
 
