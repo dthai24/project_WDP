@@ -31,12 +31,13 @@ import {
   buildMentorCourseListSearchParams,
   parseMentorCourseListParams,
 } from "@/features/mentor/utils/mentorCourseListParams";
-import { getPrimaryRoleLabel } from "@/features/auth/utils/authUtils";
+import { getPrimaryRoleLabel, isStudent } from "@/features/auth/utils/authUtils";
 import { useAuth } from '@/context/AuthContext';
 import {
   AVATAR_UPDATED_EVENT,
   getStoredAvatarUrl,
 } from '@/features/profile/utils/profileAvatarUtils';
+import StreakBadge from "@/shared/ui/StreakBadge";
 const MENU_CLOSE_DELAY = 200;
 const KEYWORD_DEBOUNCE_MS = 300;
 const PROJECT_NAME = "S.T.A.R Learning Path";
@@ -382,6 +383,12 @@ export default function Header({
 
         {showUser && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+            {user && isStudent(user) && (
+              <Box sx={{ display: { xs: "none", sm: "flex" }, mr: 1 }}>
+                <StreakBadge userId={user?.userId} />
+              </Box>
+            )}
+
             {user && showMyCoursesButton && (
               <Tooltip title="Khóa học của tôi">
                 <Box

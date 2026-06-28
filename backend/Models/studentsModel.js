@@ -28,12 +28,12 @@ async function getCompletionDates(userId) {
   request.input("userId", sql.Int, userId);
 
   const result = await request.query(`
-      SELECT DISTINCT CONVERT(varchar(10), CompletedAt, 23) AS d
-      FROM User_Nodes
-      WHERE UserId = @userId
-        AND IsCompleted = 1
-      ORDER BY d DESC;
-  `);
+        SELECT DISTINCT CONVERT(varchar(10), CompletedAt, 23) AS d
+        FROM User_Nodes
+        WHERE UserId = @userId
+          AND IsCompleted = 1
+        ORDER BY d DESC;
+    `);
 
   return result.recordset.map((r) => r.d);
 }
