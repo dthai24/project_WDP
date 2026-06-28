@@ -665,8 +665,40 @@ async function touchBankUpdatedAtByPath(courseId, pathId) {
   `);
 }
 
+/** Danh sách ngân hàng câu hỏi theo mentor (kèm thống kê câu hỏi). */
+async function getAllListQuestionBankByMentorId(mentorId) {
+  try {
+    const request = new sql.Request();
+    request.input('mentorId', sql.Int, Number(mentorId));
+
+    const result = await request.query(`
+      SELECT c.CourseId,
+        c.CourseName,
+        c.Description AS CourseDescription,
+        COUNT(DISTINCT q.QuestionId) AS TotalQuestion,
+        COUNT(DISTINCT CASE WHEN q.IsActive = 1 THEN q.QuestionId END) AS TotalQuestionIsPublic,
+        COUNT(DISTINCT qp.PathId) AS PathHasQuestion,
+        qb.UpdatedAt,
+        c.IsPublished,
+        c.Thumbnail
+      FROM Courses c
+      RIGHT JOIN Question_Bank qb ON c.CourseId = qb.CourseId
+      LEFT JOIN Questions_Path qp ON qp.BankId = qb.BankId
+      LEFT JOIN Questions q ON q.Question_Path_Id = qp.Question_Path_Id
+      WHERE qb.InstructorId = @mentorId
+      GROUP BY c.CourseId, c.CourseName, c.Description, qp.PathId, qb.UpdatedAt, c.IsPublished, c.Thumbnail
+    `);
+
+    return result.recordset;
+  } catch (error) {
+    console.error(error.message);
+    return [];
+  }
+}
+
 module.exports = {
   getQuestionBankByMentorId,
+  getAllListQuestionBankByMentorId,
   getCoursePathBanks,
   getBankPathList,
   getBankQuestions,

@@ -41,7 +41,8 @@ app.use('/api/mentor', mentorRoutes);
 app.use('/api/materials', materialsRoutes);
 app.use('/api', lookupRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/questionBank', questionBankRoutes)
+// _________Question Bank Routes______________
+app.use('/api/question-bank', questionBankRoutes)
 // Link URL Courses's Avatar
 // Static: serve course avatars
 app.use('/assets', express.static(path.join(__dirname, 'public/assets')));

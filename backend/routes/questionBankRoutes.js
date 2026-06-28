@@ -1,6 +1,8 @@
 const express = require('express');
-const router = express.Router();
+const questionBankRoutes = express.Router();
+
 const {
+  getAllBankOfMentor,
   getAllQuestionBankByMentorId,
   getCoursePathBanks,
   getPathQuestions,
@@ -13,21 +15,26 @@ const {
   patchAllQuestionsActive,
 } = require('../controllers/questionBankController');
 
-router.use((req, _res, next) => {
-  const userId = req.headers['x-user-id'];
-  if (userId) req.user = { userId: Number(userId) };
+const optionalAuth = (req, _res, next) => {
+  const userId = req.headers['x-user-id'] || req.query.userId;
+  if (userId) {
+    req.user = { userId: Number(userId) };
+  }
   next();
-});
+};
 
-router.get('/getAll', getAllQuestionBankByMentorId);
-router.get('/courses/:courseId/path-banks', getCoursePathBanks);
-router.get('/courses/:courseId/paths/:pathId/questions', getPathQuestions);
-router.post('/courses/:courseId/paths/:pathId/questions', createPathQuestions);
-router.patch('/courses/:courseId/paths/:pathId/questions', patchPathQuestions);
-router.patch('/courses/:courseId/paths/:pathId/questions/active-all', patchAllQuestionsActive);
-router.patch('/courses/:courseId/paths/:pathId/questions/:questionId/active', patchQuestionActive);
-router.delete('/courses/:courseId/paths/:pathId/questions/:questionId', deletePathQuestion);
-router.get('/:bankId/paths', getBankPaths);
-router.get('/:bankId/questions', getBankQuestions);
+questionBankRoutes.use(optionalAuth);
 
-module.exports = router;
+questionBankRoutes.get('/getAllBankOfMentor', getAllBankOfMentor);
+questionBankRoutes.get('/getAll', getAllQuestionBankByMentorId);
+questionBankRoutes.get('/courses/:courseId/path-banks', getCoursePathBanks);
+questionBankRoutes.get('/courses/:courseId/paths/:pathId/questions', getPathQuestions);
+questionBankRoutes.post('/courses/:courseId/paths/:pathId/questions', createPathQuestions);
+questionBankRoutes.patch('/courses/:courseId/paths/:pathId/questions', patchPathQuestions);
+questionBankRoutes.patch('/courses/:courseId/paths/:pathId/questions/active-all', patchAllQuestionsActive);
+questionBankRoutes.patch('/courses/:courseId/paths/:pathId/questions/:questionId/active', patchQuestionActive);
+questionBankRoutes.delete('/courses/:courseId/paths/:pathId/questions/:questionId', deletePathQuestion);
+questionBankRoutes.get('/:bankId/paths', getBankPaths);
+questionBankRoutes.get('/:bankId/questions', getBankQuestions);
+
+module.exports = questionBankRoutes;

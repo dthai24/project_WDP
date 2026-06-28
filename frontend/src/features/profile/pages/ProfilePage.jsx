@@ -425,9 +425,13 @@ export default function ProfilePage() {
   const fileInputRef = useRef(null);
   const [tempImageSrc, setTempImageSrc] = useState(null);
   const handleAvatarClick = () => {
-    fileInputRef.current?.click();
+    setCropperOpen(true);
   };
 
+  /**
+   * HAm: handleAvatarSelected
+   * TAc dng: B_t file t th input vA chuyn thAnh URL tm ` `a vAo khung c_t
+   */
   const handleAvatarSelected = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';

@@ -8,10 +8,9 @@ export const QB_LIST_DEFAULTS = {
 };
 
 const QB_PARAM_KEYS = ['q', 'status', 'questionStatus', 'sort', 'page', 'pageSize'];
-const VALID_STATUS = new Set(['all', 'published', 'draft']);
 const VALID_QUESTION_STATUS = new Set(['all', 'has_draft', 'all_published', 'empty']);
 const VALID_SORT = new Set(['updated_desc', 'name_asc', 'questions_desc']);
-
+const VALID_STATUS = new Set(['all', 'draft', 'published'])
 function parsePage(value) {
   const page = Number.parseInt(value ?? '1', 10);
   return Number.isFinite(page) && page > 0 ? page : 1;
@@ -91,25 +90,34 @@ export function buildQBActiveChips(filters, options = {}) {
   return chips;
 }
 
-function matchesQuestionStatus(item, questionStatus) {
+function matchesQuestionStatus(totalQuestion, totalQuestionIsPublic, questionStatus) {
   if (questionStatus === 'all') return true;
-  const total = item.TotalQuestionCount ?? 0;
-  const draft = item.DraftQuestionCount ?? 0;
-  if (questionStatus === 'empty') return total === 0;
-  if (questionStatus === 'has_draft') return draft > 0;
-  if (questionStatus === 'all_published') return total > 0 && draft === 0;
+  if (questionStatus === 'empty') return Number(totalQuestion) === 0;
+  if (questionStatus === 'has_draft') return Number(totalQuestion) - Number(totalQuestionIsPublic) > 0;
+  if (questionStatus === 'all_published') return Number(totalQuestion) === Number(totalQuestionIsPublic) && Number(totalQuestion) > 0;
   return true;
 }
+
+const normalizationStatus = (bankStatus) => {
+  if (bankStatus !== 'all') {
+    return bankStatus === 'published' ? true : false;
+  }
+
+  return bankStatus;
+};
 
 export function filterAndSortQBItems(items, query = {}) {
   const { q = '', status = 'all', questionStatus = 'all', sort = 'updated_desc' } = query;
   const keyword = q.trim().toLowerCase();
 
+  const formatStatus = normalizationStatus(status);
+
   let result = items.filter((item) => {
-    if (status !== 'all' && item.Status !== status) return false;
-    if (!matchesQuestionStatus(item, questionStatus)) return false;
+    // if (item.TotalQuestion === 0) return false;
+    if (status !== 'all' && item.IsPublished !== formatStatus) return false;
+    if (!matchesQuestionStatus(item.TotalQuestion, item.TotalQuestionIsPublic, questionStatus)) return false;
     if (keyword) {
-      const haystack = [item.CourseName, item.Description].filter(Boolean).join(' ').toLowerCase();
+      const haystack = [item.CourseName, item.CourseDescription].filter(Boolean).join(' ').toLowerCase();
       if (!haystack.includes(keyword)) return false;
     }
     return true;
@@ -117,12 +125,10 @@ export function filterAndSortQBItems(items, query = {}) {
 
   result = [...result].sort((a, b) => {
     if (sort === 'name_asc') return (a.CourseName ?? '').localeCompare(b.CourseName ?? '', 'vi');
-    if (sort === 'questions_desc') {
-      return (b.TotalQuestionCount ?? 0) - (a.TotalQuestionCount ?? 0);
-    }
+    if (sort === 'questions_desc') return (b.TotalQuestion ?? 0) - (a.TotalQuestion ?? 0);
     return (
-      new Date(b.QuestionBankUpdatedAt ?? 0).getTime() -
-      new Date(a.QuestionBankUpdatedAt ?? 0).getTime()
+      new Date(b.UpdatedAt ?? 0).getTime() -
+      new Date(a.UpdatedAt ?? 0).getTime()
     );
   });
 
@@ -135,7 +141,7 @@ export function paginateQBItems(items, page, pageSize) {
   const safePage = Math.min(Math.max(1, page), totalPages);
   const start = (safePage - 1) * pageSize;
   return {
-    items: items.slice(start, start + pageSize),
+    listQuestionBank: items.slice(start, start + pageSize),
     totalItems,
     totalPages,
     page: safePage,
