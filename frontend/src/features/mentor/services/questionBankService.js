@@ -89,17 +89,40 @@ function getAuthHeaders() {
   return headers;
 }
 
-function mapPathsToChapters(paths = []) {
-  return paths.map((path, pathIndex) => ({
-    PathId: path.PathId,
-    PathName: String(path.PathName ?? '').trim() || `Chương ${pathIndex + 1}`,
-    Order: path.Order ?? pathIndex + 1,
-    Nodes: (path.Nodes ?? []).map((node, nodeIndex) => ({
-      NodeId: node.NodeId,
-      NodeName: String(node.NodeName ?? '').trim() || `Bài ${nodeIndex + 1}`,
-      NodeOrder: node.NodeOrder ?? nodeIndex + 1,
-    })),
+function normalizeQBChapter(path, pathIndex = 0) {
+  const chapterId = path.chapterId ?? path.PathId ?? path.pathId;
+  const chapterTitle =
+    String(path.chapterTitle ?? path.PathName ?? path.title ?? '').trim() ||
+    `Chương ${pathIndex + 1}`;
+  const order = path.order ?? path.Order ?? pathIndex + 1;
+  const rawLessons = path.lessons ?? path.Nodes ?? [];
+
+  const lessons = rawLessons.map((node, nodeIndex) => ({
+    lessonId: node.lessonId ?? node.NodeId ?? node.nodeId,
+    lessonTitle:
+      String(node.lessonTitle ?? node.NodeName ?? node.title ?? '').trim() ||
+      `Bài ${nodeIndex + 1}`,
+    lessonOrder: node.lessonOrder ?? node.NodeOrder ?? node.order ?? nodeIndex + 1,
   }));
+
+  return {
+    chapterId,
+    chapterTitle,
+    order,
+    lessons,
+    PathId: chapterId,
+    PathName: chapterTitle,
+    Order: order,
+    Nodes: lessons.map((lesson) => ({
+      NodeId: lesson.lessonId,
+      NodeName: lesson.lessonTitle,
+      NodeOrder: lesson.lessonOrder,
+    })),
+  };
+}
+
+function mapPathsToChapters(paths = []) {
+  return paths.map((path, pathIndex) => normalizeQBChapter(path, pathIndex));
 }
 
 function loadStoredBanks() {
@@ -1010,13 +1033,13 @@ export async function fetchCourseContentOutlineForQB(courseId) {
 export async function fetchChaptersForCourse(courseId) {
   const res = await fetchCourseContentOutlineForQB(courseId);
   if (!res.ok) return res;
-  const chapters = res.chapters.map((ch) => ({
-    PathId: ch.PathId,
-    PathName: ch.PathName,
-    Order: ch.Order,
-    CourseId: Number(courseId),
-  }));
-  return { ok: true, chapters };
+  return {
+    ok: true,
+    chapters: res.chapters.map((chapter) => ({
+      ...chapter,
+      CourseId: Number(courseId),
+    })),
+  };
 }
 
 /** @deprecated alias */

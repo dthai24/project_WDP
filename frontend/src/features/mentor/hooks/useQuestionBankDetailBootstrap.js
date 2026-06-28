@@ -24,6 +24,7 @@ import {
   formatChapterDisplayLabel,
   getChapterOrder,
 } from '@/features/mentor/utils/mentorCourseUtils';
+import { buildQuestionBankChapterPath } from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 function getFirstListeningSectionId(sections) {
   return (
@@ -48,7 +49,7 @@ export default function useQuestionBankDetailBootstrap() {
   const [bank, setBank] = useState(null);
   const [bankPaths, setBankPaths] = useState([]);
   const [course, setCourse] = useState(null);
-  const [coursePaths, setCoursePaths] = useState([]);
+  const [courseChapters, setCourseChapters] = useState([]);
   const [pathsLoading, setPathsLoading] = useState(false);
   const [sections, setSections] = useState([]);
   const [sectionErrors, setSectionErrors] = useState({});
@@ -64,7 +65,7 @@ export default function useQuestionBankDetailBootstrap() {
     setBankPaths([]);
     setSections([]);
     setCourse(null);
-    setCoursePaths([]);
+    setCourseChapters([]);
 
     try {
       if (isPathListMode) {
@@ -95,13 +96,16 @@ export default function useQuestionBankDetailBootstrap() {
         });
 
         if (courseRes.ok) setCourse(courseRes.course);
-        if (outlineRes.ok) setCoursePaths(chapters);
+        if (outlineRes.ok) setCourseChapters(chapters);
         setBank(res.bank);
         setBankPaths(enrichedPaths);
 
         if (enrichedPaths.length === 1) {
           navigate(
-            `/mentor/question-banks/${questionBankId}?courseId=${res.bank.courseId}&chapterId=${enrichedPaths[0].PathId}`,
+            buildQuestionBankChapterPath(questionBankId, {
+              courseId: res.bank.courseId,
+              chapterId: enrichedPaths[0].PathId,
+            }),
             { replace: true },
           );
         }
@@ -138,11 +142,15 @@ export default function useQuestionBankDetailBootstrap() {
 
       const chapters = outlineRes.ok ? outlineRes.chapters ?? [] : [];
       if (courseRes.ok) setCourse(courseRes.course);
-      if (outlineRes.ok) setCoursePaths(chapters);
+      if (outlineRes.ok) setCourseChapters(chapters);
 
+      const matchedChapter = chapters.find(
+        (ch) => String(ch.chapterId ?? ch.PathId) === String(loadedBank.chapterId),
+      );
       const rawChapterTitle =
         String(loadedBank.chapterTitle ?? loadedBank.title ?? '').trim() ||
-        chapters.find((ch) => String(ch.PathId) === String(loadedBank.chapterId))?.PathName ||
+        matchedChapter?.chapterTitle ||
+        matchedChapter?.PathName ||
         '';
       loadedBank.chapterTitle = rawChapterTitle;
       loadedBank.chapterDisplayLabel = formatChapterDisplayLabel({
@@ -168,7 +176,10 @@ export default function useQuestionBankDetailBootstrap() {
   const openPath = useCallback(
     (path) => {
       navigate(
-        `/mentor/question-banks/${questionBankId}?courseId=${bank?.courseId}&chapterId=${path.PathId}`,
+        buildQuestionBankChapterPath(questionBankId, {
+          courseId: bank?.courseId,
+          chapterId: path.PathId,
+        }),
       );
     },
     [bank?.courseId, navigate, questionBankId],
@@ -185,7 +196,10 @@ export default function useQuestionBankDetailBootstrap() {
       const bankRes = await findQuestionBankByChapter(bank.courseId, nextChapterId);
       if (bankRes.ok) {
         navigate(
-          `/mentor/question-banks/${bankRes.bank.BankId ?? bankRes.bank.id}?courseId=${bank.courseId}&chapterId=${nextChapterId}`,
+          buildQuestionBankChapterPath(bankRes.bank.BankId ?? bankRes.bank.id, {
+            courseId: bank.courseId,
+            chapterId: nextChapterId,
+          }),
         );
         return;
       }
@@ -206,7 +220,7 @@ export default function useQuestionBankDetailBootstrap() {
     bankPaths,
     setBank,
     course,
-    coursePaths,
+    courseChapters,
     pathsLoading,
     sections,
     setSections,

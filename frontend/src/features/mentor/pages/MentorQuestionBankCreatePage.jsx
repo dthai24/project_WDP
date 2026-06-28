@@ -33,6 +33,7 @@ import { isMentorCoursePublished } from '@/features/mentor/utils/mentorCourseUti
 import { PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
 import { createQuestionBank } from '@/features/mentor/services/questionBankService';
+import { buildQuestionBankChapterPath } from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 function validateForm(chapterId, chaptersCount = 0) {
   const errors = {};
@@ -242,7 +243,7 @@ export default function MentorQuestionBankCreatePage() {
       const res = await createQuestionBank({
         title: bankTitle,
         courseId: Number(courseId),
-        courseTitle: course?.courseName ?? '',
+        courseTitle: course?.CourseName ?? course?.courseName ?? '',
         chapterId: Number(chapterId),
         chapterTitle: bankTitle,
         sections: sectionsPayload,
@@ -255,7 +256,12 @@ export default function MentorQuestionBankCreatePage() {
 
       clearQuestionBankCreateDraft(courseId, chapterId);
       toast.success('Tạo ngân hàng câu hỏi thành công!');
-      navigate(`/mentor/question-banks/${res.bank.id}`);
+      navigate(
+        buildQuestionBankChapterPath(res.bank.id, {
+          courseId,
+          chapterId,
+        }),
+      );
     } catch {
       toast.error('Đã xảy ra lỗi. Vui lòng thử lại.');
     } finally {
@@ -308,7 +314,7 @@ export default function MentorQuestionBankCreatePage() {
         isCreateMode
         bankTitle={bankTitle}
         courseId={courseId}
-        courseName={course?.courseName}
+        courseName={course?.CourseName ?? course?.courseName}
         courseCategory={courseCategory}
         chapterTitle={selectedChapter?.chapterTitle}
         coursePublished={coursePublished}
@@ -386,7 +392,7 @@ export default function MentorQuestionBankCreatePage() {
             activeSkill={activeSkill}
             activeSectionId={activeSectionId}
             onNavigateToItem={handleOutlineNavigate}
-            courseName={course?.courseName}
+            courseName={course?.CourseName ?? course?.courseName}
             courseCategory={courseCategory}
             chapterTitle={selectedChapter?.chapterTitle}
             courseChapters={courseChapters}

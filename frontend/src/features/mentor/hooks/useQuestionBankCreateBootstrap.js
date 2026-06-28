@@ -14,6 +14,7 @@ import {
   fetchCourseForQB,
   findQuestionBankByChapter,
 } from '@/features/mentor/services/questionBankService';
+import { buildQuestionBankChapterPath } from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 const DRAFT_KEY_PREFIX = 'mentor_qb_create_draft';
 
@@ -123,7 +124,13 @@ export default function useQuestionBankCreateBootstrap() {
 
       const bankRes = findQuestionBankByChapter(courseId, targetChapterId);
       if (bankRes.ok && redirectIfExists) {
-        navigate(`/mentor/question-banks/${bankRes.bank.id}`, { replace: true });
+        navigate(
+          buildQuestionBankChapterPath(bankRes.bank.id, {
+            courseId,
+            chapterId: targetChapterId,
+          }),
+          { replace: true },
+        );
         return true;
       }
 
@@ -211,7 +218,12 @@ export default function useQuestionBankCreateBootstrap() {
 
       const bankRes = findQuestionBankByChapter(courseId, nextChapterId);
       if (bankRes.ok) {
-        navigate(`/mentor/question-banks/${bankRes.bank.id}`);
+        navigate(
+          buildQuestionBankChapterPath(bankRes.bank.id, {
+            courseId,
+            chapterId: nextChapterId,
+          }),
+        );
         return;
       }
 

@@ -20,7 +20,6 @@ import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questio
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
 import MentorQuestionBankRightRail from '@/features/mentor/components/questionBank/MentorQuestionBankRightRail';
 import MentorQuestionBankPathsView from '@/features/mentor/components/questionBank/MentorQuestionBankPathsView';
-import MentorChapterQuestionListView from '@/features/mentor/components/questionBank/MentorChapterQuestionListView';
 import MentorChapterQuizSetupDialog from '@/features/mentor/components/course/MentorChapterQuizSetupDialog';
 import {
   QUIZ_SETUP_SCOPE_CHAPTER,
@@ -83,7 +82,7 @@ export default function MentorQuestionBankDetailPage() {
     bankPaths,
     setBank,
     course,
-    coursePaths,
+    courseChapters,
     pathsLoading,
     sections,
     setSections,
@@ -100,9 +99,7 @@ export default function MentorQuestionBankDetailPage() {
     setQuestionBaselineMap,
     workspaceKey,
     openPath,
-    backToPathList,
     selectChapter,
-    reloadBank,
   } = useQuestionBankDetailBootstrap();
 
   const coursePublished = course?.IsPublished === true || course?.IsPublished === 1;
@@ -144,13 +141,20 @@ export default function MentorQuestionBankDetailPage() {
     supportsQuestionBankMultiSection(activeSkill) && skillSections.length > 1;
 
   useEffect(() => {
+    if (loading || isPathListMode || isEditorMode) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('mode', 'editor');
+    navigate({ search: `?${next.toString()}` }, { replace: true });
+  }, [loading, isPathListMode, isEditorMode, searchParams, navigate]);
+
+  useEffect(() => {
     if (!activeSection && skillSections[0]) {
       setActiveSectionId(skillSections[0].tempId);
     }
   }, [activeSection, skillSections, setActiveSectionId]);
 
   useEffect(() => {
-    if (!isEditorMode || loading) return;
+    if (loading || isPathListMode) return;
     const questionId = searchParams.get('questionId');
     if (!questionId) return;
 
@@ -163,7 +167,7 @@ export default function MentorQuestionBankDetailPage() {
     setActiveSkill(section.SkillType);
     setActiveSectionId(section.tempId);
     scrollToQuestionBankItem({ type: 'question', questionTempId });
-  }, [isEditorMode, loading, searchParams, sections, setActiveSectionId, setActiveSkill]);
+  }, [loading, isPathListMode, searchParams, sections, setActiveSectionId, setActiveSkill]);
 
   const handleSectionChange = (tempId, nextSection) => {
     setSections((prev) => prev.map((s) => (s.tempId === tempId ? nextSection : s)));
@@ -339,19 +343,19 @@ export default function MentorQuestionBankDetailPage() {
       chapterTitle: bank.chapterTitle,
       chapterIndex: Math.max(
         0,
-        coursePaths.findIndex(
-          (path) => String(path.PathId) === String(bank.chapterId),
+        courseChapters.findIndex(
+          (chapter) => String(chapter.chapterId ?? chapter.PathId) === String(bank.chapterId),
         ),
       ),
     });
   };
 
-  const openQuizSetupForChapter = (path, pathIndex) => {
+  const openQuizSetupForChapter = (chapter, chapterIndex) => {
     setQuizSetupTarget({
       scope: QUIZ_SETUP_SCOPE_CHAPTER,
-      chapterId: path.PathId,
-      chapterTitle: path.PathName,
-      chapterIndex: pathIndex,
+      chapterId: chapter.chapterId ?? chapter.PathId,
+      chapterTitle: chapter.chapterTitle ?? chapter.PathName,
+      chapterIndex,
     });
   };
 
@@ -360,20 +364,6 @@ export default function MentorQuestionBankDetailPage() {
   };
 
   const backToCourseQuestions = () => {
-    if (isEditorMode && bank?.courseId && bank?.chapterId) {
-      navigate(
-        `/mentor/question-banks/${questionBankId}?courseId=${bank.courseId}&chapterId=${bank.chapterId}`,
-      );
-      return;
-    }
-    if (!isPathListMode && !isEditorMode && bank?.courseId) {
-      navigate(`/mentor/courses/${bank.courseId}/questions`);
-      return;
-    }
-    if (!isPathListMode && bank?.courseId) {
-      backToPathList();
-      return;
-    }
     if (bank?.courseId) {
       navigate(`/mentor/courses/${bank.courseId}/questions`);
       return;
@@ -439,32 +429,9 @@ export default function MentorQuestionBankDetailPage() {
   }
 
   if (!isEditorMode) {
-    const courseCategory = [course?.CategoryDisplayName, course?.LevelDisplayName]
-      .filter(Boolean)
-      .join(' · ');
-
     return (
-      <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
-        <MentorChapterQuestionListView
-          bankId={questionBankId}
-          courseId={bank.courseId}
-          chapterId={bank.chapterId}
-          chapterTitle={bank.chapterTitle}
-          chapterDisplayLabel={bank.chapterDisplayLabel}
-          courseName={course?.CourseName ?? bank.courseTitle}
-          courseCategory={courseCategory}
-          questions={bank.questionList ?? []}
-          onBack={backToCourseQuestions}
-          onReload={reloadBank}
-          onEditQuestion={(question) =>
-            navigate(
-              `/mentor/question-banks/${questionBankId}?courseId=${bank.courseId}&chapterId=${bank.chapterId}&mode=editor&questionId=${question.QuestionId}`,
-            )
-          }
-          onAddQuestion={() =>
-            navigate(`/mentor/question-banks/create?courseId=${bank.courseId}&chapterId=${bank.chapterId}`)
-          }
-        />
+      <Box sx={{ py: 8, display: 'flex', justifyContent: 'center' }}>
+        <Loading message="Đang mở trình chỉnh sửa..." />
       </Box>
     );
   }
@@ -509,8 +476,8 @@ export default function MentorQuestionBankDetailPage() {
           quizSetupTarget?.chapterIndex ??
           Math.max(
             0,
-            coursePaths.findIndex(
-              (path) => String(path.PathId) === String(bank.chapterId),
+            courseChapters.findIndex(
+              (chapter) => String(chapter.chapterId ?? chapter.PathId) === String(bank.chapterId),
             ),
           )
         }
@@ -582,12 +549,12 @@ export default function MentorQuestionBankDetailPage() {
             courseName={bank.courseTitle || course?.CourseName}
             courseCategory={courseCategory}
             chapterTitle={bank.chapterTitle}
-            coursePaths={coursePaths}
-            pathsLoading={pathsLoading}
-            selectedPathId={bank.chapterId}
+            courseChapters={courseChapters}
+            chaptersLoading={pathsLoading}
+            selectedChapterId={bank.chapterId}
             courseId={bank.courseId}
             courseOutlineHint="Chọn chương khác để mở ngân hàng câu hỏi tương ứng."
-            onPathSelect={selectChapter}
+            onChapterSelect={selectChapter}
             onChapterQuizSetup={openQuizSetupForChapter}
             onCourseQuizSetup={openCourseQuizSetup}
           />

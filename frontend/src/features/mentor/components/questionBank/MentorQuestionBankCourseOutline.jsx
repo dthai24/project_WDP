@@ -185,18 +185,23 @@ export default function MentorQuestionBankCourseOutline({
         }}
       >
         {courseChapters.map((chapter, chapterIndex) => {
-          const lessons = chapter.lessons ?? [];
-          const isSelected = String(chapter.chapterId) === String(selectedChapterId);
+          const chapterId = chapter.chapterId ?? chapter.PathId;
+          const chapterTitle = chapter.chapterTitle ?? chapter.PathName ?? `Chương ${chapterIndex + 1}`;
+          const lessons = chapter.lessons ?? (chapter.Nodes ?? []).map((node, nodeIndex) => ({
+            lessonId: node.NodeId ?? node.lessonId,
+            lessonTitle: node.NodeName ?? node.lessonTitle ?? `Bài ${nodeIndex + 1}`,
+          }));
+          const isSelected = String(chapterId) === String(selectedChapterId);
 
           return (
-            <Box key={chapter.chapterId} sx={{ mb: 0.35 }}>
+            <Box key={chapterId ?? chapterIndex} sx={{ mb: 0.35 }}>
               <OutlineNavItem
-                label={`Chương ${chapterIndex + 1}: ${chapter.chapterTitle}`}
+                label={`Chương ${chapterIndex + 1}: ${chapterTitle}`}
                 meta={lessons.length > 0 ? `${lessons.length} bài học` : 'Chưa có bài học'}
                 icon={MenuBookRoundedIcon}
                 iconColor={CHAPTER_THEME.color}
                 selected={isSelected}
-                onClick={() => onChapterSelect?.(String(chapter.chapterId))}
+                onClick={() => onChapterSelect?.(String(chapterId))}
                 trailing={
                   onChapterQuizSetup ? (
                     <MentorChapterCardMenu
