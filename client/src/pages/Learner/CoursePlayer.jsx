@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Play, FileText, HelpCircle, CheckCircle2, Lock, ChevronRight, ChevronLeft, BookOpen, Download, Eye, Menu, X, Clock, Award, Sparkles, Star } from "lucide-react";
+import { ArrowLeft, Play, FileText, HelpCircle, CheckCircle2, Lock, ChevronRight, ChevronLeft, BookOpen, Download, Eye, Menu, X, Clock, Award, Sparkles, Star, Edit } from "lucide-react";
 import { curriculumData, lessonDocuments, lessonQuizQuestions, getLearningProgress, markLessonComplete, saveQuizScore, getMentorCurriculum } from "../../services/data";
 import QuizEngine from "../../components/common/QuizEngine";
 
@@ -12,6 +12,22 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
   const [completedLessons, setCompletedLessons] = useState(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quizResult, setQuizResult] = useState(null);
+  
+  // Custom progress and leave blocking state variables
+  const [currentUser, setCurrentUser] = useState(null);
+  const [essayText, setEssayText] = useState("");
+
+  // Load user session
+  useEffect(() => {
+    const userStr = localStorage.getItem("lexiora_user") || localStorage.getItem("learnpath_user");
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error("Error parsing user session:", e);
+      }
+    }
+  }, []);
 
   // Load progress from localStorage
   useEffect(() => {
@@ -22,9 +38,37 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
   // Set first lesson as active on mount
   useEffect(() => {
     if (!activeLesson && curriculum.length > 0 && curriculum[0].lessons.length > 0) {
-      setActiveLesson(curriculum[0].lessons[0]);
+      const firstLesson = curriculum[0].lessons[0];
+      setActiveLesson(firstLesson);
+      setActiveTab(firstLesson.type === "quiz" ? "quiz" : firstLesson.type === "essay" ? "essay" : "video");
     }
   }, [curriculum]);
+
+  // Load essay draft for active lesson
+  useEffect(() => {
+    if (!currentUser || !activeLesson || activeLesson.type !== "essay") {
+      setEssayText("");
+      return;
+    }
+    const backupKey = `lexiora_course_essay_backup_${currentUser.email}_${activeLesson.id}`;
+    const backup = localStorage.getItem(backupKey);
+    if (backup) {
+      setEssayText(backup);
+    } else {
+      setEssayText("");
+    }
+  }, [activeLesson, currentUser]);
+
+  // Auto-save essay draft to localStorage
+  useEffect(() => {
+    if (!currentUser || !activeLesson || activeLesson.type !== "essay") return;
+    const backupKey = `lexiora_course_essay_backup_${currentUser.email}_${activeLesson.id}`;
+    if (essayText && essayText.trim().length > 0) {
+      localStorage.setItem(backupKey, essayText);
+    } else {
+      localStorage.removeItem(backupKey);
+    }
+  }, [essayText, activeLesson, currentUser]);
 
   // Reset quiz result when switching lessons
   useEffect(() => {
@@ -34,9 +78,52 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
   const allLessons = curriculum.flatMap(m => m.lessons);
   const currentIndex = allLessons.findIndex(l => l.id === activeLesson?.id);
 
+  // Check if there is active unsaved work
+  const getUnsavedWorkType = () => {
+    if (activeTab === "essay" && essayText.trim().length > 0) {
+      return "essay";
+    }
+    if (currentUser?.email) {
+      const quizBackup = localStorage.getItem(`lexiora_quiz_backup_${currentUser.email}`);
+      if (quizBackup) {
+        try {
+          const parsed = JSON.parse(quizBackup);
+          if (parsed.quizStarted && !parsed.quizCompleted && Object.keys(parsed.answers || {}).length > 0) {
+            return "quiz";
+          }
+        } catch (e) {}
+      }
+    }
+    return null;
+  };
+
+  // Browser tab/window close warning (beforeunload)
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (getUnsavedWorkType()) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [activeTab, essayText, currentUser]);
+
   const handleLessonClick = (lesson) => {
+    const unsaved = getUnsavedWorkType();
+    if (unsaved) {
+      const confirm = window.confirm(
+        unsaved === "essay"
+          ? "Bạn đang viết bài luận dở dang. Bạn có chắc chắn muốn chuyển sang bài học khác không?"
+          : "Bạn đang làm bài trắc nghiệm dở dang. Bạn có chắc chắn muốn chuyển sang bài học khác không?"
+      );
+      if (!confirm) return;
+    }
     setActiveLesson(lesson);
-    setActiveTab(lesson.type === "quiz" ? "quiz" : "video");
+    setActiveTab(lesson.type === "quiz" ? "quiz" : lesson.type === "essay" ? "essay" : "video");
     setSidebarOpen(false);
   };
 
@@ -290,6 +377,101 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
     );
   };
 
+  const handleBack = () => {
+    const unsaved = getUnsavedWorkType();
+    if (unsaved) {
+      const confirm = window.confirm(
+        unsaved === "essay"
+          ? "Bạn đang viết bài luận dở dang. Nếu rời đi, bài luận sẽ được lưu nháp nhưng chưa được nộp. Bạn có chắc chắn muốn rời đi không?"
+          : "Bạn đang làm bài thi trắc nghiệm dở dang. Nếu rời đi, tiến trình làm bài sẽ được lưu tạm thời nhưng chưa nộp. Bạn có chắc chắn muốn rời đi không?"
+      );
+      if (!confirm) return;
+    }
+    onBack();
+  };
+
+  const renderEssayTab = () => {
+    const wordCount = essayText.trim().split(/\s+/).filter(Boolean).length;
+    const promptText = activeLesson?.essayPrompt || "Some people think that online learning is more effective than traditional classroom learning. To what extent do you agree or disagree with this opinion?";
+    
+    const handleResetEssay = () => {
+      if (window.confirm("Bạn có chắc chắn muốn xóa bản nháp hiện tại không? Hành động này không thể hoàn tác.")) {
+        setEssayText("");
+        if (currentUser?.email && activeLesson?.id) {
+          localStorage.removeItem(`lexiora_course_essay_backup_${currentUser.email}_${activeLesson.id}`);
+        }
+      }
+    };
+
+    const handleSubmitEssay = () => {
+      if (wordCount < 100) {
+        alert("Bài viết của bạn quá ngắn (tối thiểu 100 từ). Vui lòng viết thêm trước khi nộp.");
+        return;
+      }
+      alert("Chúc mừng! Bài luận của bạn đã được nộp thành công và đang chờ Mentor chấm điểm.");
+      setEssayText("");
+      if (currentUser?.email && activeLesson?.id) {
+        localStorage.removeItem(`lexiora_course_essay_backup_${currentUser.email}_${activeLesson.id}`);
+      }
+      handleCompleteLesson();
+    };
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="font-bold text-text-primary text-lg">Bài tập viết luận (Essay)</h3>
+          <p className="text-xs text-text-muted mt-0.5">Viết bài luận theo chủ đề bên dưới và nộp bài để được Mentor chấm điểm.</p>
+        </div>
+
+        <div className="bg-primary/5 border border-primary/10 p-5 rounded-2xl">
+          <h4 className="font-extrabold text-xs text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4" /> Đề bài Essay (IELTS Writing Task)
+          </h4>
+          <p className="text-text-primary text-sm font-semibold leading-relaxed">
+            "{promptText}"
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-[10px] font-bold text-text-muted tracking-wider">
+            <span>BÀI VIẾT CỦA BẠN (Hệ thống tự động lưu nháp)</span>
+            <span className="text-primary font-mono">{wordCount} từ</span>
+          </div>
+          <textarea
+            value={essayText}
+            onChange={(e) => setEssayText(e.target.value)}
+            placeholder="Nhập nội dung bài luận của bạn tại đây (tối thiểu 100 từ)..."
+            className="w-full p-5 rounded-2xl border border-border/80 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-primary text-sm resize-none leading-relaxed transition-all bg-white"
+            style={{ height: "300px", minHeight: "200px" }}
+          />
+        </div>
+
+        <div className="flex justify-between items-center pt-2">
+          <div className="text-text-muted text-[10px] flex items-center gap-1.5 font-bold">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Đã lưu tự động
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleResetEssay}
+              disabled={essayText.trim().length === 0}
+              className="px-5 py-2.5 border border-border hover:bg-slate-50 text-text-secondary text-xs font-bold rounded-xl transition-all disabled:opacity-30"
+            >
+              Xóa nháp
+            </button>
+            <button
+              onClick={handleSubmitEssay}
+              disabled={essayText.trim().length === 0}
+              className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-xl transition-all shadow-sm shadow-primary/20 disabled:opacity-50"
+            >
+              Nộp bài luận
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-surface-muted flex flex-col lg:flex-row">
       {/* Mobile sidebar toggle */}
@@ -353,6 +535,8 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
                         <Play className="w-3.5 h-3.5" />
                       ) : lesson.type === "quiz" ? (
                         <HelpCircle className="w-3.5 h-3.5" />
+                      ) : lesson.type === "essay" ? (
+                        <Edit className="w-3.5 h-3.5" />
                       ) : (
                         <FileText className="w-3.5 h-3.5" />
                       )}
@@ -379,7 +563,7 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
         {/* Top bar */}
         <div className="bg-white border-b border-border/30 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4 min-w-0">
-            <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary transition-colors shrink-0">
+            <button onClick={handleBack} className="flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary transition-colors shrink-0">
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Quay lai</span>
             </button>
@@ -399,11 +583,19 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
         {/* Tabs */}
         <div className="bg-white border-b border-border/30 px-6">
           <div className="flex gap-1">
-            {[
-              { id: "video", label: "Video", icon: Play },
-              { id: "documents", label: "Tai lieu", icon: FileText },
-              { id: "quiz", label: "Bai tap", icon: HelpCircle },
-            ].map((tab) => {
+            {(activeLesson?.type === "quiz"
+              ? [{ id: "quiz", label: "Bai tap", icon: HelpCircle }]
+              : activeLesson?.type === "essay"
+              ? [
+                  { id: "essay", label: "Viet bai luan", icon: FileText },
+                  { id: "documents", label: "Tai lieu", icon: FileText }
+                ]
+              : [
+                  { id: "video", label: "Video", icon: Play },
+                  { id: "documents", label: "Tai lieu", icon: FileText },
+                  { id: "quiz", label: "Bai tap", icon: HelpCircle }
+                ]
+            ).map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
@@ -428,6 +620,7 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
           {activeTab === "video" && renderVideoTab()}
           {activeTab === "documents" && renderDocumentsTab()}
           {activeTab === "quiz" && renderQuizTab()}
+          {activeTab === "essay" && renderEssayTab()}
         </div>
       </div>
     </div>
