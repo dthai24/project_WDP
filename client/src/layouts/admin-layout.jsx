@@ -120,7 +120,6 @@ const AdminLayout = () => {
     } catch (e) {
       console.error("Error parsing user session:", e);
     }
-    }
 
     const isWhitelisted = user && (user.email === "admin@gmail.com" || user.email === "minh@gmail.com");
     const isAdminUser = isWhitelisted || (user && (user.role === "Admin" || (Array.isArray(user.roles) && user.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))));
@@ -156,6 +155,7 @@ const AdminLayout = () => {
       label: "Mentor Requests",
       icon: Award
     },
+    {
       path: "/admin/categories",
       label: "Category Management",
       icon: Folder
@@ -333,7 +333,6 @@ const AdminLayout = () => {
           
           <div className="flex items-center gap-4">
             {/* Notification Bell Dropdown */}
-            <div className="flex items-center gap-4">
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => {
@@ -429,56 +428,6 @@ const AdminLayout = () => {
                         ))
                       )}
                     </div>
-                        </div>
-                      ) : notifications.length === 0 ? (
-                        <div className="py-12 text-center text-slate-400 text-xs font-medium">
-                          No alerts available.
-                        </div>
-                      ) : (
-                        notifications.map((notif) => (
-                          <div
-                            key={notif._id}
-                            onClick={() => {
-                              setNotifDropdownOpen(false);
-                              navigate("/admin/mentors");
-                            }}
-                            className={`p-3.5 hover:bg-slate-55/30 transition-all flex gap-3 relative group cursor-pointer ${
-                              !notif.isRead ? "bg-blue-50/10 border-l-2 border-l-blue-655" : "border-l-2 border-l-transparent"
-                            }`}
-                          >
-                            <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
-                              !notif.isRead 
-                                ? "bg-blue-50 text-blue-600 border-blue-100/50" 
-                                : "bg-slate-50 text-slate-400 border-slate-100"
-                            }`}>
-                              {notif.isRead ? <MailOpen className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-1.5">
-                                <span className="font-bold text-xs text-slate-800 truncate">{notif.title}</span>
-                                <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">
-                                  {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ""}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-500 leading-normal mt-0.5 line-clamp-2">
-                                {notif.message}
-                              </p>
-                              
-                              <div className="mt-1.5 flex justify-end">
-                                <button
-                                  onClick={() => handleToggleReadHeader(notif._id, notif.isRead)}
-                                  className="text-[9px] font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
-                                >
-                                  {notif.isRead ? "Mark Unread" : "Mark Read"}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
                     {/* Footer */}
                     <div className="px-4 py-2.5 bg-slate-50/30 border-t border-slate-100 text-center">
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
@@ -486,15 +435,7 @@ const AdminLayout = () => {
                       </span>
                     </div>
                   </div>
-
-                  {/* Footer */}
-                  <div className="px-4 py-2.5 bg-slate-50/30 border-t border-slate-100 text-center">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                      {unreadCount} UNREAD ALERTS
-                    </span>
-                  </div>
-                </div>
-
+                </>
               )}
             </div>
 
