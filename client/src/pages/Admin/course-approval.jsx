@@ -92,20 +92,6 @@ const CourseApproval = () => {
   }, [activeTab]);
 
   const handleApproveMentor = async (regId) => {
-    if (!window.confirm("Approve this mentor application?")) return;
-    setSubmittingId(regId);
-    try {
-      const res = await adminApi.processMentorRegistration(regId, "Approved");
-      if (res && res.success) {
-        fetchMentors(mentorPagination.page, mentorSearch, mentorStatus);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("An error occurred while approving the mentor application.");
-    } finally {
-      setSubmittingId(null);
-    }
-  };
     setSubmittingId(regId);
     try {
       const res = await adminApi.processMentorRegistration(regId, "Approved");
@@ -158,17 +144,6 @@ const CourseApproval = () => {
       setConfirmData({ type: "", id: null, extra: null });
     }
   };
-      }
-    } catch (err) {
-      console.error(err);
-      alert("An error occurred while rejecting the mentor application.");
-    } finally {
-      setSubmittingId(null);
-      setConfirmData({ type: "", id: null, extra: null });
-      setSelectedRegId(null);
-      setRejectReason("");
-    }
-  };
 
   const handleConfirmAction = () => {
     if (confirmData.type === "approveMentor") {
@@ -194,9 +169,6 @@ const CourseApproval = () => {
       alert("An error occurred while updating the course status.");
     } finally {
       setSubmittingId(null);
-    }
-  };
-
     }
   };
 
@@ -426,7 +398,6 @@ const CourseApproval = () => {
             setMentorSearch(val);
             fetchMentors(1, val, mentorStatus, mentorSortColumn, mentorSortDirection);
           }}
-          }}
           filters={[
             {
               key: "status",
@@ -450,6 +421,37 @@ const CourseApproval = () => {
           onSort={handleMentorSort}
           loading={loading}
         />
+      ) : (
+        <DataTable
+          columns={courseColumns}
+          data={courses}
+          pagination={coursePagination}
+          onPageChange={(page) => fetchCourses(page, courseSearch, courseStatus)}
+          searchPlaceholder="Search courses by title..."
+          onSearch={(val) => {
+            setCourseSearch(val);
+            fetchCourses(1, val, courseStatus);
+          }}
+          filters={[
+            {
+              key: "status",
+              label: "Status",
+              value: courseStatus,
+              options: [
+                { value: "Active", label: "Active" },
+                { value: "Inactive", label: "Inactive" },
+                { value: "Pending", label: "Pending" }
+              ]
+            }
+          ]}
+          onFilterChange={(key, val) => {
+            if (key === "status") {
+              setCourseStatus(val);
+              fetchCourses(1, courseSearch, val);
+            }
+          }}
+          loading={loading}
+        />
       )}
 
       {/* Reject Mentor Modal */}
@@ -471,9 +473,6 @@ const CourseApproval = () => {
               <button
                 onClick={() => setRejectModalOpen(false)}
                 className="text-slate-400 hover:text-slate-655 text-sm font-semibold"
-              >
-                Close
-              </button>
               >
                 Close
               </button>

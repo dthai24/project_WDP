@@ -96,10 +96,6 @@ const UserControl = () => {
     setSortDirection(nextDirection);
     fetchUsers(1, search, roleFilter, statusFilter, nextCol, nextDirection);
   };
-    setSortColumn(nextCol);
-    setSortDirection(nextDirection);
-    fetchUsers(1, search, roleFilter, statusFilter, nextCol, nextDirection);
-  };
 
   const triggerToggleBlock = (userId, currentBlockedStatus) => {
     setConfirmData({ userId, currentBlocked: currentBlockedStatus });
@@ -117,15 +113,6 @@ const UserControl = () => {
       const res = await adminApi.toggleUserBlock(userId, targetNewStatus);
       if (res && res.success) {
         fetchUsers(pagination.page, search, roleFilter, statusFilter, sortColumn, sortDirection);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("An error occurred while changing the user account status.");
-    } finally {
-      setSubmittingId(null);
-      setConfirmData({ userId: null, currentBlocked: false });
-    }
-  };
       }
     } catch (err) {
       console.error(err);
