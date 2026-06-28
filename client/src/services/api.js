@@ -120,6 +120,12 @@ export const adminApi = {
   toggleNotificationReadStatus: async (id, isRead) => {
     const response = await api.post("/api/mentor/applications/mark-read");
     return { success: true, data: response.data };
+  },
+
+  markAllNotificationsRead: async () => {
+    const response = await api.post("/api/mentor/applications/mark-read");
+    return { success: true, data: response.data };
+  }
   }
 };
 

@@ -1,55 +1,85 @@
+# Node dependencies
 node_modules/
 **/node_modules/
+
+# Build and distribution directories
+dist/
 build/
+**/dist/
+**/build/
+
+# Environment files
 .env
-.env.local
-.eslintcache
-PROJECT_CONTEXT.md
-mongodb_data/
-server/.env
-client/node_modules/.cache/
+.env.*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Context management & rule files (.md)
 rules.md
-state_history.md
-task_acceptance_sheet.md
-feature.md
+rules_improve.md
+PROJECT_CONTEXT.md
+Project_Context.md
 project_status_report.md
-data/seed_data.json/users.json
-data/seed_data.json/user_streaks.json
-data/seed_data.json/user_preferences.json
-data/seed_data.json/tags.json
-data/seed_data.json/roles.json
-data/seed_data.json/reviews.json
-data/seed_data.json/quiz_submissions.json
-data/seed_data.json/payments.json
-data/seed_data.json/otp_verifications.json
-data/seed_data.json/notifications.json
-data/seed_data.json/mentor_applications.json
-data/seed_data.json/levels.json
-data/seed_data.json/enrollments.json
-data/seed_data.json/data_accounts.md
-data/seed_data.json/courses.json
-data/seed_data.json/chat_sessions.json
-data/seed_data.json/categories.json
-data/seed_data.json/audit_logs.json
-data/Pasted text(2).txt
-data/new_data/users.json
-data/new_data/user_streaks.json
-data/new_data/user_preferences.json
-data/new_data/tags.json
-data/new_data/roles.json
-data/new_data/reviews.json
-data/new_data/quiz_submissions.json
-data/new_data/payments.json
-data/new_data/otp_verifications.json
-data/new_data/notifications.json
-data/new_data/mentor_applications.json
-data/new_data/levels.json
-data/new_data/generate_dataset.js
-data/new_data/enrollments.json
-data/new_data/data_accounts.md
-data/new_data/courses.json
-data/new_data/chat_sessions.json
-data/new_data/categories.json
-data/new_data/audit_logs.json
-data/add sample account.json
+state_history.md
+*.md
+!README.md
+
+# Admin import data files
 data/add admin M.json
+add admin M.json
+data/add sample account.json
+add sample account.json
+tracking_task.md
+
+# Editor & System files
+.eslintcache
+.DS_Store
+Thumbs.db
+
+# Generated real-world dataset folder
+data/new_data/
+
+data/audit_logs.json
+data/categories.json
+data/chat_sessions.json
+data/courses.json
+data/enrollments.json
+data/levels.json
+data/mentor_applications.json
+data/notifications.json
+data/otp_verifications.json
+data/Pasted text(2).txt
+data/payments.json
+data/quiz_submissions.json
+data/reviews.json
+data/roles.json
+data/seed_data-json.rar
+data/seed_data.json/audit_logs.json
+data/seed_data.json/categories.json
+data/seed_data.json/chat_sessions.json
+data/seed_data.json/courses.json
+data/seed_data.json/enrollments.json
+data/seed_data.json/levels.json
+data/seed_data.json/mentor_applications.json
+data/seed_data.json/notifications.json
+data/seed_data.json/otp_verifications.json
+data/seed_data.json/payments.json
+data/seed_data.json/quiz_submissions.json
+data/seed_data.json/reviews.json
+data/seed_data.json/roles.json
+data/seed_data.json/tags.json
+data/seed_data.json/user_preferences.json
+data/seed_data.json/user_streaks.json
+data/seed_data.json/users.json
+data/tags.json
+data/user_preferences.json
+data/user_streaks.json
+data/users.json
+client/skills-lock.json

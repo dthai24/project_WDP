@@ -30,4 +30,9 @@ router.patch("/courses/:id/status", adminController.toggleCourseStatus);
 router.get("/mentors/registrations", adminController.getMentorRegistrations);
 router.patch("/mentors/registrations/:id", adminController.processMentorRegistration);
 
+// Notifications Control
+router.get("/notifications", adminController.getNotifications);
+router.patch("/notifications/:id/read", adminController.toggleNotificationReadStatus);
+router.post("/notifications/mark-all-read", adminController.markAllNotificationsRead);
+
 module.exports = router;
