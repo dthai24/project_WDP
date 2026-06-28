@@ -22,8 +22,15 @@ const TYPE_ID_SKILL_MAP = {
   3: TEST_SKILL_WRITING,
 };
 
-/** UI sections → JSON gửi POST tạo question bank. */
+function shouldIncludeQuestion(question, dirtyTempIds) {
+  if (!isFilledTestQuestion(question) || question.isActive === false) return false;
+  if (!dirtyTempIds) return true;
+  return dirtyTempIds.has(question.tempId);
+}
+
+/** UI sections → JSON gửi API tạo/cập nhật question bank. */
 export function buildQuestionBankApiPayload(sections = [], options = {}) {
+  const dirtyTempIds = options.dirtyTempIds ?? null;
   const orderByType = { 1: 0, 2: 0, 3: 0 };
   const questions = [];
 
@@ -37,14 +44,14 @@ export function buildQuestionBankApiPayload(sections = [], options = {}) {
         : null;
 
     for (const question of section.Questions ?? []) {
-      if (!isFilledTestQuestion(question) || question.isActive === false) continue;
+      if (!shouldIncludeQuestion(question, dirtyTempIds)) continue;
       orderByType[typeId] += 1;
-      questions.push({
+      const payload = {
         TypeId: typeId,
         Title: String(question.QuestionText ?? '').trim(),
         URL: section.SkillType === TEST_SKILL_LISTENING ? audioUrl : null,
         Order: orderByType[typeId],
-        IsActive: true,
+        IsActive: question.isActive !== false,
         Choices: (question.Options ?? [])
           .map((opt, i) => ({
             Title: String(opt.OptionText ?? '').trim(),
@@ -52,7 +59,11 @@ export function buildQuestionBankApiPayload(sections = [], options = {}) {
             IsTrue: Boolean(opt.IsCorrect),
           }))
           .filter((c) => c.Title),
-      });
+      };
+      if (question.QuestionId) {
+        payload.QuestionId = Number(question.QuestionId);
+      }
+      questions.push(payload);
     }
   }
 
@@ -60,13 +71,14 @@ export function buildQuestionBankApiPayload(sections = [], options = {}) {
     IsPublished: Boolean(options.isPublished),
     BankDescription: options.bankDescription ?? null,
     Questions: questions,
+    DeletedQuestionIds: options.deletedQuestionIds ?? [],
   };
 }
 
 function mapApiQuestionToUi(row) {
   const correctCount = (row.Choices ?? []).filter((c) => c.IsTrue).length;
   return {
-    tempId: createTestTempId('question'),
+    tempId: row.QuestionId ? `question-${row.QuestionId}` : createTestTempId('question'),
     QuestionId: row.QuestionId,
     QuestionType: 'MULTIPLE_CHOICE',
     QuestionText: row.Title,
@@ -74,7 +86,7 @@ function mapApiQuestionToUi(row) {
     AllowMultipleAnswers: correctCount > 1,
     isActive: row.IsActive !== false,
     Options: (row.Choices ?? []).map((c) => ({
-      tempId: createTestTempId('option'),
+      tempId: c.ChoiceId ? `choice-${c.ChoiceId}` : createTestTempId('option'),
       ChoiceId: c.ChoiceId,
       OptionText: c.Title,
       IsCorrect: Boolean(c.IsTrue),

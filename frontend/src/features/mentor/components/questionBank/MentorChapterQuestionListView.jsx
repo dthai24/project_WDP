@@ -1,5 +1,5 @@
 /**
- * Danh sách câu hỏi theo chương — xem chi tiết, sửa, xóa, public/private.
+ * Quản lý câu hỏi theo chương — xem, sửa, xóa, public/private.
  */
 import { useMemo, useState } from 'react';
 import {
@@ -9,37 +9,85 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  Menu,
+  MenuItem,
+  Switch,
+  Tooltip,
   Typography,
   alpha,
+  useTheme,
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import MoreHorizRoundedIcon from '@mui/icons-material/MoreHorizRounded';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
+import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import EmptyState from '@/shared/ui/EmptyState';
-import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import {
   deleteChapterQuestion,
   setAllChapterQuestionsPublic,
   setChapterQuestionPublic,
 } from '@/features/mentor/services/questionBankService';
+import { formatChapterDisplayLabel } from '@/features/mentor/utils/mentorCourseUtils';
+import {
+  TEST_SKILL_CHIP_COLORS,
+  TEST_SKILL_LABELS,
+  TEST_SKILL_LISTENING,
+  TEST_SKILL_READING,
+  TEST_SKILL_WRITING,
+} from '@/features/mentor/utils/mentorTestContentUtils';
+import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { toast } from '@/shared/ui/Toast';
 
-const TEXT = '#0F172A';
-const MUTED = '#64748B';
-const PRIMARY = '#0891B2';
+const SKILL_FILTER_ALL = 'ALL';
 
-function StatusChip({ isActive }) {
+const SKILL_META = {
+  [TEST_SKILL_LISTENING]: { icon: HeadphonesRoundedIcon, label: TEST_SKILL_LABELS[TEST_SKILL_LISTENING] },
+  [TEST_SKILL_READING]: { icon: MenuBookRoundedIcon, label: TEST_SKILL_LABELS[TEST_SKILL_READING] },
+  [TEST_SKILL_WRITING]: { icon: EditNoteRoundedIcon, label: TEST_SKILL_LABELS[TEST_SKILL_WRITING] },
+};
+
+function StatPill({ label, value, accent = PRIMARY }) {
+  return (
+    <Box
+      sx={{
+        px: 1.5,
+        py: 1,
+        borderRadius: '14px',
+        bgcolor: '#fff',
+        border: `1px solid ${alpha('#0F172A', 0.07)}`,
+        minWidth: 88,
+      }}
+    >
+      <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.25 }}>{label}</Typography>
+      <Typography sx={{ fontSize: 20, fontWeight: 800, color: accent, lineHeight: 1.1 }}>{value}</Typography>
+    </Box>
+  );
+}
+
+function SkillChip({ skillType }) {
+  const theme = TEST_SKILL_CHIP_COLORS[skillType] ?? { color: MUTED, bg: 'rgba(100,116,139,0.12)' };
   return (
     <Chip
       size="small"
-      label={isActive ? 'Public' : 'Private'}
+      label={TEST_SKILL_LABELS[skillType] ?? skillType}
       sx={{
         height: 24,
         fontSize: 11,
         fontWeight: 700,
-        bgcolor: isActive ? 'rgba(4,120,87,0.12)' : 'rgba(100,116,139,0.12)',
-        color: isActive ? '#047857' : MUTED,
+        bgcolor: theme.bg,
+        color: theme.color,
+        border: `1px solid ${alpha(theme.color, 0.2)}`,
       }}
     />
   );
@@ -49,13 +97,22 @@ function QuestionDetailDialog({ open, question, onClose }) {
   if (!question) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 800 }}>Chi tiết câu hỏi #{question.QuestionId}</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      slotProps={{
+        paper: { sx: { borderRadius: '20px' } },
+      }}
+    >
+      <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>Chi tiết câu hỏi #{question.QuestionId}</DialogTitle>
       <DialogContent>
-        <Typography sx={{ fontSize: 12, color: MUTED, mb: 1 }}>
-          {question.SkillLabel} · Thứ tự {question.Order}
-        </Typography>
-        <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEXT, mb: 2, lineHeight: 1.5 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+          <SkillChip skillType={question.SkillType} />
+          <Chip size="small" label={`Thứ tự ${question.Order}`} sx={{ height: 24, fontSize: 11, fontWeight: 600 }} />
+        </Box>
+        <Typography sx={{ fontSize: 16, fontWeight: 600, color: TEXT, mb: 2, lineHeight: 1.55 }}>
           {question.Title}
         </Typography>
         {question.URL ? (
@@ -71,8 +128,8 @@ function QuestionDetailDialog({ open, question, onClose }) {
               display: 'flex',
               gap: 1,
               alignItems: 'center',
-              py: 0.5,
-              fontSize: 13,
+              py: 0.55,
+              fontSize: 14,
               color: choice.IsTrue ? '#047857' : TEXT,
               fontWeight: choice.IsTrue ? 700 : 400,
             }}
@@ -81,12 +138,9 @@ function QuestionDetailDialog({ open, question, onClose }) {
             <span>{choice.Title}</span>
           </Box>
         ))}
-        <Box sx={{ mt: 2 }}>
-          <StatusChip isActive={question.isActive} />
-        </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <AppButton variant="outlined" onClick={onClose}>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <AppButton variant="outlined" onClick={onClose} sx={{ borderRadius: '999px' }}>
           Đóng
         </AppButton>
       </DialogActions>
@@ -94,70 +148,154 @@ function QuestionDetailDialog({ open, question, onClose }) {
   );
 }
 
-function QuestionRow({ question, busy, onDetail, onEdit, onDelete, onTogglePublic }) {
+function QuestionCard({
+  question,
+  busy,
+  toggling,
+  onDetail,
+  onEdit,
+  onDelete,
+  onTogglePublic,
+}) {
+  const theme = useTheme();
+  const skillTheme = TEST_SKILL_CHIP_COLORS[question.SkillType] ?? { color: PRIMARY, bg: alpha(PRIMARY, 0.1) };
+  const choiceCount = (question.Choices ?? []).filter((c) => String(c.Title ?? '').trim()).length;
+
   return (
     <Box
       sx={{
-        p: 1.5,
-        borderRadius: '14px',
+        position: 'relative',
+        pl: 2,
+        pr: 1.75,
+        py: 1.5,
+        borderRadius: '18px',
         bgcolor: '#fff',
         border: `1px solid ${alpha('#0F172A', 0.08)}`,
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        gap: 1.25,
-        alignItems: { md: 'center' },
+        boxShadow: theme.ios18?.shadow?.sm ?? 'none',
+        overflow: 'hidden',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+        '&:hover': {
+          borderColor: alpha(skillTheme.color, 0.28),
+          boxShadow: theme.ios18?.shadow?.md ?? `0 4px 20px ${alpha('#0F172A', 0.06)}`,
+        },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          left: 0,
+          top: 12,
+          bottom: 12,
+          width: 3,
+          borderRadius: '999px',
+          bgcolor: skillTheme.color,
+        },
       }}
     >
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', mb: 0.5 }}>
-          <Chip
-            size="small"
-            label={question.SkillLabel}
-            sx={{ height: 22, fontSize: 11, fontWeight: 700 }}
-          />
-          <StatusChip isActive={question.isActive} />
-          <Typography sx={{ fontSize: 11, color: MUTED }}>#{question.QuestionId}</Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: { xs: 1.25, md: 1.5 },
+          alignItems: { md: 'center' },
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', mb: 0.75 }}>
+            <SkillChip skillType={question.SkillType} />
+            <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED }}>
+              #{question.QuestionId} · Câu {question.Order}
+            </Typography>
+            {choiceCount > 0 ? (
+              <Typography sx={{ fontSize: 11, color: MUTED }}>{choiceCount} đáp án</Typography>
+            ) : null}
+          </Box>
+          <Typography
+            sx={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: TEXT,
+              lineHeight: 1.5,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {question.Title}
+          </Typography>
         </Box>
-        <Typography
+
+        <Box
           sx={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: TEXT,
-            lineHeight: 1.45,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 0.5, md: 1 },
+            flexShrink: 0,
+            alignSelf: { xs: 'stretch', md: 'center' },
+            justifyContent: { xs: 'space-between', md: 'flex-end' },
           }}
         >
-          {question.Title}
-        </Typography>
-      </Box>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.75,
+              px: 1.25,
+              py: 0.5,
+              borderRadius: '999px',
+              bgcolor: question.isActive ? 'rgba(4,120,87,0.08)' : 'rgba(100,116,139,0.08)',
+              border: `1px solid ${question.isActive ? 'rgba(4,120,87,0.2)' : alpha('#0F172A', 0.08)}`,
+            }}
+          >
+            {question.isActive ? (
+              <PublicOutlinedIcon sx={{ fontSize: 16, color: '#047857' }} />
+            ) : (
+              <LockOutlinedIcon sx={{ fontSize: 16, color: MUTED }} />
+            )}
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: question.isActive ? '#047857' : MUTED }}>
+              {question.isActive ? 'Public' : 'Private'}
+            </Typography>
+            <Switch
+              size="small"
+              checked={question.isActive}
+              disabled={busy || toggling}
+              onChange={() => onTogglePublic(question, !question.isActive)}
+              sx={{
+                ml: -0.25,
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#047857' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#047857' },
+              }}
+            />
+          </Box>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, flexShrink: 0 }}>
-        <AppButton size="small" variant="outlined" disabled={busy} onClick={() => onDetail(question)}>
-          See detail
-        </AppButton>
-        <AppButton size="small" variant="outlined" disabled={busy} onClick={() => onEdit(question)}>
-          Edit
-        </AppButton>
-        <AppButton
-          size="small"
-          variant="outlined"
-          disabled={busy}
-          onClick={() => onTogglePublic(question, !question.isActive)}
-        >
-          {question.isActive ? 'Set private' : 'Set public'}
-        </AppButton>
-        <AppButton
-          size="small"
-          variant="outlined"
-          disabled={busy}
-          onClick={() => onDelete(question)}
-          sx={{ color: '#DC2626', borderColor: alpha('#DC2626', 0.35) }}
-        >
-          Delete
-        </AppButton>
+          <Box sx={{ display: 'flex', gap: 0.25 }}>
+            <Tooltip title="Xem chi tiết">
+              <span>
+                <IconButton size="small" disabled={busy} onClick={() => onDetail(question)}>
+                  <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Chỉnh sửa">
+              <span>
+                <IconButton size="small" disabled={busy} onClick={() => onEdit(question)}>
+                  <EditOutlinedIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Xóa">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={busy}
+                  onClick={() => onDelete(question)}
+                  sx={{ color: '#DC2626' }}
+                >
+                  <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
@@ -168,22 +306,55 @@ export default function MentorChapterQuestionListView({
   courseId,
   chapterId,
   chapterTitle,
+  chapterDisplayLabel = '',
   courseName,
+  courseCategory = '',
   questions = [],
   onBack,
   onReload,
   onEditQuestion,
   onAddQuestion,
 }) {
+  const theme = useTheme();
   const [busyId, setBusyId] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [detailQuestion, setDetailQuestion] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [skillFilter, setSkillFilter] = useState(SKILL_FILTER_ALL);
+  const [bulkAnchor, setBulkAnchor] = useState(null);
 
   const sortedQuestions = useMemo(
     () => [...questions].sort((a, b) => a.TypeId - b.TypeId || a.Order - b.Order),
     [questions],
   );
+
+  const stats = useMemo(() => {
+    const bySkill = {
+      [TEST_SKILL_LISTENING]: 0,
+      [TEST_SKILL_READING]: 0,
+      [TEST_SKILL_WRITING]: 0,
+    };
+    let publicCount = 0;
+    sortedQuestions.forEach((q) => {
+      if (q.SkillType) bySkill[q.SkillType] = (bySkill[q.SkillType] ?? 0) + 1;
+      if (q.isActive !== false) publicCount += 1;
+    });
+    return {
+      total: sortedQuestions.length,
+      publicCount,
+      privateCount: sortedQuestions.length - publicCount,
+      bySkill,
+    };
+  }, [sortedQuestions]);
+
+  const filteredQuestions = useMemo(() => {
+    if (skillFilter === SKILL_FILTER_ALL) return sortedQuestions;
+    return sortedQuestions.filter((q) => q.SkillType === skillFilter);
+  }, [skillFilter, sortedQuestions]);
+
+  const heading =
+    chapterDisplayLabel ||
+    formatChapterDisplayLabel({ title: chapterTitle, pathId: chapterId });
 
   const runToggle = async (question, isPublic) => {
     setBusyId(question.QuestionId);
@@ -201,6 +372,7 @@ export default function MentorChapterQuestionListView({
   };
 
   const runBulk = async (isPublic) => {
+    setBulkAnchor(null);
     setBulkBusy(true);
     try {
       const res = await setAllChapterQuestionsPublic(courseId, chapterId, isPublic);
@@ -208,7 +380,7 @@ export default function MentorChapterQuestionListView({
         toast.error(res.message);
         return;
       }
-      toast.success(isPublic ? 'Đã set all public.' : 'Đã set all private.');
+      toast.success(isPublic ? 'Đã bật public toàn bộ câu hỏi.' : 'Đã chuyển toàn bộ sang private.');
       onReload?.();
     } finally {
       setBulkBusy(false);
@@ -234,73 +406,215 @@ export default function MentorChapterQuestionListView({
 
   const busy = bulkBusy || busyId != null;
 
+  const filterOptions = [
+    { value: SKILL_FILTER_ALL, label: 'Tất cả', count: stats.total },
+    ...Object.entries(SKILL_META).map(([skill, meta]) => ({
+      value: skill,
+      label: meta.label,
+      count: stats.bySkill[skill] ?? 0,
+    })),
+  ];
+
   return (
     <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Box sx={{ mb: 2.5 }}>
-        <Typography sx={{ fontSize: 13, color: MUTED, mb: 0.5 }}>
-          {courseName} · Bank #{bankId}
-        </Typography>
-        <Typography sx={{ fontSize: { xs: 22, sm: 26 }, fontWeight: 800, color: TEXT }}>
-          {chapterTitle || `Chương #${chapterId}`}
-        </Typography>
-        <Typography sx={{ fontSize: 13, color: MUTED, mt: 0.5 }}>
-          {sortedQuestions.length} câu hỏi
-        </Typography>
+      <Box sx={{ mb: 2 }}>
+        <AppButton
+          variant="text"
+          startIcon={<ArrowBackRoundedIcon />}
+          onClick={onBack}
+          sx={{
+            height: 36,
+            px: 0.5,
+            color: MUTED,
+            fontWeight: 600,
+            fontSize: 13,
+            '&:hover': { bgcolor: 'transparent', color: PRIMARY },
+          }}
+        >
+          Quay lại
+        </AppButton>
       </Box>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2, justifyContent: 'space-between' }}>
+      <Box
+        sx={{
+          mb: 2.5,
+          p: { xs: 2, sm: 2.5 },
+          borderRadius: '22px',
+          background: `linear-gradient(135deg, ${alpha(PRIMARY, 0.09)} 0%, ${alpha('#7C3AED', 0.05)} 55%, #fff 100%)`,
+          border: `1px solid ${alpha(PRIMARY, 0.14)}`,
+        }}
+      >
+        <Typography sx={{ fontSize: 12, fontWeight: 700, color: PRIMARY, mb: 0.75, letterSpacing: '0.02em' }}>
+          QUẢN LÝ CÂU HỎI
+        </Typography>
+        <Typography sx={{ fontSize: { xs: 22, sm: 26 }, fontWeight: 800, color: TEXT, lineHeight: 1.3, mb: 0.5 }}>
+          {heading}
+        </Typography>
+        <Typography sx={{ fontSize: 14, color: MUTED, mb: 2 }}>
+          {courseName}
+          {courseCategory ? ` · ${courseCategory}` : ''}
+          {bankId ? ` · Bank #${bankId}` : ''}
+        </Typography>
+
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          <AppButton
-            variant="outlined"
-            startIcon={<ArrowBackRoundedIcon />}
-            onClick={onBack}
-            sx={{ height: 40, borderRadius: '999px' }}
-          >
-            Quay lại
-          </AppButton>
-          <AppButton
-            variant="outlined"
-            disabled={busy || sortedQuestions.length === 0}
-            onClick={() => runBulk(true)}
-            sx={{ height: 40, borderRadius: '999px' }}
-          >
-            Set all public
-          </AppButton>
-          <AppButton
-            variant="outlined"
-            disabled={busy || sortedQuestions.length === 0}
-            onClick={() => runBulk(false)}
-            sx={{ height: 40, borderRadius: '999px' }}
-          >
-            Set all private
-          </AppButton>
+          <StatPill label="Tổng câu" value={stats.total} />
+          <StatPill label="Public" value={stats.publicCount} accent="#047857" />
+          <StatPill label="Private" value={stats.privateCount} accent={MUTED} />
+          {Object.entries(SKILL_META).map(([skill, meta]) => (
+            <StatPill
+              key={skill}
+              label={meta.label}
+              value={stats.bySkill[skill] ?? 0}
+              accent={TEST_SKILL_CHIP_COLORS[skill]?.color ?? PRIMARY}
+            />
+          ))}
         </Box>
-        {onAddQuestion ? (
-          <AppButton
-            startIcon={<AddRoundedIcon />}
-            onClick={onAddQuestion}
-            sx={{ height: 40, borderRadius: '999px', bgcolor: PRIMARY, color: '#fff' }}
-          >
-            Thêm câu hỏi
-          </AppButton>
-        ) : null}
       </Box>
 
-      {sortedQuestions.length === 0 ? (
+      <Box
+        sx={{
+          position: 'sticky',
+          top: 72,
+          zIndex: 3,
+          mb: 2,
+          py: 1.25,
+          px: { xs: 0, sm: 0.5 },
+          bgcolor: alpha('#F8FAFC', 0.92),
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          border: `1px solid ${alpha('#0F172A', 0.06)}`,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { md: 'center' },
+          justifyContent: 'space-between',
+          gap: 1.25,
+        }}
+      >
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: { xs: 1, sm: 1.25 } }}>
+          {filterOptions.map((opt) => {
+            const selected = skillFilter === opt.value;
+            return (
+              <Box
+                key={opt.value}
+                component="button"
+                type="button"
+                onClick={() => setSkillFilter(opt.value)}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  height: 34,
+                  px: 1.25,
+                  borderRadius: '999px',
+                  border: `1px solid ${selected ? alpha(PRIMARY, 0.35) : alpha('#0F172A', 0.08)}`,
+                  bgcolor: selected ? alpha(PRIMARY, 0.1) : '#fff',
+                  color: selected ? PRIMARY : TEXT,
+                  fontSize: 13,
+                  fontWeight: selected ? 700 : 500,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                  '&:hover': { borderColor: alpha(PRIMARY, 0.3) },
+                }}
+              >
+                {opt.label}
+                <Box
+                  component="span"
+                  sx={{
+                    minWidth: 20,
+                    height: 20,
+                    px: 0.5,
+                    borderRadius: '999px',
+                    bgcolor: selected ? alpha(PRIMARY, 0.15) : alpha('#0F172A', 0.06),
+                    fontSize: 11,
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {opt.count}
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, px: { xs: 1, sm: 1.25 }, justifyContent: 'flex-end' }}>
+          <AppButton
+            variant="outlined"
+            disabled={busy || sortedQuestions.length === 0}
+            endIcon={<MoreHorizRoundedIcon />}
+            onClick={(e) => setBulkAnchor(e.currentTarget)}
+            sx={{ height: 38, borderRadius: '999px', fontSize: 13 }}
+          >
+            Thao tác hàng loạt
+          </AppButton>
+          {onAddQuestion ? (
+            <AppButton
+              startIcon={<AddRoundedIcon />}
+              onClick={onAddQuestion}
+              sx={{
+                height: 38,
+                borderRadius: '999px',
+                bgcolor: PRIMARY,
+                color: '#fff',
+                fontWeight: 700,
+                boxShadow: 'none',
+                '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+              }}
+            >
+              Thêm câu hỏi
+            </AppButton>
+          ) : null}
+        </Box>
+      </Box>
+
+      <Menu
+        anchorEl={bulkAnchor}
+        open={Boolean(bulkAnchor)}
+        onClose={() => setBulkAnchor(null)}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 0.75,
+              borderRadius: '14px',
+              minWidth: 200,
+              boxShadow: theme.ios18?.shadow?.md,
+            },
+          },
+        }}
+      >
+        <MenuItem disabled={busy} onClick={() => runBulk(true)}>
+          <PublicOutlinedIcon sx={{ fontSize: 18, mr: 1, color: '#047857' }} />
+          Bật public toàn bộ
+        </MenuItem>
+        <MenuItem disabled={busy} onClick={() => runBulk(false)}>
+          <LockOutlinedIcon sx={{ fontSize: 18, mr: 1, color: MUTED }} />
+          Chuyển toàn bộ sang private
+        </MenuItem>
+      </Menu>
+
+      {filteredQuestions.length === 0 ? (
         <EmptyState
           icon={QuizOutlinedIcon}
-          title="Chưa có câu hỏi"
-          description="Thêm câu hỏi cho chương này."
-          actionLabel={onAddQuestion ? 'Thêm câu hỏi' : undefined}
-          onAction={onAddQuestion}
+          title={sortedQuestions.length === 0 ? 'Chưa có câu hỏi' : 'Không có câu hỏi trong bộ lọc này'}
+          description={
+            sortedQuestions.length === 0
+              ? 'Thêm câu hỏi đầu tiên cho chương này.'
+              : 'Thử chọn kỹ năng khác hoặc xem tất cả câu hỏi.'
+          }
+          actionLabel={sortedQuestions.length === 0 && onAddQuestion ? 'Thêm câu hỏi' : undefined}
+          onAction={sortedQuestions.length === 0 ? onAddQuestion : undefined}
         />
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {sortedQuestions.map((question) => (
-            <QuestionRow
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+          {filteredQuestions.map((question) => (
+            <QuestionCard
               key={question.QuestionId}
               question={question}
               busy={busy}
+              toggling={busyId === question.QuestionId}
               onDetail={setDetailQuestion}
               onEdit={onEditQuestion}
               onDelete={setDeleteTarget}

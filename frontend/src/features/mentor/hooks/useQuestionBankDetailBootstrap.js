@@ -9,6 +9,7 @@ import {
   TEST_SKILL_LISTENING,
   buildQuestionSnapshotMap,
   collectPersistedQuestionIds,
+  buildQuestionBaselineMap,
   ensureQuestionBankSkillSections,
   getSectionsBySkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
@@ -19,6 +20,10 @@ import {
   fetchQuestionBankById,
   findQuestionBankByChapter,
 } from '@/features/mentor/services/questionBankService';
+import {
+  formatChapterDisplayLabel,
+  getChapterOrder,
+} from '@/features/mentor/utils/mentorCourseUtils';
 
 function getFirstListeningSectionId(sections) {
   return (
@@ -36,6 +41,7 @@ export default function useQuestionBankDetailBootstrap() {
   const isPathListMode = !chapterIdFromUrl;
   const requestIdRef = useRef(0);
   const questionSnapshotRef = useRef(new Map());
+  const [questionBaselineMap, setQuestionBaselineMap] = useState(() => new Map());
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -68,12 +74,36 @@ export default function useQuestionBankDetailBootstrap() {
           setNotFound(true);
           return;
         }
-        setBank(res.bank);
-        setBankPaths(res.paths);
+        const [courseRes, outlineRes] = await Promise.all([
+          fetchCourseForQB(res.bank.courseId),
+          fetchCourseContentOutlineForQB(res.bank.courseId),
+        ]);
+        if (requestIdRef.current !== requestId) return;
 
-        const courseRes = await fetchCourseForQB(res.bank.courseId);
-        if (requestIdRef.current === requestId && courseRes.ok) {
-          setCourse(courseRes.course);
+        const chapters = outlineRes.ok ? outlineRes.chapters ?? [] : [];
+        const enrichedPaths = res.paths.map((path) => {
+          const order = getChapterOrder(chapters, path.PathId);
+          return {
+            ...path,
+            chapterOrder: order,
+            displayLabel: formatChapterDisplayLabel({
+              order,
+              title: path.PathName,
+              pathId: path.PathId,
+            }),
+          };
+        });
+
+        if (courseRes.ok) setCourse(courseRes.course);
+        if (outlineRes.ok) setCoursePaths(chapters);
+        setBank(res.bank);
+        setBankPaths(enrichedPaths);
+
+        if (enrichedPaths.length === 1) {
+          navigate(
+            `/mentor/question-banks/${questionBankId}?courseId=${res.bank.courseId}&chapterId=${enrichedPaths[0].PathId}`,
+            { replace: true },
+          );
         }
         return;
       }
@@ -90,13 +120,14 @@ export default function useQuestionBankDetailBootstrap() {
       const loadedBank = res.bank;
       const loadedSections = ensureQuestionBankSkillSections(loadedBank.sections ?? []);
 
-      setBank(loadedBank);
       setSections(loadedSections);
       setSectionErrors({});
       setActiveSkill(TEST_SKILL_LISTENING);
       setActiveSectionId(getFirstListeningSectionId(loadedSections));
       setPersistedQuestionIds(collectPersistedQuestionIds(loadedSections));
+      const baselineMap = buildQuestionBaselineMap(loadedSections);
       questionSnapshotRef.current = buildQuestionSnapshotMap(loadedSections);
+      setQuestionBaselineMap(baselineMap);
 
       setPathsLoading(true);
       const [courseRes, outlineRes] = await Promise.all([
@@ -104,8 +135,22 @@ export default function useQuestionBankDetailBootstrap() {
         fetchCourseContentOutlineForQB(loadedBank.courseId),
       ]);
       if (requestIdRef.current !== requestId) return;
+
+      const chapters = outlineRes.ok ? outlineRes.chapters ?? [] : [];
       if (courseRes.ok) setCourse(courseRes.course);
-      if (outlineRes.ok) setCoursePaths(outlineRes.chapters ?? []);
+      if (outlineRes.ok) setCoursePaths(chapters);
+
+      const rawChapterTitle =
+        String(loadedBank.chapterTitle ?? loadedBank.title ?? '').trim() ||
+        chapters.find((ch) => String(ch.PathId) === String(loadedBank.chapterId))?.PathName ||
+        '';
+      loadedBank.chapterTitle = rawChapterTitle;
+      loadedBank.chapterDisplayLabel = formatChapterDisplayLabel({
+        order: getChapterOrder(chapters, loadedBank.chapterId),
+        title: rawChapterTitle,
+        pathId: loadedBank.chapterId,
+      });
+      setBank(loadedBank);
     } catch {
       if (requestIdRef.current === requestId) setNotFound(true);
     } finally {
@@ -114,7 +159,7 @@ export default function useQuestionBankDetailBootstrap() {
         setPathsLoading(false);
       }
     }
-  }, [chapterIdFromUrl, isPathListMode, questionBankId]);
+  }, [chapterIdFromUrl, isPathListMode, navigate, questionBankId]);
 
   useEffect(() => {
     loadData();
@@ -174,6 +219,8 @@ export default function useQuestionBankDetailBootstrap() {
     persistedQuestionIds,
     setPersistedQuestionIds,
     questionSnapshotRef,
+    questionBaselineMap,
+    setQuestionBaselineMap,
     workspaceKey: `${questionBankId}-${chapterIdFromUrl || 'paths'}`,
     reloadBank: loadData,
     openPath,
