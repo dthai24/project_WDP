@@ -29,3 +29,6 @@ Project_Context.md
 # Editor & System files
 .DS_Store
 Thumbs.db
+
+# Database seed files
+seed.js
