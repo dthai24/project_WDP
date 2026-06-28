@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 
-import { CREATE_CARD_SX, MUTED, TEXT } from './mentorCourseCreateStyles';
+import { CREATE_CARD_SX, DETAIL_SECTION_HEADER_SX, MUTED } from './mentorCourseCreateStyles';
+import MentorCardSectionTitle from './MentorCardSectionTitle';
 
 import MentorCourseStudentsSummary from './MentorCourseStudentsSummary';
 import MentorCourseStudentsToolbar from './MentorCourseStudentsToolbar';
@@ -159,46 +160,11 @@ export default function MentorCourseStudentsTab({ courseId }) {
 
   return (
     <Box sx={CREATE_CARD_SX}>
-      {/* 
-        Khu vực thống kê tổng quan:
-        - Tổng học viên
-        - Đang học
-        - Hoàn thành
-        - Tiến độ trung bình
+      <Box sx={DETAIL_SECTION_HEADER_SX}>
+        <MentorCardSectionTitle title="Học viên" mb={0.35} />
+        <MentorCourseStudentsSummary stats={stats} loading={loading} />
+      </Box>
 
-        stats lấy từ API fetchCourseStudentStats(courseId)
-        loading để component biết đang tải hay không
-      */}
-      <MentorCourseStudentsSummary stats={stats} loading={loading} />
-
-      {/* 
-        Toolbar search/filter/sort
-
-        search={filters.q}
-        => input search đang hiển thị giá trị filters.q
-
-        onSearchChange
-        => khi user gõ search, toolbar gọi onSearchChange(q)
-        => updateFilters cập nhật filters.q
-        => setPage(1)
-        => setFilters(...)
-        => component render lại
-        => filteredStudents tính lại
-        => pagination tính lại
-        => list hiển thị dữ liệu mới
-
-        statusFilter={filters.status}
-        => trạng thái filter hiện tại
-
-        sortBy={filters.sort}
-        => kiểu sort hiện tại
-
-        showReset
-        => nếu đang có filter active thì hiện nút reset
-
-        resultCount
-        => số lượng kết quả sau khi filter
-      */}
       <MentorCourseStudentsToolbar
         search={filters.q}
         onSearchChange={(q) => updateFilters((prev) => ({ ...prev, q }))}
@@ -217,27 +183,6 @@ export default function MentorCourseStudentsTab({ courseId }) {
         resultCount={loading ? '—' : pagination.totalItems}
       />
 
-      {/* 
-        Danh sách học viên
-
-        students={pagination.items}
-        => chỉ truyền học viên của trang hiện tại
-
-        loading={loading}
-        => nếu đang tải thì list có thể hiện skeleton/loading
-
-        hasAnyStudents={allStudents.length > 0}
-        => kiểm tra khóa học có học viên nào không, dựa trên data gốc
-
-        isFiltered={showReset}
-        => biết hiện tại có đang filter không
-
-        onViewDetail
-        => khi bấm xem chi tiết một học viên
-
-        onClearFilters
-        => khi danh sách rỗng do filter, user có thể clear filter
-      */}
       <MentorCourseStudentsList
         students={pagination.items}
         loading={loading}
@@ -249,19 +194,9 @@ export default function MentorCourseStudentsTab({ courseId }) {
           setFilters(DEFAULT_FILTERS);
         }}
       />
-      {console.log("allStudents", allStudents)}
-      {/* 
-        Chỉ hiện phân trang khi:
-        - không còn loading
-        - có ít nhất 1 kết quả
-        - tổng số trang > 1
-      */}
+
       {!loading && pagination.totalItems > 0 && pagination.totalPages > 1 && (
         <>
-          {/* 
-            Dòng mô tả:
-            Ví dụ: Hiển thị 1–10 trong tổng số 35 học viên
-          */}
           <Typography
             variant="caption"
             sx={{
@@ -276,21 +211,6 @@ export default function MentorCourseStudentsTab({ courseId }) {
             {pagination.totalItems} học viên
           </Typography>
 
-          {/* 
-            Component phân trang
-
-            page={pagination.page}
-            => trang hiện tại
-
-            totalPages={pagination.totalPages}
-            => tổng số trang
-
-            onPageChange={setPage}
-            => khi user bấm sang trang khác thì setPage(page mới)
-            => page thay đổi
-            => pagination tính lại
-            => list nhận pagination.items mới
-          */}
           <MentorCourseStudentsPagination
             page={pagination.page}
             totalPages={pagination.totalPages}

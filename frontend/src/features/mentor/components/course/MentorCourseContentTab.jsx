@@ -1,14 +1,14 @@
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import AutoStoriesOutlinedIcon from '@mui/icons-material/AutoStoriesOutlined';
 import { useNavigate } from 'react-router-dom';
+import AppButton from '@/shared/ui/AppButton';
 import EmptyState from '@/shared/ui/EmptyState';
 import MentorCourseContentOutline from './MentorCourseContentOutline';
 import MentorCardSectionTitle from './MentorCardSectionTitle';
 import {
   CARD_SECTION_META_SX,
   CREATE_CARD_SX,
-  MUTED,
-  PRIMARY,
+  DETAIL_SECTION_HEADER_SX,
 } from './mentorCourseCreateStyles';
 import { countMaterialsInPath, getCoursePaths } from '../../utils/mentorCourseContentUtils';
 
@@ -17,7 +17,6 @@ export default function MentorCourseContentTab({ course }) {
 
   const paths = getCoursePaths(course);
   const courseId = course.CourseId;
-  const editPath = `/mentor/courses/${courseId}/edit`;
 
   const materialCount = paths.reduce((sum, path) => {
     return sum + countMaterialsInPath(path);
@@ -25,32 +24,26 @@ export default function MentorCourseContentTab({ course }) {
 
   return (
     <Box sx={CREATE_CARD_SX}>
-      <Box sx={{ mb: paths.length > 0 ? 2 : 0 }}>
+      <Box sx={DETAIL_SECTION_HEADER_SX}>
         <MentorCardSectionTitle
           title="Nội dung khóa học"
           mb={0.35}
           action={
-            <Button
+            <AppButton
               variant="contained"
-              sx={{
-                bgcolor: PRIMARY,
-                color: '#fff',
-                fontWeight: 600,
-                fontSize: 13,
-                textTransform: 'none',
-                borderRadius: '10px',
-                px: 2,
-                py: 0.75,
-                boxShadow: 'none',
-                '&:hover': {
-                  bgcolor: '#0E7490',
-                  boxShadow: 'none',
-                },
-              }}
               onClick={() => navigate(`/mentor/courses/${courseId}/content/edit`)}
+              sx={{
+                height: 34,
+                borderRadius: '999px',
+                fontSize: 12,
+                fontWeight: 600,
+                px: 1.5,
+                boxShadow: 'none',
+                '&:hover': { boxShadow: 'none' },
+              }}
             >
               Xây nội dung
-            </Button>
+            </AppButton>
           }
         />
 

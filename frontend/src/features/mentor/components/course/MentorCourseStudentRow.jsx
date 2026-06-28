@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import AppButton from '@/shared/ui/AppButton';
-import { PRIMARY, TEXT, MUTED } from './mentorCourseCreateStyles';
+import { PRIMARY, TEXT, MUTED, SURFACE_SUBTLE, BORDER_SUBTLE } from './mentorCourseCreateStyles';
 import {
   STUDENT_STATUS_CHIP_SX,
   STUDENT_STATUS_LABELS,
@@ -79,7 +79,10 @@ export default function MentorCourseStudentRow({ student, onViewDetail }) {
         gap: { xs: 1.25, md: 2 },
         px: { xs: 2, sm: 2.25 },
         py: { xs: 2, md: 1.75 },
-        borderBottom: '1px solid rgba(15,23,42,0.06)',
+        borderBottom: `1px solid ${BORDER_SUBTLE}`,
+        bgcolor: '#FFFFFF',
+        transition: 'background-color 0.15s ease',
+        '&:hover': { bgcolor: SURFACE_SUBTLE },
         '&:last-child': { borderBottom: 'none' },
       }}
     >

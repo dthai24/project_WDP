@@ -4,7 +4,7 @@ import SearchOffOutlinedIcon from '@mui/icons-material/SearchOffOutlined';
 import EmptyState from '@/shared/ui/EmptyState';
 import Loading from '@/shared/ui/Loading';
 import MentorCourseStudentRow from './MentorCourseStudentRow';
-import { MUTED } from './mentorCourseCreateStyles';
+import { MUTED, DETAIL_PANEL_SX, DETAIL_PANEL_HEADER_SX } from './mentorCourseCreateStyles';
 import {
   STUDENT_TABLE_GRID_COLUMNS,
   STUDENT_TABLE_HEADERS,
@@ -24,8 +24,7 @@ function ListHeader() {
       sx={{
         ...TABLE_ROW_SX,
         py: 1.25,
-        bgcolor: 'rgba(15,23,42,0.02)',
-        borderBottom: '1px solid rgba(15,23,42,0.06)',
+        ...DETAIL_PANEL_HEADER_SX,
       }}
     >
       {STUDENT_TABLE_HEADERS.map((label, index) => (
@@ -82,14 +81,7 @@ export default function MentorCourseStudentsList({
   }
 
   return (
-    <Box
-      sx={{
-        borderRadius: '16px',
-        border: '1px solid rgba(15,23,42,0.08)',
-        overflow: 'hidden',
-        bgcolor: '#fff',
-      }}
-    >
+    <Box sx={DETAIL_PANEL_SX}>
       <ListHeader />
       {students.map((student) => (
         <MentorCourseStudentRow

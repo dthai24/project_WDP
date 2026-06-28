@@ -1,17 +1,17 @@
 import { Box, Typography } from '@mui/material';
-import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
-import FolderRoundedIcon from '@mui/icons-material/FolderRounded';
-import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
-import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-import {
-  countCourseChapters,
-  countCourseLessons,
-  countCourseMaterials,
-  countCourseStudents,
-  formatCourseRating,
-} from '@/features/mentor/utils/mentorCourseUtils';
+import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { formatCourseRating } from '@/features/mentor/utils/mentorCourseUtils';
+
+function getCourseAuthorName(course) {
+  return (
+    course?.InStructorName
+    ?? course?.InstructorName
+    ?? course?.instructorName
+    ?? '—'
+  );
+}
 
 function MetricInline({ icon: Icon, label, value, iconColor }) {
   return (
@@ -30,34 +30,16 @@ function MetricInline({ icon: Icon, label, value, iconColor }) {
 export default function MentorCourseMetricsInline({ course }) {
   const metrics = [
     {
-      icon: GroupsRoundedIcon,
-      label: 'Học viên',
-      value: countCourseStudents(course),
-      iconColor: PRIMARY,
+      icon: PersonOutlineOutlinedIcon,
+      label: 'Tác giả',
+      value: getCourseAuthorName(course),
+      iconColor: '#4338CA',
     },
     {
       icon: StarRoundedIcon,
       label: 'Đánh giá',
       value: formatCourseRating(course),
       iconColor: '#D97706',
-    },
-    {
-      icon: MenuBookRoundedIcon,
-      label: 'Bài học',
-      value: countCourseLessons(course),
-      iconColor: '#0E7490',
-    },
-    {
-      icon: FolderRoundedIcon,
-      label: 'Chương',
-      value: countCourseChapters(course),
-      iconColor: '#7C3AED',
-    },
-    {
-      icon: DescriptionRoundedIcon,
-      label: 'Học liệu',
-      value: countCourseMaterials(course),
-      iconColor: '#475569',
     },
   ];
 
@@ -66,6 +48,7 @@ export default function MentorCourseMetricsInline({ course }) {
       sx={{
         display: 'flex',
         flexWrap: 'wrap',
+        alignItems: 'center',
         gap: { xs: 1.25, sm: 2, md: 2.5 },
         mt: 1.25,
       }}

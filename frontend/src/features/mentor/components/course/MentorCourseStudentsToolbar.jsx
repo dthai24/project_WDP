@@ -21,8 +21,7 @@ import {
   COURSE_STUDENT_SORT_OPTIONS,
   COURSE_STUDENT_STATUS_OPTIONS,
 } from '@/features/mentor/data/mentorCourseStudentsMock';
-
-const MUTED = '#64748B';
+import { DETAIL_TOOLBAR_WRAP_SX, MUTED, SURFACE_SUBTLE } from './mentorCourseCreateStyles';
 
 function getMenuPaperSx(theme) {
   return {
@@ -120,7 +119,7 @@ export default function MentorCourseStudentsToolbar({
     COURSE_STUDENT_SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Tiến độ cao nhất';
 
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box sx={DETAIL_TOOLBAR_WRAP_SX}>
       <Box
         sx={{
           display: 'flex',
@@ -149,7 +148,7 @@ export default function MentorCourseStudentsToolbar({
               height: 38,
               borderRadius: '999px',
               fontSize: 13,
-              bgcolor: '#fff',
+              bgcolor: SURFACE_SUBTLE,
             },
           }}
         />
@@ -224,9 +223,11 @@ export default function MentorCourseStudentsToolbar({
         )}
       </Box>
 
-      <Typography sx={{ fontSize: 12, color: MUTED, mt: 1 }}>
-        {typeof resultCount === 'number' ? `${resultCount} học viên` : 'Đang tải...'}
-      </Typography>
+      {showReset && (
+        <Typography sx={{ fontSize: 12, color: MUTED, mt: 1 }}>
+          {typeof resultCount === 'number' ? `${resultCount} kết quả lọc` : 'Đang tải...'}
+        </Typography>
+      )}
     </Box>
   );
 }
