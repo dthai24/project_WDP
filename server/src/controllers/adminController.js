@@ -631,6 +631,35 @@ const getCourses = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "", status = "", category = "", sortBy = "", sortOrder = "" } = req.query;
     const filter = {};
+
+    if (search.trim()) {
+      // Find mentors whose name matches search to query by instructorId/mentorId
+      const matchingMentors = await User.find({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { fullName: { $regex: search, $options: "i" } }
+        ]
+      }).select("_id");
+      const mentorIds = matchingMentors.map(m => m._id);
+
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { courseName: { $regex: search, $options: "i" } },
+        { mentorName: { $regex: search, $options: "i" } },
+        { mentorId: { $in: mentorIds } },
+        { instructorId: { $in: mentorIds } }
+      ];
+    }
+
+    if (status) {
+      if (status === "Active") {
+        filter.$or = [
+          { status: "Active" },
+          { isPublished: true }
+        ];
+      } else if (status === "Inactive") {
+        filter.$or = [
+          { status: "Inactive" },
           { isPublished: false }
         ];
       } else {
