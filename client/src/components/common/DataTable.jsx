@@ -88,16 +88,25 @@ export default function DataTable({
                   {columns.map((col) => (
                     <th
                       key={col.key}
-                      onClick={() => col.sortable && onSort(col.key)}
+                      onClick={(e) => col.sortable && onSort(col.key, e)}
                       className={`px-6 py-4 md:table-cell ${col.sortable ? "cursor-pointer select-none hover:bg-slate-100/50" : ""} ${col.className || ""}`}
                     >
                       <div className="flex items-center gap-1">
                         <span>{col.label}</span>
-                        {col.sortable && (
-                          <span className="text-slate-455 font-mono text-[10px] ml-1">
-                            {sortColumn === col.key ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
-                          </span>
-                        )}
+                        {col.sortable && (() => {
+                          const activeCols = sortColumn ? sortColumn.split(",") : [];
+                          const activeDirs = sortDirection ? sortDirection.split(",") : [];
+                          const colIdx = activeCols.indexOf(col.key);
+                          if (colIdx !== -1) {
+                            return (
+                              <span className="text-blue-600 font-bold font-mono text-[10px] ml-1">
+                                {activeDirs[colIdx] === "asc" ? "▲" : "▼"}
+                                {activeCols.length > 1 && <sub className="text-[8px] font-sans -ml-0.5">{colIdx + 1}</sub>}
+                              </span>
+                            );
+                          }
+                          return <span className="text-slate-400 font-mono text-[10px] ml-1">↕</span>;
+                        })()}
                       </div>
                     </th>
                   ))}

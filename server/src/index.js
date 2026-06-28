@@ -53,7 +53,7 @@ mongoose
     await seedDatabase();
   })
   .catch((error) => {
-    console.warn("MongoDB connection skipped:", error.message);
+    console.warn("MongoDB connection failed:", error.message);
   });
 
 const fs = require("fs");

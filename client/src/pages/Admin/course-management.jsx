@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { adminApi } from "../../services/api";
-import { BookOpen, RefreshCw, Search, AlertCircle, Loader2 } from "lucide-react";
+import { BookOpen, RefreshCw, Search, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const CourseManagement = () => {
   const [courses, setCourses] = useState([]);
@@ -17,6 +18,12 @@ const CourseManagement = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [categoriesOptions, setCategoriesOptions] = useState([]);
 
+  const [sortColumn, setSortColumn] = useState("");
+  const [sortDirection, setSortDirection] = useState("");
+
+  // Confirmation Modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmData, setConfirmData] = useState({ courseId: null, targetStatus: "" });
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -35,7 +42,7 @@ const CourseManagement = () => {
     loadCategories();
   }, []);
 
-  const fetchCourses = async (pageNum = 1, searchVal = "", statusVal = "", categoryVal = "") => {
+  const fetchCourses = async (pageNum = 1, searchVal = "", statusVal = "", categoryVal = "", sortByVal = "", sortDirVal = "") => {
     setLoading(true);
     setError(false);
     try {
@@ -44,7 +51,9 @@ const CourseManagement = () => {
         limit: 10,
         search: searchVal,
         status: statusVal,
-        category: categoryVal
+        category: categoryVal,
+        sortBy: sortByVal || undefined,
+        sortOrder: sortDirVal || undefined
       });
       if (res && res.success) {
         setCourses(res.data || []);
@@ -61,133 +70,111 @@ const CourseManagement = () => {
   };
 
   useEffect(() => {
-    fetchCourses(1, search, statusFilter, categoryFilter);
+    fetchCourses(1, search, statusFilter, categoryFilter, sortColumn, sortDirection);
+    
+    // Support query param viewDetail to auto-open course details modal on mount
+    const params = new URLSearchParams(window.location.search);
+    const viewDetailId = params.get("viewDetail");
+    if (viewDetailId) {
+      const loadDeepLinkCourse = async () => {
+        try {
+          const res = await adminApi.getCourses({ search: viewDetailId });
+          if (res && res.success && res.data && res.data.length > 0) {
+            setSelectedCourse(res.data[0]);
+            setDetailModalOpen(true);
+          }
+        } catch (err) {
+          console.error("Error loading deep link course:", err);
+        }
+      };
+      loadDeepLinkCourse();
+    }
   }, []);
 
-  const handleToggleStatus = async (courseId, currentStatus) => {
-    // If pending, allow Activating or Suspending
-    const targetStatus = currentStatus === "Active" ? "Inactive" : "Active";
+  const handleSort = (columnKey, event) => {
+    const isShift = event && event.shiftKey;
+    let activeCols = sortColumn ? sortColumn.split(",") : [];
+    let activeDirs = sortDirection ? sortDirection.split(",") : [];
+
+    const colIdx = activeCols.indexOf(columnKey);
+
+    if (isShift) {
+      if (colIdx !== -1) {
+        if (activeDirs[colIdx] === "asc") {
+          activeDirs[colIdx] = "desc";
+        } else {
+          activeCols.splice(colIdx, 1);
+          activeDirs.splice(colIdx, 1);
+        }
+      } else {
+        activeCols.push(columnKey);
+        activeDirs.push("asc");
+      }
+    } else {
+      if (colIdx !== -1 && activeCols.length === 1) {
+        if (activeDirs[0] === "asc") {
+          activeDirs[0] = "desc";
+        } else {
+          activeCols = [];
+          activeDirs = [];
+        }
+      } else {
+        activeCols = [columnKey];
+        activeDirs = ["asc"];
+      }
+    }
+
+    const nextCol = activeCols.join(",");
+    const nextDirection = activeDirs.join(",");
+    setSortColumn(nextCol);
+    setSortDirection(nextDirection);
+    fetchCourses(1, search, statusFilter, categoryFilter, nextCol, nextDirection);
+  };
+
+  const triggerStatusChange = (courseId, targetStatus) => {
+    setConfirmData({ courseId, targetStatus });
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmStatusChange = async () => {
+    const { courseId, targetStatus } = confirmData;
+    if (!courseId) return;
+    setConfirmOpen(false);
     setSubmittingId(courseId);
     try {
       const res = await adminApi.toggleCourseStatus(courseId, targetStatus);
       if (res && res.success) {
-        fetchCourses(pagination.page, search, statusFilter, categoryFilter);
+        fetchCourses(pagination.page, search, statusFilter, categoryFilter, sortColumn, sortDirection);
+        if (selectedCourse && selectedCourse._id === courseId) {
+          setSelectedCourse(prev => ({ ...prev, status: targetStatus }));
+        }
       } else {
-        alert("Failed to update status.");
+        alert("Failed to update course status.");
       }
     } catch (err) {
-      console.error(err);
-      alert("Error occurred while changing course status.");
+      console.error("Error updating course status:", err);
+      alert("An error occurred while updating the course status.");
     } finally {
       setSubmittingId(null);
+      setConfirmData({ courseId: null, targetStatus: "" });
     }
   };
 
-  const ToggleSwitch = ({ checked, onChange, disabled }) => {
-    return (
-      <button
-        type="button"
-        onClick={onChange}
-        disabled={disabled}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-205 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 ${
-          checked ? "bg-emerald-500" : "bg-slate-300"
-        }`}
-      >
-        <span
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-205 ease-in-out ${
-            checked ? "translate-x-5" : "translate-x-0"
-          }`}
-        />
-      </button>
-    );
+  const openDetailsModal = (course) => {
+    setSelectedCourse(course);
+    setDetailModalOpen(true);
   };
 
-  const columns = [
-    {
-      key: "title",
-      label: "Course Title",
-      render: (c) => (
-        <div>
-          <div className="font-extrabold text-slate-800 text-sm">{c.title}</div>
-          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{c._id}</div>
-        </div>
-      )
-    },
-    {
-      key: "mentor",
-      label: "Instructor",
-      render: (c) => (
-        <div>
-          <div className="font-semibold text-slate-700">{c.mentorName}</div>
-          <div className="text-xs text-slate-400">{c.mentorEmail}</div>
-        </div>
-      )
-    },
-    {
-      key: "category",
-      label: "Level Tag",
-      render: (c) => (
-        <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-xs font-bold font-mono">
-          {c.category}
-        </span>
-      )
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (c) => {
-        let styleClass = "bg-amber-50 text-amber-700 border-amber-100";
-        if (c.status === "Active") styleClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
-        if (c.status === "Inactive") styleClass = "bg-slate-100 text-slate-600 border-slate-200";
-        return (
-          <span className={`px-2.5 py-0.5 border rounded-lg text-xs font-bold ${styleClass}`}>
-            {c.status.toUpperCase()}
-          </span>
-        );
-      }
-    },
-    {
-      key: "actions",
-      label: "Status Control",
-      className: "text-right",
-      render: (c) => (
-        <div className="flex justify-end items-center gap-3">
-          <span className="text-xs text-slate-400 font-semibold select-none">
-            {c.status === "Active" ? "Active" : "Inactive"}
-          </span>
-          <ToggleSwitch
-            checked={c.status === "Active"}
-            onChange={() => handleToggleStatus(c._id, c.status)}
-            disabled={submittingId !== null}
-          />
-        </div>
-      )
+  const closeDetailsModal = () => {
+    setDetailModalOpen(false);
+    setSelectedCourse(null);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("viewDetail")) {
+      params.delete("viewDetail");
+      const newRelativePathQuery = window.location.pathname + (params.toString() ? "?" + params.toString() : "");
+      window.history.replaceState(null, "", newRelativePathQuery);
     }
-  ];
-
-  return (
-    <div className="space-y-6 text-slate-855 font-sans animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-blue-600" />
-            <span>Course Management</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Browse and search courses, filter by tag categories, and toggle active/inactive status.
-          </p>
-        </div>
-        <button
-          onClick={() => fetchCourses(pagination.page, search, statusFilter, categoryFilter)}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl hover:bg-slate-50 text-slate-700 font-bold text-sm transition-all shadow-xs disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? "animate-spin" : ""}`} />
-          <span>Sync Courses</span>
-        </button>
-      </div>
-
+  };
       {/* Main Content */}
       {error ? (
         <div className="p-6 border border-red-100 rounded-2xl bg-red-50/50 flex items-center gap-3 text-red-700 shadow-sm">
@@ -199,11 +186,12 @@ const CourseManagement = () => {
           columns={columns}
           data={courses}
           pagination={pagination}
-          onPageChange={(page) => fetchCourses(page, search, statusFilter, categoryFilter)}
-          searchPlaceholder="Search by title or instructor..."
+          onPageChange={(page) => fetchCourses(page, search, statusFilter, categoryFilter, sortColumn, sortDirection)}
+          searchPlaceholder="Search by title or mentor..."
           onSearch={(val) => {
             setSearch(val);
-            fetchCourses(1, val, statusFilter, categoryFilter);
+            fetchCourses(1, val, statusFilter, categoryFilter, sortColumn, sortDirection);
+          }}
           }}
           filters={[
             {
@@ -222,16 +210,22 @@ const CourseManagement = () => {
                 { value: "Pending", label: "Pending" }
               ]
             }
+                { value: "Pending", label: "Pending" }
+              ]
+            }
           ]}
           onFilterChange={(key, val) => {
             if (key === "category") {
               setCategoryFilter(val);
-              fetchCourses(1, search, statusFilter, val);
+              fetchCourses(1, search, statusFilter, val, sortColumn, sortDirection);
             } else if (key === "status") {
               setStatusFilter(val);
-              fetchCourses(1, search, val, categoryFilter);
+              fetchCourses(1, search, val, categoryFilter, sortColumn, sortDirection);
             }
           }}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          onSort={handleSort}
           loading={loading}
         />
       )}

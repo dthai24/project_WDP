@@ -23,7 +23,8 @@ const Dashboard = () => {
     userCount: 0,
     courseCount: 0,
     categoryCount: 0,
-    pathCount: 0
+    pathCount: 0,
+    pendingCourseCount: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -42,7 +43,8 @@ const Dashboard = () => {
           userCount: res.userCount || 0,
           courseCount: res.courseCount || 0,
           categoryCount: res.categoryCount || 0,
-          pathCount: res.pathCount || 0
+          pathCount: res.pathCount || 0,
+          pendingCourseCount: res.pendingCourseCount || 0
         });
         setSalesData(res.salesData || []);
         setEngagementData(res.engagementData || []);
@@ -77,6 +79,14 @@ const Dashboard = () => {
       link: "/admin/courses"
     },
     {
+      label: "Pending Courses",
+      value: stats.pendingCourseCount,
+      icon: ClipboardList,
+      color: "from-rose-500 to-red-500",
+      desc: "Awaiting review",
+      link: "/admin/courses"
+    },
+    {
       label: "Total Categories",
       value: stats.categoryCount,
       icon: Folder,
@@ -84,7 +94,6 @@ const Dashboard = () => {
       desc: "English level tracks",
       link: "/admin/categories"
     },
-    {
       label: "Mentor Applications",
       value: stats.pathCount,
       icon: Award,
@@ -133,7 +142,7 @@ const Dashboard = () => {
       </div>
 
       {/* Grid Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (

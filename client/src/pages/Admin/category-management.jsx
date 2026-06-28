@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { adminApi } from "../../services/api";
 import { Plus, Edit2, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const PREDEFINED_CODES = [
   { value: "EWP", label: "EWP - English for Working Professionals" },
@@ -35,6 +36,9 @@ const CategoryManagement = () => {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Confirmation Modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteCatData, setDeleteCatData] = useState(null);
   const fetchCategories = async (pageNum = 1, searchQuery = "") => {
     setLoading(true);
     setError(false);
@@ -91,9 +95,9 @@ const CategoryManagement = () => {
 
   const openEditModal = (cat) => {
     setIsEditMode(true);
-    setEditingId(cat._id);
+    setEditingId(cat._id?.$oid || cat._id);
     setFormData({
-      name: cat.name || "",
+      name: cat.name || cat.title || "",
       code: cat.code || "",
       description: cat.description || ""
     });
@@ -125,17 +129,27 @@ const CategoryManagement = () => {
     }
   };
 
-  const handleCategoryDelete = async (cat) => {
-    if (window.confirm(`Are you sure you want to delete the category "${cat.name}" (${cat.code})?`)) {
-      try {
-        const res = await adminApi.deleteCategory(cat._id);
-        if (res && res.success) {
-          fetchCategories(pagination.page, search);
-        }
-      } catch (err) {
-        console.error("Error deleting category:", err);
-        alert(err.response?.data?.message || "Failed to delete category.");
+  const triggerCategoryDelete = (cat) => {
+    setDeleteCatData(cat);
+    setConfirmOpen(true);
+  };
+
+  const handleCategoryDelete = async () => {
+    if (!deleteCatData) return;
+    const catId = deleteCatData._id?.$oid || deleteCatData._id;
+    setConfirmOpen(false);
+    try {
+      const res = await adminApi.deleteCategory(catId);
+      if (res && res.success) {
+        fetchCategories(pagination.page, search);
       }
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      alert(err.response?.data?.message || "Failed to delete category.");
+    } finally {
+      setDeleteCatData(null);
+    }
+  };
     }
   };
 
@@ -152,7 +166,7 @@ const CategoryManagement = () => {
     {
       key: "name",
       label: "Category Name",
-      render: (cat) => <span className="font-bold text-slate-800">{cat.name}</span>
+      render: (cat) => <span className="font-bold text-slate-800">{cat.name || cat.title}</span>
     },
     {
       key: "description",
@@ -173,7 +187,7 @@ const CategoryManagement = () => {
             <span>Edit</span>
           </button>
           <button
-            onClick={() => handleCategoryDelete(cat)}
+            onClick={() => triggerCategoryDelete(cat)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 hover:border-red-300 rounded-xl hover:bg-red-50 text-xs font-semibold text-red-600 transition-all shadow-xs"
           >
             <Trash2 className="w-3.5 h-3.5 text-red-500" />
@@ -281,20 +295,6 @@ const CategoryManagement = () => {
         <div className="p-6 border border-red-100 rounded-2xl bg-red-50/50 flex items-center gap-3 text-red-700 shadow-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div className="text-sm font-semibold">API connection error. Please verify the backend service or database status.</div>
-        </div>
-      ) : activeTab === "list" ? (
-        <DataTable
-          columns={categoryColumns}
-          data={categories}
-          pagination={pagination}
-          onPageChange={(page) => fetchCategories(page, search)}
-          searchPlaceholder="Search by level code or category name..."
-          onSearch={(val) => {
-            setSearch(val);
-            fetchCategories(1, val);
-          }}
-          loading={loading}
-        />
       ) : (
         <DataTable
           columns={historyColumns}
@@ -486,6 +486,39 @@ const CategoryManagement = () => {
           </div>
         </div>
       )}
+        </div>
+      ) : activeTab === "list" ? (
+        <DataTable
+          columns={categoryColumns}
+          data={categories}
+          pagination={pagination}
+          onPageChange={(page) => fetchCategories(page, search)}
+          searchPlaceholder="Search by level code or category name..."
+          onSearch={(val) => {
+            setSearch(val);
+            fetchCategories(1, val);
+          }}
+          loading={loading}
+        />
+      ) : (
+        <DataTable
+          columns={historyColumns}
+          data={historyLogs}
+          pagination={historyPagination}
+          onPageChange={(page) => fetchHistory(page)}
+          searchPlaceholder="Search not available in history"
+          loading={loading}
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmOpen}
+        title="Confirm Category Deletion"
+        message={`Are you sure you want to delete the category "${deleteCatData?.name || deleteCatData?.title || ""}" (${deleteCatData?.code || ""})?`}
+        onConfirm={handleCategoryDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 };
