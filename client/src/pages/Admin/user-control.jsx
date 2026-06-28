@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { adminApi } from "../../services/api";
 import { UserCheck, UserMinus, Eye, Loader2, AlertCircle } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const UserControl = () => {
   const [users, setUsers] = useState([]);
@@ -22,6 +23,9 @@ const UserControl = () => {
   const [sortColumn, setSortColumn] = useState("");
   const [sortDirection, setSortDirection] = useState(""); // "asc", "desc", or ""
 
+  // Confirmation Modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmData, setConfirmData] = useState({ userId: null, currentBlocked: false });
   const fetchUsers = async (pageNum = 1, searchVal = "", roleVal = "", statusVal = "", sortByVal = "", sortDirVal = "") => {
     setLoading(true);
     setError(false);
@@ -53,37 +57,82 @@ const UserControl = () => {
     fetchUsers(1, search, roleFilter, statusFilter, sortColumn, sortDirection);
   }, []);
 
-  const handleSort = (columnKey) => {
-    let nextDirection = "asc";
-    if (sortColumn === columnKey) {
-      if (sortDirection === "asc") {
-        nextDirection = "desc";
-      } else if (sortDirection === "desc") {
-        nextDirection = ""; // Reset sorting
+  const handleSort = (columnKey, event) => {
+    const isShift = event && event.shiftKey;
+    let activeCols = sortColumn ? sortColumn.split(",") : [];
+    let activeDirs = sortDirection ? sortDirection.split(",") : [];
+
+    const colIdx = activeCols.indexOf(columnKey);
+
+    if (isShift) {
+      if (colIdx !== -1) {
+        if (activeDirs[colIdx] === "asc") {
+          activeDirs[colIdx] = "desc";
+        } else {
+          activeCols.splice(colIdx, 1);
+          activeDirs.splice(colIdx, 1);
+        }
+      } else {
+        activeCols.push(columnKey);
+        activeDirs.push("asc");
+      }
+    } else {
+      if (colIdx !== -1 && activeCols.length === 1) {
+        if (activeDirs[0] === "asc") {
+          activeDirs[0] = "desc";
+        } else {
+          activeCols = [];
+          activeDirs = [];
+        }
+      } else {
+        activeCols = [columnKey];
+        activeDirs = ["asc"];
       }
     }
-    const nextCol = nextDirection ? columnKey : "";
+
+    const nextCol = activeCols.join(",");
+    const nextDirection = activeDirs.join(",");
+    setSortColumn(nextCol);
+    setSortDirection(nextDirection);
+    fetchUsers(1, search, roleFilter, statusFilter, nextCol, nextDirection);
+  };
     setSortColumn(nextCol);
     setSortDirection(nextDirection);
     fetchUsers(1, search, roleFilter, statusFilter, nextCol, nextDirection);
   };
 
-  const handleToggleBlock = async (userId, currentBlockedStatus) => {
-    const action = currentBlockedStatus ? "unblock" : "block";
-    if (!window.confirm(`Confirm you want to ${action} this user account?`)) return;
+  const triggerToggleBlock = (userId, currentBlockedStatus) => {
+    setConfirmData({ userId, currentBlocked: currentBlockedStatus });
+    setConfirmOpen(true);
+  };
+
+  const handleToggleBlock = async () => {
+    const { userId, currentBlocked } = confirmData;
+    if (!userId) return;
 
     setSubmittingId(userId);
+    setConfirmOpen(false);
     try {
-      const targetNewStatus = !currentBlockedStatus;
+      const targetNewStatus = !currentBlocked;
       const res = await adminApi.toggleUserBlock(userId, targetNewStatus);
       if (res && res.success) {
-        fetchUsers(pagination.page, search, roleFilter, statusFilter);
+        fetchUsers(pagination.page, search, roleFilter, statusFilter, sortColumn, sortDirection);
       }
     } catch (err) {
       console.error(err);
       alert("An error occurred while changing the user account status.");
     } finally {
       setSubmittingId(null);
+      setConfirmData({ userId: null, currentBlocked: false });
+    }
+  };
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while changing the user account status.");
+    } finally {
+      setSubmittingId(null);
+      setConfirmData({ userId: null, currentBlocked: false });
     }
   };
 
@@ -194,7 +243,7 @@ const UserControl = () => {
           
           {u.role !== "Admin" && (
             <button
-              onClick={() => handleToggleBlock(u._id, u.isBlocked)}
+              onClick={() => triggerToggleBlock(u._id, u.isBlocked)}
               disabled={submittingId !== null}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-xs font-bold transition-all shadow-xs ${
                 u.isBlocked
@@ -334,21 +383,23 @@ const UserControl = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">XP Points</span>
-                  <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 font-mono">
-                    {selectedUser.xp !== undefined ? selectedUser.xp : 0} XP
+              {selectedUser.role !== "Admin" && selectedUser.role !== "Mentor" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">XP Points</span>
+                    <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 font-mono">
+                      {selectedUser.xp !== undefined ? selectedUser.xp : 0} XP
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-1">
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daily Streak</span>
-                  <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 font-mono">
-                    {selectedUser.streak !== undefined ? selectedUser.streak : 0} Days
+                  <div className="space-y-1">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daily Streak</span>
+                    <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 font-mono">
+                      {selectedUser.streak !== undefined ? selectedUser.streak : 0} Days
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-1">
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account Created At</span>
@@ -373,6 +424,14 @@ const UserControl = () => {
           </div>
         </div>
       )}
+      <ConfirmationModal
+        isOpen={confirmOpen}
+        title="Confirm User Status Change"
+        message={`Are you sure you want to ${confirmData.currentBlocked ? "unblock" : "block"} this user account?`}
+        onConfirm={handleToggleBlock}
+        onCancel={() => setConfirmOpen(false)}
+        isSubmitting={submittingId !== null}
+      />
     </div>
   );
 };
