@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Course = require("../models/courseModel");
+const Category = require("../models/categoryModel");
 
 const SYSTEM_PROMPT = `Bạn là EM Assistant - trợ lý AI chính thức của nền tảng học tiếng Anh English Master.
 
@@ -132,6 +134,25 @@ router.post("/chat", async (req, res) => {
       });
     }
 
+    // Dynamic database knowledge retrieval
+    let dbKnowledge = "";
+    try {
+      const courses = await Course.find({ status: "Active" }).select("title category instructor mentorName price description");
+      const categories = await Category.find().select("name code description");
+
+      if (courses.length > 0 || categories.length > 0) {
+        dbKnowledge = "\n\nDỮ LIỆU THỰC TẾ TỪ DATABASE:\n";
+        if (categories.length > 0) {
+          dbKnowledge += "Danh mục khóa học hiện có:\n" + categories.map(c => `- ${c.name} (${c.code}): ${c.description || ""}`).join("\n") + "\n";
+        }
+        if (courses.length > 0) {
+          dbKnowledge += "Danh sách khóa học và giáo viên:\n" + courses.map(c => `- Khóa học: "${c.title}" thuộc danh mục ${c.category}. Giảng viên: ${c.instructor || c.mentorName || "Chưa rõ"}. Giá: ${c.price ? c.price.toLocaleString("vi-VN") + " VND" : "Miễn phí"}. Mô tả: ${c.description || ""}`).join("\n") + "\n";
+        }
+      }
+    } catch (dbErr) {
+      console.warn("DB knowledge fetch skipped:", dbErr.message);
+    }
+
     console.log("📤 Sending to Gemini API...");
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
@@ -145,7 +166,7 @@ router.post("/chat", async (req, res) => {
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          systemInstruction: SYSTEM_PROMPT,
+          systemInstruction: SYSTEM_PROMPT + dbKnowledge,
           generationConfig: {
             maxOutputTokens: 800,
             temperature: 0.7,
