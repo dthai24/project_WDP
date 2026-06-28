@@ -94,6 +94,7 @@ const Dashboard = () => {
       desc: "English level tracks",
       link: "/admin/categories"
     },
+    {
       label: "Mentor Applications",
       value: stats.pathCount,
       icon: Award,

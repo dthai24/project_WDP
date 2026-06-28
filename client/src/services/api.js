@@ -126,7 +126,6 @@ export const adminApi = {
     const response = await api.post("/api/mentor/applications/mark-read");
     return { success: true, data: response.data };
   }
-  }
 };
 
 export const healthApi = {
