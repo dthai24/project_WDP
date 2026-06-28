@@ -3,20 +3,30 @@
  */
 import { Box, Typography, alpha } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
+import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
+  getFilledTestQuestions,
   getQuestionBankSectionTabLabel,
   isQuestionBankWritingSkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
-function BaiTab({ label, selected, disabled, accentColor, onClick }) {
+function BaiTab({ label, selected, disabled, accentColor, hasContent = false, onClick }) {
+  const StatusIcon = hasContent ? CheckCircleOutlineRoundedIcon : RadioButtonUncheckedRoundedIcon;
+  const statusColor = hasContent ? '#047857' : alpha(MUTED, 0.85);
+
   return (
     <Box
       component="button"
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={hasContent ? 'Đã có câu hỏi' : 'Chưa có câu hỏi'}
       sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.5,
         px: 1.25,
         py: 0.55,
         borderRadius: '999px',
@@ -30,8 +40,6 @@ function BaiTab({ label, selected, disabled, accentColor, onClick }) {
         opacity: disabled ? 0.55 : 1,
         maxWidth: { xs: '100%', sm: 220 },
         overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
         transition: 'background-color 0.15s, border-color 0.15s',
         '&:hover': disabled
           ? undefined
@@ -40,7 +48,18 @@ function BaiTab({ label, selected, disabled, accentColor, onClick }) {
             },
       }}
     >
-      {label}
+      <StatusIcon sx={{ fontSize: 15, color: statusColor, flexShrink: 0 }} />
+      <Box
+        component="span"
+        sx={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          minWidth: 0,
+        }}
+      >
+        {label}
+      </Box>
     </Box>
   );
 }
@@ -65,6 +84,7 @@ export default function MentorQuestionBankBaiNav({
         <BaiTab
           key={section.tempId}
           label={getQuestionBankSectionTabLabel(section, allSections)}
+          hasContent={getFilledTestQuestions(section?.Questions).length > 0}
           selected={section.tempId === activeSectionId}
           disabled={disabled}
           accentColor={accentColor}
