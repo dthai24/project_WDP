@@ -6,11 +6,9 @@ import {
   Tab,
   Tabs,
   Typography,
-  alpha,
   useTheme,
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
@@ -19,10 +17,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import MentorCourseMetricsInline from './MentorCourseMetricsInline';
 import { PRIMARY, TEXT, MUTED, DETAIL_ENTITY_TITLE_SX } from './mentorCourseCreateStyles';
-import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 import { isCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
 import { MENTOR_COURSE_DETAIL_TABS } from '@/features/mentor/utils/mentorCourseDetailUtils';
-import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
 const PILL_CHIP_SX = {
   borderRadius: '999px',
@@ -141,89 +137,31 @@ export default function MentorCourseDetailHeader({
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { xs: 'stretch', md: 'flex-start' },
-            gap: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: 'space-between',
+            gap: 1.5,
           }}
         >
-          <ThumbnailImage
-            src={course.Thumbnail}
-            label={course.CourseName}
-            alt={course.CourseName}
-            cacheKey={course.CourseUpdateAt ?? course.UpdatedAt ?? course.CourseCreateAt}
-            iconSize={28}
-            sx={{
-              width: { xs: '100%', sm: 112 },
-              height: { xs: 140, sm: 72 },
-              borderRadius: '14px',
-              flexShrink: 0,
-            }}
-          />
-
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.75 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.25 }}>
               <Typography sx={DETAIL_ENTITY_TITLE_SX}>
                 {course.CourseName}
               </Typography>
               <Chip size="small" label={statusChip.label} sx={{ ...PILL_CHIP_SX, ...statusChip.sx }} />
             </Box>
-
-            {course.Description && (
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  color: MUTED,
-                  lineHeight: 1.6,
-                  mb: 1.25,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                {course.Description}
-              </Typography>
-            )}
-
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 0.5 }}>
-              {course.CategoryName && (
-                <Chip
-                  size="small"
-                  label={course.CategoryDisplayName}
-                  sx={{
-                    ...PILL_CHIP_SX,
-                    ...resolveCategoryChipSx({
-                      id: course.CategoryId,
-                      displayName: course.CategoryDisplayName ?? course.CategoryName,
-                    }),
-                  }}
-                />
-              )}
-              {course.LevelDisplayName && (
-                <Chip
-                  size="small"
-                  label={course.LevelDisplayName}
-                  sx={{
-                    ...PILL_CHIP_SX,
-                    ...resolveLevelChipSx({
-                      id: course.LevelId,
-                      displayName: course.LevelDisplayName ?? course.levelName,
-                    }),
-                  }}
-                />
-              )}
-            </Box>
-            {/* Metric (total {student, paths, node, materials, rate,...}) */}
             <MentorCourseMetricsInline course={course} />
           </Box>
 
           <Box
             sx={{
               display: 'flex',
-              flexDirection: { xs: 'row', md: 'column' },
+              flexWrap: 'wrap',
               gap: 1,
               flexShrink: 0,
-              alignSelf: { xs: 'stretch', md: 'flex-start' },
+              alignItems: 'center',
+              justifyContent: { xs: 'stretch', sm: 'flex-end' },
+              width: { xs: '100%', sm: 'auto' },
             }}
           >
             {/* 
@@ -239,7 +177,8 @@ export default function MentorCourseDetailHeader({
                 fontSize: 13,
                 fontWeight: 700,
                 px: 2,
-                flex: { xs: 1, md: 'unset' },
+                flex: { xs: '1 1 0', sm: '0 0 auto' },
+                minWidth: { xs: 0, sm: 'auto' },
               }}
             >
               Chỉnh sửa
@@ -258,7 +197,8 @@ export default function MentorCourseDetailHeader({
                 fontSize: 13,
                 fontWeight: 700,
                 px: 2,
-                flex: { xs: 1, md: 'unset' },
+                flex: { xs: '1 1 0', sm: '0 0 auto' },
+                minWidth: { xs: 0, sm: 'auto' },
                 color: '#7C3AED',
                 borderColor: 'rgba(124,58,237,0.28)',
                 '&:hover': {
@@ -292,7 +232,8 @@ export default function MentorCourseDetailHeader({
                 px: 2,
                 bgcolor: PRIMARY,
                 color: '#fff',
-                flex: { xs: 1, md: 'unset' },
+                flex: { xs: '1 1 0', sm: '0 0 auto' },
+                minWidth: { xs: 0, sm: 'auto' },
                 boxShadow: 'none',
                 '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
               }}

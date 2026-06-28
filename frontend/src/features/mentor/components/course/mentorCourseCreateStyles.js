@@ -1,9 +1,45 @@
 export const CREATE_CARD_SX = {
-  bgcolor: '#fff',
+  bgcolor: '#FFFFFF',
   borderRadius: '14px',
   border: '1px solid rgba(15,23,42,0.08)',
   boxShadow: 'none',
   p: { xs: 2.25, sm: 3 },
+};
+
+/** Nền & viền dùng chung cho panel Nội dung / Học viên. */
+export const SURFACE = '#FFFFFF';
+export const SURFACE_SUBTLE = '#F8FAFC';
+export const BORDER_SUBTLE = 'rgba(15,23,42,0.06)';
+export const BORDER_DEFAULT = 'rgba(15,23,42,0.08)';
+
+export const DETAIL_SECTION_HEADER_SX = {
+  mb: 2,
+};
+
+export const DETAIL_PANEL_SX = {
+  borderRadius: '14px',
+  border: `1px solid ${BORDER_DEFAULT}`,
+  overflow: 'hidden',
+  bgcolor: SURFACE,
+};
+
+export const DETAIL_PANEL_HEADER_SX = {
+  bgcolor: SURFACE_SUBTLE,
+  borderBottom: `1px solid ${BORDER_SUBTLE}`,
+};
+
+export const DETAIL_NESTED_BLOCK_SX = {
+  bgcolor: SURFACE_SUBTLE,
+  borderRadius: '10px',
+  border: `1px solid ${BORDER_SUBTLE}`,
+};
+
+export const DETAIL_TOOLBAR_WRAP_SX = {
+  borderRadius: '14px',
+  border: `1px solid ${BORDER_DEFAULT}`,
+  bgcolor: SURFACE,
+  p: { xs: 1.25, sm: 1.5 },
+  mb: 2,
 };
 
 export const PRIMARY = '#0891B2';

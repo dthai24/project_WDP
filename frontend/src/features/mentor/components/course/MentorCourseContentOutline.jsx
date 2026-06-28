@@ -18,7 +18,7 @@ import {
   getPathNodes,
   normalizeMaterialForDisplay,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
-import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { MUTED, TEXT, DETAIL_PANEL_SX, DETAIL_PANEL_HEADER_SX, DETAIL_NESTED_BLOCK_SX, BORDER_SUBTLE, SURFACE_SUBTLE } from './mentorCourseCreateStyles';
 import {
   CHAPTER_THEME,
   LESSON_THEME,
@@ -63,9 +63,9 @@ function MaterialOutlineRow({ material }) {
   return (
     <Box
       sx={{
-        borderRadius: '12px',
+        borderRadius: '10px',
         border: `1px solid ${theme.border}`,
-        bgcolor: theme.soft,
+        bgcolor: '#FFFFFF',
         overflow: 'hidden',
       }}
     >
@@ -156,14 +156,7 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
   const materialCount = countMaterialsInPath(path);
 
   return (
-    <Box
-      sx={{
-        borderRadius: '16px',
-        border: '1px solid rgba(15,23,42,0.08)',
-        overflow: 'hidden',
-        bgcolor: 'rgba(15,23,42,0.02)',
-      }}
-    >
+    <Box sx={DETAIL_PANEL_SX}>
       <Box
         sx={{
           display: 'flex',
@@ -171,8 +164,8 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
           gap: 1.25,
           px: 1.75,
           py: 1.5,
-          bgcolor: CHAPTER_THEME.bg,
-          borderBottom: expanded ? `1px solid ${CHAPTER_THEME.border}` : 'none',
+          bgcolor: SURFACE_SUBTLE,
+          borderBottom: expanded ? `1px solid ${BORDER_SUBTLE}` : 'none',
         }}
       >
         <IconButton size="small" onClick={() => setExpanded((prev) => !prev)} sx={{ p: 0.4 }}>
@@ -215,9 +208,9 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
                     sx={{
                       pl: 1.5,
                       py: 1.25,
-                      borderLeft: `2px solid ${LESSON_THEME.border}`,
-                      bgcolor: 'rgba(99,102,241,0.03)',
-                      borderRadius: '0 12px 12px 0',
+                      borderLeft: `2px solid ${LESSON_THEME.accent}`,
+                      ...DETAIL_NESTED_BLOCK_SX,
+                      borderRadius: '0 10px 10px 0',
                     }}
                   >
                     <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, mb: 1 }}>
@@ -257,7 +250,7 @@ export default function MentorCourseContentOutline({ paths = [] }) {
   if (paths.length === 0) return null;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {paths.map((path, pathIndex) => (
         <ChapterOutline
           key={getItemKey(path, `path-${pathIndex}`)}
