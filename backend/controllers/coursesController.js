@@ -317,13 +317,13 @@ const updateProgress = async (req, res) => {
 
 async function getStreak(req, res) {
   const userId = Number(req.headers["x-user-id"]);
-  if (!userId) return res.json({ success: true, streak: 0 });
+  if (!userId) return res.json({ success: true, streak: 0, hasStudiedToday: false });
   try {
-    const streak = await streakService.getStreak(userId);
-    res.json({ success: true, streak });
+    const result = await streakService.getStreak(userId);
+    res.json({ success: true, streak: result.streak, hasStudiedToday: result.hasStudiedToday });
   } catch (e) {
     console.error("streak error", e);
-    res.json({ success: true, streak: 0 });
+    res.json({ success: true, streak: 0, hasStudiedToday: false });
   }
 }
 

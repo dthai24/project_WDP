@@ -436,6 +436,9 @@ export default function CourseLearningPage() {
 
       const result = await response.json();
       if (result.success) {
+        // Dispatch sự kiện để cập nhật streak trên header
+        window.dispatchEvent(new CustomEvent("streakUpdate", { detail: { hasStudiedToday: true } }));
+
         // Cập nhật giao diện thành xanh
         setModules(prev =>
           prev.map(module => ({
