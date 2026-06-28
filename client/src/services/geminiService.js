@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5050/api";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://localhost:5050/api";
 const REQUEST_TIMEOUT_MS = 45000;
 
 const geminiService = {
