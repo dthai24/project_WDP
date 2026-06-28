@@ -26,7 +26,6 @@ const UserControl = () => {
   // Confirmation Modal state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmData, setConfirmData] = useState({ userId: null, currentBlocked: false });
-
   const fetchUsers = async (pageNum = 1, searchVal = "", roleVal = "", statusVal = "", sortByVal = "", sortDirVal = "") => {
     setLoading(true);
     setError(false);
@@ -97,6 +96,10 @@ const UserControl = () => {
     setSortDirection(nextDirection);
     fetchUsers(1, search, roleFilter, statusFilter, nextCol, nextDirection);
   };
+    setSortColumn(nextCol);
+    setSortDirection(nextDirection);
+    fetchUsers(1, search, roleFilter, statusFilter, nextCol, nextDirection);
+  };
 
   const triggerToggleBlock = (userId, currentBlockedStatus) => {
     setConfirmData({ userId, currentBlocked: currentBlockedStatus });
@@ -114,6 +117,15 @@ const UserControl = () => {
       const res = await adminApi.toggleUserBlock(userId, targetNewStatus);
       if (res && res.success) {
         fetchUsers(pagination.page, search, roleFilter, statusFilter, sortColumn, sortDirection);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while changing the user account status.");
+    } finally {
+      setSubmittingId(null);
+      setConfirmData({ userId: null, currentBlocked: false });
+    }
+  };
       }
     } catch (err) {
       console.error(err);
@@ -412,7 +424,6 @@ const UserControl = () => {
           </div>
         </div>
       )}
-
       <ConfirmationModal
         isOpen={confirmOpen}
         title="Confirm User Status Change"

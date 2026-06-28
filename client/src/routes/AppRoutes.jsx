@@ -4,6 +4,7 @@ import HomePage from "../pages/Home/HomePage";
 import LoginPage from "../pages/Auth/LoginPage";
 import CreateCourse from "../pages/Mentor/CreateCourse";
 import BecomeMentor from "../pages/Mentor/BecomeMentor"; 
+import { Dashboard } from "../pages/Home/Dashboard";
 import AdminRoutes from "./admin-routes"; 
 
 export default function AppRoutes({ currentUser, onLogin, onLogout }) {
@@ -22,6 +23,7 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
           />
         } 
       />
+
 
       {/* Trang Đăng nhập */}
       <Route 
@@ -65,6 +67,17 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
           <CreateCourse 
             currentUser={currentUser} 
             onBackDashboard={() => navigate("/")} 
+          />
+        } 
+      />
+
+      {/* Student Dashboard */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <Dashboard 
+            currentUser={currentUser} 
+            onLogout={onLogout} 
           />
         } 
       />

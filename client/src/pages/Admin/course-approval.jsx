@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { adminApi } from "../../services/api";
-import { Check, X, AlertCircle, Loader2 } from "lucide-react";
+import { Check, X, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const CourseApproval = () => {
+  const [activeTab, setActiveTab] = useState("mentors"); // "mentors" or "courses"
   // Mentor registrations state
   const [mentors, setMentors] = useState([]);
   const [mentorPagination, setMentorPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
   const [mentorSearch, setMentorSearch] = useState("");
-  const [mentorStatus, setMentorStatus] = useState(""); // Defaults to all
+  const [mentorStatus, setMentorStatus] = useState("Pending");
+
+  // Courses state
+  const [courses, setCourses] = useState([]);
+  const [coursePagination, setCoursePagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
+  const [courseSearch, setCourseSearch] = useState("");
+  const [courseStatus, setCourseStatus] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -18,18 +25,13 @@ const CourseApproval = () => {
   // Sorting states
   const [mentorSortColumn, setMentorSortColumn] = useState("");
   const [mentorSortDirection, setMentorSortDirection] = useState("");
-
   // Rejection Modal states for Mentor
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [selectedRegId, setSelectedRegId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [reasonError, setReasonError] = useState("");
 
-  // Confirmation Modal state
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmData, setConfirmData] = useState({ type: "", id: null, extra: null });
-
-  const fetchMentors = async (pageNum = 1, search = "", status = "", sortByVal = "", sortDirVal = "") => {
+  const fetchMentors = async (pageNum = 1, search = "", status = "Pending", sortByVal = "", sortDirVal = "") => {
      setLoading(true);
      setError(false);
      try {
@@ -54,60 +56,56 @@ const CourseApproval = () => {
        setLoading(false);
      }
    };
+  const fetchCourses = async (pageNum = 1, search = "", status = "") => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await adminApi.getCourses({ page: pageNum, limit: 10, search, status });
+      if (res && res.success) {
+        setCourses(res.data || []);
+        setCoursePagination(res.pagination || { total: 0, page: pageNum, limit: 10, pages: 0 });
+      } else {
+        setCourses([]);
+      }
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchMentors(1, mentorSearch, mentorStatus, mentorSortColumn, mentorSortDirection);
-  }, []);
-
-  const handleMentorSort = (columnKey, event) => {
-    const isShift = event && event.shiftKey;
-    let activeCols = mentorSortColumn ? mentorSortColumn.split(",") : [];
-    let activeDirs = mentorSortDirection ? mentorSortDirection.split(",") : [];
-
-    const colIdx = activeCols.indexOf(columnKey);
-
-    if (isShift) {
-      if (colIdx !== -1) {
-        if (activeDirs[colIdx] === "asc") {
-          activeDirs[colIdx] = "desc";
-        } else {
-          activeCols.splice(colIdx, 1);
-          activeDirs.splice(colIdx, 1);
-        }
-      } else {
-        activeCols.push(columnKey);
-        activeDirs.push("asc");
-      }
-    } else {
-      if (colIdx !== -1 && activeCols.length === 1) {
-        if (activeDirs[0] === "asc") {
-          activeDirs[0] = "desc";
-        } else {
-          activeCols = [];
-          activeDirs = [];
-        }
-      } else {
-        activeCols = [columnKey];
-        activeDirs = ["asc"];
-      }
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam === "mentors" || tabParam === "courses") {
+      setActiveTab(tabParam);
     }
+  }, [window.location.search]);
 
-    const nextCol = activeCols.join(",");
-    const nextDirection = activeDirs.join(",");
-    setMentorSortColumn(nextCol);
-    setMentorSortDirection(nextDirection);
-    fetchMentors(1, mentorSearch, mentorStatus, nextCol, nextDirection);
+  useEffect(() => {
+    if (activeTab === "mentors") {
+      fetchMentors(1, mentorSearch, mentorStatus);
+    } else {
+      fetchCourses(1, courseSearch, courseStatus);
+    }
+  }, [activeTab]);
+
+  const handleApproveMentor = async (regId) => {
+    if (!window.confirm("Approve this mentor application?")) return;
+    setSubmittingId(regId);
+    try {
+      const res = await adminApi.processMentorRegistration(regId, "Approved");
+      if (res && res.success) {
+        fetchMentors(mentorPagination.page, mentorSearch, mentorStatus);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while approving the mentor application.");
+    } finally {
+      setSubmittingId(null);
+    }
   };
-
-  const triggerApproveMentor = (regId) => {
-    setConfirmData({ type: "approveMentor", id: regId });
-    setConfirmOpen(true);
-  };
-
-  const handleApproveMentor = async () => {
-    const regId = confirmData.id;
-    if (!regId) return;
-    setConfirmOpen(false);
     setSubmittingId(regId);
     try {
       const res = await adminApi.processMentorRegistration(regId, "Approved");
@@ -158,6 +156,15 @@ const CourseApproval = () => {
     } finally {
       setSubmittingId(null);
       setConfirmData({ type: "", id: null, extra: null });
+    }
+  };
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while rejecting the mentor application.");
+    } finally {
+      setSubmittingId(null);
+      setConfirmData({ type: "", id: null, extra: null });
       setSelectedRegId(null);
       setRejectReason("");
     }
@@ -168,6 +175,28 @@ const CourseApproval = () => {
       handleApproveMentor();
     } else if (confirmData.type === "rejectMentor") {
       handleRejectMentor();
+    }
+  };
+
+  const handleToggleCourseStatus = async (courseId, currentStatus) => {
+    const nextStatus = currentStatus === "Active" ? "Inactive" : "Active";
+    const msg = nextStatus === "Active" ? "activate" : "suspend";
+    if (!window.confirm(`Are you sure you want to ${msg} this course?`)) return;
+
+    setSubmittingId(courseId);
+    try {
+      const res = await adminApi.toggleCourseStatus(courseId, nextStatus);
+      if (res && res.success) {
+        fetchCourses(coursePagination.page, courseSearch, courseStatus);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while updating the course status.");
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
     }
   };
 
@@ -206,7 +235,6 @@ const CourseApproval = () => {
     {
       key: "certificate",
       label: "Certificate",
-      sortable: true,
       render: (m) => {
         if (!m.certificate) {
           return <span className="text-slate-450 text-xs italic">Not uploaded</span>;
@@ -276,23 +304,118 @@ const CourseApproval = () => {
     }
   ];
 
+  // Columns for courses status toggle
+  const courseColumns = [
+    {
+      key: "title",
+      label: "Course Title",
+      render: (c) => (
+        <div>
+          <div className="font-bold text-slate-800">{c.title}</div>
+          <div className="text-xs text-slate-400 font-mono mt-0.5">{c._id}</div>
+        </div>
+      )
+    },
+    {
+      key: "category",
+      label: "Level",
+      render: (c) => (
+        <span className="px-2.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-xs font-bold">
+          {c.category}
+        </span>
+      )
+    },
+    {
+      key: "mentorName",
+      label: "Instructor / Mentor",
+      render: (c) => (
+        <div>
+          <div className="font-semibold text-slate-700">{c.mentorName || "Unknown"}</div>
+          <div className="text-[10px] text-slate-400 font-medium">{c.mentorEmail || ""}</div>
+        </div>
+      )
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (c) => {
+        const isActive = c.status === "Active";
+        return (
+          <span className={`px-2.5 py-0.5 rounded-lg border text-xs font-bold ${
+            isActive
+              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+              : "bg-slate-100 text-slate-500 border-slate-200"
+          }`}>
+            {isActive ? "Active" : "Inactive"}
+          </span>
+        );
+      }
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      className: "text-right",
+      render: (c) => {
+        const isActive = c.status === "Active";
+        return (
+          <button
+            onClick={() => handleToggleCourseStatus(c._id, c.status)}
+            disabled={submittingId !== null}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs ${
+              isActive
+                ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            }`}>
+            {isActive ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5" />
+                <span>Suspend</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5" />
+                <span>Activate</span>
+              </>
+            )}
+          </button>
+        );
+      }
+    }
+  ];
   return (
     <div className="space-y-6 text-slate-850 font-sans">
       {/* Header */}
       <div className="border-b border-slate-200/80 pb-6">
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Mentor Approval List</h1>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Approvals & Status</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Review and approve incoming instructor registration profiles.
+          Manage mentor applications and active courses status.
         </p>
       </div>
 
+      {/* Tabs Menu */}
+      <div className="flex gap-2 p-1 bg-slate-200/50 rounded-2xl w-fit">
+        <button
+          onClick={() => setActiveTab("mentors")}
+          className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+            activeTab === "mentors" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+          }`}>
+          Mentor Applications
+        </button>
+        <button
+          onClick={() => setActiveTab("courses")}
+          className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+            activeTab === "courses" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+          }`}>
+          Course Status
+        </button>
+      </div>
       {/* Tab Contents */}
       {error ? (
         <div className="p-6 border border-red-100 rounded-2xl bg-red-50/50 flex items-center gap-3 text-red-700 shadow-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div className="text-sm font-semibold">API connection error. Please verify the backend service or database status.</div>
         </div>
-      ) : (
+      ) : activeTab === "mentors" ? (
         <DataTable
           columns={mentorColumns}
           data={mentors}
@@ -303,10 +426,11 @@ const CourseApproval = () => {
             setMentorSearch(val);
             fetchMentors(1, val, mentorStatus, mentorSortColumn, mentorSortDirection);
           }}
+          }}
           filters={[
             {
               key: "status",
-              label: "All status",
+              label: "Application Status",
               value: mentorStatus,
               options: [
                 { value: "Pending", label: "Pending" },
@@ -350,6 +474,9 @@ const CourseApproval = () => {
               >
                 Close
               </button>
+              >
+                Close
+              </button>
             </div>
 
             <form onSubmit={handleRejectMentorSubmit} className="space-y-4">
@@ -390,7 +517,6 @@ const CourseApproval = () => {
           </div>
         </div>
       )}
-
       {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={confirmOpen}

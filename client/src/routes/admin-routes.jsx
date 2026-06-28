@@ -7,6 +7,7 @@ import CategoryManagement from "../pages/Admin/category-management";
 import UserControl from "../pages/Admin/user-control";
 import CourseManagement from "../pages/Admin/course-management";
 import Notifications from "../pages/Admin/notifications";
+import MentorRequests from "../pages/Admin/mentor-requests";
 
 const AdminRoutes = () => {
   return (
@@ -26,6 +27,9 @@ const AdminRoutes = () => {
         
         {/* /admin/courses maps to Course Management */}
         <Route path="courses" element={<CourseManagement />} />
+
+        {/* /admin/mentors maps to Mentor Requests */}
+        <Route path="mentors" element={<MentorRequests />} />
 
         {/* /admin/notifications maps to Notifications */}
         <Route path="notifications" element={<Notifications />} />

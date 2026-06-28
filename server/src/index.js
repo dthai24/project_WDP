@@ -43,7 +43,7 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/wdp";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/learning_path";
 const { seedDatabase } = require("./controllers/authController");
 
 mongoose
@@ -56,6 +56,40 @@ mongoose
     console.warn("MongoDB connection failed:", error.message);
   });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+const fs = require("fs");
+const https = require("https");
+
+const keyPath = path.join(__dirname, "../cert/server.key");
+const certPath = path.join(__dirname, "../cert/server.crt");
+
+if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+  try {
+    const options = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath)
+    };
+    https.createServer(options, app).listen(PORT, () => {
+      console.log(`HTTPS Server running on https://localhost:${PORT}`);
+    });
+
+    // Create an HTTP server on PORT + 1 to redirect to HTTPS
+    const HTTP_PORT = parseInt(PORT, 10) + 1;
+    const http = require("http");
+    http.createServer((req, res) => {
+      const host = req.headers.host ? req.headers.host.split(":")[0] : "localhost";
+      res.writeHead(301, { Location: `https://${host}:${PORT}${req.url}` });
+      res.end();
+    }).listen(HTTP_PORT, () => {
+      console.log(`HTTP Redirect Server running on http://localhost:${HTTP_PORT} -> https://localhost:${PORT}`);
+    });
+  } catch (sslErr) {
+    console.error("Failed to start HTTPS, falling back to HTTP:", sslErr.message);
+    app.listen(PORT, () => {
+      console.log(`HTTP Server running on http://localhost:${PORT}`);
+    });
+  }
+} else {
+  app.listen(PORT, () => {
+    console.log(`HTTP Server running on http://localhost:${PORT}`);
+  });
+}

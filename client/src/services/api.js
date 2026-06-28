@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create Axios instance for API requests
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000",
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5050",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -103,26 +103,35 @@ export const adminApi = {
     return response.data;
   },
 
-  // Notifications Control
   getNotifications: async () => {
-    const response = await api.get("/api/admin/notifications");
-    return response.data;
+    const response = await api.get("/api/mentor/applications");
+    const data = response.data || [];
+    const mapped = data.map(app => ({
+      _id: app._id,
+      title: `Yêu cầu Mentor từ ${app.fullName}`,
+      message: `Họ tên: ${app.fullName}\nEmail: ${app.email}\nPortfolio: ${app.portfolioUrl}\nGiới thiệu: ${app.bio}`,
+      type: "MENTOR_APPLICATION",
+      isRead: app.isReadByAdmin || app.status !== "pending",
+      createdAt: app.createdAt
+    }));
+    return { success: true, data: mapped };
   },
 
   toggleNotificationReadStatus: async (id, isRead) => {
-    const response = await api.patch(`/api/admin/notifications/${id}/read`, { isRead });
-    return response.data;
+    const response = await api.post("/api/mentor/applications/mark-read");
+    return { success: true, data: response.data };
   },
 
   markAllNotificationsRead: async () => {
-    const response = await api.post("/api/admin/notifications/mark-all-read");
-    return response.data;
+    const response = await api.post("/api/mentor/applications/mark-read");
+    return { success: true, data: response.data };
+  }
   }
 };
 
 export const healthApi = {
   checkHealth: async () => {
-    const response = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/health`);
+    const response = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/health`);
     return response.data;
   }
 };

@@ -73,7 +73,7 @@ export default function LoginPage({ onLogin, onBackHome }) {
 
     try {
       // 1. Cố gắng kết nối và xác thực qua API Backend
-      const response = await fetch("http://127.0.0.1:5000/api/auth/login", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
