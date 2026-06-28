@@ -182,8 +182,8 @@ export default function MentorTestSectionCard({
   const questions = section.Questions ?? [];
   const sectionScoreLabel = getSectionScoreLabel(section, scoringMode, totalScore, questionCountAll);
   const skillType = section.SkillType ?? TEST_SKILL_READING;
-  const skillTheme = TEST_SKILL_CHIP_COLORS[skillType] ?? TEST_SKILL_CHIP_COLORS[TEST_SKILL_READING];
-  const skillAccent = skillTheme.color;
+  const skillChip = TEST_SKILL_CHIP_COLORS[skillType] ?? TEST_SKILL_CHIP_COLORS[TEST_SKILL_READING];
+  const skillAccent = skillChip.color;
   const showListeningSource = skillType === TEST_SKILL_LISTENING;
   const isListeningQuestionBank = questionBankMode && showListeningSource;
   const displayTitle = questionBankMode ? '' : getSectionDisplayTitle(section);
