@@ -26,6 +26,73 @@ export default function QuizEngine({
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
 
+  // Recovery & Blocker States
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [savedProgress, setSavedProgress] = useState(null);
+
+  // Load current user email for unique backup key
+  useEffect(() => {
+    const userStr = localStorage.getItem("lexiora_user") || localStorage.getItem("learnpath_user");
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error("Error parsing user session:", e);
+      }
+    }
+  }, []);
+
+  const backupKey = currentUser?.email ? `lexiora_quiz_backup_${currentUser.email}` : null;
+
+  // 1. Auto-save progress
+  useEffect(() => {
+    if (!backupKey || submitted || showResult) return;
+    const stateToSave = {
+      currentQuestion,
+      answers,
+      timeLeft,
+      title,
+      quizStarted: true,
+      quizCompleted: false
+    };
+    localStorage.setItem(backupKey, JSON.stringify(stateToSave));
+  }, [currentQuestion, answers, timeLeft, backupKey, submitted, showResult, title]);
+
+  // 2. Check for saved progress on mount
+  useEffect(() => {
+    if (!backupKey) return;
+    const backup = localStorage.getItem(backupKey);
+    if (backup) {
+      try {
+        const parsed = JSON.parse(backup);
+        if (parsed.quizStarted && !parsed.quizCompleted) {
+          setSavedProgress(parsed);
+          setShowRestoreModal(true);
+        }
+      } catch (e) {
+        console.error("Error reading backup:", e);
+      }
+    }
+  }, [backupKey]);
+
+  // 3. Browser tab close warning (beforeunload)
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!submitted && !showResult) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [submitted, showResult]);
+
+  // Timer useEffect
   useEffect(() => {
     if (submitted || !timeLimit) return;
     if (timeLeft <= 0) { handleSubmit(); return; }
@@ -44,9 +111,20 @@ export default function QuizEngine({
     setAnswers(prev => ({ ...prev, [currentQuestion]: optionIndex }));
   };
 
+  const handleExitAttempt = () => {
+    if (submitted || showResult) {
+      if (onBack) onBack();
+    } else {
+      setShowExitModal(true);
+    }
+  };
+
   const handleSubmit = () => {
     setSubmitted(true);
     setShowResult(true);
+    if (backupKey) {
+      localStorage.removeItem(backupKey);
+    }
     const correctCount = questions.filter((q, i) => answers[i] === q.correct).length;
     const score = Math.round((correctCount / questions.length) * 100);
     if (onComplete) onComplete({ correctCount, total: questions.length, score, passed: score >= passingScore });
@@ -227,7 +305,7 @@ export default function QuizEngine({
     <div className="min-h-screen bg-surface-muted">
       <div className="bg-white border-b border-border/30 px-6 py-3 flex items-center justify-between">
         {onBack && (
-          <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary transition-colors">
+          <button onClick={handleExitAttempt} className="flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary transition-colors">
             <ArrowLeft className="w-4 h-4" />
             <span>Thoat</span>
           </button>
@@ -243,6 +321,85 @@ export default function QuizEngine({
         </div>
       </div>
       <div className="max-w-3xl mx-auto px-6 py-10">{quizContent}</div>
+
+      {/* Exit Blocker Modal */}
+      {showExitModal && (
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full border border-rose-100 shadow-2xl flex flex-col items-center text-center space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
+              <AlertCircle size={32} className="animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-slate-900">Rời khỏi phòng thi?</h3>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Bạn đang làm dở bài kiểm tra. Bạn có chắc chắn muốn rời đi? Tiến trình làm bài sẽ được tự động lưu lại.
+              </p>
+            </div>
+            <div className="flex gap-3 w-full pt-2">
+              <button
+                onClick={() => setShowExitModal(false)}
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-2xl active:scale-95 transition-all"
+              >
+                Tiếp tục làm bài
+              </button>
+              <button
+                onClick={() => {
+                  setShowExitModal(false);
+                  if (onBack) onBack();
+                }}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shadow-md shadow-rose-500/10"
+              >
+                Rời đi & Lưu bài
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore Progress Modal */}
+      {showRestoreModal && (
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full border border-rose-100 shadow-2xl flex flex-col items-center text-center space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center shadow-inner">
+              <HelpCircle size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-slate-900">Tiếp tục bài làm?</h3>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Hệ thống phát hiện bài làm trắc nghiệm trước đó của bạn chưa hoàn thành. Bạn có muốn tiếp tục làm tiếp không?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full pt-2">
+              <button
+                onClick={() => {
+                  if (backupKey) {
+                    localStorage.removeItem(backupKey);
+                  }
+                  setShowRestoreModal(false);
+                }}
+                className="flex-1 py-3 px-4 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-2xl active:scale-95 transition-all"
+              >
+                Làm bài mới
+              </button>
+              <button
+                onClick={() => {
+                  if (savedProgress) {
+                    setCurrentQuestion(savedProgress.currentQuestion || 0);
+                    setAnswers(savedProgress.answers || {});
+                    if (savedProgress.timeLeft !== undefined) {
+                      setTimeLeft(savedProgress.timeLeft);
+                    }
+                  }
+                  setShowRestoreModal(false);
+                }}
+                className="flex-1 py-3 px-4 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shadow-md shadow-primary/10"
+              >
+                Tiếp tục làm bài
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
