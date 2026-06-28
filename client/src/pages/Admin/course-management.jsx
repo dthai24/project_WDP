@@ -175,6 +175,30 @@ const CourseManagement = () => {
       window.history.replaceState(null, "", newRelativePathQuery);
     }
   };
+
+  return (
+    <div className="space-y-6 text-slate-855 font-sans animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-blue-600" />
+            <span>Course Management</span>
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Browse and search courses, filter by tag categories, and toggle active/inactive status.
+          </p>
+        </div>
+        <button
+          onClick={() => fetchCourses(pagination.page, search, statusFilter, categoryFilter, sortColumn, sortDirection)}
+          disabled={loading}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl hover:bg-slate-50 text-slate-700 font-bold text-sm transition-all shadow-xs disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? "animate-spin" : ""}`} />
+          <span>Sync Courses</span>
+        </button>
+      </div>
+
       {/* Main Content */}
       {error ? (
         <div className="p-6 border border-red-100 rounded-2xl bg-red-50/50 flex items-center gap-3 text-red-700 shadow-sm">
@@ -192,7 +216,6 @@ const CourseManagement = () => {
             setSearch(val);
             fetchCourses(1, val, statusFilter, categoryFilter, sortColumn, sortDirection);
           }}
-          }}
           filters={[
             {
               key: "category",
@@ -207,9 +230,6 @@ const CourseManagement = () => {
               options: [
                 { value: "Active", label: "Active" },
                 { value: "Inactive", label: "Inactive" },
-                { value: "Pending", label: "Pending" }
-              ]
-            }
                 { value: "Pending", label: "Pending" }
               ]
             }
