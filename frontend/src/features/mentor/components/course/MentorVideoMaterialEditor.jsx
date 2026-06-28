@@ -1,12 +1,21 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Box, InputBase, Typography } from '@mui/material';
 import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
 import PlayCircleRoundedIcon from '@mui/icons-material/PlayCircleRounded';
 import OndemandVideoRoundedIcon from '@mui/icons-material/OndemandVideoRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
-import { resolveVideoEmbed } from '@/shared/utils/videoEmbedUtils';
+import {
+  contentFieldSx,
+  contentInputInnerSx,
+  MATERIAL_TYPE_THEME,
+} from './mentorCourseContentStyles';
+import {
+  COMPACT_VIDEO_PREVIEW_HEIGHT,
+  COMPACT_VIDEO_PREVIEW_MAX_WIDTH,
+  fetchVideoTitle,
+  resolveVideoEmbed,
+} from '@/shared/utils/videoEmbedUtils';
 
 // TODO: backend should support EmbedUrl for VIDEO material
 
@@ -49,18 +58,32 @@ function VideoPreviewFrame({ previewType, embedUrl }) {
   );
 }
 
-export default function MentorVideoMaterialEditor({
+export function MentorVideoUrlField({
   material,
   errors = {},
   onChange,
   disabled = false,
+  compact = false,
 }) {
-  const theme = MATERIAL_TYPE_THEME.VIDEO;
-  const materialUrl = String(material.MaterialUrl ?? '').trim();
+  const applyVideoUrl = useCallback(
+    async (value, { fillTitle = false } = {}) => {
+      const trimmed = String(value ?? '').trim();
+      const { embedUrl } = resolveVideoEmbed(trimmed);
+      const patch = {
+        MaterialUrl: trimmed,
+        EmbedUrl: embedUrl,
+        SourceType: 'LINK',
+      };
 
-  const preview = useMemo(() => resolveVideoEmbed(materialUrl), [materialUrl]);
-  const canPreview = Boolean(preview.embedUrl && preview.previewType);
-  const showUnknownPreview = materialUrl.length > 0 && !canPreview;
+      if (fillTitle && embedUrl) {
+        const title = await fetchVideoTitle(trimmed);
+        if (title) patch.Title = title;
+      }
+
+      onChange(material.tempId, patch);
+    },
+    [material.tempId, onChange],
+  );
 
   const handleUrlChange = (value) => {
     const { embedUrl } = resolveVideoEmbed(value);
@@ -71,45 +94,31 @@ export default function MentorVideoMaterialEditor({
     });
   };
 
-  return (
-    <Box
-      sx={{
-        mt: 1.25,
-        ml: { xs: 0, sm: 0.25 },
-        p: { xs: 1.25, sm: 1.5 },
-        borderRadius: '16px',
-        border: `1px solid ${
-          errors.MaterialUrl ? '#FECACA' : 'rgba(15,23,42,0.08)'
-        }`,
-        bgcolor: '#F8FAFC',
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
-        <PlayCircleRoundedIcon sx={{ fontSize: 20, color: theme.color }} />
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
-          Gắn link video
-        </Typography>
-      </Box>
+  const handleUrlPaste = useCallback(
+    async (event) => {
+      const pasted = event.clipboardData?.getData('text')?.trim();
+      if (!pasted) return;
+      event.preventDefault();
+      await applyVideoUrl(pasted, { fillTitle: true });
+    },
+    [applyVideoUrl],
+  );
 
-      <ContentFieldLabel sx={fieldLabelSx}>Link video</ContentFieldLabel>
-      <InputBase
-        value={material.MaterialUrl ?? ''}
-        onChange={(event) => handleUrlChange(event.target.value)}
-        disabled={disabled}
-        placeholder="https://youtube.com/watch?v=... hoặc link video"
-        fullWidth
-        sx={{
-          fontSize: 13,
-          color: TEXT,
-          px: 1,
-          py: 0.65,
-          borderRadius: '10px',
-          border: `1px solid ${errors.MaterialUrl ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-          bgcolor: '#fff',
-          '&:focus-within': { borderColor: errors.MaterialUrl ? '#DC2626' : PRIMARY },
-        }}
-      />
-      <Typography sx={{ fontSize: 11.5, color: MUTED, mt: 0.5, lineHeight: 1.45 }}>
+  return (
+    <Box sx={compact ? undefined : { mt: 0 }}>
+      <ContentFieldLabel sx={compact ? undefined : fieldLabelSx}>Link video</ContentFieldLabel>
+      <Box sx={contentFieldSx(Boolean(errors.MaterialUrl))}>
+        <InputBase
+          value={material.MaterialUrl ?? ''}
+          onChange={(event) => handleUrlChange(event.target.value)}
+          onPaste={handleUrlPaste}
+          disabled={disabled}
+          placeholder="https://youtube.com/watch?v=... hoặc link video"
+          fullWidth
+          sx={contentInputInnerSx}
+        />
+      </Box>
+      <Typography sx={{ fontSize: 11.5, color: MUTED, mt: 0.75, lineHeight: 1.45 }}>
         Hỗ trợ YouTube, Vimeo, Google Drive hoặc link .mp4 trực tiếp.
       </Typography>
       {errors.MaterialUrl && (
@@ -117,28 +126,86 @@ export default function MentorVideoMaterialEditor({
           {errors.MaterialUrl}
         </Typography>
       )}
+    </Box>
+  );
+}
+
+export default function MentorVideoMaterialEditor({
+  material,
+  errors = {},
+  onChange,
+  disabled = false,
+  compact = false,
+}) {
+  const theme = MATERIAL_TYPE_THEME.VIDEO;
+  const materialUrl = String(material.MaterialUrl ?? '').trim();
+
+  const preview = useMemo(() => resolveVideoEmbed(materialUrl), [materialUrl]);
+  const canPreview = Boolean(preview.embedUrl && preview.previewType);
+  const showUnknownPreview = materialUrl.length > 0 && !canPreview;
+
+  return (
+    <Box
+      sx={
+        compact
+          ? { mt: 0 }
+          : {
+              mt: 1.25,
+              ml: { xs: 0, sm: 0.25 },
+              p: { xs: 1.25, sm: 1.5 },
+              borderRadius: '16px',
+              border: `1px solid ${errors.MaterialUrl ? '#FECACA' : 'rgba(15,23,42,0.08)'}`,
+              bgcolor: '#F8FAFC',
+            }
+      }
+    >
+      {!compact ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
+          <PlayCircleRoundedIcon sx={{ fontSize: 20, color: theme.color }} />
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
+            Xem trước video
+          </Typography>
+        </Box>
+      ) : null}
 
       {canPreview ? (
-        <Box sx={{ mt: 1.25 }}>
-          <ContentFieldLabel sx={{ ...fieldLabelSx, mb: 0.75 }}>
-            Xem trước
-          </ContentFieldLabel>
+        <Box
+          sx={{
+            mt: compact ? 2 : 1.25,
+            width: '100%',
+            display: 'flex',
+            justifyContent: compact ? 'center' : 'flex-start',
+          }}
+        >
           <Box
             sx={{
-              position: 'relative',
               width: '100%',
-              pt: '56.25%',
-              borderRadius: '14px',
-              overflow: 'hidden',
-              border: '1px solid rgba(15,23,42,0.08)',
-              bgcolor: '#0F172A',
+              maxWidth: compact ? { xs: '100%', sm: COMPACT_VIDEO_PREVIEW_MAX_WIDTH } : '100%',
             }}
           >
-            <Box sx={{ position: 'absolute', inset: 0 }}>
-              <VideoPreviewFrame
-                previewType={preview.previewType}
-                embedUrl={preview.embedUrl}
-              />
+            <ContentFieldLabel sx={{ ...fieldLabelSx, mb: 0.75 }}>
+              Xem trước
+            </ContentFieldLabel>
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                ...(compact
+                  ? { height: COMPACT_VIDEO_PREVIEW_HEIGHT }
+                  : { pt: '56.25%' }),
+                borderRadius: compact ? '10px' : '14px',
+                overflow: 'hidden',
+                border: '1px solid rgba(15,23,42,0.08)',
+                bgcolor: '#0F172A',
+                mx: compact ? 'auto' : 0,
+              }}
+            >
+              <Box sx={{ position: 'absolute', inset: 0 }}>
+                <VideoPreviewFrame
+                  previewType={preview.previewType}
+                  embedUrl={preview.embedUrl}
+                />
+              </Box>
             </Box>
           </Box>
         </Box>
@@ -147,13 +214,13 @@ export default function MentorVideoMaterialEditor({
       {showUnknownPreview ? (
         <Box
           sx={{
-            mt: 1.25,
+            mt: compact ? 2 : 1.25,
             display: 'flex',
             alignItems: 'flex-start',
             gap: 1,
-            p: 1.25,
-            borderRadius: '14px',
-            bgcolor: '#fff',
+            p: compact ? 1 : 1.25,
+            borderRadius: compact ? '10px' : '14px',
+            bgcolor: compact ? 'transparent' : '#fff',
             border: '1px dashed rgba(15,23,42,0.12)',
           }}
         >
@@ -172,13 +239,13 @@ export default function MentorVideoMaterialEditor({
       {!materialUrl && !canPreview && !showUnknownPreview ? (
         <Box
           sx={{
-            mt: 1.25,
+            mt: compact ? 2 : 1.25,
             display: 'flex',
             alignItems: 'center',
             gap: 1,
-            p: 1.25,
-            borderRadius: '14px',
-            bgcolor: '#fff',
+            p: compact ? 0.75 : 1.25,
+            borderRadius: compact ? '10px' : '14px',
+            bgcolor: compact ? 'transparent' : '#fff',
             border: '1px dashed rgba(15,23,42,0.10)',
           }}
         >

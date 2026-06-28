@@ -75,6 +75,7 @@ export default function MentorDocumentMaterialEditor({
   errors = {},
   onChange,
   disabled = false,
+  compact = false,
 }) {
   const theme = MATERIAL_TYPE_THEME.DOC;
   const fileInputRef = useRef(null);
@@ -151,23 +152,29 @@ export default function MentorDocumentMaterialEditor({
 
   return (
     <Box
-      sx={{
-        mt: 1.25,
-        ml: { xs: 0, sm: 0.25 },
-        p: { xs: 1.25, sm: 1.5 },
-        borderRadius: '16px',
-        border: `1px solid ${
-          errors.File || errors.MaterialUrl ? '#FECACA' : 'rgba(15,23,42,0.08)'
-        }`,
-        bgcolor: '#F8FAFC',
-      }}
+      sx={
+        compact
+          ? { mt: 0 }
+          : {
+              mt: 1.25,
+              ml: { xs: 0, sm: 0.25 },
+              p: { xs: 1.25, sm: 1.5 },
+              borderRadius: '16px',
+              border: `1px solid ${
+                errors.File || errors.MaterialUrl ? '#FECACA' : 'rgba(15,23,42,0.08)'
+              }`,
+              bgcolor: '#F8FAFC',
+            }
+      }
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
-        <DescriptionRoundedIcon sx={{ fontSize: 20, color: theme.color }} />
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
-          Tài liệu học tập
-        </Typography>
-      </Box>
+      {!compact ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
+          <DescriptionRoundedIcon sx={{ fontSize: 20, color: theme.color }} />
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
+            Tài liệu học tập
+          </Typography>
+        </Box>
+      ) : null}
 
       <ContentFieldLabel sx={{ mb: 0.75, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
         Nguồn tài liệu
@@ -227,18 +234,7 @@ export default function MentorDocumentMaterialEditor({
                 transition: 'border-color 0.15s, background-color 0.15s',
               }}
             >
-              <Box
-                sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '12px',
-                  bgcolor: theme.soft,
-                  display: 'grid',
-                  placeItems: 'center',
-                }}
-              >
-                <InsertDriveFileRoundedIcon sx={{ fontSize: 24, color: theme.color }} />
-              </Box>
+              <InsertDriveFileRoundedIcon sx={{ fontSize: compact ? 28 : 24, color: theme.color }} />
               <Typography
                 sx={{ fontSize: 13, fontWeight: 600, color: TEXT, textAlign: 'center', lineHeight: 1.45 }}
               >
@@ -288,19 +284,7 @@ export default function MentorDocumentMaterialEditor({
                 border: '1px solid rgba(15,23,42,0.08)',
               }}
             >
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '10px',
-                  bgcolor: theme.soft,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <InsertDriveFileRoundedIcon sx={{ fontSize: 22, color: theme.color }} />
-              </Box>
+              <InsertDriveFileRoundedIcon sx={{ fontSize: 22, color: theme.color, flexShrink: 0 }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
                   sx={{

@@ -194,8 +194,16 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
   );
 }
 
-export default function MentorCourseContentReview({ paths = [] }) {
+export default function MentorCourseContentReview({ paths = [], courseId = null }) {
   const navigate = useNavigate();
+
+  const handleEditContent = () => {
+    if (courseId) {
+      navigate(`/mentor/courses/${courseId}/content/edit`);
+      return;
+    }
+    navigate('/mentor/courses/create/content');
+  };
 
   return (
     <Box sx={CREATE_CARD_SX}>
@@ -205,7 +213,7 @@ export default function MentorCourseContentReview({ paths = [] }) {
           <AppButton
             variant="outlined"
             startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
-            onClick={() => navigate('/mentor/courses/create/content')}
+            onClick={handleEditContent}
             sx={{
               height: 34,
               borderRadius: '999px',

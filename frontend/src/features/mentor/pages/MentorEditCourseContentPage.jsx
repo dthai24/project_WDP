@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Breadcrumbs, CircularProgress, Link as MuiLink, Typography } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import AppButton from '@/shared/ui/AppButton';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseContentBuilder from '@/features/mentor/components/course/MentorCourseContentBuilder';
 import MentorContentOverview from '@/features/mentor/components/course/MentorContentOverview';
+import MentorCourseContentFooterActions, {
+  COURSE_CONTENT_MOBILE_FOOTER_ID,
+} from '@/features/mentor/components/course/MentorCourseContentFooterActions';
+import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
 import MentorCourseLeaveDialog from '@/features/mentor/components/course/MentorCourseLeaveDialog';
-import MentorChapterDraftDialog from '@/features/mentor/components/course/MentorChapterDraftDialog';
-import { MUTED, PAGE_TITLE_SX, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { useMentorCourseLeaveGuard } from '@/features/mentor/hooks/useMentorCourseLeaveGuard';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
 import { getUser } from '@/features/auth/utils/authUtils';
@@ -25,15 +26,18 @@ import {
   createEmptyMaterial,
   createEmptyNode,
   createEmptyPath,
+  chapterHasContent,
+  lessonHasContent,
+  materialHasContent,
   getFirstContentErrorTarget,
   hasContentValidationErrors,
   isPathSnapshotSaved,
   MATERIAL_TYPE_LABELS,
+  parseContentFocusTarget,
   reorderMaterials,
   scrollToContentItem,
   serializePathSnapshot,
   validateCourseContent,
-  validatePathForSave,
   withNormalizedOrders,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 
@@ -106,11 +110,8 @@ export default function MentorEditCourseContentPage() {
   const [expandedPaths, setExpandedPaths] = useState({});
   const [expandedNodes, setExpandedNodes] = useState({});
   const [savedPathSnapshots, setSavedPathSnapshots] = useState({});
-  const [isSaved, setIsSaved] = useState(false);
-  const [savingChapterId, setSavingChapterId] = useState(null);
-  const [chapterDraftDialogOpen, setChapterDraftDialogOpen] = useState(false);
-  const [pendingChapterTempId, setPendingChapterTempId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [focusTarget, setFocusTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
 
@@ -132,7 +133,6 @@ export default function MentorEditCourseContentPage() {
     async ({ markAllSaved = true } = {}) => {
       if (!coursePascal) return;
       persistEditContent(courseId, coursePascal, paths);
-      setIsSaved(true);
       if (markAllSaved) setSavedPathSnapshots(buildSnapshots(paths));
     },
     [buildSnapshots, courseId, coursePascal, paths],
@@ -190,7 +190,6 @@ export default function MentorEditCourseContentPage() {
       setCoursePascal(resolvedCoursePascal);
       setPaths(loaded);
       setSavedPathSnapshots(snapshots);
-      setIsSaved(Boolean(existingDraft?.meta?.contentSaved) || loaded.length > 0);
       setReady(true);
     })();
 
@@ -228,12 +227,22 @@ export default function MentorEditCourseContentPage() {
 
   const requestDeletePath = (pathTempId) => {
     const p = paths.find((x) => x.tempId === pathTempId);
+    if (!p) return;
+    if (!chapterHasContent(p)) {
+      handlePathDelete(pathTempId);
+      return;
+    }
     setDeleteConfirm({ type: 'chapter', pathTempId, label: String(p?.PathName ?? '').trim() || 'Chương này' });
   };
 
   const requestDeleteNode = (pathTempId, nodeTempId) => {
     const p = paths.find((x) => x.tempId === pathTempId);
     const n = (p?.nodes ?? p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
+    if (!n) return;
+    if (!lessonHasContent(n)) {
+      handleNodeDelete(pathTempId, nodeTempId);
+      return;
+    }
     setDeleteConfirm({ type: 'lesson', pathTempId, nodeTempId, label: String(n?.NodeName ?? '').trim() || 'Bài học này' });
   };
 
@@ -241,6 +250,11 @@ export default function MentorEditCourseContentPage() {
     const p = paths.find((x) => x.tempId === pathTempId);
     const n = (p?.nodes ?? p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
     const m = (n?.materials ?? n?.Materials ?? []).find((x) => x.tempId === materialTempId);
+    if (!m) return;
+    if (!materialHasContent(m)) {
+      handleMaterialDelete(pathTempId, nodeTempId, materialTempId);
+      return;
+    }
     const title = String(m?.Title ?? '').trim();
     const typeLabel = MATERIAL_TYPE_LABELS[m?.MaterialType] ?? 'Học liệu';
     setDeleteConfirm({ type: 'material', pathTempId, nodeTempId, materialTempId, label: title || `${typeLabel} này` });
@@ -347,54 +361,10 @@ export default function MentorEditCourseContentPage() {
     );
   };
 
-  // ── chapter save ────────────────────────────────────────────────────────────
-
-  const executeChapterSave = async (pathTempId) => {
-    const p = paths.find((x) => x.tempId === pathTempId);
-    if (!p) return false;
-
-    const pathErrors = validatePathForSave(p);
-    if (pathErrors.PathName) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        paths: { ...(prev.paths ?? {}), [pathTempId]: { ...(prev.paths?.[pathTempId] ?? {}), ...pathErrors } },
-      }));
-      toast.error(pathErrors.PathName);
-      return false;
-    }
-
-    setSavingChapterId(pathTempId);
-    try {
-      await doPersist({ markAllSaved: false });
-      setSavedPathSnapshots((prev) => ({ ...prev, [pathTempId]: serializePathSnapshot(p) }));
-      toast.success('Đã lưu chương.');
-      return true;
-    } finally {
-      setSavingChapterId(null);
-    }
-  };
-
-  const handleSaveChapter = (pathTempId) => {
-    if (!isSaved) {
-      setPendingChapterTempId(pathTempId);
-      setChapterDraftDialogOpen(true);
-      return;
-    }
-    void executeChapterSave(pathTempId);
-  };
-
-  const handleChapterDraftDialogSave = async () => {
-    if (!pendingChapterTempId) return;
-    const saved = await executeChapterSave(pendingChapterTempId);
-    if (!saved) return;
-    setIsSaved(true);
-    setChapterDraftDialogOpen(false);
-    setPendingChapterTempId(null);
-  };
-
   // ── submit (Lưu nội dung → review) ─────────────────────────────────────────
 
   const handleNavigateToContent = useCallback((target) => {
+    setFocusTarget(target);
     scrollToContentItem(target, { setExpandedPaths, setExpandedNodes });
   }, []);
 
@@ -422,11 +392,13 @@ export default function MentorEditCourseContentPage() {
 
       const target = getFirstContentErrorTarget(errors, paths);
       if (target) {
+        const focus = parseContentFocusTarget(target, paths);
+        if (focus) setFocusTarget(focus);
         setTimeout(() => {
           document
             .querySelector(`[data-content-error="${target}"]`)
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 180);
+        }, 220);
       }
       return;
     }
@@ -462,55 +434,28 @@ export default function MentorEditCourseContentPage() {
   }
 
   const deleteDialogContent = getDeleteDialogContent(deleteConfirm);
-  const busy = submitting || savingDraft || Boolean(savingChapterId) || saving;
+  const busy = submitting || savingDraft || saving;
 
   const footerActions = (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, width: '100%' }}>
-      <AppButton
-        variant="outlined"
-        startIcon={<ArrowBackRoundedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
-        onClick={() => navigate(`/mentor/courses/${courseId}/edit`)}
-        disabled={busy}
-        sx={{
-          flex: '1 1 0', minWidth: 0, height: 42, borderRadius: '999px',
-          fontWeight: 700, fontSize: { xs: 12, sm: 13 }, px: { xs: 1, sm: 2 },
-        }}
-      >
-        Quay lại
-      </AppButton>
-      <AppButton
-        variant="outlined"
-        onClick={handleSaveDraftClick}
-        loading={savingDraft}
-        disabled={submitting || saving}
-        sx={{
-          flex: '1 1 0', minWidth: 0, height: 42, borderRadius: '999px',
-          fontWeight: 700, fontSize: { xs: 12, sm: 13 }, px: { xs: 1, sm: 2 },
-        }}
-      >
-        Lưu nháp
-      </AppButton>
-      <AppButton
-        onClick={handleSaveContent}
-        loading={submitting}
-        endIcon={!submitting ? <SaveRoundedIcon sx={{ fontSize: 16 }} /> : undefined}
-        disabled={savingDraft || saving}
-        sx={{
-          flex: '1 1 0', minWidth: 0, height: 42, borderRadius: '999px',
-          fontWeight: 700, fontSize: { xs: 12, sm: 13 }, px: { xs: 1, sm: 2 },
-          bgcolor: PRIMARY, '&:hover': { bgcolor: '#0E7490' },
-        }}
-      >
-        Lưu nội dung
-      </AppButton>
-    </Box>
+    <MentorCourseContentFooterActions
+      onBack={() => navigate(`/mentor/courses/${courseId}/edit`)}
+      onSaveDraft={handleSaveDraftClick}
+      onPrimary={handleSaveContent}
+      primaryLabel="Lưu nội dung"
+      primaryEndIcon={!submitting ? <SaveRoundedIcon sx={{ fontSize: 16 }} /> : undefined}
+      backDisabled={busy}
+      saveDraftDisabled={submitting || saving}
+      primaryDisabled={savingDraft || saving}
+      saveDraftLoading={savingDraft}
+      primaryLoading={submitting}
+    />
   );
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
+    <Box sx={{ width: '100%', maxWidth: { xs: '100%', xl: 1600 }, mx: 'auto' }}>
       <Breadcrumbs
         separator="/"
-        sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 } }}
+        sx={{ mb: 1.5, '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 } }}
       >
         <MuiLink component={Link} to="/home" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
           Trang chủ
@@ -526,15 +471,25 @@ export default function MentorEditCourseContentPage() {
         </Typography>
       </Breadcrumbs>
 
-      <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 1.75, maxWidth: 720 }}>
+      <Typography
+        component="h1"
+        sx={{
+          fontSize: { xs: 15, sm: 16 },
+          fontWeight: 600,
+          color: MUTED,
+          letterSpacing: '-0.01em',
+          lineHeight: 1.3,
+          mb: 0.75,
+        }}
+      >
         Chỉnh sửa nội dung khóa học
       </Typography>
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 7fr) minmax(280px, 3fr)' },
-          gap: { xs: 2, lg: 2.5 },
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' },
+          gap: { xs: 2, lg: 2 },
           alignItems: 'start',
         }}
       >
@@ -563,22 +518,40 @@ export default function MentorEditCourseContentPage() {
           onMaterialReorder={handleMaterialReorder}
           disabled={busy}
           savedPathSnapshots={savedPathSnapshots}
-          savingChapterId={savingChapterId}
-          onSaveChapter={handleSaveChapter}
+          showChapterSave={false}
+          focusTarget={focusTarget}
         />
 
         <MentorContentOverview
           paths={paths}
-          courseId={Number(courseId)}
           courseName={courseName}
+          focusTarget={focusTarget}
           footer={footerActions}
           onNavigateToItem={handleNavigateToContent}
         />
       </Box>
 
-      <Box sx={{ display: { xs: 'flex', lg: 'none' }, mt: 2.5 }}>
+      <Box
+        id={COURSE_CONTENT_MOBILE_FOOTER_ID}
+        sx={{
+          display: { xs: 'block', lg: 'none' },
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 5,
+          mt: 2.5,
+          pt: 1.5,
+          pb: 'max(20px, env(safe-area-inset-bottom, 0px))',
+          bgcolor: 'rgba(255,255,255,0.96)',
+          backdropFilter: 'blur(8px)',
+          borderTop: '1px solid rgba(15,23,42,0.08)',
+        }}
+      >
         {footerActions}
       </Box>
+
+      <ScrollToTopButton
+        avoidSelectors={['#app-site-footer', `#${COURSE_CONTENT_MOBILE_FOOTER_ID}`]}
+      />
 
       <MentorCourseLeaveDialog
         open={dialogOpen}
@@ -586,17 +559,6 @@ export default function MentorEditCourseContentPage() {
         onDiscard={handleDiscard}
         onSaveDraft={handleSaveDraft}
         saving={saving}
-      />
-
-      <MentorChapterDraftDialog
-        open={chapterDraftDialogOpen}
-        onCancel={() => {
-          if (savingChapterId) return;
-          setChapterDraftDialogOpen(false);
-          setPendingChapterTempId(null);
-        }}
-        onSaveDraft={handleChapterDraftDialogSave}
-        saving={Boolean(savingChapterId)}
       />
 
       <ConfirmDialog

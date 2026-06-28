@@ -3,7 +3,8 @@ import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownR
 import PlayCircleRoundedIcon from '@mui/icons-material/PlayCircleRounded';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
-import { TEXT } from './mentorCourseCreateStyles';
+import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { contentInputSx } from './mentorCourseContentStyles';
 
 const PRIMARY = '#0891B2';
 const PRIMARY_SELECTED = '#0E7490';
@@ -21,26 +22,9 @@ function getOption(value) {
 
 function TypeOptionIcon({ opt, size = 'md' }) {
   const Icon = opt.icon;
-  const dim = size === 'sm' ? 22 : 24;
-  const iconSize = size === 'sm' ? 16 : 18;
+  const iconSize = size === 'sm' ? 18 : 20;
 
-  return (
-    <Box
-      component="span"
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: dim,
-        height: dim,
-        borderRadius: '6px',
-        bgcolor: opt.soft,
-        flexShrink: 0,
-      }}
-    >
-      <Icon sx={{ fontSize: iconSize, color: opt.color }} />
-    </Box>
-  );
+  return <Icon sx={{ fontSize: iconSize, color: opt.color, flexShrink: 0, display: 'block' }} />;
 }
 
 export default function MentorMaterialTypeSelect({
@@ -56,6 +40,8 @@ export default function MentorMaterialTypeSelect({
       value={value}
       onChange={onChange}
       disabled={disabled}
+      variant="standard"
+      disableUnderline={false}
       IconComponent={KeyboardArrowDownRoundedIcon}
       renderValue={() => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, overflow: 'hidden' }}>
@@ -95,32 +81,33 @@ export default function MentorMaterialTypeSelect({
       }}
       sx={{
         width: '100%',
-        height: 40,
-        borderRadius: '14px',
-        bgcolor: '#fff',
-        '& .MuiOutlinedInput-notchedOutline': {
-          borderColor: error ? '#DC2626' : 'rgba(15,23,42,0.10)',
+        height: 'auto',
+        minHeight: 28,
+        borderRadius: 0,
+        bgcolor: 'transparent',
+        '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+        '&:before': {
+          borderBottom: `1px solid ${error ? '#DC2626' : 'rgba(8,145,178,0.18)'}`,
         },
-        '&:hover .MuiOutlinedInput-notchedOutline': {
-          borderColor: error ? '#DC2626' : 'rgba(15,23,42,0.16)',
+        '&:hover:not(.Mui-disabled):before': {
+          borderBottom: `1px solid ${error ? '#DC2626' : 'rgba(8,145,178,0.28)'}`,
         },
-        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-          borderColor: error ? '#DC2626' : PRIMARY,
-          borderWidth: 1,
+        '&.Mui-focused:after': {
+          borderBottom: `2px solid ${error ? '#DC2626' : PRIMARY}`,
         },
         '& .MuiSelect-select': {
           display: 'flex',
           alignItems: 'center',
           py: 0,
-          pl: 1,
+          pl: 0,
           pr: '28px !important',
-          minHeight: '40px !important',
+          minHeight: '28px !important',
           boxSizing: 'border-box',
         },
         '& .MuiSelect-icon': {
           fontSize: 18,
-          color: '#64748B',
-          right: 8,
+          color: MUTED,
+          right: 0,
           top: 'calc(50% - 9px)',
         },
       }}
@@ -147,7 +134,7 @@ export default function MentorMaterialTypeSelect({
                 color: PRIMARY_SELECTED,
                 '&:hover': { bgcolor: 'rgba(8,145,178,0.12)' },
               },
-              '&.Mui-selected > .MuiSvgIcon-root': {
+              '&.Mui-selected .MuiMenuItem-icon': {
                 display: 'none',
               },
             }}

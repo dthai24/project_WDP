@@ -1,3 +1,4 @@
+import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 
 export const BORDER = 'rgba(15,23,42,0.08)';
@@ -38,14 +39,14 @@ export const MATERIAL_TYPE_THEME = {
 
 export const CONTENT_FIELD_LABEL_SX = {
   fontSize: 12,
-  fontWeight: 600,
+  fontWeight: 500,
   color: MUTED,
-  mb: 0.75,
-  lineHeight: 1.35,
+  mb: 0.4,
+  lineHeight: 1.25,
 };
 
 export const CONTENT_SECTION_LABEL_SX = {
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 700,
   color: MUTED,
   letterSpacing: '0.04em',
@@ -56,46 +57,87 @@ export const CONTENT_SECTION_LABEL_SX = {
 };
 
 export const CONTENT_CARD_META_SX = {
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 500,
   color: MUTED,
   lineHeight: 1.35,
 };
 
 export const CONTENT_CARD_TITLE_SX = {
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: 600,
   color: TEXT,
   lineHeight: 1.35,
 };
 
-export function contentInputSx(hasError = false) {
-  return {
-    fontSize: 14,
+function underlineBorderColor(hasError, accent = PRIMARY) {
+  return hasError ? '#DC2626' : 'rgba(8,145,178,0.18)';
+}
+
+export const contentInputInnerSx = {
+  fontSize: 14,
+  fontWeight: 600,
+  color: TEXT,
+  lineHeight: 1.45,
+  width: '100%',
+  '& .MuiInputBase-input': {
+    p: 0,
+    height: 'auto',
+  },
+  '& .MuiInputBase-inputMultiline': {
+    p: 0,
+  },
+  '& .MuiInputBase-input::placeholder': {
+    color: MUTED,
+    opacity: 0.7,
     fontWeight: 500,
-    color: TEXT,
-    px: 1.25,
-    py: 0.75,
-    minHeight: 40,
-    borderRadius: '10px',
-    border: `1px solid ${hasError ? '#DC2626' : BORDER_STRONG}`,
-    bgcolor: '#fff',
+  },
+};
+
+export function contentFieldSx(hasError = false, theme = CHAPTER_THEME) {
+  const accent = theme?.color ?? PRIMARY;
+  return {
+    pb: '4px',
     width: '100%',
     boxSizing: 'border-box',
-    transition: 'border-color 0.15s ease',
+    borderBottom: `1px solid ${underlineBorderColor(hasError, accent)}`,
+    transition: 'border-color 0.2s ease',
     '&:focus-within': {
-      borderColor: hasError ? '#DC2626' : PRIMARY,
-    },
-    '& .MuiInputBase-input::placeholder': {
-      color: MUTED,
-      opacity: 0.65,
-      fontWeight: 400,
+      borderBottomColor: hasError ? '#DC2626' : accent,
     },
   };
 }
 
-export function contentFieldSx(hasError, _theme = CHAPTER_THEME) {
-  return contentInputSx(hasError);
+export function contentInputSx(hasError = false, theme = CHAPTER_THEME) {
+  const accent = theme?.color ?? PRIMARY;
+  return {
+    ...contentInputInnerSx,
+    display: 'block',
+    pb: '4px',
+    borderRadius: 0,
+    border: 'none',
+    borderBottom: `1px solid ${underlineBorderColor(hasError, accent)}`,
+    bgcolor: 'transparent',
+    minHeight: 'unset',
+    px: 0,
+    py: 0,
+    boxSizing: 'border-box',
+    transition: 'border-color 0.2s ease',
+    '&.Mui-focused': {
+      borderBottomColor: hasError ? '#DC2626' : accent,
+    },
+    '&:focus-within': {
+      borderBottomColor: hasError ? '#DC2626' : accent,
+    },
+  };
+}
+
+export function contentMultilineInputSx(hasError = false, theme = CHAPTER_THEME) {
+  return {
+    ...contentInputSx(hasError, theme),
+    alignItems: 'flex-start',
+    py: 0.25,
+  };
 }
 
 export const TEST_ADD_QUESTION_THEME = {
@@ -119,7 +161,7 @@ export function contentAddButtonSx(_theme = CHAPTER_THEME) {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 0.5,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 600,
     fontFamily: 'inherit',
     color: MUTED,
@@ -153,6 +195,94 @@ export const BUILDER_PANEL_SX = {
   border: `1px solid ${BORDER}`,
   boxShadow: 'none',
 };
+
+export const TAB_STRIP_BG = '#E8EDF3';
+
+/** Chiều cao dải tab chương (sticky) — offset cho thanh nội dung bên dưới. */
+export const BUILDER_CHAPTER_TAB_STRIP_HEIGHT = 40;
+
+/** Chiều cao thanh tổng kết chương (sticky) — offset cho tab bài/học liệu. */
+export const BUILDER_CHAPTER_BAR_HEIGHT = 44;
+
+/** Chiều cao rail tab bài học + toolbar (sticky). */
+export const BUILDER_LESSON_RAIL_HEIGHT = 72;
+
+/** Chiều cao khối pinned tab học liệu + toolbar. */
+export const BUILDER_MATERIAL_PINNED_HEIGHT = 68;
+
+/** Sticky offsets — chỉ tab học liệu sticky khi scroll. */
+export const BUILDER_STICKY_MATERIAL_TABS_ONLY_TOP = HEADER_HEIGHT;
+
+/** Chiều cao dải tab học liệu. */
+export const BUILDER_MATERIAL_TAB_STRIP_HEIGHT = 36;
+
+/** @deprecated — các thanh khác không còn sticky xếp chồng. */
+export const BUILDER_STICKY_CHAPTER_TABS_TOP = HEADER_HEIGHT;
+export const BUILDER_STICKY_ACTION_BAR_TOP =
+  HEADER_HEIGHT + BUILDER_CHAPTER_TAB_STRIP_HEIGHT;
+export const BUILDER_STICKY_LESSON_RAIL_TOP =
+  HEADER_HEIGHT + BUILDER_CHAPTER_TAB_STRIP_HEIGHT + BUILDER_CHAPTER_BAR_HEIGHT;
+export const BUILDER_STICKY_MATERIAL_PINNED_TOP =
+  BUILDER_STICKY_LESSON_RAIL_TOP + BUILDER_LESSON_RAIL_HEIGHT;
+
+/** scroll-margin-top khi focus / cuộn tới section trong builder. */
+export const BUILDER_SCROLL_MARGIN_TOP = BUILDER_STICKY_MATERIAL_TABS_ONLY_TOP + 12;
+export const BUILDER_SCROLL_MARGIN_MATERIAL =
+  BUILDER_STICKY_MATERIAL_TABS_ONLY_TOP +
+  BUILDER_MATERIAL_TAB_STRIP_HEIGHT +
+  BUILDER_CHAPTER_BAR_HEIGHT +
+  12;
+
+/** Sticky rail tab học liệu + toolbar tóm tắt. */
+export function materialPinnedRailStickySx(
+  top = BUILDER_STICKY_MATERIAL_TABS_ONLY_TOP,
+  zIndex = 30,
+) {
+  return {
+    position: 'sticky',
+    top,
+    zIndex,
+    width: '100%',
+    bgcolor: '#fff',
+    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+    boxSizing: 'border-box',
+  };
+}
+
+/** Full-bleed trong vùng body có px:2 — tránh khe trắng khi dùng mx âm. */
+export function breakoutBodyPaddingSx(padding = 2) {
+  return (theme) => ({
+    mx: -padding,
+    width: `calc(100% + ${theme.spacing(padding * 2)})`,
+    maxWidth: 'none',
+    boxSizing: 'border-box',
+  });
+}
+
+/** Sticky tab strip — `top` offset for nested strips inside scroll container. */
+export function tabStripStickySx(top = BUILDER_STICKY_MATERIAL_TABS_ONLY_TOP, zIndex = 12) {
+  return {
+    position: 'sticky',
+    top,
+    zIndex,
+    bgcolor: TAB_STRIP_BG,
+    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+    width: '100%',
+  };
+}
+
+/** Khối pinned (tab + toolbar) trong section collapsible. */
+export function pinnedTabStickySx(top = BUILDER_STICKY_ACTION_BAR_TOP, zIndex = 18) {
+  return {
+    position: 'sticky',
+    top,
+    zIndex,
+    alignSelf: 'flex-start',
+    width: '100%',
+    bgcolor: '#fff',
+    boxShadow: '0 4px 12px rgba(15,23,42,0.04)',
+  };
+}
 
 /** @deprecated — không dùng nền header màu nữa */
 export const CHAPTER_HEADER_BG = 'transparent';

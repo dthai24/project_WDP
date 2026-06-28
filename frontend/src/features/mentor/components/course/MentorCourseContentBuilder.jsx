@@ -1,13 +1,14 @@
 import { Box, Typography } from '@mui/material';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCard from './MentorChapterCard';
-import MentorChapterQuizSetupDialog from './MentorChapterQuizSetupDialog';
-import { CARD_SECTION_META_SX, CARD_SECTION_TITLE_SX, MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-import { BUILDER_PANEL_SX, contentAddButtonSx } from './mentorCourseContentStyles';
-import { isPathSnapshotSaved, resolveChapterId } from '@/features/mentor/utils/mentorCourseContentUtils';
+import MentorChapterTabs from './MentorChapterTabs';
+import MentorSectionTabToggle from './MentorSectionTabToggle';
+import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
+import { BUILDER_PANEL_SX } from './mentorCourseContentStyles';
+import { isPathSnapshotSaved, resolveChapterId, chapterHasContent } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentBuilder({
   paths,
@@ -30,34 +31,86 @@ export default function MentorCourseContentBuilder({
   savedPathSnapshots = {},
   savingChapterId = null,
   onSaveChapter,
+  showChapterSave = true,
   courseId = null,
   courseTitle = '',
+  focusTarget = null,
 }) {
-  const [quizSetupTarget, setQuizSetupTarget] = useState(null);
+  const [activeChapterId, setActiveChapterId] = useState(() => paths[0]?.tempId ?? null);
+  const [chapterSectionOpen, setChapterSectionOpen] = useState(true);
+  const pendingSelectLastRef = useRef(false);
+  const activeChapterIndexRef = useRef(0);
 
-  const canConfigureQuiz = courseId != null && courseId !== '';
+  const hasErrorById = useMemo(() => {
+    const map = {};
+    for (const path of paths) {
+      map[path.tempId] = Boolean(errors.paths?.[path.tempId]);
+    }
+    return map;
+  }, [errors.paths, paths]);
 
-  const openQuizSetup = (path, pathIndex) => {
-    if (!canConfigureQuiz) return;
-    setQuizSetupTarget({
-      chapterId: resolveChapterId(path, pathIndex),
-      chapterTitle: path.PathName?.trim() || `Chương ${pathIndex + 1}`,
-      chapterIndex: pathIndex,
-    });
+  const hasContentById = useMemo(() => {
+    const map = {};
+    for (const path of paths) {
+      map[path.tempId] = chapterHasContent(path);
+    }
+    return map;
+  }, [paths]);
+
+  useEffect(() => {
+    if (paths.length === 0) {
+      setActiveChapterId(null);
+      return;
+    }
+    const stillExists = paths.some((p) => p.tempId === activeChapterId);
+    if (!stillExists) {
+      const nextIdx = Math.max(0, activeChapterIndexRef.current - 1);
+      setActiveChapterId(paths[Math.min(nextIdx, paths.length - 1)]?.tempId ?? paths[0]?.tempId);
+    }
+  }, [paths, activeChapterId]);
+
+  useEffect(() => {
+    if (focusTarget?.pathTempId) {
+      setActiveChapterId(focusTarget.pathTempId);
+    }
+  }, [focusTarget]);
+
+  useEffect(() => {
+    setChapterSectionOpen(true);
+  }, [activeChapterId]);
+
+  useEffect(() => {
+    if (pendingSelectLastRef.current && paths.length > 0) {
+      setActiveChapterId(paths[paths.length - 1].tempId);
+      pendingSelectLastRef.current = false;
+    }
+  }, [paths]);
+
+  const activePathIndex = paths.findIndex((p) => p.tempId === activeChapterId);
+  const activePath = activePathIndex >= 0 ? paths[activePathIndex] : null;
+
+  useEffect(() => {
+    if (activePathIndex >= 0) activeChapterIndexRef.current = activePathIndex;
+  }, [activePathIndex]);
+
+  const handlePathDelete = useCallback((pathTempId) => {
+    if (pathTempId === activeChapterId) {
+      const idx = paths.findIndex((p) => p.tempId === pathTempId);
+      const remaining = paths.filter((p) => p.tempId !== pathTempId);
+      const nextIdx = Math.max(0, idx - 1);
+      setActiveChapterId(remaining[nextIdx]?.tempId ?? null);
+    }
+    onPathDelete?.(pathTempId);
+  }, [activeChapterId, paths, onPathDelete]);
+
+  const handleAddChapterClick = () => {
+    pendingSelectLastRef.current = true;
+    onAddPath?.();
   };
 
   return (
     <>
       <Box id="content-builder-root" data-content-error="content-builder-root">
-        <Box sx={{ mb: 3 }}>
-          <Typography sx={CARD_SECTION_TITLE_SX}>
-            Nội dung khóa học
-          </Typography>
-          <Typography sx={{ ...CARD_SECTION_META_SX, mt: 0.35, maxWidth: 520 }}>
-            Tạo chương, bài học và học liệu theo đúng thứ tự học.
-          </Typography>
-        </Box>
-
         {(errors.root ?? []).length > 0 && (
           <Box
             sx={{
@@ -77,7 +130,6 @@ export default function MentorCourseContentBuilder({
           </Box>
         )}
 
-        {console.log("paths", paths)}
         {paths.length === 0 ? (
           <Box sx={{ ...BUILDER_PANEL_SX, textAlign: 'center', py: 5, px: 2.5 }}>
             <MenuBookOutlinedIcon sx={{ fontSize: 36, color: MUTED, mb: 1.5 }} />
@@ -88,7 +140,7 @@ export default function MentorCourseContentBuilder({
               Thêm chương đầu tiên để bắt đầu xây dựng nội dung khóa học.
             </Typography>
             <AppButton
-              onClick={onAddPath}
+              onClick={handleAddChapterClick}
               disabled={disabled}
               startIcon={<AddRoundedIcon />}
               sx={{
@@ -103,69 +155,75 @@ export default function MentorCourseContentBuilder({
             </AppButton>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            {paths.map((path, pathIndex) => (
-              <MentorChapterCard
-                key={path.tempId}
-                path={path}
-                pathIndex={pathIndex}
-                courseId={courseId}
-                chapterId={resolveChapterId(path, pathIndex)}
-                errors={errors.paths?.[path.tempId] ?? {}}
-                expanded={expandedPaths[path.tempId] !== false}
-                expandedNodes={expandedNodes}
-                onToggle={() => onTogglePath(path.tempId)}
-                onToggleNode={onToggleNode}
-                onChange={onPathChange}
-                onDelete={() => onPathDelete(path.tempId)}
-                onAddNode={() => onAddNode(path.tempId)}
-                onNodeChange={(nodeTempId, patch) => onNodeChange(path.tempId, nodeTempId, patch)}
-                onNodeDelete={onNodeDelete}
-                onAddMaterial={onAddMaterial}
-                onMaterialChange={onMaterialChange}
-                onMaterialDelete={onMaterialDelete}
-                onMaterialReorder={onMaterialReorder}
-                disabled={disabled}
-                isSaved={isPathSnapshotSaved(path, savedPathSnapshots[path.tempId])}
-                saving={savingChapterId === path.tempId}
-                onSave={() => onSaveChapter?.(path.tempId)}
-                onQuizSetup={() => openQuizSetup(path, pathIndex)}
-                quizSetupDisabled={!canConfigureQuiz}
-                quizSetupDisabledReason={
-                  canConfigureQuiz ? '' : 'Lưu khóa học trước khi thiết lập kiểm tra'
-                }
-              />
-            ))}
+          <Box>
+            <MentorChapterTabs
+              paths={paths}
+              activeId={activeChapterId}
+              onChange={setActiveChapterId}
+              onAdd={handleAddChapterClick}
+              disabled={disabled}
+              hasErrorById={hasErrorById}
+              hasContentById={hasContentById}
+              trailingActions={
+                <MentorSectionTabToggle
+                  label="Chương"
+                  expanded={chapterSectionOpen}
+                  onToggle={() => setChapterSectionOpen((v) => !v)}
+                />
+              }
+            />
 
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start', pt: 0.5 }}>
-              <Box
-                component="button"
-                type="button"
-                onClick={onAddPath}
-                disabled={disabled}
-                sx={{
-                  ...contentAddButtonSx(),
-                  cursor: disabled ? 'default' : 'pointer',
-                  opacity: disabled ? 0.6 : 1,
-                }}
-              >
-                <AddRoundedIcon sx={{ fontSize: 18 }} />
-                Thêm chương
-              </Box>
+            <Box
+              sx={{
+                ...BUILDER_PANEL_SX,
+                borderRadius: '0 0 14px 14px',
+                borderTop: '1px solid rgba(15,23,42,0.1)',
+                overflow: 'visible',
+              }}
+            >
+              {activePath ? (
+                <MentorChapterCard
+                  key={activePath.tempId}
+                  path={activePath}
+                  pathIndex={activePathIndex}
+                  courseId={courseId}
+                  chapterId={resolveChapterId(activePath, activePathIndex)}
+                  errors={errors.paths?.[activePath.tempId] ?? {}}
+                  expanded
+                  tabMode
+                  expandedNodes={expandedNodes}
+                  onToggle={() => onTogglePath(activePath.tempId)}
+                  onToggleNode={onToggleNode}
+                  onChange={onPathChange}
+                  onDelete={() => handlePathDelete(activePath.tempId)}
+                  onAddNode={() => onAddNode(activePath.tempId)}
+                  onNodeChange={(nodeTempId, patch) =>
+                    onNodeChange(activePath.tempId, nodeTempId, patch)
+                  }
+                  onNodeDelete={onNodeDelete}
+                  onAddMaterial={onAddMaterial}
+                  onMaterialChange={onMaterialChange}
+                  onMaterialDelete={onMaterialDelete}
+                  onMaterialReorder={onMaterialReorder}
+                  disabled={disabled}
+                  isSaved={isPathSnapshotSaved(activePath, savedPathSnapshots[activePath.tempId])}
+                  saving={savingChapterId === activePath.tempId}
+                  showSave={showChapterSave}
+                  onSave={() => onSaveChapter?.(activePath.tempId)}
+                  focusLessonId={
+                    focusTarget?.pathTempId === activePath.tempId ? focusTarget.nodeTempId : null
+                  }
+                  focusMaterialId={
+                    focusTarget?.pathTempId === activePath.tempId ? focusTarget.materialTempId : null
+                  }
+                  chapterSectionOpen={chapterSectionOpen}
+                  onChapterSectionOpenChange={setChapterSectionOpen}
+                />
+              ) : null}
             </Box>
           </Box>
         )}
       </Box>
-
-      <MentorChapterQuizSetupDialog
-        open={Boolean(quizSetupTarget)}
-        onClose={() => setQuizSetupTarget(null)}
-        courseId={courseId}
-        courseTitle={courseTitle}
-        chapterId={quizSetupTarget?.chapterId}
-        chapterTitle={quizSetupTarget?.chapterTitle}
-        chapterIndex={quizSetupTarget?.chapterIndex ?? 0}
-      />
     </>
   );
 }
