@@ -16,20 +16,14 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
       <Route 
         path="/" 
         element={
-          currentUser?.role === "Learner" ? (
-            <Dashboard 
-              currentUser={currentUser} 
-              onLogout={onLogout} 
-            />
-          ) : (
-            <HomePage 
-              currentUser={currentUser} 
-              onLogout={onLogout} 
-              onLoginClick={() => navigate("/login")} 
-            />
-          )
+          <HomePage 
+            currentUser={currentUser} 
+            onLogout={onLogout} 
+            onLoginClick={() => navigate("/login")} 
+          />
         } 
       />
+
 
       {/* Trang Đăng nhập */}
       <Route 
