@@ -23,6 +23,7 @@ export default function MentorCourseInfoReview({
   course,
   categoryLabel,
   levelLabel,
+  onEditInfo,
 }) {
   const navigate = useNavigate();
   const thumbnail = String(course?.Thumbnail ?? '').trim();
@@ -37,7 +38,13 @@ export default function MentorCourseInfoReview({
           <AppButton
             variant="outlined"
             startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
-            onClick={() => navigate('/mentor/courses/create')}
+            onClick={() => {
+              if (onEditInfo) {
+                onEditInfo();
+                return;
+              }
+              navigate('/mentor/courses/create');
+            }}
             sx={{
               height: 34,
               borderRadius: '999px',

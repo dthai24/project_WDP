@@ -1,6 +1,6 @@
 import { Alert, Box, InputBase, Typography } from '@mui/material';
 import { MENTOR_COURSE_DESCRIPTION_MAX, MENTOR_COURSE_NAME_MAX } from '@/features/mentor/utils/mentorCourseFormUtils';
-import { contentInputSx } from './mentorCourseContentStyles';
+import { contentFieldSx, contentInputInnerSx } from './mentorCourseContentStyles';
 import { MUTED, SECTION_TITLE_SX, TEXT } from './mentorCourseCreateStyles';
 
 function FormField({
@@ -23,12 +23,12 @@ function FormField({
 
   return (
     <Box sx={{ mb: 2.5, '&:last-of-type': { mb: 0 } }}>
-      <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, mb: 0.75, lineHeight: 1.35 }}>
+      <Typography sx={{ fontSize: 11, fontWeight: 500, color: MUTED, mb: 0.4, lineHeight: 1.2 }}>
         {label}
       </Typography>
 
       {isSelect ? (
-        <Box sx={contentInputSx(Boolean(error))}>
+        <Box sx={contentFieldSx(Boolean(error))}>
           <Box
             component="select"
             name={name}
@@ -40,8 +40,8 @@ function FormField({
               border: 'none',
               outline: 'none',
               background: 'transparent',
-              fontSize: 14,
-              fontWeight: 500,
+              fontSize: 13.5,
+              fontWeight: 600,
               color: TEXT,
               p: 0,
               lineHeight: 1.4,
@@ -56,24 +56,34 @@ function FormField({
             ))}
           </Box>
         </Box>
+      ) : multiline ? (
+        <Box sx={contentFieldSx(Boolean(error))}>
+          <InputBase
+            name={name}
+            value={value ?? ''}
+            onChange={onChange}
+            disabled={disabled}
+            placeholder={placeholder}
+            fullWidth
+            multiline
+            minRows={rows}
+            inputProps={maxLength ? { maxLength } : undefined}
+            sx={{ ...contentInputInnerSx, alignItems: 'flex-start', py: 0.25 }}
+          />
+        </Box>
       ) : (
-        <InputBase
-          name={name}
-          value={value ?? ''}
-          onChange={onChange}
-          disabled={disabled}
-          placeholder={placeholder}
-          fullWidth
-          multiline={multiline}
-          minRows={multiline ? rows : undefined}
-          inputProps={maxLength ? { maxLength } : undefined}
-          sx={{
-            ...contentInputSx(Boolean(error)),
-            alignItems: multiline ? 'flex-start' : 'center',
-            minHeight: multiline ? undefined : 40,
-            py: multiline ? 1 : 0.75,
-          }}
-        />
+        <Box sx={contentFieldSx(Boolean(error))}>
+          <InputBase
+            name={name}
+            value={value ?? ''}
+            onChange={onChange}
+            disabled={disabled}
+            placeholder={placeholder}
+            fullWidth
+            inputProps={maxLength ? { maxLength } : undefined}
+            sx={contentInputInnerSx}
+          />
+        </Box>
       )}
 
       {showCharCount && maxLength && (

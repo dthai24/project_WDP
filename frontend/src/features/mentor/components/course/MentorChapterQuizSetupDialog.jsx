@@ -18,6 +18,7 @@ import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
+import { contentInputSx } from './mentorCourseContentStyles';
 import {
   getChapterQuizConfig,
   saveChapterQuizConfig,
@@ -52,20 +53,8 @@ import {
   TEST_SKILL_WRITING,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
-const fieldInputSx = (hasError) => ({
-  fontSize: 13,
-  color: TEXT,
-  px: 1.25,
-  py: 0.75,
-  borderRadius: '10px',
-  border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-  bgcolor: '#fff',
-  width: '100%',
-  '&:focus-within': { borderColor: hasError ? '#DC2626' : PRIMARY },
-});
-
 const countInputSx = (hasError) => ({
-  ...fieldInputSx(hasError),
+  ...contentInputSx(hasError),
   maxWidth: 88,
 });
 
@@ -493,7 +482,7 @@ export default function MentorChapterQuizSetupDialog({
                 disabled={saving}
                 placeholder={isCourseScope ? 'Ví dụ: Quiz cuối khóa' : 'Ví dụ: Quiz Chương 1'}
                 fullWidth
-                sx={fieldInputSx(Boolean(errors.title))}
+                sx={contentInputSx(Boolean(errors.title))}
               />
               {errors.title && (
                 <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.5 }}>{errors.title}</Typography>
@@ -517,7 +506,7 @@ export default function MentorChapterQuizSetupDialog({
                   onChange={(e) => handleNumberFieldChange('timeLimitMinutes', e.target.value, { min: 1 })}
                   disabled={saving}
                   fullWidth
-                  sx={fieldInputSx(Boolean(errors.timeLimitMinutes))}
+                  sx={contentInputSx(Boolean(errors.timeLimitMinutes))}
                 />
                 {errors.timeLimitMinutes && (
                   <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.5 }}>
@@ -536,7 +525,7 @@ export default function MentorChapterQuizSetupDialog({
                   }
                   disabled={saving}
                   fullWidth
-                  sx={fieldInputSx(Boolean(errors.passingScore))}
+                  sx={contentInputSx(Boolean(errors.passingScore))}
                 />
                 {errors.passingScore && (
                   <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.5 }}>
@@ -553,7 +542,7 @@ export default function MentorChapterQuizSetupDialog({
                   onChange={(e) => handleNumberFieldChange('maxAttempts', e.target.value, { min: 1 })}
                   disabled={saving}
                   fullWidth
-                  sx={fieldInputSx(Boolean(errors.maxAttempts))}
+                  sx={contentInputSx(Boolean(errors.maxAttempts))}
                 />
                 {errors.maxAttempts && (
                   <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.5 }}>

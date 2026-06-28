@@ -10,6 +10,7 @@ import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { contentInputSx, contentMultilineInputSx } from './mentorCourseContentStyles';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import MentorTestQuestionCard from './MentorTestQuestionCard';
 import MentorTestListeningSourceEditor from './MentorTestListeningSourceEditor';
@@ -81,26 +82,8 @@ function SkillOptionButton({ option, selected, disabled, accentColor, onSelect }
   );
 }
 
-function fieldInputSx(hasError, accentColor) {
-  return {
-    fontSize: 13,
-    color: TEXT,
-    px: 1,
-    py: 0.65,
-    borderRadius: '8px',
-    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
-    bgcolor: '#fff',
-    width: '100%',
-    '&:focus-within': { borderColor: hasError ? '#DC2626' : accentColor },
-  };
-}
-
-function multilineInputSx(hasError, accentColor) {
-  return {
-    ...fieldInputSx(hasError, accentColor),
-    alignItems: 'flex-start',
-    py: 0.75,
-  };
+function skillTheme(accentColor) {
+  return { color: accentColor };
 }
 
 function AddQuestionButton({ onClick, disabled, label = 'Thêm câu hỏi', variant = 'inline' }) {
@@ -501,11 +484,7 @@ export default function MentorTestSectionCard({
                 multiline
                 minRows={2}
                 maxRows={6}
-                sx={{
-                  ...multilineInputSx(false, skillAccent),
-                  py: 0.55,
-                  minHeight: 'unset',
-                }}
+                sx={contentMultilineInputSx(false, skillTheme(skillAccent))}
               />
             </Box>
           ) : isWritingQuestionBank ? (
@@ -520,11 +499,7 @@ export default function MentorTestSectionCard({
                 multiline
                 minRows={2}
                 maxRows={6}
-                sx={{
-                  ...multilineInputSx(false, skillAccent),
-                  py: 0.55,
-                  minHeight: 'unset',
-                }}
+                sx={contentMultilineInputSx(false, skillTheme(skillAccent))}
               />
             </Box>
           ) : (
@@ -537,7 +512,7 @@ export default function MentorTestSectionCard({
                   disabled={disabled}
                   placeholder={sectionTitlePlaceholder}
                   fullWidth
-                  sx={fieldInputSx(false, skillAccent)}
+                  sx={contentInputSx(false, skillTheme(skillAccent))}
                 />
               </Box>
 
@@ -584,7 +559,7 @@ export default function MentorTestSectionCard({
                     fullWidth
                     multiline
                     minRows={2}
-                    sx={multilineInputSx(false, skillAccent)}
+                    sx={contentMultilineInputSx(false, skillTheme(skillAccent))}
                   />
                 </Box>
               ) : null}

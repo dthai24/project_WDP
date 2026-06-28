@@ -2,7 +2,7 @@ import { Box, InputBase, Typography } from '@mui/material';
 import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
+import { MATERIAL_TYPE_THEME, contentMultilineInputSx } from './mentorCourseContentStyles';
 import MentorTestQuestionBankSelector from '@/features/mentor/components/questionBank/MentorTestQuestionBankSelector';
 import MentorFinalTestConfigEditor from '@/features/mentor/components/questionBank/MentorFinalTestConfigEditor';
 import {
@@ -23,22 +23,7 @@ import {
   scoresMatch,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
-const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
-
-function multilineInputSx(hasError, accentColor) {
-  return {
-    fontSize: 13,
-    color: TEXT,
-    px: 1,
-    py: 0.75,
-    borderRadius: '10px',
-    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-    bgcolor: '#fff',
-    width: '100%',
-    alignItems: 'flex-start',
-    '&:focus-within': { borderColor: hasError ? '#DC2626' : accentColor },
-  };
-}
+const fieldLabelSx = { mb: 0.4 };
 
 function SummaryPill({ children, color = MUTED, bgcolor = 'rgba(15,23,42,0.05)' }) {
   return (
@@ -384,7 +369,7 @@ export default function MentorTestMaterialEditor({
               fullWidth
               multiline
               minRows={2}
-              sx={multilineInputSx(false, accentColor)}
+              sx={contentMultilineInputSx(false, { color: accentColor })}
             />
           </Box>
         </>

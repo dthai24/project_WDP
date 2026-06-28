@@ -22,6 +22,7 @@ import FormatAlignRightRoundedIcon from '@mui/icons-material/FormatAlignRightRou
 import FormatClearRoundedIcon from '@mui/icons-material/FormatClearRounded';
 import AppButton from '@/shared/ui/AppButton';
 import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { getPasteContent } from '@/features/mentor/utils/mentorTextPasteUtils';
 import { fetchTextMaterialHtml } from '@/features/mentor/services/materialUploadService';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
@@ -226,6 +227,7 @@ export default function MentorTextMaterialEditor({
   errors = {},
   onChange,
   disabled = false,
+  compact = false,
 }) {
   const editorRef = useRef(null);
   const savedRangeRef = useRef(null);
@@ -314,10 +316,15 @@ export default function MentorTextMaterialEditor({
   const handlePaste = useCallback(
     (e) => {
       e.preventDefault();
-      const text = e.clipboardData.getData('text/plain');
-      if (!text) return;
+      const paste = getPasteContent(e.clipboardData);
+      if (!paste) return;
+
       runCommand(() => {
-        document.execCommand('insertText', false, text);
+        if (paste.type === 'html') {
+          document.execCommand('insertHTML', false, paste.value);
+          return;
+        }
+        document.execCommand('insertText', false, paste.value);
       });
     },
     [runCommand],
@@ -445,28 +452,34 @@ export default function MentorTextMaterialEditor({
 
   return (
     <Box
-      sx={{
-        mt: 1.25,
-        ml: { xs: 0, sm: 0.25 },
-        p: { xs: 1.25, sm: 1.5 },
-        borderRadius: '16px',
-        border: `1px solid ${errors.Content ? '#FECACA' : 'rgba(15,23,42,0.08)'}`,
-        bgcolor: '#F8FAFC',
-      }}
+      sx={
+        compact
+          ? { mt: 0 }
+          : {
+              mt: 1.25,
+              ml: { xs: 0, sm: 0.25 },
+              p: { xs: 1.25, sm: 1.5 },
+              borderRadius: '16px',
+              border: `1px solid ${errors.Content ? '#FECACA' : 'rgba(15,23,42,0.08)'}`,
+              bgcolor: '#F8FAFC',
+            }
+      }
     >
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: compact ? 'flex-end' : 'space-between',
           gap: 1,
-          mb: 1.25,
+          mb: compact ? 1 : 1.25,
           flexWrap: 'wrap',
         }}
       >
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
-          Soạn nội dung văn bản
-        </Typography>
+        {!compact ? (
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
+            Soạn nội dung văn bản
+          </Typography>
+        ) : null}
         <AppButton
           variant="outlined"
           size="small"

@@ -105,3 +105,46 @@ export function resolveVideoEmbed(rawUrl) {
     return { embedUrl: null, previewType: null };
   }
 }
+
+/** Kích thước preview video trong tab mode (compact). */
+export const COMPACT_VIDEO_PREVIEW_MAX_WIDTH = 494; // 380 + 30%
+export const COMPACT_VIDEO_PREVIEW_HEIGHT = 260; // 200 + 30%
+
+/**
+ * Lấy tiêu đề video từ YouTube / Vimeo qua oEmbed (dùng khi dán link).
+ * @param {string} rawUrl
+ * @returns {Promise<string | null>}
+ */
+export async function fetchVideoTitle(rawUrl) {
+  const url = String(rawUrl ?? '').trim();
+  if (!url || !isHttpUrl(url)) return null;
+
+  const { embedUrl } = resolveVideoEmbed(url);
+  if (!embedUrl) return null;
+
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+    let oembedUrl = null;
+
+    if (
+      host === 'youtube.com' ||
+      host === 'm.youtube.com' ||
+      host === 'youtu.be'
+    ) {
+      oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+    } else if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+      oembedUrl = `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`;
+    }
+
+    if (!oembedUrl) return null;
+
+    const response = await fetch(oembedUrl);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const title = String(data?.title ?? '').trim();
+    return title || null;
+  } catch {
+    return null;
+  }
+}

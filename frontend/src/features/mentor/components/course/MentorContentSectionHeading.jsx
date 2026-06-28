@@ -1,7 +1,13 @@
 import { Box, InputBase, Typography } from '@mui/material';
 import { CONTENT_SHORT_DESCRIPTION_MAX } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { CONTENT_CARD_META_SX, CONTENT_CARD_TITLE_SX, CONTENT_FIELD_LABEL_SX, contentFieldSx } from './mentorCourseContentStyles';
+import {
+  CONTENT_CARD_META_SX,
+  CONTENT_CARD_TITLE_SX,
+  CONTENT_FIELD_LABEL_SX,
+  contentFieldSx,
+  contentInputInnerSx,
+} from './mentorCourseContentStyles';
 
 export function ContentFieldLabel({ children, sx }) {
   return (
@@ -46,7 +52,7 @@ export function ContentShortDescriptionField({
           multiline
           minRows={2}
           inputProps={{ maxLength }}
-          sx={{ fontSize: 14, color: TEXT, alignItems: 'flex-start', width: '100%', py: 0.25 }}
+          sx={{ ...contentInputInnerSx, alignItems: 'flex-start', py: 0.25 }}
         />
       </Box>
       <Typography

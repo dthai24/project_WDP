@@ -6,6 +6,7 @@ import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
 import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { contentInputSx } from './mentorCourseContentStyles';
 import { formatFileSize } from '@/features/mentor/utils/mentorCourseContentUtils';
 import {
   AUDIO_ALLOWED_EXTENSION_NAMES,
@@ -17,20 +18,6 @@ import {
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const FORMAT_HINT = AUDIO_ALLOWED_EXTENSION_NAMES.map((ext) => ext.toUpperCase()).join(', ');
-
-function fieldInputSx(hasError, accentColor) {
-  return {
-    fontSize: 13,
-    color: TEXT,
-    px: 1,
-    py: 0.65,
-    borderRadius: '8px',
-    border: `1px solid ${hasError ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
-    bgcolor: '#fff',
-    width: '100%',
-    '&:focus-within': { borderColor: hasError ? '#DC2626' : accentColor },
-  };
-}
 
 export default function MentorTestListeningSourceEditor({
   section,
@@ -308,7 +295,7 @@ export default function MentorTestListeningSourceEditor({
                 disabled={disabled}
                 placeholder="Dán link audio / video nghe"
                 fullWidth
-                sx={fieldInputSx(Boolean(linkError), accentColor)}
+                sx={contentInputSx(Boolean(linkError), { color: accentColor })}
               />
             </Box>
           </>

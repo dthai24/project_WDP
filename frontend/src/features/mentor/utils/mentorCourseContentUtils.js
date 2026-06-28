@@ -64,6 +64,29 @@ export function countMaterialsInPath(path = {}) {
   );
 }
 
+/** Chương đã có nội dung học (bài học hoặc học liệu). */
+export function chapterHasContent(path = {}) {
+  const nodes = getPathNodes(path);
+  if (nodes.length === 0) return false;
+  if (countMaterialsInPath(path) > 0) return true;
+  return nodes.some((node) => String(node.NodeName ?? node.nodeName ?? '').trim().length > 0);
+}
+
+/** Bài học đã có nội dung (tên hoặc học liệu). */
+export function lessonHasContent(node = {}) {
+  if (countLearningMaterials(getNodeMaterials(node)) > 0) return true;
+  return String(node.NodeName ?? node.nodeName ?? '').trim().length > 0;
+}
+
+/** Học liệu đã có nội dung (tiêu đề, link, file hoặc văn bản). */
+export function materialHasContent(material = {}) {
+  if (String(material.Title ?? '').trim()) return true;
+  if (String(material.MaterialUrl ?? '').trim()) return true;
+  if (String(material.Content ?? '').trim()) return true;
+  if (material.File || material.FileName) return true;
+  return false;
+}
+
 export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
 
 export function trimShortDescription(value) {
@@ -477,6 +500,43 @@ export function getFirstContentErrorTarget(errors, paths = []) {
       for (const material of node.materials ?? []) {
         if (nodeErrors.materials?.[material.tempId]) {
           return `material-${material.tempId}`;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+export function parseContentFocusTarget(errorTarget, paths = []) {
+  if (!errorTarget || typeof errorTarget !== 'string') return null;
+
+  if (errorTarget.startsWith('chapter-')) {
+    return { type: 'chapter', pathTempId: errorTarget.slice('chapter-'.length) };
+  }
+
+  if (errorTarget.startsWith('lesson-')) {
+    const nodeTempId = errorTarget.slice('lesson-'.length);
+    const path = paths.find((p) =>
+      (p.nodes ?? p.Nodes ?? []).some((n) => n.tempId === nodeTempId),
+    );
+    return { type: 'lesson', pathTempId: path?.tempId, nodeTempId };
+  }
+
+  if (errorTarget.startsWith('material-')) {
+    const materialTempId = errorTarget.slice('material-'.length);
+    for (const path of paths) {
+      for (const node of path.nodes ?? path.Nodes ?? []) {
+        const material = (node.materials ?? node.Materials ?? []).find(
+          (m) => m.tempId === materialTempId,
+        );
+        if (material) {
+          return {
+            type: 'material',
+            pathTempId: path.tempId,
+            nodeTempId: node.tempId,
+            materialTempId,
+          };
         }
       }
     }
