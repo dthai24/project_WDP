@@ -10,11 +10,7 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
-import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
-import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
-import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
-import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { Link, useNavigate } from 'react-router-dom';
@@ -22,12 +18,6 @@ import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCardMenu from '@/features/mentor/components/course/MentorChapterCardMenu';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
-import {
-  TEST_SKILL_LABELS,
-  TEST_SKILL_LISTENING,
-  TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
-} from '@/features/mentor/utils/mentorTestContentUtils';
 
 const PILL_CHIP_SX = {
   borderRadius: '999px',
@@ -36,13 +26,13 @@ const PILL_CHIP_SX = {
   fontWeight: 700,
 };
 
-function StatInline({ icon: Icon, label, value, iconColor }) {
+function MetaLine({ icon: Icon, label, value }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-      <Icon sx={{ fontSize: 16, color: iconColor, flexShrink: 0 }} />
-      <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.4 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+      {Icon ? <Icon sx={{ fontSize: 14, color: MUTED, flexShrink: 0 }} /> : null}
+      <Typography sx={{ fontSize: 12.5, color: MUTED, lineHeight: 1.45 }}>
         {label}:{' '}
-        <Box component="span" sx={{ color: TEXT, fontWeight: 700 }}>
+        <Box component="span" sx={{ color: TEXT, fontWeight: 600 }}>
           {value}
         </Box>
       </Typography>
@@ -54,12 +44,8 @@ export default function MentorQuestionBankDetailHeader({
   bankTitle = '',
   courseName = '',
   courseId = null,
-  courseCategory = '',
-  chapterTitle = '',
   coursePublished = false,
   totalQuestionCount = 0,
-  activeQuestionCount = 0,
-  questionCountBySkill = {},
   createdAt = null,
   updatedAt = null,
   actions = null,
@@ -89,45 +75,6 @@ export default function MentorQuestionBankDetailHeader({
 
   const breadcrumbLabel = isCreateMode && !bankTitle ? 'Tạo mới' : displayTitle;
 
-  const showDates = Boolean(createdAt || updatedAt);
-
-  const statItems = [
-    {
-      icon: QuizOutlinedIcon,
-      label: 'Tổng câu hỏi',
-      value: totalQuestionCount,
-      iconColor: PRIMARY,
-    },
-    ...(coursePublished
-      ? [
-          {
-            icon: CheckCircleOutlineRoundedIcon,
-            label: 'Dùng cho quiz',
-            value: activeQuestionCount,
-            iconColor: '#047857',
-          },
-        ]
-      : []),
-    {
-      icon: HeadphonesRoundedIcon,
-      label: TEST_SKILL_LABELS[TEST_SKILL_LISTENING],
-      value: questionCountBySkill[TEST_SKILL_LISTENING] ?? 0,
-      iconColor: '#7C3AED',
-    },
-    {
-      icon: MenuBookRoundedIcon,
-      label: TEST_SKILL_LABELS[TEST_SKILL_READING],
-      value: questionCountBySkill[TEST_SKILL_READING] ?? 0,
-      iconColor: '#0891B2',
-    },
-    {
-      icon: EditNoteRoundedIcon,
-      label: TEST_SKILL_LABELS[TEST_SKILL_WRITING],
-      value: questionCountBySkill[TEST_SKILL_WRITING] ?? 0,
-      iconColor: '#EA580C',
-    },
-  ];
-
   return (
     <Box sx={{ mb: 2.5 }}>
       <Box
@@ -142,7 +89,14 @@ export default function MentorQuestionBankDetailHeader({
       >
         <Breadcrumbs
           separator="/"
-          sx={{ '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 } }}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            flexWrap: 'wrap',
+            rowGap: 0.5,
+            '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 },
+            '& .MuiBreadcrumbs-li': { maxWidth: '100%' },
+          }}
         >
           <MuiLink
             component={Link}
@@ -153,32 +107,14 @@ export default function MentorQuestionBankDetailHeader({
             Trang chủ
           </MuiLink>
           {courseId ? (
-            <>
-              <MuiLink
-                component={Link}
-                to="/mentor/courses"
-                underline="hover"
-                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
-              >
-                Khóa học của tôi
-              </MuiLink>
-              <MuiLink
-                component={Link}
-                to={`/mentor/courses/${courseId}`}
-                underline="hover"
-                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
-              >
-                {courseName || `Khóa học #${courseId}`}
-              </MuiLink>
-              <MuiLink
-                component={Link}
-                to={backPath}
-                underline="hover"
-                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
-              >
-                Ngân hàng câu hỏi
-              </MuiLink>
-            </>
+            <MuiLink
+              component={Link}
+              to="/mentor/courses"
+              underline="hover"
+              sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+            >
+              Khóa học của tôi
+            </MuiLink>
           ) : (
             <MuiLink
               component={Link}
@@ -189,7 +125,31 @@ export default function MentorQuestionBankDetailHeader({
               Ngân hàng câu hỏi
             </MuiLink>
           )}
-          <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }} noWrap>
+          {courseId ? (
+            <MuiLink
+              component={Link}
+              to={`/mentor/courses/${courseId}`}
+              underline="hover"
+              sx={{ fontSize: 13, color: MUTED, fontWeight: 500, maxWidth: 220 }}
+              noWrap
+            >
+              {courseName || `Khóa học #${courseId}`}
+            </MuiLink>
+          ) : null}
+          {courseId ? (
+            <MuiLink
+              component={Link}
+              to={backPath}
+              underline="hover"
+              sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+            >
+              Ngân hàng câu hỏi
+            </MuiLink>
+          ) : null}
+          <Typography
+            sx={{ fontSize: 13, color: TEXT, fontWeight: 600, maxWidth: 280 }}
+            noWrap
+          >
             {breadcrumbLabel}
           </Typography>
         </Breadcrumbs>
@@ -270,11 +230,11 @@ export default function MentorQuestionBankDetailHeader({
                 <Typography
                   component="h1"
                   sx={{
-                    fontSize: { xs: 20, sm: 22 },
-                    fontWeight: 800,
+                    fontSize: { xs: 17, sm: 18 },
+                    fontWeight: 600,
                     color: TEXT,
-                    lineHeight: 1.35,
-                    letterSpacing: '-0.02em',
+                    lineHeight: 1.4,
+                    letterSpacing: '0.01em',
                   }}
                 >
                   {displayTitle}
@@ -299,80 +259,33 @@ export default function MentorQuestionBankDetailHeader({
               ) : null}
             </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75, mb: 1.25 }}>
-              <MenuBookRoundedIcon sx={{ fontSize: 17, color: PRIMARY, mt: 0.15, flexShrink: 0 }} />
-              <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.55 }}>
-                Khóa học:{' '}
-                <Box component="span" sx={{ fontWeight: 700, color: TEXT }}>
-                  {courseName || '—'}
-                </Box>
-                {courseCategory ? (
-                  <>
-                    {' · '}
-                    <Box component="span" sx={{ fontWeight: 500 }}>
-                      {courseCategory}
-                    </Box>
-                  </>
-                ) : null}
-                {' · Chương: '}
-                <Box component="span" sx={{ fontWeight: 700, color: TEXT }}>
-                  {chapterTitle || '—'}
-                </Box>
-              </Typography>
-            </Box>
-
             <Box
               sx={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: { xs: 1, sm: 1.5, md: 2 },
-                mb: 1.25,
+                flexDirection: 'column',
+                gap: 0.5,
               }}
             >
-              {statItems.map(({ icon, label, value, iconColor }) => (
-                <StatInline
-                  key={label}
-                  icon={icon}
-                  label={label}
-                  value={value}
-                  iconColor={iconColor}
+              <MetaLine
+                icon={QuizOutlinedIcon}
+                label="Tổng câu hỏi"
+                value={totalQuestionCount}
+              />
+              {createdAt ? (
+                <MetaLine
+                  icon={CalendarTodayOutlinedIcon}
+                  label="Tạo"
+                  value={formatMentorCourseDate(createdAt)}
                 />
-              ))}
+              ) : null}
+              {updatedAt ? (
+                <MetaLine
+                  icon={CalendarTodayOutlinedIcon}
+                  label="Cập nhật"
+                  value={formatMentorCourseDate(updatedAt)}
+                />
+              ) : null}
             </Box>
-
-            {showDates ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: { xs: 0.5, sm: 1.5 },
-                  alignItems: 'center',
-                }}
-              >
-                {createdAt ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <CalendarTodayOutlinedIcon sx={{ fontSize: 14, color: MUTED }} />
-                    <Typography sx={{ fontSize: 12, color: MUTED }}>
-                      Tạo:{' '}
-                      <Box component="span" sx={{ fontWeight: 600, color: TEXT }}>
-                        {formatMentorCourseDate(createdAt)}
-                      </Box>
-                    </Typography>
-                  </Box>
-                ) : null}
-                {updatedAt ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <CalendarTodayOutlinedIcon sx={{ fontSize: 14, color: MUTED }} />
-                    <Typography sx={{ fontSize: 12, color: MUTED }}>
-                      Cập nhật:{' '}
-                      <Box component="span" sx={{ fontWeight: 600, color: TEXT }}>
-                        {formatMentorCourseDate(updatedAt)}
-                      </Box>
-                    </Typography>
-                  </Box>
-                ) : null}
-              </Box>
-            ) : null}
           </Box>
 
           {actions ? (

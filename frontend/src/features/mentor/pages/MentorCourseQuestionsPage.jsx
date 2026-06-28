@@ -23,6 +23,7 @@ import {
   getQuestionBanksByCourse,
 } from '@/features/mentor/services/questionBankService';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
+import { buildQuestionBankChapterPath } from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
@@ -53,7 +54,7 @@ function BankRow({ bank, onManage }) {
         </Typography>
       </Box>
       <AppButton
-        onClick={() => onManage(bank.id)}
+        onClick={() => onManage(bank)}
         sx={{
           height: 40,
           px: 2.5,
@@ -113,8 +114,13 @@ export default function MentorCourseQuestionsPage() {
     };
   }, [courseId]);
 
-  const handleManage = (bankId) => {
-    navigate(`/mentor/question-banks/${bankId}`);
+  const handleManage = (bank) => {
+    navigate(
+      buildQuestionBankChapterPath(bank.id, {
+        courseId,
+        chapterId: bank.chapterId,
+      }),
+    );
   };
 
   return (

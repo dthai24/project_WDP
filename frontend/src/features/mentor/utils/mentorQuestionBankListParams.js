@@ -149,3 +149,17 @@ export function paginateQBItems(items, page, pageSize) {
     rangeEnd: Math.min(start + pageSize, totalItems),
   };
 }
+
+/** URL trang chỉnh sửa ngân hàng câu hỏi theo chương. */
+export function buildQuestionBankChapterPath(
+  bankId,
+  { courseId, chapterId, questionId, mode = 'editor' } = {},
+) {
+  const params = new URLSearchParams();
+  if (courseId != null && courseId !== '') params.set('courseId', String(courseId));
+  if (chapterId != null && chapterId !== '') params.set('chapterId', String(chapterId));
+  if (mode) params.set('mode', mode);
+  if (questionId != null && questionId !== '') params.set('questionId', String(questionId));
+  const query = params.toString();
+  return `/mentor/question-banks/${bankId}${query ? `?${query}` : ''}`;
+}

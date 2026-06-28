@@ -293,10 +293,10 @@ export function paginateMentorCourses(courses, page, pageSize) {
 /** Thứ tự chương (1-based) trong outline khóa học. */
 export function getChapterOrder(chapters = [], chapterId) {
   const index = chapters.findIndex(
-    (chapter) => String(chapter.PathId) === String(chapterId),
+    (chapter) => String(chapter.chapterId ?? chapter.PathId) === String(chapterId),
   );
   if (index < 0) return null;
-  return chapters[index]?.Order ?? index + 1;
+  return chapters[index]?.order ?? chapters[index]?.Order ?? index + 1;
 }
 
 /** Hiển thị chương dạng "Chương 1: Tên chương". */
