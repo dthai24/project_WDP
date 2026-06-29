@@ -9,7 +9,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const { connectDB } = require('./config/db');
+const { connectMongoDB } = require('./config/mongodb');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const courseRoutes = require('./routes/coursesRoutes');
@@ -31,7 +31,7 @@ app.use(express.json({ limit: '8mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---- Database ----
-connectDB();
+connectMongoDB();
 
 // ---- Routes ----
 app.use('/api/auth', authRoutes);

@@ -1,257 +1,376 @@
-import { useEffect, useMemo, useState } from "react";
-import { Box, Breadcrumbs, Grid, Link as MuiLink, Typography, alpha, useTheme } from "@mui/material";
-import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import Loading from "@/shared/ui/Loading";
-import EmptyState from "@/shared/ui/EmptyState";
-import CourseCard from "@/features/courses/components/CourseCard";
-import CourseCatalogToolbar from "@/features/courses/components/CourseCatalogToolbar";
-import CourseListPagination, { COURSE_LIST_PAGE_SIZE } from "@/features/courses/components/CourseListPagination";
-import { toast } from "@/shared/ui/Toast";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  buildActiveFilterChips,
-  buildCourseDetailPath,
-  buildCourseListSearchParams,
-  hasActiveCourseFilters,
-  parseCourseListParams,
-  resetCourseListParams,
-} from "@/features/courses/utils/courseListParams";
-import { enrollCourseApi } from '@/features/auth/services/authService';
+  MagnifyingGlass,
+  Funnel,
+  X,
+  BookOpen,
+  GraduationCap,
+  Sliders,
+  CaretDown,
+  ArrowRight,
+} from "@phosphor-icons/react";
+import CourseCard from "@/features/courses/components/CourseCard";
 
-const PAGE_SIZE = COURSE_LIST_PAGE_SIZE;
-
-const STATUS_OPTIONS = [
-  { value: "enrolled", label: "Đã đăng ký" },
-  { value: "not_enrolled", label: "Chưa đăng ký" },
+const LEVELS = [
+  { value: "", label: "All Levels" },
+  { value: "1", label: "Beginner" },
+  { value: "2", label: "Intermediate" },
+  { value: "3", label: "Advanced" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "newest", label: "Mới nhất" },
-  { value: "popular", label: "Phổ biến" },
-  { value: "progress", label: "Tiến độ cao nhất" },
+  { value: "popular", label: "Most Popular" },
+  { value: "newest", label: "Newest" },
+  { value: "name_asc", label: "Name A-Z" },
+  { value: "name_desc", label: "Name Z-A" },
 ];
 
-// Hàm gọi API lấy danh sách khóa học kèm bộ lọc từ url
-async function fetchCourses(userId, filters) {
-  try {
-    const params = new URLSearchParams();
-    if (filters.keyword) params.append('search', filters.keyword);
-    if (filters.categories?.length > 0) {
-      filters.categories.forEach(cat => params.append('category', cat));
-    }
-    if (filters.levels?.length > 0) {
-      filters.levels.forEach(lvl => params.append('level', lvl));
-    }
-    if (filters.statuses?.length > 0) params.append('status', filters.statuses[0]);
-    if (filters.sort) params.append('sort', filters.sort);
-
-    const url = `http://localhost:5000/api/courses/student?${params.toString()}`;
-    const headers = {};
-    if (userId) headers['x-user-id'] = userId;
-
-    const res = await fetch(url, { headers });
-    const result = await res.json();
-
-    if (!res.ok || !result.success) return { data: [], totalCount: 0 };
-    return { data: result.data || [], totalCount: result.totalCount || 0 };
-  } catch (err) {
-    console.error("Lỗi fetch khóa học:", err);
-    return { data: [], totalCount: 0 };
-  }
-}
-
 export default function CourseListPage() {
-  const theme = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // State lưu trữ danh sách khóa học và phân trang
   const [courses, setCourses] = useState([]);
-  const [totalCourses, setTotalCourses] = useState(0);
-  const [categoriesList, setCategoriesList] = useState([]);
-  const [levelsList, setLevelsList] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
+  const [selectedLevel, setSelectedLevel] = useState(searchParams.get("level") || "");
+  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "popular");
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Xử lý đồng bộ dữ liệu bộ lọc từ URL thanh địa chỉ
-  const filters = useMemo(() => parseCourseListParams(searchParams), [searchParams]);
-  const showReset = hasActiveCourseFilters(filters);
-  const activeFilterChips = useMemo(() => buildActiveFilterChips(filters, undefined, categoriesList, levelsList), [filters, categoriesList, levelsList]);
-
-  // Hàm cập nhật param lọc mới lên URL thanh địa chỉ
-  const updateFilters = (patch, options = {}) => {
-    const next = buildCourseListSearchParams({ ...filters, ...patch }, searchParams);
-    setSearchParams(next, { replace: options.replace ?? true });
-  };
-
+  // Fetch categories
   useEffect(() => {
-    async function fetchLookups() {
+    async function fetchCategories() {
       try {
-        const [catRes, levRes] = await Promise.all([
-          fetch('http://localhost:5000/api/categories'),
-          fetch('http://localhost:5000/api/levels')
-        ]);
-        const catData = await catRes.json();
-        const levData = await levRes.json();
+        const res = await fetch("http://localhost:5000/api/lookups/categories");
 
-        if (catData.success) {
-          setCategoriesList(catData.data.map(c => ({
-            value: String(c.categoryId),
-            label: c.displayName
-          })));
+
+        const result = await res.json();
+        if (result.success && Array.isArray(result.data)) {
+          setCategories(result.data);
         }
-        if (levData.success) {
-          setLevelsList(levData.data.map(l => ({
-            value: String(l.levelId),
-            label: l.displayName
-          })));
-        }
-      } catch (error) {
-        console.error("Lỗi tải danh mục lựa chọn:", error);
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
       }
     }
-    fetchLookups();
+    fetchCategories();
   }, []);
 
-  // Tải danh sách khóa học dựa theo bộ lọc thay đổi
-  useEffect(() => {
-    let isMounted = true;
+  // Fetch courses
+  const fetchCourses = useCallback(async () => {
+    setLoading(true);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const headers = user.userId ? { "x-user-id": user.userId } : {};
 
-    async function loadCourses() {
-      try {
-        setLoading(true);
-        // Đọc thông tin đăng nhập trực tiếp từ localStorage
-        const userRaw = localStorage.getItem('user');
-        const currentUser = userRaw ? JSON.parse(userRaw) : null;
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set("category", selectedCategory);
+      if (selectedLevel) params.set("level", selectedLevel);
+      if (searchTerm) params.set("search", searchTerm);
+      if (sortBy) params.set("sort", sortBy);
 
-        // Truyền id của user sang API lấy danh sách khóa học
-        const result = await fetchCourses(currentUser?.userId, filters);
-        if (isMounted) {
-          setCourses(Array.isArray(result.data) ? result.data : []);
-          setTotalCourses(result.totalCount || 0);
-        }
-      } catch {
-        toast.error("Không thể tải danh sách khóa học. Vui lòng thử lại.");
-      } finally {
-        if (isMounted) setLoading(false);
+      const res = await fetch(`http://localhost:5000/api/courses/student?${params.toString()}`, { headers });
+      const result = await res.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        setCourses(result.data);
+      } else {
+        setCourses([]);
       }
+    } catch (err) {
+      console.error("Failed to fetch courses:", err);
+      setCourses([]);
+    } finally {
+      setLoading(false);
     }
-
-    loadCourses();
-    return () => { isMounted = false; };
-  }, [filters]);
-
-  // Logic chia nhỏ danh sách hiển thị phân trang ở giao diện client
-  const totalPages = Math.max(1, Math.ceil(totalCourses / PAGE_SIZE));
-  const currentPage = Math.min(filters.page, totalPages);
-  const pageCourses = courses.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [selectedCategory, selectedLevel, searchTerm, sortBy]);
 
   useEffect(() => {
-    if (filters.page !== currentPage) {
-      updateFilters({ page: currentPage });
-    }
-  }, [filters.page, currentPage]);
+    fetchCourses();
+  }, [fetchCourses]);
 
-  // Bắt sự kiện tương tác bộ lọc thanh công cụ công khai
-  const handleCategoriesChange = (e) => updateFilters({ categories: e.target.value, page: 1 });
-  const handleLevelsChange = (e) => updateFilters({ levels: e.target.value, page: 1 });
-  const handleStatusesChange = (e) => updateFilters({ statuses: e.target.value, page: 1 });
-  const handleSortChange = (e) => updateFilters({ sort: e.target.value, page: 1 });
-  const handlePageChange = (val) => {
-    updateFilters({ page: val });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedCategory) params.set("category", selectedCategory);
+    if (selectedLevel) params.set("level", selectedLevel);
+    if (searchTerm) params.set("search", searchTerm);
+    if (sortBy && sortBy !== "popular") params.set("sort", sortBy);
+    setSearchParams(params, { replace: true });
+  }, [selectedCategory, selectedLevel, searchTerm, sortBy, setSearchParams]);
+
+  const clearFilters = () => {
+    setSelectedCategory("");
+    setSelectedLevel("");
+    setSearchTerm("");
+    setSortBy("popular");
   };
 
-
-  const handleContinueLearning = (course) => {
-    const cId = course.CourseId || course.courseId || course.id;
-    navigate(`/my-courses/${cId}/learn`);
-  };
-  // Xử lý xóa nhãn chip tiêu chí lọc đang hiển thị
-  const handleRemoveFilterChip = (chip) => {
-    if (chip.type === "keyword") {
-      updateFilters({ keyword: "", page: 1 });
-      return;
-    }
-    if (chip.type === "category") {
-      updateFilters({ categories: filters.categories.filter((v) => v !== chip.value), page: 1 });
-      return;
-    }
-    if (chip.type === "level") {
-      updateFilters({ levels: filters.levels.filter((v) => v !== chip.value), page: 1 });
-      return;
-    }
-    if (chip.type === "status") {
-      updateFilters({ statuses: [], page: 1 });
-    }
-  };
-
-  const handleResetFilters = () => setSearchParams(resetCourseListParams(searchParams), { replace: true });
+  const hasActiveFilters = selectedCategory || selectedLevel || searchTerm;
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1280, mx: "auto" }}>
-      {/* Thanh định hướng điều hướng Breadcrumbs */}
-      <Breadcrumbs separator="/" sx={{ mb: 2.5, "& .MuiBreadcrumbs-separator": { color: "#64748B", mx: 0.5 } }}>
-        <MuiLink component={Link} to="/home" underline="hover" sx={{ fontSize: 13, color: "#64748B", fontWeight: 500 }}>
-          Trang chủ
-        </MuiLink>
-        <Typography sx={{ fontSize: 13, color: "#0F172A", fontWeight: 600 }}>
-          Khóa học
-        </Typography>
-      </Breadcrumbs>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      {/* Header */}
+      <div className="mb-8 sm:mb-10">
+        <p className="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3">
+          Course Library
+        </p>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 mb-3">
+          Explore Courses
+        </h1>
+        <p className="text-base sm:text-lg text-slate-500 max-w-xl leading-relaxed">
+          Discover the perfect course for your English learning journey. Filter by category, level, or search for specific topics.
+        </p>
+      </div>
 
-      {/* Bộ thanh công cụ Toolbar chứa các thẻ lọc tìm kiếm */}
-      <CourseCatalogToolbar
-        categories={filters.categories}
-        onCategoriesChange={handleCategoriesChange}
-        categoryOptions={categoriesList}
-        levels={filters.levels}
-        onLevelsChange={handleLevelsChange}
-        levelOptions={levelsList}
-        statuses={filters.statuses}
-        onStatusesChange={handleStatusesChange}
-        statusOptions={STATUS_OPTIONS}
-        sortBy={filters.sort}
-        onSortChange={handleSortChange}
-        sortOptions={SORT_OPTIONS}
-        totalCount={totalCourses}
-        activeFilterChips={activeFilterChips}
-        onRemoveFilterChip={handleRemoveFilterChip}
-        showReset={showReset}
-        onReset={handleResetFilters}
-      />
-
-      {/* Khu vực kết quả hiển thị danh sách khóa học */}
-      {loading ? (
-        <Loading message="Đang tải danh sách khóa học..." />
-      ) : courses.length === 0 ? (
-        <Box sx={{ py: 7, textAlign: "center", borderRadius: 3, bgcolor: "background.paper", border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}` }}>
-          <MenuBookOutlinedIcon sx={{ fontSize: 48, color: "primary.main", opacity: 0.3, mb: 1.5 }} />
-          <EmptyState
-            embedded
-            title="Không tìm thấy khóa học phù hợp"
-            description={filters.keyword ? "Thử đổi từ khóa tìm kiếm hoặc chọn bộ lọc khác." : "Thử chọn bộ lọc khác để xem thêm khóa học."}
-            actionLabel="Xóa bộ lọc"
-            onAction={handleResetFilters}
+      {/* Search & Filters Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <MagnifyingGlass
+            size={16}
+            weight="bold"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
           />
-        </Box>
-      ) : (
-        <>
-          <Grid container spacing={2.5}>
-            {pageCourses.map((course, index) => (
-              <Grid key={course.CourseId || index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-                <CourseCard
-                  course={course}
-                  onContinueLearning={handleContinueLearning}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          <input
+            type="text"
+            placeholder="Search courses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={14} weight="bold" />
+            </button>
+          )}
+        </div>
 
-          {/* Thanh phân trang ở cuối trang danh sách */}
-          <CourseListPagination page={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-        </>
+        {/* Filter Toggle (Mobile) */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="sm:hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+        >
+          <Sliders size={16} />
+          Filters
+          {hasActiveFilters && (
+            <span className="w-2 h-2 rounded-full bg-brand-500" />
+          )}
+        </button>
+
+        {/* Desktop Filters */}
+        <div className="hidden sm:flex items-center gap-3">
+          {/* Category */}
+          <div className="relative">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="appearance-none pl-3.5 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all cursor-pointer hover:border-slate-300"
+            >
+              <option value="">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.CategoryId} value={String(cat.CategoryId)}>
+                  {cat.DisplayName || cat.CategoryName}
+                </option>
+              ))}
+            </select>
+            <CaretDown
+              size={12}
+              weight="bold"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+          </div>
+
+          {/* Level */}
+          <div className="relative">
+            <select
+              value={selectedLevel}
+              onChange={(e) => setSelectedLevel(e.target.value)}
+              className="appearance-none pl-3.5 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all cursor-pointer hover:border-slate-300"
+            >
+              {LEVELS.map((level) => (
+                <option key={level.value} value={level.value}>
+                  {level.label}
+                </option>
+              ))}
+            </select>
+            <CaretDown
+              size={12}
+              weight="bold"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+          </div>
+
+          {/* Sort */}
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="appearance-none pl-3.5 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all cursor-pointer hover:border-slate-300"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <CaretDown
+              size={12}
+              weight="bold"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+          </div>
+
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <X size={14} weight="bold" />
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Filter Panel */}
+      {showFilters && (
+        <div className="sm:hidden mb-6 p-5 bg-white border border-slate-100 rounded-2xl space-y-4 shadow-sm">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Category
+            </label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full appearance-none px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              <option value="">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.CategoryId} value={String(cat.CategoryId)}>
+                  {cat.DisplayName || cat.CategoryName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Level
+            </label>
+            <select
+              value={selectedLevel}
+              onChange={(e) => setSelectedLevel(e.target.value)}
+              className="w-full appearance-none px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              {LEVELS.map((level) => (
+                <option key={level.value} value={level.value}>
+                  {level.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full appearance-none px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={clearFilters}
+              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              Clear All
+            </button>
+            <button
+              onClick={() => setShowFilters(false)}
+              className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
       )}
-    </Box>
+
+      {/* Results Count */}
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-sm text-slate-500">
+          {loading ? (
+            <span className="text-slate-400">Searching...</span>
+          ) : (
+            <>
+              <strong className="text-slate-900">{courses.length}</strong> course{courses.length !== 1 ? "s" : ""} found
+            </>
+          )}
+        </p>
+      </div>
+
+      {/* Course Grid */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="animate-pulse bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              <div className="aspect-[16/9] bg-slate-100" />
+              <div className="p-4 space-y-3">
+                <div className="h-4 bg-slate-100 rounded-full w-3/4" />
+                <div className="h-3 bg-slate-100 rounded-full w-1/2" />
+                <div className="h-3 bg-slate-100 rounded-full w-5/6" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : courses.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {courses.map((course) => {
+            const cid = course._id || course.CourseId || course.courseId;
+            return (
+              <CourseCard
+                key={cid}
+                course={course}
+                onContinueLearning={() => navigate(`/my-courses/${cid}/learn`)}
+              />
+            );
+          })}
+
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 mb-4">
+            <BookOpen size={32} weight="light" className="text-slate-300" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">No courses found</h3>
+          <p className="text-sm text-slate-500 mb-4 max-w-sm mx-auto">
+            Try adjusting your filters or search term to find what you are looking for.
+          </p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-800 transition-colors"
+            >
+              Clear all filters
+              <ArrowRight size={14} weight="bold" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

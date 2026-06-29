@@ -16,7 +16,11 @@ export function sanitizeThumbnail(thumbnail) {
 
 export function resolveThumbnailUrl(thumbnail, cacheKey) {
   const value = sanitizeThumbnail(thumbnail);
-  if (!value) return '';
+  if (!value) {
+    // Return Picsum placeholder when no thumbnail is available
+    const seed = cacheKey || 'course-default';
+    return `https://picsum.photos/seed/${seed}/640/360`;
+  }
 
   if (
     value.startsWith('http://') ||

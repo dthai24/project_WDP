@@ -1,421 +1,168 @@
-/**
- * CourseCard ─ Card hiển thị một khóa học trong danh sách catalog
- */
-import { Box, Card, CardContent, Chip, Typography, alpha, useTheme } from "@mui/material";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-
-// Icons
-import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
-import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
-import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
-import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
-import StarRoundedIcon from "@mui/icons-material/StarRounded";
-import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
-
-// Local Components & Utils
-import AppButton from "@/shared/ui/AppButton";
-import ThumbnailImage from "@/shared/ui/ThumbnailImage";
-import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Star,
+  Users,
+  Clock,
+  PlayCircle,
+  GraduationCap,
+  ArrowRight,
+} from "@phosphor-icons/react";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
-import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
-import { sanitizeThumbnail } from "@/shared/utils/thumbnailUtils";
 
-/* ─── HÀM HELPER ─── */
-const MUTED = "#64748B";
-const TEXT = "#0F172A";
-
-function formatStudentCount(count) {
-  if (count >= 1000) return count.toLocaleString("vi-VN");
-  return String(count);
+function getLevelBadge(level = "") {
+  const l = level.toLowerCase();
+  if (l.includes("co ban") || l.includes("beginner")) return "bg-sky-50 text-sky-700 border-sky-200";
+  if (l.includes("trung cap") || l.includes("intermediate")) return "bg-amber-50 text-amber-700 border-amber-200";
+  if (l.includes("nang cao") || l.includes("advanced")) return "bg-orange-50 text-orange-700 border-orange-200";
+  return "bg-slate-100 text-slate-600 border-slate-200";
 }
 
-function countLessonsFromPaths(paths = []) {
-  return paths.reduce((sum, path) => sum + (path.Nodes?.length ?? 0), 0);
-}
-
-function countMaterialsFromPaths(paths = []) {
-  return paths.reduce(
-    (sum, path) =>
-      sum +
-      (path.Nodes ?? []).reduce(
-        (nodeSum, node) => nodeSum + (node.Materials?.length ?? 0),
-        0,
-      ),
-    0,
-  );
-}
-
-function normalizeCourse(course = {}) {
-  // 1. Kiểm tra tiến độ học
-  let currentProgress = 0;
-  if (course.Progress != null) {
-    currentProgress = course.Progress;
-  } else if (course.progressPercentage != null) {
-    currentProgress = course.progressPercentage;
-  } else if (course.progress != null) {
-    currentProgress = course.progress;
-  }
-  // 2. Kiểm tra xem đã đăng ký khóa học chưa
-  let checkEnrolled = false;
-  if (course.IsEnrolled === 1 || course.IsEnrolled === true) {
-    checkEnrolled = true; // Đọc từ biến viết hoa
-  } else if (course.isEnrolled === 1 || course.isEnrolled === true) {
-    checkEnrolled = true; // Đọc từ biến viết thường
-  } else if (currentProgress > 0) {
-    checkEnrolled = true; // Đang học dở thì chắc chắn là đã đăng ký
-  }
-  // 3. Xử lý ảnh Thumbnail
-  const courseImage = sanitizeThumbnail(course.thumbnail || course.Thumbnail);
-  // 4. Đếm số chương học (Paths)
-  const paths = course.Paths ?? [];
-  let stageCount = 0;
-  if (paths.length > 0) {
-    stageCount = paths.length;
-  } else if (course.TotalNodes != null) {
-    stageCount = course.TotalNodes;
-  }
-  const lessonCount =
-    course.TotalLessons != null ? course.TotalLessons : countLessonsFromPaths(paths);
-  const materialCount =
-    course.TotalMaterials != null ? course.TotalMaterials : countMaterialsFromPaths(paths);
-  // 5. Gắn dữ liệu vào danh sách chuẩn bị trả về
-  return {
-    courseId: course.CourseId || course.id,
-    courseName: course.CourseName || course.title || "Khóa học",
-    thumbnail: courseImage || null,
-    category: course.CategoryDisplayName || course.CategoryName || course.Category || "",
-    level: course.LevelDisplayName || course.LevelName || course.Level || "",
-    instructor: course.Instructor || "S.T.A.R Mentor Team",
-    rating: course.Rating || null,
-    reviewCount: course.ReviewCount || 0,
-    studentCount: course.StudentCount || 0,
-    totalLessons: lessonCount,
-    totalNodes: stageCount,
-    totalMaterials: materialCount,
-    progressPercentage: currentProgress,
-    isEnrolled: checkEnrolled,
+function getCategoryBadge(category = "") {
+  const map = {
+    "Giao tiep": "bg-blue-50 text-blue-700 border-blue-200",
+    Communication: "bg-blue-50 text-blue-700 border-blue-200",
+    IELTS: "bg-purple-50 text-purple-700 border-purple-200",
+    TOEIC: "bg-sky-50 text-sky-700 border-sky-200",
+    "Ngu phap": "bg-slate-100 text-slate-700 border-slate-200",
+    Grammar: "bg-slate-100 text-slate-700 border-slate-200",
+    "Phat am": "bg-pink-50 text-pink-700 border-pink-200",
+    Pronunciation: "bg-pink-50 text-pink-700 border-pink-200",
   };
+  return map[category] ?? "bg-slate-100 text-slate-600 border-slate-200";
 }
 
-function getStatusChipStyle(isEnrolled, progress) {
-  if (!isEnrolled) {
-    return {
-      label: "Chưa đăng ký",
-      sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
-    };
-  }
-  if (progress >= 100) {
-    return {
-      label: "Hoàn thành",
-      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
-    };
-  }
-  if (progress > 0) {
-    return {
-      label: "Đang học",
-      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
-    };
-  }
-  return {
-    label: "Đã đăng ký",
-    sx: { bgcolor: "rgba(22,163,74,0.12)", color: "#16A34A", border: "1px solid rgba(22,163,74,0.20)" },
-  };
+function getStatusBadge(isEnrolled, progress) {
+  if (!isEnrolled) return null;
+  if (progress >= 100) return { label: "Completed", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  if (progress > 0) return { label: "In Progress", className: "bg-brand-50 text-brand-700 border-brand-200" };
+  return { label: "Enrolled", className: "bg-green-50 text-green-700 border-green-200" };
 }
 
-function getMyCoursesStatusChip(progress) {
-  if (progress >= 100) {
-    return {
-      label: "Hoàn thành",
-      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
-    };
-  }
-  if (progress > 0) {
-    return {
-      label: "Đang học",
-      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
-    };
-  }
-  return {
-    label: "Chưa bắt đầu",
-    sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
-  };
-}
-
-/* ─── sub-components ─── */
-
-function MetaInline({ icon: Icon, label }) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      <Icon sx={{ fontSize: 15, color: "rgba(8,145,178,0.75)", flexShrink: 0 }} />
-      <Typography sx={{ fontSize: 12.5, color: MUTED, fontWeight: 500, lineHeight: 1.2 }}>
-        {label}
-      </Typography>
-    </Box>
-  );
-}
-
-/* ─── COMPONENT CHÍNH ─── */
-export default function CourseCard({
-  course,
-  variant = "catalog",
-  onEnroll,
-  onContinueLearning,
-  onStartLearning,
-  onClick,
-  sx: cardSx,
-}) {
-  const theme = useTheme();
+export default function CourseCard({ course, onContinueLearning }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Khởi tạo các biến logic
-  const isCatalog = variant === "catalog";
-  const isMyCourses = variant === "myCourses";
-  const data = normalizeCourse(course);
-  const statusChip = isMyCourses
-    ? getMyCoursesStatusChip(data.progressPercentage)
-    : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
-  const levelStyle = resolveLevelChipSx({ displayName: data.level });
-  const categoryStyle = resolveCategoryChipSx({ displayName: data.category }, { withBorder: false });
-  const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
-  const progressTextColor = getProgressColor(progressValue);
-  const isCompleted = progressValue >= 100;
-  const isNotStarted = isMyCourses && progressValue === 0;
-  const showProgress = isMyCourses;
-  const lastActivity = course.lastActivity;
+  const courseId = course._id || course.CourseId || course.courseId || course.id;
 
-  // Xử lý đường dẫn
-  const listFromUrl = isMyCourses ? "/my-courses" : location.pathname === "/courses" ? `${location.pathname}${location.search}` : undefined;
-  const detailPath = buildCourseDetailPath(data.courseId, searchParams, listFromUrl);
+  const title = course.CourseName || course.title || course.courseName || "Untitled Course";
+  const description = course.Description || course.shortDescription || "";
+  const category = course.CategoryDisplayName || course.category || "";
+  const level = course.LevelDisplayName || course.level || "";
+  const instructor = course.InStructorName || course.instructor || "";
+  const isEnrolled = Boolean(course.isEnrolled);
+  const progress = course.progress || 0;
+  const rating = course.rating || 4.5;
+  const studentCount = course.studentCount || 0;
+  const lessonCount = course.TotalLessons || course.lessonCount || 0;
+  const stageCount = course.stageCount || 0;
+
+  let thumbnail = course.thumbnail || course.Thumbnail;
+  if (thumbnail === "CHUA FIX LOI ANH" || !thumbnail) {
+    // Use Picsum for placeholder images - deterministic seed based on course ID
+    const seed = courseId || title.replace(/\s+/g, "-").toLowerCase();
+    thumbnail = `https://picsum.photos/seed/${seed}/640/360`;
+  } else if (!thumbnail.startsWith("http://") && !thumbnail.startsWith("https://") && !thumbnail.startsWith("data:")) {
+    thumbnail = `http://localhost:5000${thumbnail.startsWith("/") ? thumbnail : "/" + thumbnail}`;
+  }
+
+  const statusBadge = getStatusBadge(isEnrolled, progress);
+
+  const handleClick = () => {
+    if (isEnrolled && onContinueLearning) {
+      onContinueLearning(course);
+    } else {
+      navigate(buildCourseDetailPath(courseId, searchParams));
+    }
+  };
 
   return (
-    <Card
-      elevation={0}
-      onClick={onClick}
-      sx={{
-        height: "100%",
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        bgcolor: "#FFFFFF",
-        borderRadius: "18px",
-        border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
-        boxShadow: theme.ios18?.shadow?.sm,
-        cursor: onClick ? "pointer" : "default",
-        transition: [
-          `transform 0.25s ${theme.ios18?.transition}`,
-          `box-shadow 0.25s ${theme.ios18?.transition}`,
-          `border-color 0.25s ${theme.ios18?.transition}`,
-        ].join(", "),
-        "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: theme.ios18?.shadow?.md,
-          borderColor: alpha(theme.palette.primary.main, 0.18),
-        },
-        ...cardSx,
-      }}
+    <article
+      onClick={handleClick}
+      className="group relative bg-white rounded-2xl border border-slate-100 overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5 active:translate-y-0"
     >
-      {/* 
-      ================= Hình thu nhỏ ==========================================
-       */}
-      <ThumbnailImage
-        src={data.thumbnail}
-        label={data.courseName}
-        alt={data.courseName}
-        iconSize={24}
-        sx={{ width: "100%", aspectRatio: "16 / 9", flexShrink: 0 }}
-      />
-      {/* {console.log("huhusdfasdfdasf", data.thumbnail)} */}
-
-      {/* ── Nội dung thẻ ── */}
-      <CardContent
-        sx={{
-          position: "relative",
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: 1.25,
-          p: 2,
-          "&:last-child": { pb: 2 },
-        }}
-      >
-        {/* Tiêu đề */}
-        <Typography
-          component={Link}
-          to={detailPath}
-          onClick={(e) => e.stopPropagation()}
-          variant="subtitle1"
-          sx={{
-            fontWeight: 700,
-            lineHeight: 1.35,
-            color: TEXT,
-            textDecoration: "none",
-            cursor: "pointer",
-            transition: `color 0.18s ${theme.ios18?.transition}`,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-            minHeight: "2.7em",
-            "&:hover": { color: "primary.main" },
-          }}
-        >
-          {data.courseName}
-        </Typography>
-
-        {/* Đánh giá & Học viên */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.25, minHeight: 20 }}>
-          {data.rating != null && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                <StarRoundedIcon sx={{ fontSize: 15, color: "#F59E0B" }} />
-                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1 }}>
-                  {Number(data.rating).toFixed(1)}
-                </Typography>
-                {data.reviewCount > 0 && (
-                  <Typography sx={{ fontSize: 11.5, color: MUTED, lineHeight: 1 }}>
-                    ({data.reviewCount.toLocaleString("vi-VN")})
-                  </Typography>
-                )}
-              </Box>
-            )}
-            {data.rating != null && data.studentCount > 0 && (
-              <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "#CBD5E1", flexShrink: 0 }} />
-            )}
-            {data.studentCount > 0 && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                <PeopleOutlineRoundedIcon sx={{ fontSize: 15, color: "#94A3B8" }} />
-                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1 }}>
-                  {formatStudentCount(data.studentCount)} học viên
-                </Typography>
-              </Box>
-            )}
-        </Box>
-
-        {/* Trình độ & Danh mục */}
-        {(data.level || data.category) && (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-            {data.level && <Chip label={data.level} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...levelStyle }} />}
-            {data.category && <Chip label={data.category} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...categoryStyle }} />}
-          </Box>
-        )}
-
-        {/* Thông tin Chương, Bài học, Học liệu */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5, py: 0.5 }}>
-          <MetaInline icon={RouteOutlinedIcon} label={`${data.totalNodes} chương`} />
-          <MetaInline icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
-          <MetaInline icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
-        </Box>
-
-        {/* Giảng viên */}
-        {data.instructor && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
-            <PersonOutlineOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8", flexShrink: 0 }} />
-            <Typography sx={{ fontSize: 11.5, color: MUTED, flexShrink: 0 }}>Giảng viên:</Typography>
-            <Typography sx={{ fontSize: 12, color: TEXT, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {data.instructor}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Trạng thái */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-          <Chip
-            label={statusChip.label}
-            size="small"
-            sx={{
-              height: 26,
-              fontSize: 12.5,
-              fontWeight: 700,
-              borderRadius: "99px",
-              "& .MuiChip-label": { px: 1.25, lineHeight: 1.2 },
-              ...statusChip.sx,
+      {/* Thumbnail */}
+      <div className="aspect-[16/9] bg-gradient-to-br from-slate-50 to-brand-50/30 relative overflow-hidden">
+        {thumbnail ? (
+          <img
+            src={thumbnail}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              e.target.style.display = "none";
             }}
           />
-        </Box>
-
-        {/* Thanh Tiến độ (Nếu đang học) */}
-        {showProgress && (
-          <Box>
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
-              <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 600, fontSize: 11.5 }}>
-                {isCompleted ? "Hoàn thành" : "Tiến độ"}
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                {isCompleted && <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14, color: progressTextColor }} />}
-                <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 11.5, color: progressTextColor }}>
-                  {data.progressPercentage}%
-                </Typography>
-              </Box>
-            </Box>
-            <AppProgressBar value={progressValue} height={6} />
-          </Box>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <GraduationCap size={36} weight="light" className="text-slate-300" />
+          </div>
         )}
 
-        {/* Hoạt động gần nhất */}
-        {isMyCourses && lastActivity && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: -0.25 }}>
-            <AccessTimeOutlinedIcon sx={{ fontSize: 12, color: "#94A3B8" }} />
-            <Typography variant="caption" sx={{ color: "#64748B", fontSize: 11.5, fontWeight: 500 }}>
-              Học gần nhất: {lastActivity}
-            </Typography>
-          </Box>
+        {/* Status Badge Overlay */}
+        {statusBadge && (
+          <span
+            className={`absolute top-3 left-3 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-sm backdrop-blur-sm ${statusBadge.className}`}
+          >
+            {statusBadge.label}
+          </span>
         )}
 
-        {/* ── Nút Hành Động Cuối Card ── */}
-        <Box sx={{ mt: "auto", pt: 0.75 }}>
-          {isMyCourses ? (
-            <AppButton
-              fullWidth
-              size="small"
-              variant="contained"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isCompleted) {
-                  onContinueLearning?.(course);
-                } else if (isNotStarted) {
-                  onStartLearning?.(course) ?? onContinueLearning?.(course);
-                } else {
-                  onContinueLearning?.(course);
-                }
-              }}
-            >
-              {isCompleted ? "Ôn tập lại" : isNotStarted ? "Bắt đầu học" : "Tiếp tục học"}
-            </AppButton>
-          ) : data.isEnrolled ? (
-            <AppButton
-              fullWidth
-              size="small"
-              variant="contained"
-              onClick={(e) => {
-                e.stopPropagation();
-                onContinueLearning?.(course);
-              }}
-            >
-              Tiếp tục học
-            </AppButton>
-          ) : (
-            <AppButton
-              fullWidth
-              size="small"
-              variant="accent"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onEnroll) {
-                  onEnroll(course);
-                } else {
-                  navigate(buildCourseDetailPath(data.courseId, searchParams, listFromUrl));
-                }
-              }}
-            >
-              Đăng ký
-            </AppButton>
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Title */}
+        <h3 className="text-sm font-bold text-slate-900 leading-snug mb-1.5 line-clamp-2 group-hover:text-brand-700 transition-colors">
+          {title}
+        </h3>
+
+        {/* Description */}
+        {description && (
+          <p className="text-xs text-slate-500 leading-relaxed mb-2.5 line-clamp-2">
+            {description}
+          </p>
+        )}
+
+        {/* Badges */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {category && (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getCategoryBadge(category)}`}>
+              {category}
+            </span>
           )}
-        </Box>
-      </CardContent>
-    </Card>
+          {level && (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getLevelBadge(level)}`}>
+              {level}
+            </span>
+          )}
+        </div>
+
+        {/* Stats Row */}
+        <div className="flex items-center justify-between pt-2.5 border-t border-slate-50">
+          <div className="flex items-center gap-3">
+            {rating > 0 && (
+              <div className="flex items-center gap-1">
+                <Star size={12} weight="fill" className="text-amber-400" />
+                <span className="text-[11px] font-bold text-slate-700">{rating}</span>
+              </div>
+            )}
+            {lessonCount > 0 && (
+              <div className="flex items-center gap-1">
+                <PlayCircle size={12} className="text-slate-400" />
+                <span className="text-[11px] text-slate-500">{lessonCount} lessons</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <span className="text-[11px] font-bold">
+              {isEnrolled ? "Continue" : "Details"}
+            </span>
+            <ArrowRight size={12} weight="bold" />
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }

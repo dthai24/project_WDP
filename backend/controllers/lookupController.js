@@ -1,14 +1,19 @@
-const { sql } = require('../config/db');
+const Category = require('../models/MongoDB/Category');
+const Level = require('../models/MongoDB/Level');
 
 const getCategories = async (_req, res) => {
   try {
-    const result = await new sql.Request().query(`
-      SELECT CategoryId AS categoryId, DisplayName AS displayName
-      FROM Categories
-      ORDER BY DisplayName
-    `);
+    const categories = await Category.find({ isActive: true })
+      .select('_id displayName')
+      .sort({ displayName: 1 })
+      .lean();
 
-    return res.json({ success: true, data: result.recordset });
+    const data = categories.map(c => ({
+      categoryId: c._id.toString(),
+      displayName: c.displayName,
+    }));
+
+    return res.json({ success: true, data });
   } catch (err) {
     console.error('[GetCategories Error]', err.message);
     return res.status(500).json({
@@ -20,13 +25,17 @@ const getCategories = async (_req, res) => {
 
 const getLevels = async (_req, res) => {
   try {
-    const result = await new sql.Request().query(`
-      SELECT LevelId AS levelId, DisplayName AS displayName
-      FROM Levels
-      ORDER BY SortOrder ASC
-    `);
+    const levels = await Level.find({ isActive: true })
+      .select('_id displayName')
+      .sort({ sortOrder: 1 })
+      .lean();
 
-    return res.json({ success: true, data: result.recordset });
+    const data = levels.map(l => ({
+      levelId: l._id.toString(),
+      displayName: l.displayName,
+    }));
+
+    return res.json({ success: true, data });
   } catch (err) {
     console.error('[GetLevels Error]', err.message);
     return res.status(500).json({

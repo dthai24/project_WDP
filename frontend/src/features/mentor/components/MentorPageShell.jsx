@@ -1,19 +1,15 @@
-import { Box, Typography } from '@mui/material';
-import {
-  PAGE_DESCRIPTION_SX,
-  PAGE_TITLE_SX,
-} from '@/features/mentor/components/course/mentorCourseCreateStyles';
-
 export default function MentorPageShell({ title, description, children }) {
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 0.75 }}>
+    <div className="w-full max-w-7xl mx-auto">
+      <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3] mb-1" style={{ color: '#0F172A' }}>
         {title}
-      </Typography>
-      <Typography sx={{ ...PAGE_DESCRIPTION_SX, mb: 2.5 }}>
-        {description}
-      </Typography>
+      </h1>
+      {description && (
+        <p className="text-[14px] leading-[1.55] max-w-[560px] mb-2.5" style={{ color: '#64748B' }}>
+          {description}
+        </p>
+      )}
       {children}
-    </Box>
+    </div>
   );
 }

@@ -1,176 +1,31 @@
-const { sql } = require("../config/db");
-const {
-  saveCourseThumbnailFromDataUrl,
-} = require("../middlewares/courseThumbnailMiddleware");
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
+const Course = require('./MongoDB/Course');
+const Path = require('./MongoDB/Path');
+const PathNode = require('./MongoDB/PathNode');
+const NodeMaterial = require('./MongoDB/NodeMaterial');
+const UserCourse = require('./MongoDB/UserCourse');
+const UserNode = require('./MongoDB/UserNode');
+const { saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
 // ==========================================
-// 1. CÁC HÀM LẤY DANH SÁCH KHÓA HỌC CHUNG
+// HELPERS
 // ==========================================
 
-// Phân luồng lấy khóa học tùy theo vai trò (Mentor hay Student)
-const getCoursesByUserRole = (userId, userRole) => {
-  if (userRole.toLowerCase() === "mentor") {
-    return getMentorCourses(userId);
-  }
-  if (userRole.toLowerCase() === "student") {
-    return getStudentCourses(userId);
-  }
-  return null;
-};
-// lay khoa hoc noi bat theo so luong nguoi tham gia
-const getFeaturedCourses = async () => {
-  const request = new sql.Request();
-  const result = await request.query(`
-    SELECT TOP 4
-      c.CourseId,
-      c.CourseName,
-      c.Description,
-      c.Thumbnail,
-      c.Rating,
-      c.TotalLessons,
-      cat.DisplayName AS CategoryName,
-      lv.DisplayName  AS LevelName,
-      u.FullName      AS InstructorName,
-      COUNT(uc.UserId) AS TotalStudents
-    FROM Courses c
-    LEFT JOIN Categories  cat ON c.CategoryId  = cat.CategoryId
-    LEFT JOIN Levels      lv  ON c.LevelId     = lv.LevelId
-    LEFT JOIN Users       u   ON c.InstructorId = u.UserId
-    LEFT JOIN User_Courses uc ON c.CourseId    = uc.CourseId
-    WHERE c.IsPublished = 1
-    GROUP BY
-      c.CourseId, c.CourseName, c.Description,
-      c.Thumbnail, c.Rating, c.TotalLessons,
-      cat.DisplayName, lv.DisplayName, u.FullName
-    ORDER BY TotalStudents DESC
-  `);
-  return result.recordset;
-};
-// lấy top 4 khóa học có đánh giá (Rating) cao nhất
-const getFeaturedPaths = async () => {
-  const request = new sql.Request();
-  const result = await request.query(`
-    SELECT TOP 4
-      c.CourseId, c.CourseName, c.Description, c.Thumbnail,
-      c.Rating, c.TotalLessons,
-      cat.DisplayName AS CategoryName,
-      lv.DisplayName  AS LevelName,
-      u.FullName      AS InstructorName,
-      COUNT(uc.UserId) AS TotalStudents
-    FROM Courses c
-    LEFT JOIN Categories  cat ON c.CategoryId   = cat.CategoryId
-    LEFT JOIN Levels      lv  ON c.LevelId      = lv.LevelId
-    LEFT JOIN Users       u   ON c.InstructorId = u.UserId
-    LEFT JOIN User_Courses uc ON c.CourseId     = uc.CourseId
-    WHERE c.IsPublished = 1
-    GROUP BY
-      c.CourseId, c.CourseName, c.Description,
-      c.Thumbnail, c.Rating, c.TotalLessons,
-      cat.DisplayName, lv.DisplayName, u.FullName
-    ORDER BY c.Rating DESC          -- ← chỗ duy nhất khác mục 3
-  `);
-  return result.recordset;
-};
-
-// Lấy tất cả khóa học cho màn hình Catalog (Có phân trang, bộ lọc)
-const getStudentCoursesList = async (filters, userId) => {
-  const request = new sql.Request();
-  const { search, category, level, status, sort } = filters;
-  // Luôn truyền UserId vào SQL (nếu không đăng nhập thì là null)
-  request.input("UserId", sql.Int, userId || null);
-
-  let baseQuery = `
-        FROM Courses crs
-        LEFT JOIN Categories cate ON crs.CategoryId = cate.CategoryId
-        LEFT JOIN Levels lv ON crs.LevelId = lv.LevelId
-        LEFT JOIN User_Courses uc ON crs.CourseId = uc.CourseId AND uc.UserId = @UserId
-        WHERE crs.IsPublished = 1
-    `;
-
-  // Lọc theo từ khóa tìm kiếm
-  if (search) {
-    baseQuery += ` AND crs.CourseName LIKE @Search`;
-    request.input("Search", sql.NVarChar(200), `%${search}%`);
-  }
-
-  // Lọc theo danh mục
-  if (category) {
-    const catIds = Array.isArray(category) ? category.join(",") : category;
-    if (catIds && String(catIds).trim() !== "") {
-      baseQuery += ` AND crs.CategoryId IN (${catIds})`;
-    }
-  }
-
-  // Lọc theo cấp độ
-  if (level) {
-    const levIds = Array.isArray(level) ? level.join(",") : level;
-    if (levIds && String(levIds).trim() !== "") {
-      baseQuery += ` AND crs.LevelId IN (${levIds})`;
-    }
-  }
-
-  // Lọc theo trạng thái đã đăng ký hay chưa
-  if (status && userId) {
-    if (status === "enrolled") {
-      baseQuery += ` AND EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
-    } else if (status === "not_enrolled") {
-      baseQuery += ` AND NOT EXISTS (SELECT 1 FROM User_Courses uc WHERE uc.CourseId = crs.CourseId AND uc.UserId = @UserId)`;
-    }
-    if (!request.parameters.UserId) {
-      request.input("UserId", sql.Int, userId);
-    }
-  }
-
-  // Lấy tổng số lượng để làm phân trang
-  const countQuery = `SELECT COUNT(*) AS totalCount ${baseQuery}`;
-  const countResult = await request.query(countQuery);
-  const totalCount = countResult.recordset[0].totalCount;
-
-  // Truy vấn dữ liệu chi tiết
-  let selectQuery = `
-        SELECT crs.CourseId, crs.CourseName, crs.Description, crs.CategoryId, crs.LevelId,
-               lv.LevelName as levelName, lv.DisplayName as LevelDisplayName,
-               crs.Thumbnail, crs.CreatedAt, crs.UpdatedAt,
-               cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName,
-               CASE WHEN uc.UserId IS NOT NULL THEN 1 ELSE 0 END AS isEnrolled
-        ${baseQuery}
-    `;
-
-  // Sắp xếp
-  if (sort === "newest") {
-    selectQuery += ` ORDER BY crs.CreatedAt DESC`;
-  } else {
-    selectQuery += ` ORDER BY crs.CourseId DESC`; // Mặc định xếp mới nhất theo ID
-  }
-
-  const coursesResult = await request.query(selectQuery);
-  // Đắp thêm cấu trúc Path -> Node -> Material vào từng khóa học
-  const coursesWithPaths = await buildCourse(coursesResult.recordset);
-  return { courses: coursesWithPaths, totalCount };
-};
-
-// ==========================================
-// 2. CÁC HÀM XÂY DỰNG CẤU TRÚC KHÓA HỌC (BUILD COURSE)
-// ==========================================
-
-// Ghép nối cấu trúc: Course -> Paths -> Nodes -> Materials
+/** Ghép nối cấu trúc: Course -> Paths -> Nodes -> Materials */
 const buildCourse = async (courses) => {
   return await Promise.all(
     courses.map(async (course) => {
-      const coursePaths = await getCoursePaths(course.CourseId);
+      const coursePaths = await getCoursePaths(course._id);
       const pathsWithNodes = await Promise.all(
         coursePaths.map(async (path) => {
-          const pathId = path.PathId;
-          const nodes = await getPathNodes(pathId);
-
+          const nodes = await getPathNodes(path._id);
           const nodesWithMaterials = await Promise.all(
             nodes.map(async (node) => {
-              const nodeId = node.NodeId;
-              const materials = await getMaterials(nodeId);
+              const materials = await getMaterials(node._id);
               return { ...node, Materials: materials };
             }),
           );
-
           return { ...path, Nodes: nodesWithMaterials };
         }),
       );
@@ -180,312 +35,577 @@ const buildCourse = async (courses) => {
 };
 
 const getCoursePaths = async (courseId) => {
-  const request = new sql.Request();
-  request.input("courseId", sql.Int, courseId);
-  const result = await request.query(
-    `Select * From Paths Where CourseId = @courseId ORDER BY [Order] ASC`,
-  );
-  return result.recordset;
-};
-
-/** Mục lục chương + bài (không kèm học liệu) — dùng cho Question Bank, quiz setup, v.v. */
-const getCourseChaptersOutline = async (courseId) => {
-  const request = new sql.Request();
-  request.input("courseId", sql.Int, Number(courseId));
-  const courseCheck = await request.query(
-    `SELECT CourseId FROM Courses WHERE CourseId = @courseId`,
-  );
-  if (courseCheck.recordset.length === 0) {
-    return null;
-  }
-
-  const paths = await getCoursePaths(Number(courseId));
-  return Promise.all(
-    paths.map(async (path) => {
-      const nodes = await getPathNodes(path.PathId);
-      return {
-        PathId: path.PathId,
-        PathName: path.PathName,
-        Order: path.Order,
-        Nodes: nodes.map((node) => ({
-          NodeId: node.NodeId,
-          NodeName: node.NodeName,
-          NodeOrder: node.NodeOrder,
-        })),
-      };
-    }),
-  );
+  return await Path.find({ courseId }).sort({ order: 1 }).lean();
 };
 
 const getPathNodes = async (pathId) => {
-  const request = new sql.Request();
-  request.input("pathId", sql.Int, pathId);
-  const result = await request.query(
-    `SELECT * FROM [dbo].[Path_Nodes] Where PathId = @pathId Order by NodeOrder Asc`,
-  );
-  return result.recordset;
+  return await PathNode.find({ pathId }).sort({ nodeOrder: 1 }).lean();
 };
 
 const getMaterials = async (nodeId) => {
-  const request = new sql.Request();
-  request.input("nodeId", sql.Int, nodeId);
-  const result = await request.query(
-    `SELECT * FROM [LearningPath_Base].[dbo].[Node_Materials] Where NodeId = @nodeId Order By MaterialOrder ASC`,
-  );
-  return result.recordset;
+  return await NodeMaterial.find({ nodeId }).sort({ materialOrder: 1 }).lean();
 };
 
 // ==========================================
-// 3. CHI TIẾT KHÓA HỌC & MENTOR
+// 1. CÁC HÀM LẤY DANH SÁCH KHÓA HỌC CHUNG
+// ==========================================
+
+const getCoursesByUserRole = async (userId, userRole) => {
+  if (userRole.toLowerCase() === 'mentor') {
+    return getMentorCourses(userId);
+  }
+  if (userRole.toLowerCase() === 'student') {
+    return getStudentCourses(userId);
+  }
+  return null;
+};
+
+/** Lấy khóa học nổi bật theo số lượng người tham gia */
+const getFeaturedCourses = async () => {
+  const courses = await Course.aggregate([
+    { $match: { isPublished: true } },
+    {
+      $lookup: {
+        from: 'usercourses',
+        localField: '_id',
+        foreignField: 'courseId',
+        as: 'enrollments',
+      },
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'categoryId',
+        foreignField: '_id',
+        as: 'category',
+      },
+    },
+    {
+      $lookup: {
+        from: 'levels',
+        localField: 'levelId',
+        foreignField: '_id',
+        as: 'level',
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'instructorId',
+        foreignField: '_id',
+        as: 'instructor',
+      },
+    },
+    {
+      $addFields: {
+        totalStudents: { $size: '$enrollments' },
+        categoryName: { $arrayElemAt: ['$category.displayName', 0] },
+        levelName: { $arrayElemAt: ['$level.displayName', 0] },
+        instructorName: { $arrayElemAt: ['$instructor.fullName', 0] },
+      },
+    },
+    { $sort: { totalStudents: -1 } },
+    { $limit: 4 },
+    {
+      $project: {
+        _id: 1,
+        courseName: 1,
+        description: 1,
+        thumbnail: 1,
+        rating: 1,
+        totalLessons: 1,
+        categoryName: 1,
+        levelName: 1,
+        instructorName: 1,
+        totalStudents: 1,
+      },
+    },
+  ]);
+  return courses;
+};
+
+/** Lấy top 4 khóa học có đánh giá (Rating) cao nhất */
+const getFeaturedPaths = async () => {
+  const courses = await Course.aggregate([
+    { $match: { isPublished: true } },
+    {
+      $lookup: {
+        from: 'usercourses',
+        localField: '_id',
+        foreignField: 'courseId',
+        as: 'enrollments',
+      },
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'categoryId',
+        foreignField: '_id',
+        as: 'category',
+      },
+    },
+    {
+      $lookup: {
+        from: 'levels',
+        localField: 'levelId',
+        foreignField: '_id',
+        as: 'level',
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'instructorId',
+        foreignField: '_id',
+        as: 'instructor',
+      },
+    },
+    {
+      $addFields: {
+        totalStudents: { $size: '$enrollments' },
+        categoryName: { $arrayElemAt: ['$category.displayName', 0] },
+        levelName: { $arrayElemAt: ['$level.displayName', 0] },
+        instructorName: { $arrayElemAt: ['$instructor.fullName', 0] },
+      },
+    },
+    { $sort: { rating: -1 } },
+    { $limit: 4 },
+    {
+      $project: {
+        _id: 1,
+        courseName: 1,
+        description: 1,
+        thumbnail: 1,
+        rating: 1,
+        totalLessons: 1,
+        categoryName: 1,
+        levelName: 1,
+        instructorName: 1,
+        totalStudents: 1,
+      },
+    },
+  ]);
+  return courses;
+};
+
+/** Lấy tất cả khóa học cho màn hình Catalog (Có phân trang, bộ lọc) */
+const getStudentCoursesList = async (filters, userId) => {
+  const { search, category, level, status, sort } = filters;
+
+  const matchStage = { isPublished: true };
+
+  if (search) {
+    matchStage.courseName = { $regex: search, $options: 'i' };
+  }
+  if (category) {
+    const catIds = Array.isArray(category) ? category : [category];
+    matchStage.categoryId = { $in: catIds.map(id => new ObjectId(id)) };
+  }
+  if (level) {
+    const levIds = Array.isArray(level) ? level : [level];
+    matchStage.levelId = { $in: levIds.map(id => new ObjectId(id)) };
+  }
+
+  const pipeline = [
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'categoryId',
+        foreignField: '_id',
+        as: 'category',
+      },
+    },
+    {
+      $lookup: {
+        from: 'levels',
+        localField: 'levelId',
+        foreignField: '_id',
+        as: 'level',
+      },
+    },
+    {
+      $lookup: {
+        from: 'usercourses',
+        let: { courseId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: (() => {
+                  const conditions = [{ $eq: ['$courseId', '$$courseId'] }];
+                  if (userId) conditions.push({ $eq: ['$userId', new ObjectId(userId)] });
+                  return conditions;
+                })(),
+              },
+            },
+          },
+        ],
+        as: 'userCourse',
+      },
+    },
+    {
+      $addFields: {
+        categoryDisplayName: { $arrayElemAt: ['$category.displayName', 0] },
+        categoryName: { $arrayElemAt: ['$category.categoryName', 0] },
+        levelName: { $arrayElemAt: ['$level.levelName', 0] },
+        levelDisplayName: { $arrayElemAt: ['$level.displayName', 0] },
+        isEnrolled: { $cond: [{ $gt: [{ $size: '$userCourse' }, 0] }, 1, 0] },
+      },
+    },
+  ];
+
+  // Lọc theo trạng thái đã đăng ký
+  if (status === 'enrolled' && userId) {
+    pipeline.push({ $match: { isEnrolled: 1 } });
+  } else if (status === 'not_enrolled' && userId) {
+    pipeline.push({ $match: { isEnrolled: 0 } });
+  }
+
+  // Sắp xếp
+  if (sort === 'newest') {
+    pipeline.push({ $sort: { createdAt: -1 } });
+  } else {
+    pipeline.push({ $sort: { _id: -1 } });
+  }
+
+  // Count total
+  const countPipeline = [...pipeline, { $count: 'totalCount' }];
+  const countResult = await Course.aggregate(countPipeline);
+  const totalCount = countResult[0]?.totalCount || 0;
+
+  // Get data
+  pipeline.push({
+    $project: {
+      _id: 1,
+      courseName: 1,
+      description: 1,
+      categoryId: 1,
+      levelId: 1,
+      levelName: 1,
+      levelDisplayName: 1,
+      thumbnail: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      categoryDisplayName: 1,
+      categoryName: 1,
+      isEnrolled: 1,
+    },
+  });
+
+  const courses = await Course.aggregate(pipeline);
+  const coursesWithPaths = await buildCourse(courses);
+  return { courses: coursesWithPaths, totalCount };
+};
+
+// ==========================================
+// 2. CHI TIẾT KHÓA HỌC & MENTOR
 // ==========================================
 
 const getCourseById = async (courseId, userId = null) => {
-  const request = new sql.Request();
-  request.input("courseId", sql.Int, Number(courseId));
-  request.input("userId", sql.Int, userId || null);
-  const result = await request.query(`
-       Select crs.CourseId, 
-crs.InstructorId,
-Users.FullName as InStructorName,
-            crs.IsPublished,
-               crs.CourseName, 
-               crs.Description,
-               crs.Rating,
-               (SELECT COUNT(*) FROM User_Courses uc WHERE uc.CourseId = crs.CourseId) AS StudentCount,
-               crs.CreatedAt as CourseCreateAt,
-			   crs.UpdatedAt as CourseUpdateAt,
-               crs.Thumbnail,
-               crs.TotalLessons,
-               Users.FullName,
-               Levels.LevelId,
-               Levels.LevelName,
-               Levels.DisplayName as LevelDisplayName,
-               cate.CategoryId,
-               cate.CategoryName,
-               cate.DisplayName as CategoryDisplayName,
-               CASE WHEN uc.UserId IS NOT NULL THEN 1 ELSE 0 END AS isEnrolled,
-               ISNULL(uc.ProgressPercentage, 0) AS progress
-        from courses crs
-        join Categories cate on crs.CategoryId = cate.CategoryId
-        join Levels on Levels.LevelId = crs.LevelId
-        join Users on Users.UserId = crs.InstructorId
-		 left join User_Courses uc on crs.CourseId = uc.CourseId and uc.UserId = @userId
-        Where crs.CourseId = @courseId
-    `);
-  return await buildCourse(result.recordset);
-};
-// lay khoa hoc dang hoc hien thi o homepage
-const getContinueCourse = async (userId) => {
-  const request = new sql.Request();
-  request.input("UserId", sql.Int, userId);
+  const pipeline = [
+    { $match: { _id: new ObjectId(courseId) } },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'categoryId',
+        foreignField: '_id',
+        as: 'category',
+      },
+    },
+    {
+      $lookup: {
+        from: 'levels',
+        localField: 'levelId',
+        foreignField: '_id',
+        as: 'level',
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'instructorId',
+        foreignField: '_id',
+        as: 'instructor',
+      },
+    },
+    {
+      $lookup: {
+        from: 'usercourses',
+        let: { courseId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: (() => {
+                  const conditions = [{ $eq: ['$courseId', '$$courseId'] }];
+                  if (userId) conditions.push({ $eq: ['$userId', new ObjectId(userId)] });
+                  return conditions;
+                })(),
+              },
+            },
+          },
+        ],
+        as: 'userCourse',
+      },
+    },
+    {
+      $lookup: {
+        from: 'usercourses',
+        localField: '_id',
+        foreignField: 'courseId',
+        as: 'allEnrollments',
+      },
+    },
+    {
+      $addFields: {
+        categoryDisplayName: { $arrayElemAt: ['$category.displayName', 0] },
+        categoryName: { $arrayElemAt: ['$category.categoryName', 0] },
+        categoryId: { $arrayElemAt: ['$category._id', 0] },
+        levelDisplayName: { $arrayElemAt: ['$level.displayName', 0] },
+        levelName: { $arrayElemAt: ['$level.levelName', 0] },
+        levelId: { $arrayElemAt: ['$level._id', 0] },
+        instructorName: { $arrayElemAt: ['$instructor.fullName', 0] },
+        instructorId: { $arrayElemAt: ['$instructor._id', 0] },
+        studentCount: { $size: '$allEnrollments' },
+        isEnrolled: { $cond: [{ $gt: [{ $size: '$userCourse' }, 0] }, 1, 0] },
+        progress: {
+          $ifNull: [{ $arrayElemAt: ['$userCourse.progressPercentage', 0] }, 0],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        courseName: 1,
+        description: 1,
+        rating: 1,
+        studentCount: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        thumbnail: 1,
+        totalLessons: 1,
+        instructorName: 1,
+        instructorId: 1,
+        isPublished: 1,
+        levelId: 1,
+        levelName: 1,
+        levelDisplayName: 1,
+        categoryId: 1,
+        categoryName: 1,
+        categoryDisplayName: 1,
+        isEnrolled: 1,
+        progress: 1,
+      },
+    },
+  ];
 
-  const result = await request.query(`
-    SELECT TOP 1
-          c.CourseId,
-          c.CourseName,
-          c.Thumbnail,
-          uc.ProgressPercentage
-      FROM User_Courses uc
-      INNER JOIN Courses c
-          ON c.CourseId = uc.CourseId
-      WHERE uc.UserId = @UserId
-      ORDER BY uc.ProgressPercentage DESC`);
-  return await buildCourse(result.recordset);
+  const courses = await Course.aggregate(pipeline);
+  return await buildCourse(courses);
+};
+
+/** Lấy khóa học đang học hiển thị ở homepage */
+const getContinueCourse = async (userId) => {
+  const userCourses = await UserCourse.find({ userId })
+    .sort({ progressPercentage: -1 })
+    .limit(1)
+    .populate('courseId')
+    .lean();
+
+  if (!userCourses.length) return null;
+
+  const uc = userCourses[0];
+  const course = uc.courseId;
+  if (!course) return null;
+
+  return [{
+    _id: course._id,
+    courseName: course.courseName,
+    thumbnail: course.thumbnail,
+    progressPercentage: uc.progressPercentage,
+  }];
 };
 
 const getMentorCourses = async (userId) => {
-  const request = new sql.Request();
-  request.input("InstructorId", sql.Int, userId);
+  const courses = await Course.find({ instructorId: new ObjectId(userId) })
+    .populate('categoryId', 'displayName categoryName')
+    .populate('levelId', 'levelName displayName sortOrder')
+    .lean();
 
-  const result = await request.query(`
-        Select crs.CourseId, crs.CourseName, crs.TotalLessons as TotalLessons, crs.Description, crs.CategoryId, crs.LevelId,
-               crs.Rating,
-               (SELECT COUNT(*) FROM User_Courses uc WHERE uc.CourseId = crs.CourseId) AS StudentCount,
-               Levels.LevelName as levelName, Levels.Displayname as LevelDisplayName, Levels.SortOrder as LevelSortOrder,
-               crs.Thumbnail, crs.IsPublished, crs.CreatedAt, crs.UpdatedAt,
-               cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName
-        from courses crs
-        join Categories cate on crs.CategoryId = cate.CategoryId
-        join Levels on Levels.LevelId = crs.LevelId
-        Where InstructorId = @InstructorId
-    `);
-  return await buildCourse(result.recordset);
+  const enriched = await Promise.all(
+    courses.map(async (course) => {
+      const studentCount = await UserCourse.countDocuments({ courseId: course._id });
+      return {
+        ...course,
+        studentCount,
+        categoryDisplayName: course.categoryId?.displayName || '',
+        categoryName: course.categoryId?.categoryName || '',
+        levelName: course.levelId?.levelName || '',
+        levelDisplayName: course.levelId?.displayName || '',
+        levelSortOrder: course.levelId?.sortOrder || 0,
+      };
+    }),
+  );
+
+  return await buildCourse(enriched);
 };
 
 // ==========================================
-// 4. API DÀNH CHO HỌC VIÊN (STUDENT) & ĐĂNG KÝ
+// 3. API DÀNH CHO HỌC VIÊN (STUDENT) & ĐĂNG KÝ
 // ==========================================
 
-const getStudentCourses = async (userId, filterStatus = "all") => {
-  const request = new sql.Request();
-  request.input("userId", sql.Int, userId);
+const getStudentCourses = async (userId, filterStatus = 'all') => {
+  const match = { userId: new ObjectId(userId) };
 
-  let query = `
-        SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail,
-               uc.ProgressPercentage, uc.EnrollmentDate
-        FROM User_Courses uc
-        JOIN Courses crs ON uc.CourseId = crs.CourseId
-        WHERE uc.UserId = @userId
-    `;
+  const userCourses = await UserCourse.find(match)
+    .populate('courseId', 'courseName description thumbnail')
+    .sort({ enrollmentDate: -1 })
+    .lean();
 
-  if (filterStatus === "learning") {
-    query += ` AND uc.ProgressPercentage > 0 AND uc.ProgressPercentage < 100`;
-  } else if (filterStatus === "completed") {
-    query += ` AND uc.ProgressPercentage = 100`;
-  } else if (filterStatus === "not_started") {
-    query += ` AND uc.ProgressPercentage = 0`;
+  let results = userCourses.map(uc => ({
+    ...uc.courseId,
+    progressPercentage: uc.progressPercentage,
+    enrollmentDate: uc.enrollmentDate,
+  }));
+
+  if (filterStatus === 'learning') {
+    results = results.filter(r => r.progressPercentage > 0 && r.progressPercentage < 100);
+  } else if (filterStatus === 'completed') {
+    results = results.filter(r => r.progressPercentage === 100);
+  } else if (filterStatus === 'not_started') {
+    results = results.filter(r => r.progressPercentage === 0);
   }
 
-  query += ` ORDER BY uc.EnrollmentDate DESC`;
-
-  const result = await request.query(query);
-  return result.recordset;
+  return results;
 };
 
-// Hàm lấy khóa học cá nhân
-const getMyEnrolledCourses = async (userId, filterStatus = "all") => {
-  const request = new sql.Request();
-  request.input("UserId", sql.Int, userId);
+const getMyEnrolledCourses = async (userId, filterStatus = 'all') => {
+  const match = { userId: new ObjectId(userId) };
 
-  let query = `
-      SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail, 
-       uc.ProgressPercentage as progress, uc.EnrollmentDate,
-       cate.CategoryName, cate.DisplayName as CategoryDisplayName,
-       lv.LevelName as levelName, lv.DisplayName as LevelDisplayName
-FROM User_Courses uc
-INNER JOIN Courses crs ON uc.CourseId = crs.CourseId
-LEFT JOIN Categories cate ON crs.CategoryId = cate.CategoryId
-LEFT JOIN Levels lv ON crs.LevelId = lv.LevelId
-WHERE uc.UserId = @UserId
-    `;
+  const userCourses = await UserCourse.find(match)
+    .populate({
+      path: 'courseId',
+      populate: [
+        { path: 'categoryId', select: 'categoryName displayName' },
+        { path: 'levelId', select: 'levelName displayName' },
+      ],
+    })
+    .sort({ enrollmentDate: -1 })
+    .lean();
 
-  if (filterStatus === "learning") {
-    query += ` AND uc.ProgressPercentage > 0 AND uc.ProgressPercentage < 100`;
-  } else if (filterStatus === "completed") {
-    query += ` AND uc.ProgressPercentage = 100`;
-  } else if (filterStatus === "not_started") {
-    query += ` AND uc.ProgressPercentage = 0`;
+  let results = userCourses.map(uc => {
+    const course = uc.courseId;
+    return {
+      _id: course?._id,
+      courseName: course?.courseName,
+      description: course?.description,
+      thumbnail: course?.thumbnail,
+      progress: uc.progressPercentage,
+      enrollmentDate: uc.enrollmentDate,
+      categoryName: course?.categoryId?.categoryName || '',
+      categoryDisplayName: course?.categoryId?.displayName || '',
+      levelName: course?.levelId?.levelName || '',
+      levelDisplayName: course?.levelId?.displayName || '',
+    };
+  });
+
+  if (filterStatus === 'learning') {
+    results = results.filter(r => r.progress > 0 && r.progress < 100);
+  } else if (filterStatus === 'completed') {
+    results = results.filter(r => r.progress === 100);
+  } else if (filterStatus === 'not_started') {
+    results = results.filter(r => r.progress === 0);
   }
 
-  query += ` ORDER BY uc.EnrollmentDate DESC`;
-
-  const result = await request.query(query);
-  return result.recordset;
+  return results;
 };
 
-// HÀM ĐĂNG KÝ KHÓA HỌC
+/** Đăng ký khóa học */
 const enrollCourse = async (userId, courseId) => {
-  const request = new sql.Request();
-  request.input("UserId", sql.Int, userId);
-  request.input("CourseId", sql.Int, courseId);
+  const existing = await UserCourse.findOne({
+    userId: new ObjectId(userId),
+    courseId: new ObjectId(courseId),
+  });
 
-  const checkExist = await request.query(`
-        SELECT 1 FROM User_Courses 
-        WHERE UserId = @UserId AND CourseId = @CourseId
-    `);
-
-  if (checkExist.recordset.length > 0) {
-    return { success: false, message: "Bạn đã đăng ký khóa học này rồi!" };
+  if (existing) {
+    return { success: false, message: 'Bạn đã đăng ký khóa học này rồi!' };
   }
-  const result = await request.query(`
-        INSERT INTO User_Courses (UserId, CourseId, ProgressPercentage, EnrollmentDate)
-        VALUES (@UserId, @CourseId, 0, GETDATE())
-    `);
 
-  return { success: true, rowsAffected: result.rowsAffected };
+  await UserCourse.create({
+    userId: new ObjectId(userId),
+    courseId: new ObjectId(courseId),
+    progressPercentage: 0,
+    enrollmentDate: new Date(),
+  });
+
+  return { success: true };
 };
 
 // ==========================================
-// 5. CÁC HÀM TẠO KHÓA HỌC MỚI (CREATE COURSE)
+// 4. CÁC HÀM TẠO KHÓA HỌC MỚI (CREATE COURSE)
 // ==========================================
 
 const createCourseStepOne = async (course) => {
-  const request = new sql.Request();
+  const newCourse = await Course.create({
+    courseName: course.CourseName,
+    description: course.Description,
+    categoryId: new ObjectId(course.CategoryId),
+    levelId: new ObjectId(course.LevelId),
+    instructorId: new ObjectId(course.InstructorId),
+    thumbnail: course.Thumbnail || null,
+    rating: course.Rating ?? 0.0,
+    totalLessons: course.TotalLessons ?? 0,
+    isPublished: course.IsPublished ?? false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 
-  request.input("CourseName", sql.NVarChar(200), course.CourseName);
-  request.input("Description", sql.NVarChar(sql.MAX), course.Description);
-  request.input("CategoryId", sql.Int, Number(course.CategoryId));
-  request.input("LevelId", sql.Int, Number(course.LevelId));
-  request.input("InstructorId", sql.Int, Number(course.InstructorId));
-  request.input("Thumbnail", sql.NVarChar(500), null);
-  request.input("Rating", sql.Decimal(3, 1), course.Rating ?? 0.0);
-  request.input("TotalLessons", sql.Int, course.TotalLessons ?? 0);
-  request.input("IsPublished", sql.Bit, course.IsPublished ?? false);
-
-  const result = await request.query(`
-        INSERT INTO Courses (CourseName, Description, CategoryId, LevelId, InstructorId, Thumbnail, Rating, TotalLessons, CreatedAt, UpdatedAt, IsPublished)
-        OUTPUT INSERTED.*
-        VALUES (@CourseName, @Description, @CategoryId, @LevelId, @InstructorId, @Thumbnail, @Rating, @TotalLessons, GETDATE(), GETDATE(), @IsPublished)
-    `);
-
-  return result.recordset[0].CourseId;
+  return newCourse._id;
 };
 
 const insertPath = async (path, courseId) => {
-  const request = new sql.Request();
-  request.input("CourseId", sql.Int, Number(courseId));
-  request.input("PathName", sql.NVarChar(100), path.PathName);
-  request.input("Description", sql.NVarChar(sql.MAX), path.Description || null);
-  request.input("Order", sql.Int, Number(path.PathOrder ?? 1)); // Fix nhẹ lỗi i is not defined cũ
-
-  const result = await request.query(`
-      INSERT INTO [dbo].[Paths] ([CourseId], [PathName], [Description], [CreatedAt], [Order])
-      OUTPUT INSERTED.PathId AS pathId
-      VALUES (@CourseId, @PathName, @Description, GETDATE(), @Order)
-    `);
-  return result.recordset[0].pathId;
+  const newPath = await Path.create({
+    courseId: new ObjectId(courseId),
+    pathName: path.PathName,
+    description: path.Description || null,
+    order: Number(path.PathOrder ?? 1),
+    createdAt: new Date(),
+  });
+  return newPath._id;
 };
 
 const insertNode = async (node, pathId) => {
-  const request = new sql.Request();
-  request.input("PathId", sql.Int, pathId);
-  request.input("NodeName", sql.NVarChar(255), node.NodeName);
-  request.input("NodeOrder", sql.Int, node.NodeOrder);
-  request.input("Description", sql.NVarChar(sql.MAX), node.Description ?? null);
-
-  const result = await request.query(`
-        INSERT INTO [dbo].[Path_Nodes] ([PathId], [NodeName], [NodeOrder], [Description])
-        OUTPUT INSERTED.NodeId
-        VALUES (@PathId, @NodeName, @NodeOrder, @Description)
-    `);
-  return result.recordset[0].NodeId;
+  const newNode = await PathNode.create({
+    pathId: new ObjectId(pathId),
+    nodeName: node.NodeName,
+    nodeOrder: node.NodeOrder,
+    description: node.Description ?? null,
+  });
+  return newNode._id;
 };
 
 const insertMaterial = async (material, nodeId) => {
-  const request = new sql.Request();
-  const materialUrl = material.MaterialUrl ?? material.Content ?? null;
-
-  request.input("NodeId", sql.Int, Number(nodeId));
-  request.input("MaterialType", sql.NVarChar(20), material.MaterialType);
-  request.input("Title", sql.NVarChar(255), material.Title);
-  request.input("MaterialUrl", sql.NVarChar(sql.MAX), materialUrl);
-  request.input("MaterialOrder", sql.Int, Number(material.MaterialOrder));
-  request.input("SourceType", sql.NVarChar(20), material.SourceType ?? null);
-  request.input("FileName", sql.NVarChar(255), material.FileName ?? null);
-  request.input(
-    "FileSize",
-    sql.BigInt,
-    material.FileSize != null ? Number(material.FileSize) : null,
-  );
-  request.input("EmbedUrl", sql.NVarChar(sql.MAX), material.EmbedUrl ?? null);
-
-  const result = await request.query(`
-        INSERT INTO [dbo].[Node_Materials]
-            ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder], [SourceType], [FileName], [FileSize], [EmbedUrl])
-        OUTPUT INSERTED.MaterialId AS MaterialId
-        VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize, @EmbedUrl)
-    `);
-  return result.recordset[0].MaterialId;
+  const materialUrl = material.MaterialUrl ?? null;
+  const newMaterial = await NodeMaterial.create({
+    nodeId: new ObjectId(nodeId),
+    materialType: material.MaterialType,
+    title: material.Title,
+    materialUrl: materialUrl,
+    materialOrder: Number(material.MaterialOrder),
+    sourceType: material.SourceType ?? null,
+    fileName: material.FileName ?? null,
+    fileSize: material.FileSize != null ? Number(material.FileSize) : null,
+    embedUrl: material.EmbedUrl ?? null,
+    content: material.Content ?? null,
+  });
+  return newMaterial._id;
 };
 
 const increaseCourseTotalLessons = async (courseId) => {
-  const request = new sql.Request();
-  request.input("courseId", sql.Int, Number(courseId));
-  await request.query(`
-        UPDATE dbo.Courses
-        SET TotalLessons = ISNULL(TotalLessons, 0) + 1, UpdatedAt = GETDATE()
-        WHERE CourseId = @courseId
-    `);
+  await Course.findByIdAndUpdate(courseId, {
+    $inc: { totalLessons: 1 },
+    updatedAt: new Date(),
+  });
 };
 
 const buildPathsNodes = async (paths, courseId) => {
@@ -506,10 +626,7 @@ const buildPathsNodes = async (paths, courseId) => {
 const createFinalCourse = async (course, paths) => {
   const newCourseId = await createCourseStepOne(course);
   if (course.Thumbnail) {
-    const thumbnailPath = saveCourseThumbnailFromDataUrl(
-      course.Thumbnail,
-      newCourseId,
-    );
+    const thumbnailPath = saveCourseThumbnailFromDataUrl(course.Thumbnail, newCourseId);
     await updateCourseThumbnail(newCourseId, thumbnailPath);
   }
   await buildPathsNodes(paths, newCourseId);
@@ -522,245 +639,189 @@ const replaceCourseContent = async (courseId, paths) => {
 };
 
 const getCourseInstructorId = async (courseId) => {
-  const request = new sql.Request();
-  request.input("courseId", sql.Int, Number(courseId));
-  const result = await request.query(`
-        SELECT InstructorId FROM Courses WHERE CourseId = @courseId
-    `);
-  return result.recordset[0]?.InstructorId ?? null;
+  const course = await Course.findById(courseId).select('instructorId').lean();
+  return course?.instructorId ?? null;
 };
 
 const clearCourseContent = async (courseId) => {
-  const request = new sql.Request();
-  request.input("courseId", sql.Int, Number(courseId));
+  const paths = await Path.find({ courseId }).lean();
+  const pathIds = paths.map(p => p._id);
+  const nodes = await PathNode.find({ pathId: { $in: pathIds } }).lean();
+  const nodeIds = nodes.map(n => n._id);
 
-  await request.query(`
-        DELETE un
-        FROM User_Nodes un
-        INNER JOIN Path_Nodes pn ON un.NodeId = pn.NodeId
-        INNER JOIN Paths p ON pn.PathId = p.PathId
-        WHERE p.CourseId = @courseId;
-
-        DELETE nm
-        FROM Node_Materials nm
-        INNER JOIN Path_Nodes pn ON nm.NodeId = pn.NodeId
-        INNER JOIN Paths p ON pn.PathId = p.PathId
-        WHERE p.CourseId = @courseId;
-
-        DELETE pn
-        FROM Path_Nodes pn
-        INNER JOIN Paths p ON pn.PathId = p.PathId
-        WHERE p.CourseId = @courseId;
-
-        DELETE FROM Paths WHERE CourseId = @courseId;
-
-        UPDATE Courses
-        SET TotalLessons = 0, UpdatedAt = GETDATE()
-        WHERE CourseId = @courseId;
-    `);
+  await UserNode.deleteMany({ nodeId: { $in: nodeIds } });
+  await NodeMaterial.deleteMany({ nodeId: { $in: nodeIds } });
+  await PathNode.deleteMany({ pathId: { $in: pathIds } });
+  await Path.deleteMany({ courseId });
+  await Course.findByIdAndUpdate(courseId, { totalLessons: 0, updatedAt: new Date() });
 };
 
 const getCourseStudentCount = async (courseId) => {
-  const request = new sql.Request();
-  request.input("courseId", sql.Int, Number(courseId));
-  const result = await request.query(`
-        SELECT COUNT(*) AS StudentCount
-        FROM User_Courses
-        WHERE CourseId = @courseId
-    `);
-  return Number(result.recordset[0]?.StudentCount ?? 0) || 0;
+  return await UserCourse.countDocuments({ courseId: new ObjectId(courseId) });
 };
 
 const updateCourseById = async (courseId, course) => {
-  const request = new sql.Request();
-  request.input("CourseId", sql.Int, Number(courseId));
-  request.input("CourseName", sql.NVarChar(200), course.CourseName);
-  request.input("Description", sql.NVarChar(sql.MAX), course.Description);
-  request.input("CategoryId", sql.Int, Number(course.CategoryId));
-  request.input("LevelId", sql.Int, Number(course.LevelId));
-  request.input("IsPublished", sql.Bit, course.IsPublished ?? false);
-
-  const result = await request.query(`
-        UPDATE Courses
-        SET CourseName = @CourseName,
-            Description = @Description,
-            CategoryId = @CategoryId,
-            LevelId = @LevelId,
-            IsPublished = @IsPublished,
-            UpdatedAt = GETDATE()
-        OUTPUT INSERTED.CourseId
-        WHERE CourseId = @CourseId
-    `);
-
-  return result.recordset[0]?.CourseId ?? null;
+  const result = await Course.findByIdAndUpdate(
+    courseId,
+    {
+      courseName: course.CourseName,
+      description: course.Description,
+      categoryId: new ObjectId(course.CategoryId),
+      levelId: new ObjectId(course.LevelId),
+      isPublished: course.IsPublished ?? false,
+      updatedAt: new Date(),
+    },
+    { new: true },
+  );
+  return result?._id ?? null;
 };
 
-// update Thumbnail
 const updateCourseThumbnail = async (courseId, thumbnailPath) => {
-  const request = new sql.Request();
-
-  request.input("CourseId", sql.Int, courseId);
-  request.input("Thumbnail", sql.NVarChar(500), thumbnailPath);
-
-  await request.query(`
-        UPDATE Courses
-        SET Thumbnail = @Thumbnail,
-            UpdatedAt = GETDATE()
-        WHERE CourseId = @CourseId
-    `);
+  await Course.findByIdAndUpdate(courseId, {
+    thumbnail: thumbnailPath,
+    updatedAt: new Date(),
+  });
 };
 
-// set course => publish
 const setPublishCourse = async (courseId) => {
-  const request = new sql.Request();
-
-  request.input("CourseId", sql.Int, Number(courseId));
-
-  const result = await request.query(`
-        UPDATE dbo.Courses
-        SET 
-            UpdatedAt = GETDATE(),
-            IsPublished = 1
-        OUTPUT inserted.CourseId
-        WHERE CourseId = @CourseId
-    `);
-
-  return result.recordset[0]?.CourseId || null;
+  const result = await Course.findByIdAndUpdate(
+    courseId,
+    { isPublished: true, updatedAt: new Date() },
+    { new: true },
+  );
+  return result?._id || null;
 };
 
-// set course  => draft
 const setDraftCourse = async (courseId) => {
-  const request = new sql.Request();
-
-  request.input("CourseId", sql.Int, Number(courseId));
-
-  const result = await request.query(`
-        UPDATE dbo.Courses
-        SET 
-            UpdatedAt = GETDATE(),
-            IsPublished = 0
-        OUTPUT inserted.CourseId
-        WHERE CourseId = @CourseId
-    `);
-
-  return result.recordset[0]?.CourseId || null;
+  const result = await Course.findByIdAndUpdate(
+    courseId,
+    { isPublished: false, updatedAt: new Date() },
+    { new: true },
+  );
+  return result?._id || null;
 };
 
-//  Hàm lấy danh sách bài học (Kèm trạng thái hoàn thành): dùng để lấy toàn bộ lộ trình học của 1 khóa học
+/** Lấy danh sách bài học (Kèm trạng thái hoàn thành) */
 const getCourseLearningPath = async (courseId, userId) => {
-  try {
-    const query = `
-             SELECT 
-                p.PathId,
-                p.PathName,
-                p.Description AS PathDescription,
-                pn.NodeId,
-                pn.NodeName,
-                pn.Description AS NodeDescription,
-                pn.NodeOrder,
-                nm.MaterialType,
-                nm.MaterialUrl,
-                CAST(CASE WHEN un.NodeId IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsCompleted
-            FROM Paths p
-            LEFT JOIN Path_Nodes pn ON p.PathId = pn.PathId
-            LEFT JOIN Node_Materials nm ON pn.NodeId = nm.NodeId
-            LEFT JOIN User_Nodes un ON pn.NodeId = un.NodeId AND un.UserId = @userId
-            WHERE p.CourseId = @courseId
-            ORDER BY p.[Order], pn.NodeOrder, nm.MaterialOrder
-        `;
-    const result = await new sql.Request()
-      .input("courseId", sql.Int, courseId)
-      .input("userId", sql.Int, userId)
-      .query(query);
-    let finalModules = [];
-    result.recordset.forEach((row) => {
-      // Tìm Chương (Path) dựa vào PathId
-      let existingModule = finalModules.find((m) => m.PathId === row.PathId);
+  const paths = await Path.find({ courseId: new ObjectId(courseId) })
+    .sort({ order: 1 })
+    .lean();
 
-      // Nếu chưa có thì tạo mới
-      if (!existingModule) {
-        existingModule = {
-          PathId: row.PathId,
-          PathName: row.PathName,
-          Description: row.PathDescription ?? null,
-          lessons: [],
-        };
-        finalModules.push(existingModule);
-      }
-      // Nhét Bài học (Node) vào Chương — mỗi Node chỉ xuất hiện một lần
-      if (row.NodeId) {
-        const existingLesson = existingModule.lessons.find((l) => l.NodeId === row.NodeId);
-        if (!existingLesson) {
-          existingModule.lessons.push({
-            NodeId: row.NodeId,
-            NodeName: row.NodeName,
-            Description: row.NodeDescription ?? null,
-            NodeOrder: row.NodeOrder,
-            MaterialType: row.MaterialType,
-            MaterialUrl: row.MaterialUrl,
-            IsCompleted: row.IsCompleted,
-          });
-        }
-      }
+  const finalModules = [];
+
+  for (const path of paths) {
+    const nodes = await PathNode.find({ pathId: path._id })
+      .sort({ nodeOrder: 1 })
+      .lean();
+
+    const lessons = [];
+    for (const node of nodes) {
+      const materials = await NodeMaterial.find({ nodeId: node._id })
+        .sort({ materialOrder: 1 })
+        .lean();
+
+      const userNode = userId
+        ? await UserNode.findOne({
+            userId: new ObjectId(userId),
+            nodeId: node._id,
+          }).lean()
+        : null;
+
+      const firstMaterial = materials[0] || {};
+
+      lessons.push({
+        NodeId: node._id.toString(),
+        NodeName: node.nodeName,
+        Description: node.description ?? null,
+        NodeOrder: node.nodeOrder,
+        MaterialType: firstMaterial.materialType || null,
+        MaterialUrl: firstMaterial.materialUrl || null,
+        IsCompleted: userNode?.isCompleted || false,
+      });
+    }
+
+    finalModules.push({
+      PathId: path._id.toString(),
+      PathName: path.pathName,
+      Description: path.description ?? null,
+      lessons,
     });
+  }
 
-    return finalModules;
-  } catch (error) {
-    console.error("Lỗi lấy danh sách bài học:", error);
-    throw error;
-  }
+  return finalModules;
 };
-// Hàm lưu tiến độ : chạy khi User ấn nút "Đánh dấu hoàn thành"
+
+/** Lưu tiến độ: chạy khi User ấn nút "Đánh dấu hoàn thành" */
 const markNodeAsCompleted = async (courseId, userId, nodeId) => {
-  try {
-    //LƯU TRẠNG THÁI BÀI HỌC VÀO User_Nodes
-    const insertQuery = `
-            IF NOT EXISTS (SELECT 1 FROM User_Nodes WHERE UserId = @userId AND NodeId = @nodeId)
-            BEGIN
-                INSERT INTO User_Nodes (UserId, NodeId, IsCompleted) 
-                VALUES (@userId, @nodeId, 1);
-            END
-        `;
-    await new sql.Request()
-      .input("userId", sql.Int, userId)
-      .input("nodeId", sql.Int, nodeId)
-      .query(insertQuery);
-    // TÍNH LẠI % TIẾN ĐỘ TỔNG BẰNG CÁCH ĐẾM THỰC TẾ
-    const updateProgressQuery = `
-            DECLARE @Total INT = (
-                SELECT COUNT(pn.NodeId) 
-                FROM Path_Nodes pn
-                JOIN Paths p ON pn.PathId = p.PathId
-                WHERE p.CourseId = @courseId
-            );
-            DECLARE @Completed INT = (
-                SELECT COUNT(un.NodeId) 
-                FROM User_Nodes un
-                JOIN Path_Nodes pn ON un.NodeId = pn.NodeId
-                JOIN Paths p ON pn.PathId = p.PathId
-                WHERE un.UserId = @userId AND p.CourseId = @courseId
-            );
-            
-            DECLARE @Percent INT = 0;
-            IF @Total > 0
-                SET @Percent = (@Completed * 100) / @Total;
-                
-            UPDATE User_Courses 
-            SET ProgressPercentage = @Percent 
-            WHERE UserId = @userId AND CourseId = @courseId;
-            
-            SELECT @Percent as NewProgress;
-        `;
-    const result = await new sql.Request()
-      .input("courseId", sql.Int, courseId)
-      .input("userId", sql.Int, userId)
-      .query(updateProgressQuery);
-    return result.recordset[0].NewProgress;
-  } catch (error) {
-    console.error("Lỗi đánh dấu hoàn thành:", error);
-    throw error;
+  // Lưu trạng thái bài học vào User_Nodes
+  const existing = await UserNode.findOne({
+    userId: new ObjectId(userId),
+    nodeId: new ObjectId(nodeId),
+  });
+
+  if (!existing) {
+    await UserNode.create({
+      userId: new ObjectId(userId),
+      nodeId: new ObjectId(nodeId),
+      isCompleted: true,
+      completedAt: new Date(),
+    });
   }
+
+  // Tính lại % tiến độ tổng
+  const totalNodes = await PathNode.countDocuments({
+    pathId: { $in: (await Path.find({ courseId: new ObjectId(courseId) }).select('_id').lean()).map(p => p._id) },
+  });
+
+  const completedNodes = await UserNode.countDocuments({
+    userId: new ObjectId(userId),
+    nodeId: {
+      $in: (await PathNode.find({
+        pathId: { $in: (await Path.find({ courseId: new ObjectId(courseId) }).select('_id').lean()).map(p => p._id) },
+      }).select('_id').lean()).map(n => n._id),
+    },
+  });
+
+  const newProgress = totalNodes > 0 ? Math.round((completedNodes * 100) / totalNodes) : 0;
+
+  await UserCourse.findOneAndUpdate(
+    { userId: new ObjectId(userId), courseId: new ObjectId(courseId) },
+    { progressPercentage: newProgress },
+  );
+
+  return newProgress;
 };
+
+/** Mục lục chương + bài (không kèm học liệu) */
+const getCourseChaptersOutline = async (courseId) => {
+  const course = await Course.findById(courseId).lean();
+  if (!course) return null;
+
+  const paths = await Path.find({ courseId: new ObjectId(courseId) })
+    .sort({ order: 1 })
+    .lean();
+
+  return Promise.all(
+    paths.map(async (path) => {
+      const nodes = await PathNode.find({ pathId: path._id })
+        .sort({ nodeOrder: 1 })
+        .select('nodeName nodeOrder')
+        .lean();
+
+      return {
+        PathId: path._id.toString(),
+        PathName: path.pathName,
+        Order: path.order,
+        Nodes: nodes.map((node) => ({
+          NodeId: node._id.toString(),
+          NodeName: node.nodeName,
+          NodeOrder: node.nodeOrder,
+        })),
+      };
+    }),
+  );
+};
+
 module.exports = {
   getCoursesByUserRole,
   getCourseById,

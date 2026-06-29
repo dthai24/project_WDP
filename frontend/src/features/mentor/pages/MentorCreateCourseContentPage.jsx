@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useNavigate } from 'react-router-dom';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
@@ -61,27 +61,6 @@ function getDeleteDialogContent(deleteConfirm) {
     title: 'Xóa học liệu?',
     message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Nội dung học liệu sẽ bị xóa vĩnh viễn.`,
   };
-}
-
-function LeaveAwareBreadcrumbLink({ to, children, onNavigate, sx }) {
-  return (
-    <MuiLink
-      component="button"
-      type="button"
-      underline="hover"
-      onClick={() => onNavigate(to)}
-      sx={{
-        border: 'none',
-        background: 'none',
-        cursor: 'pointer',
-        font: 'inherit',
-        p: 0,
-        ...sx,
-      }}
-    >
-      {children}
-    </MuiLink>
-  );
 }
 
 function updatePathInList(paths, pathTempId, patch) {
@@ -548,36 +527,15 @@ export default function MentorCreateCourseContentPage() {
   );
 
   return (
-    <Box sx={{ width: '100%', maxWidth: { xs: '100%', xl: 1600 }, mx: 'auto' }}>
-      <Breadcrumbs
-        separator="/"
-        sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: '#64748B', mx: 0.5 } }}
-      >
-        <LeaveAwareBreadcrumbLink
-          to="/home"
-          onNavigate={requestLeave}
-          sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
-        >
-          Trang chủ
-        </LeaveAwareBreadcrumbLink>
-        <LeaveAwareBreadcrumbLink
-          to="/mentor/courses"
-          onNavigate={requestLeave}
-          sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
-        >
-          Khóa học của tôi
-        </LeaveAwareBreadcrumbLink>
-        <LeaveAwareBreadcrumbLink
-          to="/mentor/courses/create"
-          onNavigate={requestLeave}
-          sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
-        >
-          Tạo khóa học
-        </LeaveAwareBreadcrumbLink>
-        <Typography sx={{ fontSize: 13, color: '#0F172A', fontWeight: 600 }}>
-          Xây nội dung
-        </Typography>
-      </Breadcrumbs>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: '#0F172A' }}>
+          Xây dựng nội dung
+        </h1>
+        <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: '#64748B' }}>
+          Thêm chương, bài học và tài liệu cho khóa học của bạn.
+        </p>
+      </div>
 
       <MentorCourseCreateStepIndicator currentStep={2} />
 
@@ -680,6 +638,6 @@ export default function MentorCreateCourseContentPage() {
         cancelLabel="Hủy"
         destructive
       />
-    </Box>
+    </div>
   );
 }

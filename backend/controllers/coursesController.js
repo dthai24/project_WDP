@@ -1,6 +1,15 @@
-const courseModel = require('../models/coursesModel');
+const mongoose = require('mongoose');
+const Course = require('../models/MongoDB/Course');
+const Path = require('../models/MongoDB/Path');
+const PathNode = require('../models/MongoDB/PathNode');
+const NodeMaterial = require('../models/MongoDB/NodeMaterial');
+const UserCourse = require('../models/MongoDB/UserCourse');
+const UserNode = require('../models/MongoDB/UserNode');
+const CourseComment = require('../models/MongoDB/CourseComment');
+const User = require('../models/MongoDB/User');
+const Category = require('../models/MongoDB/Category');
+const Level = require('../models/MongoDB/Level');
 const streakService = require("../services/streakService");
-const courseCommentsModel = require('../models/courseCommentsModel');
 const { validateCourseThumbnailDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
 const getStudentCourses = async (req, res) => {
@@ -12,9 +21,54 @@ const getStudentCourses = async (req, res) => {
       status: req.query.status || '',
       sort: req.query.sort || 'newest'
     };
-    const userId = req.user?.userId || null;
 
-    const { courses, totalCount } = await courseModel.getStudentCoursesList(filters, userId);
+    let query = { isPublished: true };
+
+    // Search by course name
+    if (filters.search) {
+      query.courseName = { $regex: filters.search, $options: 'i' };
+    }
+
+    // Filter by category
+    if (filters.category) {
+      // Support both MongoDB ObjectId and categoryName
+      if (mongoose.Types.ObjectId.isValid(filters.category)) {
+        query.categoryId = filters.category;
+      } else {
+        const category = await Category.findOne({ categoryName: filters.category });
+        if (category) {
+          query.categoryId = category._id;
+        }
+      }
+    }
+
+    // Filter by level
+    if (filters.level) {
+      // Support both MongoDB ObjectId and levelName
+      if (mongoose.Types.ObjectId.isValid(filters.level)) {
+        query.levelId = filters.level;
+      } else {
+        const level = await Level.findOne({ levelName: filters.level });
+        if (level) {
+          query.levelId = level._id;
+        }
+      }
+    }
+
+    // Sort
+    let sortOption = { createdAt: -1 }; // newest
+    if (filters.sort === 'oldest') sortOption = { createdAt: 1 };
+    else if (filters.sort === 'rating') sortOption = { rating: -1 };
+    else if (filters.sort === 'name') sortOption = { courseName: 1 };
+
+    const courses = await Course.find(query)
+      .populate('categoryId', 'displayName')
+      .populate('levelId', 'displayName')
+      .populate('instructorId', 'fullName email')
+      .sort(sortOption)
+      .lean();
+
+    const totalCount = courses.length;
 
     return res.status(200).json({
       success: true,
@@ -45,12 +99,31 @@ const getMyCourses = async (req, res) => {
       });
     }
 
-
     let courses;
     if (roleName.toLowerCase() === 'student') {
-      courses = await courseModel.getMyEnrolledCourses(userId, filterStatus);
+      // Get enrolled courses for student
+      const enrollments = await UserCourse.find({ userId })
+        .populate({
+          path: 'courseId',
+          populate: [
+            { path: 'categoryId', select: 'displayName' },
+            { path: 'levelId', select: 'displayName' },
+            { path: 'instructorId', select: 'fullName' }
+          ]
+        })
+        .lean();
+
+      courses = enrollments.map(e => ({
+        ...e.courseId,
+        progressPercentage: e.progressPercentage,
+        enrollmentDate: e.enrollmentDate
+      }));
     } else {
-      courses = await courseModel.getCoursesByUserRole(userId, roleName);
+      // Get courses created by instructor/mentor
+      courses = await Course.find({ instructorId: userId })
+        .populate('categoryId', 'displayName')
+        .populate('levelId', 'displayName')
+        .lean();
     }
 
     return res.status(200).json({
@@ -60,7 +133,6 @@ const getMyCourses = async (req, res) => {
     });
   } catch (error) {
     console.error('Get my courses error:', error);
-
     return res.status(500).json({
       success: false,
       message: 'Lỗi server khi lấy khóa học',
@@ -68,67 +140,109 @@ const getMyCourses = async (req, res) => {
   }
 };
 
-//Get course's by Id
 const getInformationCourse = async (req, res) => {
   try {
     const courseId = req.params.courseId;
     const tab = req.query.tab;
+
     if (!courseId) {
       return res.status(400).json({
         success: false,
         message: 'Thiếu courseId',
         data: {},
-      })
-    } else if (!tab) {
+      });
+    }
+
+    if (!tab) {
       return res.status(400).json({
         success: false,
         message: 'Thiếu hoặc sai query tab trên url',
         data: {}
-      })
+      });
     }
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'courseId không hợp lệ',
+        data: {}
+      });
+    }
+
     const userId = req.headers['x-user-id'] || null;
 
     // Tab=course
     if (tab.toLowerCase() === 'course') {
-      const courses = await courseModel.getCourseById(courseId, userId);
-      //404
-      if (courses.length === 0) {
+      const course = await Course.findById(courseId)
+        .populate('categoryId', 'displayName')
+        .populate('levelId', 'displayName')
+        .populate('instructorId', 'fullName email avatarUrl')
+        .lean();
+
+      if (!course) {
         return res.status(404).json({
           success: false,
-          message: 'Không tìm thấy khóa học này trong Databse',
+          message: 'Không tìm thấy khóa học này trong Database',
           data: {}
-        })
+        });
       }
-      //200
+
+      // Check if user is enrolled
+      let isEnrolled = false;
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        const enrollment = await UserCourse.findOne({ userId, courseId });
+        isEnrolled = !!enrollment;
+      }
+
       return res.status(200).json({
         success: true,
         message: 'Lấy thông tin khóa học thành công',
-        data: courses
-      })
+        data: { ...course, isEnrolled }
+      });
     }
 
     // Tab=content — cây chương / bài / học liệu
     if (tab.toLowerCase() === 'content') {
-      const courses = await courseModel.getCourseById(courseId, userId);
-      if (courses.length === 0) {
+      const course = await Course.findById(courseId).lean();
+      if (!course) {
         return res.status(404).json({
           success: false,
-          message: 'Không tìm thấy khóa học này trong Databse',
+          message: 'Không tìm thấy khóa học này trong Database',
           data: {},
         });
       }
 
-      const course = courses[0];
+      // Get paths with nodes and materials
+      const paths = await Path.find({ courseId })
+        .sort({ order: 1 })
+        .lean();
+
+      const pathsWithNodes = await Promise.all(paths.map(async (path) => {
+        const nodes = await PathNode.find({ pathId: path._id })
+          .sort({ nodeOrder: 1 })
+          .lean();
+
+        const nodesWithMaterials = await Promise.all(nodes.map(async (node) => {
+          const materials = await NodeMaterial.find({ nodeId: node._id })
+            .sort({ materialOrder: 1 })
+            .lean();
+          return { ...node, Materials: materials };
+        }));
+
+        return { ...path, Nodes: nodesWithMaterials };
+      }));
+
       return res.status(200).json({
         success: true,
         message: 'Lấy nội dung khóa học thành công',
         data: {
-          CourseId: course.CourseId,
-          Paths: course.Paths ?? [],
-          TotalLessons: course.TotalLessons ?? 0,
+          CourseId: course._id.toString(),
+          Paths: pathsWithNodes,
+          TotalLessons: course.totalLessons || 0,
         },
       });
     }
+
     return res.status(400).json({
       success: false,
       message: `Chưa hỗ trợ lấy dữ liệu cho tab: ${tab}`,
@@ -155,8 +269,16 @@ const getCourseChapters = async (req, res) => {
       });
     }
 
-    const paths = await courseModel.getCourseChaptersOutline(courseId);
-    if (paths === null) {
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'courseId không hợp lệ',
+        data: {},
+      });
+    }
+
+    const course = await Course.findById(courseId).lean();
+    if (!course) {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy khóa học này trong Database',
@@ -164,12 +286,24 @@ const getCourseChapters = async (req, res) => {
       });
     }
 
+    const paths = await Path.find({ courseId })
+      .sort({ order: 1 })
+      .lean();
+
+    const pathsWithNodes = await Promise.all(paths.map(async (path) => {
+      const nodes = await PathNode.find({ pathId: path._id })
+        .sort({ nodeOrder: 1 })
+        .select('nodeName nodeOrder description')
+        .lean();
+      return { ...path, Nodes: nodes };
+    }));
+
     return res.status(200).json({
       success: true,
       message: 'Lấy danh sách chương thành công',
       data: {
-        CourseId: Number(courseId),
-        Paths: paths,
+        CourseId: courseId,
+        Paths: pathsWithNodes,
       },
     });
   } catch (error) {
@@ -181,19 +315,17 @@ const getCourseChapters = async (req, res) => {
   }
 };
 
-//Save Course Draft at Step 1
 const saveCourseDraftStepOne = async (req, res) => {
   try {
     const body = req.body;
 
-    // req.body có thể là {} nên không được chỉ check !req.body
     if (!body || Object.keys(body).length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Step 1: Không có dữ liệu gửi lên.',
       });
     }
-    console.error('Lỗi tại enrollCourse Controller:', error.message);
+
     const {
       CourseName,
       Description,
@@ -221,7 +353,7 @@ const saveCourseDraftStepOne = async (req, res) => {
     }
 
     // Validate CategoryId
-    if (!CategoryId || Number.isNaN(Number(CategoryId))) {
+    if (!CategoryId) {
       return res.status(400).json({
         success: false,
         message: 'Step 1: Thiếu hoặc sai CategoryId.',
@@ -229,7 +361,7 @@ const saveCourseDraftStepOne = async (req, res) => {
     }
 
     // Validate LevelId
-    if (!LevelId || Number.isNaN(Number(LevelId))) {
+    if (!LevelId) {
       return res.status(400).json({
         success: false,
         message: 'Step 1: Thiếu hoặc sai LevelId.',
@@ -237,7 +369,7 @@ const saveCourseDraftStepOne = async (req, res) => {
     }
 
     // Validate InstructorId
-    if (!InstructorId || Number.isNaN(Number(InstructorId))) {
+    if (!InstructorId) {
       return res.status(400).json({
         success: false,
         message: 'Step 1: Thiếu hoặc sai InstructorId.',
@@ -245,22 +377,22 @@ const saveCourseDraftStepOne = async (req, res) => {
     }
 
     const courseData = {
-      CourseName: String(CourseName).trim(),
-      Description: String(Description).trim(),
-      Thumbnail: Thumbnail || null,
-      CategoryId: Number(CategoryId),
-      LevelId: Number(LevelId),
-      InstructorId: Number(InstructorId),
-      IsPublished: Boolean(IsPublished),
-      Rating: 0,
-      TotalLessons: 0,
+      courseName: String(CourseName).trim(),
+      description: String(Description).trim(),
+      thumbnail: Thumbnail || null,
+      categoryId: CategoryId,
+      levelId: LevelId,
+      instructorId: InstructorId,
+      isPublished: Boolean(IsPublished),
+      rating: 0,
+      totalLessons: 0,
     };
 
-    if (courseData.Thumbnail) {
-      validateCourseThumbnailDataUrl(courseData.Thumbnail);
+    if (courseData.thumbnail) {
+      validateCourseThumbnailDataUrl(courseData.thumbnail);
     }
 
-    const newCourse = await courseModel.createCourseStepOne(courseData);
+    const newCourse = await Course.create(courseData);
 
     return res.status(201).json({
       success: true,
@@ -279,44 +411,126 @@ const saveCourseDraftStepOne = async (req, res) => {
     });
   }
 };
-// Hứng request lấy danh sách bài học
+
 const getLearningPath = async (req, res) => {
   try {
     const courseId = req.params.id;
-    const userId = req.headers['x-user-id']; // Lấy ID người dùng từ Header
+    const userId = req.headers['x-user-id'];
 
-    // Lấy thêm tên khóa học và tên giảng viên
-    const coursesInfo = await courseModel.getCourseById(courseId, userId);
-    const courseDetails = coursesInfo.length > 0 ? coursesInfo[0] : null;
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+    }
 
-    const data = await courseModel.getCourseLearningPath(courseId, userId);
+    // Get course info
+    const course = await Course.findById(courseId)
+      .populate('instructorId', 'fullName')
+      .lean();
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học' });
+    }
+
+    // Get paths with nodes and materials
+    const paths = await Path.find({ courseId })
+      .sort({ order: 1 })
+      .lean();
+
+    const pathsWithNodes = await Promise.all(paths.map(async (path) => {
+      const nodes = await PathNode.find({ pathId: path._id })
+        .sort({ nodeOrder: 1 })
+        .lean();
+
+      const nodesWithDetails = await Promise.all(nodes.map(async (node) => {
+        const materials = await NodeMaterial.find({ nodeId: node._id })
+          .sort({ materialOrder: 1 })
+          .lean();
+
+        // Check if node is completed by user
+        let isCompleted = false;
+        let completedAt = null;
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+          const userNode = await UserNode.findOne({ userId, nodeId: node._id });
+          if (userNode) {
+            isCompleted = userNode.isCompleted;
+            completedAt = userNode.completedAt;
+          }
+        }
+
+        return {
+          ...node,
+          Materials: materials,
+          IsCompleted: isCompleted,
+          CompletedAt: completedAt
+        };
+      }));
+
+      return { ...path, Nodes: nodesWithDetails };
+    }));
+
     res.json({
       success: true,
-      courseTitle: courseDetails ? courseDetails.CourseName : "Khóa học",
-      instructor: courseDetails ? courseDetails.InStructorName : "Giảng viên",
-      data: data
+      courseTitle: course.courseName,
+      instructor: course.instructorId?.fullName || 'Giảng viên',
+      data: pathsWithNodes
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Lỗi Server" });
+    console.error('getLearningPath error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi Server' });
   }
 };
 
-// Hứng request lưu bài học
 const updateProgress = async (req, res) => {
   try {
     const courseId = req.params.id;
     const userId = req.headers['x-user-id'];
-    const { nodeId } = req.body; // Frontend gửi lên nodeId
+    const { nodeId } = req.body;
 
-    const newProgress = await courseModel.markNodeAsCompleted(courseId, userId, nodeId);
-    res.json({ success: true, newProgress: newProgress });
+    if (!userId || !nodeId) {
+      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc nodeId' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(nodeId)) {
+      return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
+    }
+
+    // Mark node as completed
+    await UserNode.findOneAndUpdate(
+      { userId, nodeId },
+      { userId, nodeId, isCompleted: true, completedAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    // Calculate new progress percentage
+    const totalNodes = await PathNode.countDocuments({
+      pathId: { $in: (await Path.find({ courseId }).select('_id').lean()).map(p => p._id) }
+    });
+
+    const completedNodes = await UserNode.countDocuments({
+      userId,
+      nodeId: { $in: (await PathNode.find({
+        pathId: { $in: (await Path.find({ courseId }).select('_id').lean()).map(p => p._id) }
+      }).select('_id').lean()).map(n => n._id) },
+      isCompleted: true
+    });
+
+    const newProgress = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
+
+    // Update UserCourse progress
+    await UserCourse.findOneAndUpdate(
+      { userId, courseId },
+      { progressPercentage: newProgress },
+      { upsert: true }
+    );
+
+    res.json({ success: true, newProgress });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Lỗi Server" });
+    console.error('updateProgress error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi Server' });
   }
 };
 
 async function getStreak(req, res) {
-  const userId = Number(req.headers["x-user-id"]);
+  const userId = req.headers["x-user-id"];
   if (!userId) return res.json({ success: true, streak: 0, hasStudiedToday: false });
   try {
     const result = await streakService.getStreak(userId);
@@ -334,7 +548,15 @@ const getCourseComments = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Thiếu courseId', data: [] });
     }
 
-    const comments = await courseCommentsModel.getCourseComments(courseId);
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ success: false, message: 'courseId không hợp lệ', data: [] });
+    }
+
+    const comments = await CourseComment.find({ courseId })
+      .populate('userId', 'fullName avatarUrl')
+      .sort({ createdAt: -1 })
+      .lean();
+
     return res.status(200).json({
       success: true,
       message: 'Lấy bình luận thành công',
@@ -374,48 +596,27 @@ const createCourseComment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 5 sao' });
     }
 
-    const comment = await courseCommentsModel.createCourseComment({
+    const comment = await CourseComment.create({
       courseId,
       userId,
       rating: numericRating,
       content: String(content).trim(),
     });
 
+    const populatedComment = await CourseComment.findById(comment._id)
+      .populate('userId', 'fullName avatarUrl')
+      .lean();
+
     return res.status(201).json({
       success: true,
       message: 'Gửi bình luận thành công',
-      data: comment,
+      data: populatedComment,
     });
   } catch (error) {
     console.error('createCourseComment error:', error.message);
     return res.status(500).json({ success: false, message: 'Lỗi server khi gửi bình luận' });
   }
 };
-
-//create node
-
-//Save Course (Final step in create course process)
-// at this step => course must be have full information about course
-// req.body : {
-//   course: {
-//     CourseName: 'adsf',
-//     Description: 'adsfadsf',
-//     Thumbnail:
-//     CategoryId: 4,
-//     LevelId: 1,
-//     InstructorId: 2,
-//     IsPublished: true
-//   },
-//   paths: [
-//     {
-//       PathName: 'adsf',
-//       Description: 'adf',
-//       PathOrder: 1,
-//       nodes: [{}]
-//     }
-//   ]
-// }
-
 
 const createFinalCourse = async (req, res) => {
   try {
@@ -426,15 +627,76 @@ const createFinalCourse = async (req, res) => {
       validateCourseThumbnailDataUrl(newCourse.Thumbnail);
     }
 
-    const newCourseId = await courseModel.createFinalCourse(newCourse, newCoursePaths);
+    // Create course
+    const courseData = {
+      courseName: String(newCourse.CourseName).trim(),
+      description: String(newCourse.Description).trim(),
+      thumbnail: newCourse.Thumbnail || null,
+      categoryId: newCourse.CategoryId,
+      levelId: newCourse.LevelId,
+      instructorId: newCourse.InstructorId,
+      isPublished: Boolean(newCourse.IsPublished),
+      rating: 0,
+      totalLessons: 0,
+    };
+
+    const course = await Course.create(courseData);
+    let totalLessons = 0;
+
+    // Create paths with nodes
+    if (newCoursePaths && Array.isArray(newCoursePaths)) {
+      for (const pathData of newCoursePaths) {
+        const path = await Path.create({
+          courseId: course._id,
+          pathName: String(pathData.PathName).trim(),
+          description: pathData.Description || null,
+          order: pathData.PathOrder || 1,
+        });
+
+        if (pathData.nodes && Array.isArray(pathData.nodes)) {
+          for (const nodeData of pathData.nodes) {
+            const node = await PathNode.create({
+              pathId: path._id,
+              nodeName: String(nodeData.NodeName).trim(),
+              nodeOrder: nodeData.NodeOrder || 1,
+              description: nodeData.Description || null,
+            });
+            totalLessons++;
+
+            // Create materials for this node
+            const materials = nodeData.materials || nodeData.Materials || [];
+            for (const matData of materials) {
+              const materialType = String(matData.MaterialType || matData.materialType || '').trim().toUpperCase();
+              if (!materialType) continue;
+
+              await NodeMaterial.create({
+                nodeId: node._id,
+                materialType: materialType,
+                title: String(matData.Title || matData.title || '').trim(),
+                materialUrl: matData.MaterialUrl || matData.materialUrl || null,
+                materialOrder: matData.MaterialOrder || matData.materialOrder || 1,
+                sourceType: matData.SourceType || matData.sourceType || null,
+                fileName: matData.FileName || matData.fileName || null,
+                fileSize: matData.FileSize || matData.fileSize || null,
+                embedUrl: matData.EmbedUrl || matData.embedUrl || null,
+                content: matData.Content || matData.content || null,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Update total lessons
+    await Course.findByIdAndUpdate(course._id, { totalLessons });
 
     return res.status(201).json({
       success: true,
       message: 'Tạo khóa học hoàn chỉnh thành công!',
-      data: { courseId: newCourseId }
+      data: { courseId: course._id.toString() }
     });
   } catch (error) {
-    console.error(error.message);
+    console.error('createFinalCourse error:', error.message);
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       success: false,
@@ -443,23 +705,49 @@ const createFinalCourse = async (req, res) => {
         : 'Lỗi server khi tạo khóa học',
     });
   }
-}
+};
+
 const enrollCourse = async (req, res) => {
   try {
     const { userId, courseId } = req.body;
     if (!userId || !courseId) {
       return res.status(400).json({ success: false, message: 'Thiếu userId hoặc courseId' });
     }
-    const result = await courseModel.enrollCourse(userId, courseId);
-    return res.status(200).json({ success: true, message: 'Đăng ký khóa học thành công!', data: result });
+
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
+    }
+
+    // Check if already enrolled
+    const existing = await UserCourse.findOne({ userId, courseId });
+    if (existing) {
+      return res.status(200).json({ success: true, message: 'Bạn đã đăng ký khóa học này rồi!', data: existing });
+    }
+
+    const enrollment = await UserCourse.create({
+      userId,
+      courseId,
+      progressPercentage: 0,
+      enrollmentDate: new Date(),
+    });
+
+    return res.status(200).json({ success: true, message: 'Đăng ký khóa học thành công!', data: enrollment });
   } catch (error) {
+    console.error('enrollCourse error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi server khi đăng ký khóa học' });
   }
 };
 
 const getFeaturedCourses = async (req, res) => {
   try {
-    const courses = await courseModel.getFeaturedCourses();
+    const courses = await Course.find({ isPublished: true })
+      .populate('categoryId', 'displayName')
+      .populate('levelId', 'displayName')
+      .populate('instructorId', 'fullName')
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(8)
+      .lean();
+
     return res.status(200).json({
       success: true,
       message: 'Lấy khoá học nổi bật thành công',
@@ -476,11 +764,31 @@ const getFeaturedCourses = async (req, res) => {
 
 const getFeaturedPaths = async (req, res) => {
   try {
-    const paths = await courseModel.getFeaturedPaths();
+    const courses = await Course.find({ isPublished: true })
+      .populate('categoryId', 'displayName')
+      .populate('levelId', 'displayName')
+      .populate('instructorId', 'fullName')
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .lean();
+
+    const featuredPaths = await Promise.all(courses.map(async (course) => {
+      const paths = await Path.find({ courseId: course._id })
+        .sort({ order: 1 })
+        .lean();
+
+      const pathsWithNodeCount = await Promise.all(paths.map(async (path) => {
+        const nodeCount = await PathNode.countDocuments({ pathId: path._id });
+        return { ...path, nodeCount };
+      }));
+
+      return { ...course, Paths: pathsWithNodeCount };
+    }));
+
     return res.status(200).json({
       success: true,
       message: 'Lấy lộ trình nổi bật thành công',
-      data: paths
+      data: featuredPaths
     });
   } catch (error) {
     console.error('getFeaturedPaths error:', error);
@@ -491,21 +799,38 @@ const getFeaturedPaths = async (req, res) => {
   }
 };
 
-// hien thi khoa hoc dang hoc theo date
 const getContinueCourse = async (req, res) => {
   try {
     const userId = req.params.userId;
 
-    if (!userId || Number.isNaN(Number(userId))) {
+    if (!userId) {
       return res.status(400).json({
         success: false,
-        message: 'Thiếu hoặc sai userId.',
+        message: 'Thiếu userId.',
       });
     }
 
-    const continueCourse = await courseModel.getContinueCourse(userId);
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId không hợp lệ.',
+      });
+    }
 
-    if (!continueCourse) {
+    // Find the most recent enrollment with progress < 100%
+    const enrollment = await UserCourse.findOne({ userId, progressPercentage: { $lt: 100 } })
+      .sort({ enrollmentDate: -1 })
+      .populate({
+        path: 'courseId',
+        populate: [
+          { path: 'categoryId', select: 'displayName' },
+          { path: 'levelId', select: 'displayName' },
+          { path: 'instructorId', select: 'fullName' }
+        ]
+      })
+      .lean();
+
+    if (!enrollment) {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy khóa học đang học.',
@@ -515,7 +840,11 @@ const getContinueCourse = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Lấy khóa học đang học thành công.',
-      data: continueCourse
+      data: {
+        ...enrollment.courseId,
+        progressPercentage: enrollment.progressPercentage,
+        enrollmentDate: enrollment.enrollmentDate
+      }
     });
   } catch (error) {
     console.error('getContinueCourse error:', error);
@@ -525,7 +854,6 @@ const getContinueCourse = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   getMyCourses,

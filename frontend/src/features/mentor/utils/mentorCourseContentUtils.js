@@ -617,6 +617,7 @@ export function buildCourseContentPayload(paths) {
                 MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
                 FileName: material.FileName ?? null,
                 FileSize: material.FileSize ?? null,
+                Content: String(material.Content ?? '').trim() || null,
               };
             }
 

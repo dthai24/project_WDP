@@ -12,7 +12,7 @@ const optionalAuth = (req, res, next) => {
 
     if (userId) {
         req.user = {
-            userId: Number(userId),
+            userId: String(userId),
         };
     }
 

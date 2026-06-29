@@ -31,20 +31,35 @@ export function getInitialComments() {
 }
 
 export function mapApiComment(row) {
+  // Support both MongoDB field names and SQL field names
+  const id = row._id || row.CommentId;
+  const authorName = row.userId?.fullName || row.FullName || 'Học viên';
+  const avatarUrl = row.userId?.avatarUrl || row.AvatarUrl || null;
+  const rating = row.rating ?? row.Rating ?? null;
+  const content = row.content || row.Content;
+  const createdAt = row.createdAt || row.CreatedAt;
+  const userId = row.userId?._id || row.userId || row.UserId;
+  const isInstructor = Boolean(row.isInstructor || row.IsInstructor);
+
+  // Check for reply (MongoDB uses replyContent, SQL uses ReplyContent)
+  const replyContent = row.replyContent || row.ReplyContent;
+  const replyAt = row.replyAt || row.ReplyAt;
+  const replyByName = row.replyByName || row.ReplyByName || 'Mentor';
+
   return {
-    id: row.CommentId,
-    authorName: row.FullName || 'Học viên',
-    avatarUrl: row.AvatarUrl || null,
-    rating: row.Rating ?? null,
-    content: row.Content,
-    createdAt: row.CreatedAt,
-    userId: row.UserId,
-    isInstructor: Boolean(row.IsInstructor),
-    reply: row.ReplyContent
+    id,
+    authorName,
+    avatarUrl,
+    rating,
+    content,
+    createdAt,
+    userId,
+    isInstructor,
+    reply: replyContent
       ? {
-          content: row.ReplyContent,
-          repliedAt: row.ReplyAt,
-          repliedByName: row.ReplyByName || 'Mentor',
+          content: replyContent,
+          repliedAt: replyAt,
+          repliedByName,
         }
       : null,
   };

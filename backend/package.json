@@ -9,11 +9,9 @@
     "db:material-columns": "node scripts/add-material-cloudinary-columns.js",
     "db:material-type": "node scripts/update-material-type-constraint.js",
     "db:merge-material-url": "node scripts/merge-material-content-into-url.js",
-    "db:test": "node scripts/migrate-test-schema.js"
+    "db:test": "node scripts/migrate-test-schema.js",
+    "seed:mongo": "node scripts/seed-mongodb.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
@@ -22,11 +20,15 @@
     "express": "^4.22.2",
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.0.0",
     "mssql": "^10.0.4",
     "multer": "^2.2.0",
     "nodemailer": "^8.0.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

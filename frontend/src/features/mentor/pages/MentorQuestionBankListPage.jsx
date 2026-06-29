@@ -4,9 +4,9 @@
  * Search: Header SearchBox (param q) — không nằm trong toolbar.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import MentorQuestionBankToolbar from '@/features/mentor/components/questionBank/MentorQuestionBankToolbar';
 import MentorQuestionBankList from '@/features/mentor/components/questionBank/MentorQuestionBankList';
@@ -139,33 +139,16 @@ export default function MentorQuestionBankListPage() {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          justifyContent: 'space-between',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1.5, sm: 2 },
-          mb: 2.5,
-        }}
-      >
-        <Breadcrumbs
-          separator="/"
-          sx={{ '& .MuiBreadcrumbs-separator': { color: '#64748B', mx: 0.5 } }}
-        >
-          <MuiLink
-            component={Link}
-            to="/home"
-            underline="hover"
-            sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
-          >
-            Trang chủ
-          </MuiLink>
-          <Typography sx={{ fontSize: 13, color: '#0F172A', fontWeight: 600 }}>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: '#0F172A' }}>
             Ngân hàng câu hỏi
-          </Typography>
-        </Breadcrumbs>
+          </h1>
+          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: '#64748B' }}>
+            Quản lý bộ câu hỏi cho các khóa học của bạn.
+          </p>
+        </div>
 
         <AppButton
           startIcon={<AddRoundedIcon />}
@@ -186,7 +169,7 @@ export default function MentorQuestionBankListPage() {
         >
           Tạo bộ câu hỏi
         </AppButton>
-      </Box>
+      </div>
 
       <MentorQuestionBankToolbar
         statusFilter={queryState.status}
@@ -235,6 +218,6 @@ export default function MentorQuestionBankListPage() {
           navigate(`/mentor/question-banks/create?courseId=${course.CourseId}`)
         }
       />
-    </Box>
+    </div>
   );
 }
