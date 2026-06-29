@@ -36,7 +36,6 @@
  *   Sau khi thành công → toast thông báo + cập nhật state cục bộ.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Box } from '@mui/material';
 import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import EmptyState from '@/shared/ui/EmptyState';
@@ -111,9 +110,10 @@ export default function MentorCourseDetailPage() {
         return <MentorCourseContentTab course={course} />;
       // ---------Students-----------
       case MENTOR_COURSE_DETAIL_TABS.STUDENTS:
-        return <MentorCourseStudentsTab courseId={course.CourseId} />;
+        return <MentorCourseStudentsTab courseId={course._id || course.CourseId} />;
       case MENTOR_COURSE_DETAIL_TABS.COMMENTS:
-        return <MentorCourseCommentsTab courseId={course.CourseId} />;
+        return <MentorCourseCommentsTab courseId={course._id || course.CourseId} />;
+
       default:
         return <MentorCourseOverviewTab course={course} onCourseUpdated={loadCourse} />;
     }
@@ -136,7 +136,8 @@ export default function MentorCourseDetailPage() {
     setPublishing(true);
 
     // TODO: wire real API — updateCoursePublishStatus(courseId, isPublished)
-    const result = await updateCoursePublishStatus(course.CourseId, nextPublished);
+    const result = await updateCoursePublishStatus(course._id || course.CourseId, nextPublished);
+
     if (result.ok && result.courseIdUpdate) {
       // setCourse(result.course);
       setPublishing(true);
@@ -172,15 +173,15 @@ export default function MentorCourseDetailPage() {
 
   if (loading) {
     return (
-      <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
+      <div className="w-full max-w-7xl mx-auto">
         <Loading message="Đang tải khóa học..." />
-      </Box>
+      </div>
     );
   }
 
   if (error || !course) {
     return (
-      <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
+      <div className="w-full max-w-7xl mx-auto">
         <EmptyState
           variant="error"
           title="Không tìm thấy khóa học"
@@ -188,12 +189,12 @@ export default function MentorCourseDetailPage() {
           actionLabel="Quay lại danh sách"
           onAction={() => navigate('/mentor/courses')}
         />
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
+    <div className="w-full max-w-7xl mx-auto">
       {/* Detail's header */}
       <MentorCourseDetailHeader
         course={course}
@@ -206,7 +207,8 @@ export default function MentorCourseDetailPage() {
       {/* 
       --------------------ACTIVE Tab Panel (Khóa học, nội dung, học viên)------------------------
        */}
-      <Box key={activeTab}>{renderActiveTabPanel()}</Box>
+      <div key={activeTab}>{renderActiveTabPanel()}</div>
+
 
       {/* --------------Dialog------------------------ */}
       <ConfirmDialog
@@ -220,6 +222,6 @@ export default function MentorCourseDetailPage() {
         destructive={publishDialogConfig?.destructive}
         loading={publishing}
       />
-    </Box>
+    </div>
   );
 }

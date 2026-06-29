@@ -1,7 +1,11 @@
-
-const studentsModel = require('../Models/studentsModel.js')
-const coursesModel = require('../Models/coursesModel.js')
-const courseCommentsModel = require('../Models/courseCommentsModel.js')
+const mongoose = require('mongoose');
+const Course = require('../models/MongoDB/Course');
+const Path = require('../models/MongoDB/Path');
+const PathNode = require('../models/MongoDB/PathNode');
+const NodeMaterial = require('../models/MongoDB/NodeMaterial');
+const UserCourse = require('../models/MongoDB/UserCourse');
+const CourseComment = require('../models/MongoDB/CourseComment');
+const User = require('../models/MongoDB/User');
 const { validateCourseThumbnailDataUrl, saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
 function normalizeThumbnailInput(thumbnail) {
@@ -23,31 +27,45 @@ function isThumbnailDataUrl(thumbnail) {
 }
 
 async function assertMentorOwnsCourse(courseId, instructorId) {
-    const ownerId = await coursesModel.getCourseInstructorId(courseId);
-    if (!ownerId) {
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+        return { ok: false, status: 400, message: 'courseId không hợp lệ.' };
+    }
+    const course = await Course.findById(courseId).select('instructorId').lean();
+    if (!course) {
         return { ok: false, status: 404, message: 'Không tìm thấy khóa học.' };
     }
-    if (instructorId && Number(ownerId) !== Number(instructorId)) {
+    if (instructorId && String(course.instructorId) !== String(instructorId)) {
         return { ok: false, status: 403, message: 'Bạn không có quyền cập nhật khóa học này.' };
     }
-    return { ok: true, ownerId };
+    return { ok: true, course };
 }
 
 // get Students in course
 const getStudentsInCourse = async (req, res) => {
     try {
-        // Lấy courseId từ params trước
-        // Route nên là: /courses/:courseId/students
-        const courseId = Number(req.params.courseId);
+        const courseId = req.params.courseId;
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({
                 success: false,
                 message: 'courseId không hợp lệ',
             });
         }
 
-        const students = await studentsModel.getStudentsInCourseModel(courseId);
+        const enrollments = await UserCourse.find({ courseId })
+            .populate('userId', 'fullName email avatarUrl dateOfBirth')
+            .sort({ enrollmentDate: -1 })
+            .lean();
+
+        const students = enrollments.map(e => ({
+            userId: e.userId?._id,
+            fullName: e.userId?.fullName || '',
+            email: e.userId?.email || '',
+            avatarUrl: e.userId?.avatarUrl || null,
+            dateOfBirth: e.userId?.dateOfBirth || null,
+            progressPercentage: e.progressPercentage,
+            enrollmentDate: e.enrollmentDate,
+        }));
 
         return res.status(200).json({
             success: true,
@@ -56,7 +74,6 @@ const getStudentsInCourse = async (req, res) => {
         });
     } catch (error) {
         console.error('getStudentsInCourse error:', error);
-
         return res.status(500).json({
             success: false,
             message: 'Lỗi server khi lấy danh sách học viên trong khóa học',
@@ -67,27 +84,24 @@ const getStudentsInCourse = async (req, res) => {
 // set public course
 const setPublishCourse = async (req, res) => {
     try {
-        // Lấy courseId từ params trước
-        // Route nên là: /courses/:courseId/students
-        const courseId = Number(req.params.courseId);
+        const courseId = req.params.courseId;
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({
                 success: false,
                 message: 'courseId không hợp lệ',
             });
         }
 
-        const courseIdSetPublish = await coursesModel.setPublishCourse(courseId);
+        await Course.findByIdAndUpdate(courseId, { isPublished: true, updatedAt: new Date() });
 
         return res.status(200).json({
             success: true,
             message: 'Set course -> Publish success',
-            courseIdUpdate: courseIdSetPublish,
+            courseIdUpdate: courseId,
         });
     } catch (error) {
         console.error('setPublishCourse error:', error);
-
         return res.status(500).json({
             success: false,
             message: 'Lỗi server setPublishCourse',
@@ -98,27 +112,24 @@ const setPublishCourse = async (req, res) => {
 // set course -> draft
 const setDraftCourse = async (req, res) => {
     try {
-        // Lấy courseId từ params trước
-        // Route nên là: /courses/:courseId/students
-        const courseId = Number(req.params.courseId);
+        const courseId = req.params.courseId;
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({
                 success: false,
                 message: 'courseId không hợp lệ',
             });
         }
 
-        const courseIdSetPublish = await coursesModel.setDraftCourse(courseId);
+        await Course.findByIdAndUpdate(courseId, { isPublished: false, updatedAt: new Date() });
 
         return res.status(200).json({
             success: true,
             message: 'Set course -> Draft success',
-            courseIdUpdate: courseIdSetPublish,
+            courseIdUpdate: courseId,
         });
     } catch (error) {
         console.error('setDraftCourse error:', error);
-
         return res.status(500).json({
             success: false,
             message: 'Lỗi server setDraftCourse',
@@ -128,10 +139,10 @@ const setDraftCourse = async (req, res) => {
 
 const updateCourse = async (req, res) => {
     try {
-        const courseId = Number(req.params.courseId);
+        const courseId = req.params.courseId;
         const instructorId = req.user?.userId ?? req.body?.InstructorId ?? null;
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
         }
 
@@ -155,31 +166,21 @@ const updateCourse = async (req, res) => {
         if (!Description || String(Description).trim() === '') {
             return res.status(400).json({ success: false, message: 'Thiếu mô tả khóa học.' });
         }
-        if (!CategoryId || Number.isNaN(Number(CategoryId))) {
+        if (!CategoryId) {
             return res.status(400).json({ success: false, message: 'Thiếu hoặc sai CategoryId.' });
         }
-        if (!LevelId || Number.isNaN(Number(LevelId))) {
+        if (!LevelId) {
             return res.status(400).json({ success: false, message: 'Thiếu hoặc sai LevelId.' });
         }
 
-        const [existingCourses, studentCount] = await Promise.all([
-            coursesModel.getCourseById(courseId),
-            coursesModel.getCourseStudentCount(courseId),
-        ]);
-        const existingCourse = Array.isArray(existingCourses) ? existingCourses[0] : existingCourses;
+        // Check if course has students
+        const studentCount = await UserCourse.countDocuments({ courseId });
 
-        if (!existingCourse) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học.' });
-        }
-
-        const hasStudents = studentCount > 0;
-        const resolvedCategoryId = Number(CategoryId);
-        const resolvedLevelId = Number(LevelId);
-
-        if (hasStudents) {
+        if (studentCount > 0) {
+            const existingCourse = await Course.findById(courseId).lean();
             if (
-                resolvedCategoryId !== Number(existingCourse.CategoryId)
-                || resolvedLevelId !== Number(existingCourse.LevelId)
+                String(existingCourse.categoryId) !== String(CategoryId)
+                || String(existingCourse.levelId) !== String(LevelId)
             ) {
                 return res.status(400).json({
                     success: false,
@@ -189,21 +190,19 @@ const updateCourse = async (req, res) => {
         }
 
         const courseData = {
-            CourseName: String(CourseName).trim(),
-            Description: String(Description).trim(),
-            CategoryId: resolvedCategoryId,
-            LevelId: resolvedLevelId,
-            IsPublished: Boolean(IsPublished),
+            courseName: String(CourseName).trim(),
+            description: String(Description).trim(),
+            categoryId: CategoryId,
+            levelId: LevelId,
+            isPublished: Boolean(IsPublished),
+            updatedAt: new Date(),
         };
 
-        const updatedId = await coursesModel.updateCourseById(courseId, courseData);
-        if (!updatedId) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học.' });
-        }
+        await Course.findByIdAndUpdate(courseId, courseData);
 
         let savedThumbnailPath = null;
 
-        if (!hasStudents) {
+        if (studentCount === 0) {
             const thumbnailInput = normalizeThumbnailInput(Thumbnail);
             if (thumbnailInput && isThumbnailDataUrl(thumbnailInput)) {
                 validateCourseThumbnailDataUrl(thumbnailInput);
@@ -213,7 +212,7 @@ const updateCourse = async (req, res) => {
                     { replaceExisting: true },
                 );
                 if (savedThumbnailPath) {
-                    await coursesModel.updateCourseThumbnail(courseId, savedThumbnailPath);
+                    await Course.findByIdAndUpdate(courseId, { thumbnail: savedThumbnailPath });
                 }
             }
         }
@@ -221,7 +220,7 @@ const updateCourse = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: 'Cập nhật thông tin khóa học thành công.',
-            courseId: updatedId,
+            courseId: courseId,
             thumbnail: savedThumbnailPath,
         });
     } catch (error) {
@@ -236,11 +235,11 @@ const updateCourse = async (req, res) => {
 
 const updateCourseContent = async (req, res) => {
     try {
-        const courseId = Number(req.params.courseId);
+        const courseId = req.params.courseId;
         const instructorId = req.user?.userId ?? req.body?.InstructorId ?? null;
         const paths = req.body?.paths;
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
         }
 
@@ -253,7 +252,60 @@ const updateCourseContent = async (req, res) => {
             return res.status(ownership.status).json({ success: false, message: ownership.message });
         }
 
-        await coursesModel.replaceCourseContent(courseId, paths);
+        // Delete existing paths, nodes, and materials for this course
+        const existingPaths = await Path.find({ courseId }).select('_id').lean();
+        const pathIds = existingPaths.map(p => p._id);
+        const existingNodes = await PathNode.find({ pathId: { $in: pathIds } }).select('_id').lean();
+        const nodeIds = existingNodes.map(n => n._id);
+
+        await NodeMaterial.deleteMany({ nodeId: { $in: nodeIds } });
+        await PathNode.deleteMany({ pathId: { $in: pathIds } });
+        await Path.deleteMany({ courseId });
+
+        // Create new paths with nodes
+        let totalLessons = 0;
+        for (const pathData of paths) {
+            const path = await Path.create({
+                courseId,
+                pathName: String(pathData.PathName || pathData.pathName || '').trim(),
+                description: pathData.Description || pathData.description || null,
+                order: pathData.PathOrder || pathData.order || 1,
+            });
+
+            const nodes = pathData.nodes || pathData.Nodes || [];
+            for (const nodeData of nodes) {
+                const node = await PathNode.create({
+                    pathId: path._id,
+                    nodeName: String(nodeData.NodeName || nodeData.nodeName || '').trim(),
+                    nodeOrder: nodeData.NodeOrder || nodeData.nodeOrder || 1,
+                    description: nodeData.Description || nodeData.description || null,
+                });
+                totalLessons++;
+
+                // Create materials for this node
+                const materials = nodeData.materials || nodeData.Materials || [];
+                for (const matData of materials) {
+                    const materialType = String(matData.MaterialType || matData.materialType || '').trim().toUpperCase();
+                    if (!materialType) continue;
+
+                    await NodeMaterial.create({
+                        nodeId: node._id,
+                        materialType: materialType,
+                        title: String(matData.Title || matData.title || '').trim(),
+                        materialUrl: matData.MaterialUrl || matData.materialUrl || null,
+                        materialOrder: matData.MaterialOrder || matData.materialOrder || 1,
+                        sourceType: matData.SourceType || matData.sourceType || null,
+                        fileName: matData.FileName || matData.fileName || null,
+                        fileSize: matData.FileSize || matData.fileSize || null,
+                        embedUrl: matData.EmbedUrl || matData.embedUrl || null,
+                        content: matData.Content || matData.content || null,
+                    });
+                }
+            }
+        }
+
+        // Update total lessons
+        await Course.findByIdAndUpdate(courseId, { totalLessons, updatedAt: new Date() });
 
         return res.status(200).json({
             success: true,
@@ -271,10 +323,10 @@ const updateCourseContent = async (req, res) => {
 
 const getCourseCommentsForMentor = async (req, res) => {
     try {
-        const courseId = Number(req.params.courseId);
+        const courseId = req.params.courseId;
         const instructorId = req.user?.userId;
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({ success: false, message: 'courseId không hợp lệ', data: [] });
         }
 
@@ -283,7 +335,11 @@ const getCourseCommentsForMentor = async (req, res) => {
             return res.status(ownership.status).json({ success: false, message: ownership.message, data: [] });
         }
 
-        const comments = await courseCommentsModel.getCourseComments(courseId);
+        const comments = await CourseComment.find({ courseId })
+            .populate('userId', 'fullName avatarUrl')
+            .sort({ createdAt: -1 })
+            .lean();
+
         return res.status(200).json({
             success: true,
             message: 'Lấy bình luận thành công',
@@ -301,15 +357,15 @@ const getCourseCommentsForMentor = async (req, res) => {
 
 const replyCourseComment = async (req, res) => {
     try {
-        const courseId = Number(req.params.courseId);
-        const commentId = Number(req.params.commentId);
+        const courseId = req.params.courseId;
+        const commentId = req.params.commentId;
         const instructorId = req.user?.userId;
         const { content } = req.body ?? {};
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
         }
-        if (!Number.isInteger(commentId) || commentId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
             return res.status(400).json({ success: false, message: 'commentId không hợp lệ' });
         }
         if (!instructorId) {
@@ -327,21 +383,25 @@ const replyCourseComment = async (req, res) => {
             return res.status(ownership.status).json({ success: false, message: ownership.message });
         }
 
-        const updated = await courseCommentsModel.replyToCourseComment({
-            courseId,
-            commentId,
-            mentorUserId: instructorId,
-            replyContent: String(content).trim(),
-        });
-
-        if (!updated) {
+        const comment = await CourseComment.findById(commentId);
+        if (!comment) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy bình luận' });
         }
+
+        // Add reply to the comment
+        comment.replyContent = String(content).trim();
+        comment.replyByUserId = instructorId;
+        comment.replyAt = new Date();
+        await comment.save();
+
+        const updatedComment = await CourseComment.findById(commentId)
+            .populate('userId', 'fullName avatarUrl')
+            .lean();
 
         return res.status(200).json({
             success: true,
             message: 'Đã gửi phản hồi',
-            data: updated,
+            data: updatedComment,
         });
     } catch (error) {
         console.error('replyCourseComment error:', error);
@@ -351,11 +411,11 @@ const replyCourseComment = async (req, res) => {
 
 const createCourseCommentForMentor = async (req, res) => {
     try {
-        const courseId = Number(req.params.courseId);
+        const courseId = req.params.courseId;
         const instructorId = req.user?.userId;
         const { content } = req.body ?? {};
 
-        if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
             return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
         }
         if (!instructorId) {
@@ -373,17 +433,21 @@ const createCourseCommentForMentor = async (req, res) => {
             return res.status(ownership.status).json({ success: false, message: ownership.message });
         }
 
-        const comment = await courseCommentsModel.createCourseComment({
+        const comment = await CourseComment.create({
             courseId,
             userId: instructorId,
             rating: null,
             content: String(content).trim(),
         });
 
+        const populatedComment = await CourseComment.findById(comment._id)
+            .populate('userId', 'fullName avatarUrl')
+            .lean();
+
         return res.status(201).json({
             success: true,
             message: 'Gửi bình luận thành công',
-            data: comment,
+            data: populatedComment,
         });
     } catch (error) {
         console.error('createCourseCommentForMentor error:', error);

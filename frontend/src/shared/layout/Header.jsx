@@ -1,663 +1,249 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Box,
-  Avatar,
-  IconButton,
-  Menu,
-  MenuItem,
-  Divider,
-  Tooltip,
-  alpha,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
-import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
-import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import Logo from "@/shared/ui/Logo";
-import AppButton from "@/shared/ui/AppButton";
-import SearchBox from "@/shared/ui/SearchBox";
-import { toast } from "@/shared/ui/Toast";
-import {
-  buildCourseListSearchParams,
-  parseCourseListParams,
-} from "@/features/courses/utils/courseListParams";
-import {
-  buildMentorCourseListSearchParams,
-  parseMentorCourseListParams,
-} from "@/features/mentor/utils/mentorCourseListParams";
-import { getPrimaryRoleLabel, isStudent } from "@/features/auth/utils/authUtils";
-import { useAuth } from '@/context/AuthContext';
-import {
-  AVATAR_UPDATED_EVENT,
-  getStoredAvatarUrl,
-} from '@/features/profile/utils/profileAvatarUtils';
-import StreakBadge from "@/shared/ui/StreakBadge";
-const MENU_CLOSE_DELAY = 200;
-const KEYWORD_DEBOUNCE_MS = 300;
-const PROJECT_NAME = "S.T.A.R Learning Path";
-const PRIMARY = "#0891B2";
-const ITEM_TEXT = "#334155";
-const MUTED = "#64748B";
-const ERROR = "#DC2626";
+  GraduationCap,
+  House,
+  BookOpen,
+  User,
+  Gear,
+  SignOut,
+  List,
+  X,
+  CaretDown,
+  ChartLine,
+  Question,
+} from "@phosphor-icons/react";
 
-const USER_MENU_ITEMS = [
-  { key: "profile", label: "Hồ sơ cá nhân", icon: PersonOutlineRoundedIcon, path: "/profile" },
+const NAV_ITEMS = [
+  { label: "Home", path: "/home", icon: House },
+  { label: "Courses", path: "/courses", icon: BookOpen },
+  { label: "My Learning", path: "/my-courses", icon: ChartLine },
+  { label: "Practice", path: "/practice", icon: Question },
 ];
 
-function getUserInitials(user) {
-  const name = user?.fullName || user?.email || "?";
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("");
-}
-
-const menuItemSx = {
-  minHeight: 44,
-  borderRadius: "12px",
-  px: 1.25,
-  py: 0.75,
-  gap: 1.25,
-  color: ITEM_TEXT,
-  transition: "background-color 0.18s ease, color 0.18s ease",
-  "&:hover": {
-    bgcolor: "rgba(8,145,178,0.06)",
-    color: PRIMARY,
-    "& .user-menu-icon": { color: PRIMARY },
-  },
-};
-
-const logoutItemSx = {
-  ...menuItemSx,
-  color: ERROR,
-  "& .user-menu-icon": { color: ERROR },
-  "&:hover": {
-    bgcolor: "rgba(220,38,38,0.08)",
-    color: ERROR,
-    "& .user-menu-icon": { color: ERROR },
-  },
-};
-
-export default function Header({
-  showUser = true,
-  onLogout,
-  logoHeight = 36,
-  logoTo = "/home",
-  profilePath = "/profile",
-  showMyCoursesButton = true,
-}) {
-  const theme = useTheme();
+export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const closeTimer = useRef(null);
-  const keywordDebounceRef = useRef(null);
-  const userZoneRef = useRef(null);
-
-  const isCoursePage = location.pathname === "/courses";
-  const isMyCoursesPage = location.pathname === "/my-courses";
-  const isMentorCoursesPage = location.pathname === "/mentor/courses";
-  const isMentorQuestionBanksPage = location.pathname === "/mentor/question-banks";
-  const isAdminAccountsPage = location.pathname === "/admin/accounts";
-  const isAdminCategoriesPage = location.pathname === "/admin/categories";
-  const isAdminLevelsPage = location.pathname === "/admin/levels";
-  const isAdminNewsPage = location.pathname === "/admin/news";
-  const isAdminCatalogPage = isAdminCategoriesPage || isAdminLevelsPage;
-  const isMentorListSearchPage =
-    isMentorCoursesPage ||
-    isMentorQuestionBanksPage ||
-    isAdminAccountsPage ||
-    isAdminCatalogPage ||
-    isAdminNewsPage;
-  const isCourseListSearchPage = isCoursePage || isMyCoursesPage || isMentorListSearchPage;
-  const [search, setSearch] = useState("");
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-  const userMenuOpen = Boolean(userMenuAnchor);
+  const [user, setUser] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const profileRef = useRef(null);
 
   useEffect(() => {
-    if (isMentorListSearchPage) {
-      setSearch(searchParams.get("q") || "");
-    } else if (isCourseListSearchPage) {
-      setSearch(searchParams.get("keyword") || "");
-    }
-  }, [isCourseListSearchPage, isMentorListSearchPage, searchParams]);
-
-  useEffect(
-    () => () => {
-      if (keywordDebounceRef.current) {
-        clearTimeout(keywordDebounceRef.current);
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        setUser(null);
       }
-    },
-    []
-  );
-
-  // 1. LẤY USER VÀ HÀM LOGOUT TỪ KHO RA XÀI
-  const { user, logout } = useAuth(); 
-
-  // (Vẫn giữ logic Avatar của ông trong trường hợp ông có update lẻ avatar)
-  const [avatarUrl, setAvatarUrl] = useState(() => getStoredAvatarUrl());
+    }
+  }, [location]);
 
   useEffect(() => {
-    setAvatarUrl(getStoredAvatarUrl());
-  }, [user]);
-
-  useEffect(() => {
-    const handleAvatarUpdated = (event) => {
-      setAvatarUrl(event.detail?.avatarUrl ?? getStoredAvatarUrl());
-    };
-
-    window.addEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated);
-    return () => window.removeEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const clearCloseTimer = () => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
     }
-  };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const openUserMenu = () => {
-    clearCloseTimer();
-    if (userZoneRef.current) setUserMenuAnchor(userZoneRef.current);
-  };
-
-  const scheduleCloseUserMenu = () => {
-    clearCloseTimer();
-    closeTimer.current = setTimeout(() => {
-      setUserMenuAnchor(null);
-    }, MENU_CLOSE_DELAY);
-  };
-
-  const closeUserMenu = () => {
-    clearCloseTimer();
-    setUserMenuAnchor(null);
-  };
-
-  const handleGoProfile = () => {
-    closeUserMenu();
-    navigate(profilePath);
-  };
-
-  const handleProfileTriggerClick = (event) => {
-    event.stopPropagation();
-    if (isMobile) {
-      toggleUserMenu();
-      return;
-    }
-    handleGoProfile();
-  };
-
-  const handleUserZoneKeyDown = (e) => {
-    if (e.key !== "Enter" && e.key !== " ") return;
-    e.preventDefault();
-    if (isMobile) toggleUserMenu();
-    else handleGoProfile();
-  };
-
-  const toggleUserMenu = () => {
-    if (userMenuOpen) closeUserMenu();
-    else openUserMenu();
-  };
-
-  // 2. HÀM LOGOUT: GỌI HÀM CỦA NHÀ KHO THAY VÌ TỰ XÓA STORAGE
   const handleLogout = () => {
-    closeUserMenu();
-    if (onLogout) {
-      onLogout();
-    } else {
-      logout(); // Dùng hàm quét dọn của AuthContext
-      toast.info("Đã đăng xuất thành công.");
-      navigate("/login", { replace: true });
-    }
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    setUser(null);
+    setProfileOpen(false);
+    navigate("/login");
   };
 
-  const handleMenuNavigate = (item) => {
-    if (item.disabled) return;
-    if (item.path === "/profile") handleGoProfile();
-    else {
-      closeUserMenu();
-      if (item.path) navigate(item.path);
-    }
+  const isActive = (path) => {
+    if (path === "/home") return location.pathname === "/home";
+    if (path === "/courses") return location.pathname.startsWith("/courses");
+    if (path === "/my-courses") return location.pathname.startsWith("/my-courses");
+    if (path === "/practice") return location.pathname.startsWith("/practice");
+    return false;
   };
-
-  const displayName = user?.fullName || "Phúc Nguyễn";
-  const displayEmail = user?.email || "";
-  const displayRole = getPrimaryRoleLabel(user);
-
-  const applyCourseKeyword = (value) => {
-    const current = parseCourseListParams(searchParams);
-    const next = buildCourseListSearchParams(
-      { ...current, keyword: value.trim(), page: 1 },
-      searchParams
-    );
-    setSearchParams(next, { replace: true });
-  };
-
-  const applyMentorCourseKeyword = (value) => {
-    const current = parseMentorCourseListParams(searchParams);
-    const next = buildMentorCourseListSearchParams(
-      { ...current, q: value.trim(), page: 1 },
-      searchParams,
-    );
-    setSearchParams(next, { replace: true });
-  };
-
-  const applySearchKeyword = (value) => {
-    if (isMentorListSearchPage) applyMentorCourseKeyword(value);
-    else applyCourseKeyword(value);
-  };
-
-  const handleSearchClear = () => {
-    if (keywordDebounceRef.current) {
-      clearTimeout(keywordDebounceRef.current);
-    }
-    setSearch("");
-    if (isCourseListSearchPage) {
-      applySearchKeyword("");
-    }
-  };
-
-  const handleSearchChange = (event) => {
-    const value = event.target.value;
-    setSearch(value);
-
-    if (!isCourseListSearchPage) return;
-
-    if (keywordDebounceRef.current) {
-      clearTimeout(keywordDebounceRef.current);
-    }
-    keywordDebounceRef.current = setTimeout(() => {
-      applySearchKeyword(value);
-    }, KEYWORD_DEBOUNCE_MS);
-  };
-
-  const handleSearchKeyDown = (event) => {
-    if (event.key !== "Enter") return;
-
-    if (keywordDebounceRef.current) {
-      clearTimeout(keywordDebounceRef.current);
-    }
-
-    if (isCourseListSearchPage) {
-      applySearchKeyword(search);
-      return;
-    }
-
-    const trimmed = search.trim();
-    if (trimmed) {
-      navigate(`/courses?keyword=${encodeURIComponent(trimmed)}`);
-    }
-  };
-
-  const userZoneHandlers = isMobile
-    ? {}
-    : {
-        onMouseEnter: openUserMenu,
-        onMouseLeave: scheduleCloseUserMenu,
-      };
 
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{
-        backgroundColor: "#FFFFFF",
-        color: "text.primary",
-        borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-        boxShadow: theme.ios18?.shadow?.sm,
-      }}
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_1px_3px_rgba(15,23,42,0.04)]"
+          : "bg-transparent"
+      }`}
     >
-      <Toolbar sx={{ gap: 2, minHeight: { xs: 56, sm: 60 } }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1.25,
-            flexShrink: 0,
-            minWidth: 0,
-          }}
-        >
-          <Logo height={logoHeight} to={logoTo} />
-          <Typography
-            component="span"
-            sx={{
-              display: { xs: "none", sm: "block" },
-              fontSize: { sm: 14, md: 15 },
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "text.primary",
-              whiteSpace: "nowrap",
-            }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-[68px]">
+          {/* Logo */}
+          <Link
+            to={user ? "/home" : "/"}
+            className="flex items-center gap-2.5 shrink-0 group"
           >
-            {PROJECT_NAME}
-          </Typography>
-        </Box>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-105">
+              <GraduationCap size={20} weight="fill" className="text-white" />
+            </div>
+            <span className="text-lg font-extrabold text-slate-900 tracking-tight hidden sm:block">
+              S.T.A.R
+            </span>
+          </Link>
 
-        <Box
-          sx={{
-            flex: 1,
-            display: "flex",
-            justifyContent: "center",
-            px: { xs: 0, sm: 2 },
-            minWidth: 0,
-          }}
-        >
-          <SearchBox
-            value={search}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            onClear={handleSearchClear}
-            showClear={isCourseListSearchPage}
-            placeholder={
-              isMentorQuestionBanksPage
-                ? "Tìm khóa học trong ngân hàng câu hỏi..."
-                : isMentorCoursesPage
-                  ? "Tìm theo tên khóa học..."
-                  : isAdminAccountsPage
-                    ? "Tìm theo tên, email hoặc username..."
-                    : isAdminCategoriesPage
-                      ? "Tìm theo tên danh mục..."
-                      : isAdminLevelsPage
-                        ? "Tìm theo tên trình độ..."
-                        : isAdminNewsPage
-                          ? "Tìm theo tiêu đề, danh mục..."
-                          : isMyCoursesPage
-                          ? "Tìm trong khóa học của tôi..."
-                          : isCoursePage
-                            ? "Tìm khóa học..."
-                            : "Tìm kiếm khóa học, lộ trình..."
-            }
-            sx={{ width: "100%", maxWidth: 480 }}
-          />
-        </Box>
-
-        {showUser && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
-            {user && isStudent(user) && (
-              <Box sx={{ display: { xs: "none", sm: "flex" }, mr: 1 }}>
-                <StreakBadge userId={user?.userId} />
-              </Box>
-            )}
-
-            {user && showMyCoursesButton && (
-              <Tooltip title="Khóa học của tôi">
-                <Box
-                  component="button"
-                  type="button"
-                  onClick={() => navigate("/my-courses")}
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.75,
-                    py: 1,
-                    px: isMobile ? 1 : 1.75,
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    bgcolor: "rgba(8,145,178,0.08)",
-                    color: "#0891B2",
-                    borderRadius: "99px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                    transition: "background-color 0.2s ease",
-                    "&:hover": {
-                      bgcolor: "rgba(8,145,178,0.14)",
-                    },
-                  }}
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    active
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
                 >
-                  <MenuBookOutlinedIcon sx={{ fontSize: 18 }} />
-                  {!isMobile && "Khóa học của tôi"}
-                </Box>
-              </Tooltip>
-            )}
+                  <item.icon size={16} weight={active ? "fill" : "regular"} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-            {user && (
-              <IconButton
-                aria-label="Thông báo"
-                size="medium"
-                sx={{
-                  color: "text.secondary",
-                  borderRadius: theme.ios18?.radius?.xs,
-                  "&:hover": {
-                    color: "primary.main",
-                    bgcolor: alpha(theme.palette.primary.main, 0.08),
-                  },
-                }}
-              >
-                <NotificationsOutlinedIcon />
-              </IconButton>
-            )}
-
-            {!user && (
-              <AppButton
-                onClick={() => navigate("/login")}
-                sx={{
-                  px: { xs: 2, sm: 2.5 },
-                  py: 0.75,
-                  fontSize: 13,
-                  minWidth: 0,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Đăng nhập
-              </AppButton>
-            )}
-
-            {user && (
-              <Box {...userZoneHandlers} sx={{ position: "relative" }}>
-                <Tooltip
-                  title={isMobile ? "Menu tài khoản" : ""}
-                  disableHoverListener={!isMobile || userMenuOpen}
-                  disableFocusListener={!isMobile || userMenuOpen}
-                  disableTouchListener={!isMobile}
-                  enterDelay={400}
-                  leaveDelay={0}
+          {/* Right Side */}
+          <div className="flex items-center gap-2">
+            {user ? (
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
                 >
-                  <Box
-                    ref={userZoneRef}
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={userMenuOpen}
-                    aria-haspopup="true"
-                    aria-label={isMobile ? "Menu tài khoản" : "Xem hồ sơ cá nhân"}
-                    onKeyDown={handleUserZoneKeyDown}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      py: 0.5,
-                      px: 1,
-                      borderRadius: theme.ios18?.radius?.xs,
-                      transition: `background-color 0.2s ${theme.ios18?.transition}`,
-                      "&:hover": {
-                        bgcolor: alpha(theme.palette.primary.main, 0.06),
-                      },
-                    }}
-                  >
-                    {avatarUrl ? (
-                      <Box
-                        component="img"
-                        src={avatarUrl}
-                        alt="avatar"
-                        onClick={handleProfileTriggerClick}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          objectFit: "cover",
-                          borderRadius: "50%",
-                          cursor: "pointer",
-                        }}
-                      />
-                    ) : (
-                      <Avatar
-                        onClick={handleProfileTriggerClick}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          bgcolor: "primary.main",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {getUserInitials(user)}
-                      </Avatar>
-                    )}
-                    <Typography
-                      variant="body2"
-                      onClick={handleProfileTriggerClick}
-                      sx={{
-                        fontWeight: 600,
-                        maxWidth: { xs: 100, sm: 140 },
-                        display: { xs: "none", sm: "block" },
-                        cursor: "pointer",
-                      }}
-                      noWrap
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center text-xs font-bold text-brand-700 border-2 border-white shadow-sm">
+                    {user.fullName
+                      ? user.fullName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)
+                      : "U"}
+                  </div>
+                  <span className="hidden sm:block text-sm font-semibold text-slate-700 max-w-[120px] truncate">
+                    {user.fullName || "User"}
+                  </span>
+                  <CaretDown
+                    size={12}
+                    weight="bold"
+                    className={`text-slate-400 transition-transform duration-200 ${
+                      profileOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-slate-100 shadow-elevated py-1.5 z-50">
+                    <div className="px-4 py-2 border-b border-slate-50 mb-1">
+                      <p className="text-sm font-bold text-slate-900 truncate">
+                        {user.fullName || "User"}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {user.email || ""}
+                      </p>
+                    </div>
+
+                    <Link
+                      to="/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                     >
-                      {displayName}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-
-                <Menu
-                  anchorEl={userMenuAnchor}
-                  open={userMenuOpen}
-                  onClose={closeUserMenu}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                  transformOrigin={{ vertical: "top", horizontal: "right" }}
-                  marginThreshold={12}
-                  slotProps={{
-                    paper: {
-                      onMouseEnter: clearCloseTimer,
-                      onMouseLeave: scheduleCloseUserMenu,
-                      sx: {
-                        width: 240,
-                        mt: 0.75,
-                        borderRadius: "16px",
-                        bgcolor: "rgba(255,255,255,0.92)",
-                        backdropFilter: "blur(16px) saturate(140%)",
-                        WebkitBackdropFilter: "blur(16px) saturate(140%)",
-                        border: "1px solid rgba(8,145,178,0.08)",
-                        boxShadow: "0 12px 32px rgba(15,23,42,0.10)",
-                        overflow: "hidden",
-                      },
-                    },
-                    list: {
-                      sx: { py: 1, px: 1 },
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{ px: 1.25, py: 1, mb: 0.5, cursor: "pointer" }}
-                    onClick={handleGoProfile}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleGoProfile();
-                      }
-                    }}
-                  >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-                      {avatarUrl ? (
-                        <Box
-                          component="img"
-                          src={avatarUrl}
-                          alt="avatar"
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            objectFit: "cover",
-                            borderRadius: "50%",
-                          }}
-                        />
-                      ) : (
-                        <Avatar
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            fontSize: 14,
-                            fontWeight: 700,
-                            bgcolor: PRIMARY,
-                          }}
-                        >
-                          {getUserInitials(user)}
-                        </Avatar>
-                      )}
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography
-                          sx={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "#0F172A",
-                            lineHeight: 1.3,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {displayName}
-                        </Typography>
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            color: MUTED,
-                            lineHeight: 1.3,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {displayEmail || displayRole}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-
-                  <Divider sx={{ my: 0.5, borderColor: "rgba(8,145,178,0.08)" }} />
-
-                  {USER_MENU_ITEMS.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <MenuItem
-                        key={item.key}
-                        disabled={item.disabled}
-                        onClick={() => handleMenuNavigate(item)}
-                        sx={{
-                          ...menuItemSx,
-                          ...(item.disabled && { opacity: 0.45 }),
-                        }}
+                      <User size={16} className="text-slate-400" />
+                      Profile
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Gear size={16} className="text-slate-400" />
+                      Settings
+                    </Link>
+                    <div className="border-t border-slate-50 mt-1 pt-1">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
-                        <Icon className="user-menu-icon" sx={{ fontSize: 19, color: MUTED }} />
-                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{item.label}</Typography>
-                      </MenuItem>
-                    );
-                  })}
-
-                  <Divider sx={{ my: 0.75, borderColor: "rgba(8,145,178,0.08)" }} />
-
-                  <MenuItem onClick={handleLogout} sx={logoutItemSx}>
-                    <LogoutRoundedIcon className="user-menu-icon" sx={{ fontSize: 19 }} />
-                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Đăng xuất</Typography>
-                  </MenuItem>
-                </Menu>
-              </Box>
+                        <SignOut size={16} />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-4 py-2 text-sm font-bold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-all duration-200 active:scale-[0.98] shadow-sm"
+                >
+                  Get Started
+                </Link>
+              </div>
             )}
-          </Box>
-        )}
-      </Toolbar>
-    </AppBar>
+
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-slate-50 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? (
+                <X size={20} weight="bold" className="text-slate-600" />
+              ) : (
+                <List size={20} weight="bold" className="text-slate-600" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Nav */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-xl">
+          <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                    active
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <item.icon size={18} weight={active ? "fill" : "regular"} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      )}
+    </header>
   );
 }

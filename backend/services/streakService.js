@@ -1,4 +1,4 @@
-const { getCompletionDates } = require("../models/studentsModel");
+const UserNode = require("../models/MongoDB/UserNode");
 
 function ymd(date) {
   const y = date.getFullYear();
@@ -28,8 +28,19 @@ function computeStreak(dateStrings) {
 }
 
 async function getStreak(userId) {
-  const dates = await getCompletionDates(userId);
-  return computeStreak(dates);
+  // Get all completed nodes for this user from MongoDB
+  const completedNodes = await UserNode.find({
+    userId,
+    isCompleted: true,
+    completedAt: { $ne: null }
+  }).select('completedAt').lean();
+
+  // Extract unique completion dates (YYYY-MM-DD)
+  const dateStrings = [...new Set(
+    completedNodes.map(n => ymd(new Date(n.completedAt)))
+  )];
+
+  return computeStreak(dateStrings);
 }
 
 module.exports = { getStreak };

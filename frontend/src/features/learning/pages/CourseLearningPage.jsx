@@ -1,96 +1,62 @@
 /**
- * CourseLearningPage  ─  Trang học bài trong khóa học (student)
+ * CourseLearningPage  —  Trang học bài trong khóa học (student)
+ * Redesigned: Premium English Learning Experience
  *
- * Props: không có (page component, route: /my-courses/:courseId/learn)
+ * Route: /my-courses/:courseId/learn
  *
- * URL params:
- *   courseId : string  — ID khóa học, từ useParams()
- *
- * ── Data source (hiện đang dùng mock) ───────────────────────────────────
- *   getCourseLearningMock(courseId) từ courseLearningMock.js
- *   Thứ tự ưu tiên: mentorCourseDetailById → MANUAL_COURSE_LEARNING → fallback
- *
- *   TODO: khi BE sẵn sàng → thay bằng:
+ * ── Data source ───────────────────────────────────────────────────────
  *   GET /api/courses/:courseId/learning?userId=<id>
  *
- *   Response JSON mong đợi từ BE:
+ *   Response JSON:
  *   {
  *     success: true,
- *     course: {
- *       courseId:    number,
- *       courseTitle: string,
- *       instructor:  string,
- *       progress:    number,    // 0–100
- *       modules: [
- *         {
- *           id:    number,
- *           title: string,
- *           lessons: [
- *             {
- *               id:       number,
- *               title:    string,
- *               duration: string,
- *               type:     "video" | "reading" | "quiz",
- *               status:   "completed" | "current" | "not_started",
- *               materials: [
- *                 {
- *                   id:    number,
- *                   type:  "VIDEO" | "DOCUMENT" | "TEST",
- *                   title: string,
- *                   url:   string | null
- *                 }
- *               ]
- *             }
- *           ]
- *         }
- *       ]
- *     }
+ *     courseTitle: string,
+ *     instructor: string,
+ *     data: [
+ *       {
+ *         PathId: number,
+ *         PathName: string,
+ *         Description: string,
+ *         lessons: [
+ *           {
+ *             NodeId: number,
+ *             NodeName: string,
+ *             Description: string,
+ *             MaterialType: "VIDEO" | "TEXT" | "DOC" | "TEST",
+ *             MaterialUrl: string | null,
+ *             Content: string | null,
+ *             IsCompleted: boolean
+ *           }
+ *         ]
+ *       }
+ *     ]
  *   }
- *
- * ── API call (cập nhật tiến trình) ──────────────────────────────────────
- *   TODO: POST /api/courses/:courseId/progress
- *   Request JSON:
- *   {
- *     userId:     number,
- *     lessonId:   number,
- *     completed:  boolean,
- *     timeSpent:  number    // giây
- *   }
- *   Response JSON: { success: true, progressPercentage: number }
  */
-import { useMemo, useState, useEffect } from "react";
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Breadcrumbs,
-  Chip,
-  Link as MuiLink,
-  Typography,
-  alpha,
-  useTheme,
-} from "@mui/material";
-import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
-import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
-import RadioButtonUncheckedRoundedIcon from "@mui/icons-material/RadioButtonUncheckedRounded";
-import PlayCircleRoundedIcon from "@mui/icons-material/PlayCircleRounded";
-import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
-import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
-import AssignmentRoundedIcon from "@mui/icons-material/AssignmentRounded";
-import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
-import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
-import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
-import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
-import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
-import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
-import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
-import QuizRoundedIcon from "@mui/icons-material/QuizRounded";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  BookOpen,
+  PlayCircle,
+  FileText,
+  ClipboardText,
+  CheckCircle,
+  Circle,
+  Clock,
+  User,
+  ArrowLeft,
+  ArrowRight,
+  Download,
+  FilePdf,
+  FileDoc,
+  File,
+  GraduationCap,
+  ListChecks,
+  Target,
+  Sparkle,
+  CaretDown,
+  CaretUp,
+  Exam,
+} from "@phosphor-icons/react";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import EmptyState from "@/shared/ui/EmptyState";
@@ -100,57 +66,63 @@ import {
   getCourseQuizConfig,
 } from "@/features/mentor/services/chapterQuizConfigService";
 
-const PRIMARY = "#0891B2";
-const TEXT = "#0F172A";
-const MUTED = "#64748B";
-const SUCCESS = "#16A34A";
-const DIVIDER = "rgba(8,145,178,0.08)";
+/* ─── Constants ─── */
+const BRAND = "#10b981";
+const BRAND_LIGHT = "rgba(16,185,129,0.08)";
+const BRAND_MED = "rgba(16,185,129,0.15)";
+const TEXT = "#0f172a";
+const MUTED = "#64748b";
+const SUCCESS = "#16a34a";
+const DIVIDER = "#e2e8f0";
 
-// CSS cấu hình để nội dung bài đọc (HTML) hiển thị y hệt như bên Mentor soạn thảo
-const RICH_CONTENT_SX = {
-  fontSize: 15,
-  lineHeight: 1.8,
-  color: TEXT,
-  wordBreak: 'break-word',
-  '& p': { margin: '0 0 8px' },
-  '& ul, & ol': { paddingLeft: '1.5rem', marginBottom: '8px' },
-  '& li': { marginBottom: '4px' },
-  '& img': { maxWidth: '100%', height: 'auto', borderRadius: '8px' },
-  '& i, & em': { fontStyle: 'italic' },
-  '& b, & strong': { fontWeight: 700 },
-  '& u': { textDecoration: 'underline' },
+const TYPE_CONFIG = {
+  video: { icon: PlayCircle, label: "Video", color: "#0ea5e9", bg: "rgba(14,165,233,0.08)" },
+  reading: { icon: FileText, label: "Bài đọc", color: "#8b5cf6", bg: "rgba(139,92,246,0.08)" },
+  quiz: { icon: ClipboardText, label: "Bài tập", color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
+  doc: { icon: FileText, label: "Tài liệu", color: "#6366f1", bg: "rgba(99,102,241,0.08)" },
+  text: { icon: FileText, label: "Văn bản", color: "#8b5cf6", bg: "rgba(139,92,246,0.08)" },
 };
 
-// Component phụ trách render Video: Tự động phân loại link Youtube/Vimeo hay link .mp4
+const MATERIAL_FILE_META = {
+  pdf: { icon: FilePdf, color: "#dc2626" },
+  doc: { icon: FileDoc, color: "#2563eb" },
+  docx: { icon: FileDoc, color: "#2563eb" },
+  default: { icon: File, color: "#64748b" },
+};
+
+function getFileMeta(title = "") {
+  const lower = title.toLowerCase();
+  for (const [ext, meta] of Object.entries(MATERIAL_FILE_META)) {
+    if (lower.endsWith(`.${ext}`)) return meta;
+  }
+  return MATERIAL_FILE_META.default;
+}
+
+/* ─── Video Player ─── */
 function LessonVideoPlayer({ url }) {
   if (!url) return null;
   const { previewType, embedUrl } = resolveVideoEmbed(url);
 
-  // Trả về thẻ video gốc nếu là file .mp4
-  if (previewType === 'video') {
+  if (previewType === "video") {
     return (
-      <Box
-        component="video"
+      <video
         src={embedUrl}
         controls
-        sx={{ width: '100%', height: '100%', bgcolor: '#000', objectFit: 'contain' }}
+        className="w-full h-full bg-black object-contain rounded-xl"
       />
     );
   }
 
-  // Trả về thẻ iframe nếu là link YouTube, Vimeo...
   return (
-    <Box
-      component="iframe"
+    <iframe
       src={embedUrl}
       allowFullScreen
-      sx={{ width: '100%', height: '100%', border: 'none', bgcolor: '#000' }}
+      className="w-full h-full border-none bg-black rounded-xl"
     />
   );
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
-
+/* ─── Helpers ─── */
 function flatLessons(mods) {
   return mods.flatMap((m) => m.lessons);
 }
@@ -176,218 +148,247 @@ function computeProgress(mods) {
   );
 }
 
-function OutlineTestItem({ label, subtitle, onClick, variant = "chapter" }) {
-  const isCourse = variant === "course";
-
-  return (
-    <Box
-      component="button"
-      type="button"
-      onClick={onClick}
-      sx={{
-        width: "100%",
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 1,
-        py: 1,
-        px: 1.25,
-        mt: isCourse ? 0.5 : 0.25,
-        border: "none",
-        borderRadius: "10px",
-        cursor: "pointer",
-        textAlign: "left",
-        fontFamily: "inherit",
-        bgcolor: isCourse ? alpha("#7C3AED", 0.08) : alpha("#7C3AED", 0.05),
-        borderTop: isCourse ? "none" : `1px dashed ${alpha("#7C3AED", 0.22)}`,
-        transition: "background-color 0.15s ease",
-        "&:hover": {
-          bgcolor: alpha("#7C3AED", isCourse ? 0.12 : 0.1),
-        },
-      }}
-    >
-      <Box sx={{ pt: 0.1, flexShrink: 0 }}>
-        <QuizRoundedIcon sx={{ fontSize: 18, color: "#7C3AED" }} />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography
-          sx={{
-            fontSize: 12.5,
-            fontWeight: 600,
-            color: "#6D28D9",
-            lineHeight: 1.35,
-          }}
-        >
-          {label}
-        </Typography>
-        {subtitle ? (
-          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.25, lineHeight: 1.35 }}>
-            {subtitle}
-          </Typography>
-        ) : null}
-      </Box>
-    </Box>
-  );
-}
-
-const TYPE_ICON = {
-  video: PlayCircleRoundedIcon,
-  reading: ArticleRoundedIcon,
-  quiz: AssignmentRoundedIcon,
-  doc: DescriptionRoundedIcon,
-  text: ArticleRoundedIcon,
-};
-
-const TYPE_LABEL = { video: "Video", reading: "Bài đọc", quiz: "Bài tập", doc: "Tài liệu", text: "Văn bản" };
-
-const MATERIAL_TYPE_UI = {
-  VIDEO: "video",
-  TEXT: "reading",
-  DOC: "doc",
-  TEST: "quiz",
-};
-
 function mapMaterialTypeToUi(materialType) {
-  if (!materialType) return "video";
-  const key = String(materialType).toUpperCase();
-  return MATERIAL_TYPE_UI[key] ?? String(materialType).toLowerCase();
+  const map = { VIDEO: "video", TEXT: "reading", DOC: "doc", TEST: "quiz" };
+  return map[materialType] ?? "video";
 }
 
-const ICON_COLORS = {
-  route: "#7C3AED",
-  instructor: "#2563EB",
-  duration: "#D97706",
-  video: PRIMARY,
-  reading: "#0EA5E9",
-  quiz: "#EA580C",
-  objective: SUCCESS,
-  content: "#6366F1",
-  pdf: "#DC2626",
-  doc: "#1D4ED8",
-  file: "#64748B",
-  download: PRIMARY,
-};
-
-const TYPE_ICON_COLOR = {
-  video: ICON_COLORS.video,
-  reading: ICON_COLORS.reading,
-  quiz: ICON_COLORS.quiz,
-  doc: ICON_COLORS.doc,
-  text: ICON_COLORS.reading,
-};
-
-const META_TEXT_SX = { fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1.2 };
-
-function getMaterialFileMeta(title = "") {
-  const lower = title.toLowerCase();
-  if (lower.endsWith(".pdf")) {
-    return { Icon: PictureAsPdfRoundedIcon, color: ICON_COLORS.pdf };
-  }
-  if (lower.endsWith(".doc") || lower.endsWith(".docx")) {
-    return { Icon: DescriptionRoundedIcon, color: ICON_COLORS.doc };
-  }
-  return { Icon: InsertDriveFileRoundedIcon, color: ICON_COLORS.file };
-}
-
-function HeaderMetaItem({ icon: Icon, iconColor = PRIMARY, children }) {
+/* ─── Lesson Type Badge ─── */
+function TypeBadge({ type }) {
+  const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reading;
+  const Icon = cfg.icon;
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      <Icon sx={{ fontSize: 15, color: iconColor, flexShrink: 0 }} />
-      {children}
-    </Box>
+    <span
+      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+      style={{ backgroundColor: cfg.bg, color: cfg.color }}
+    >
+      <Icon size={12} weight="fill" />
+      {cfg.label}
+    </span>
   );
 }
 
-function LessonChip({ icon: Icon, label, iconColor = MUTED, sx = {} }) {
+/* ─── Sidebar Lesson Item ─── */
+function LessonItem({ lesson, isActive, onSelect }) {
+  const cfg = TYPE_CONFIG[lesson.type] ?? TYPE_CONFIG.reading;
+  const Icon = cfg.icon;
+  const isCompleted = lesson.status === "completed";
+
   return (
-    <Chip
-      icon={<Icon sx={{ fontSize: "14px !important", color: `${iconColor} !important` }} />}
-      label={label}
-      size="small"
-      sx={{
-        height: 26,
-        fontSize: 11,
-        fontWeight: 600,
-        borderRadius: "99px",
-        bgcolor: alpha(iconColor === MUTED ? PRIMARY : iconColor, 0.06),
-        border: `1px solid ${alpha(iconColor === MUTED ? PRIMARY : iconColor, 0.14)}`,
-        color: MUTED,
-        ...sx,
-      }}
-    />
+    <button
+      type="button"
+      onClick={() => onSelect(lesson.id)}
+      className={`
+        w-full flex items-start gap-2.5 py-2.5 px-3 rounded-xl text-left
+        transition-all duration-150 font-sans
+        ${isActive
+          ? "bg-emerald-50 shadow-sm border border-emerald-200/60"
+          : "hover:bg-slate-50 border border-transparent"
+        }
+      `}
+    >
+      {/* Status icon */}
+      <span className="pt-0.5 flex-shrink-0">
+        {isCompleted ? (
+          <CheckCircle size={18} className="text-emerald-500" weight="fill" />
+        ) : isActive ? (
+          <PlayCircle size={18} className="text-emerald-500" weight="fill" />
+        ) : (
+          <Circle size={18} className="text-slate-300" />
+        )}
+      </span>
+
+      {/* Content */}
+      <span className="flex-1 min-w-0">
+        <span
+          className={`block text-[13px] leading-snug ${
+            isActive ? "font-semibold text-emerald-700" : "font-medium text-slate-800"
+          }`}
+        >
+          Bài {lesson.index}: {lesson.title}
+        </span>
+        <span className="flex items-center gap-1 mt-1">
+          <Icon size={11} className={cfg.color} />
+          <span className="text-[11px] text-slate-400">{lesson.duration}</span>
+        </span>
+      </span>
+    </button>
   );
 }
 
-/* ─── Page ───────────────────────────────────────────────────────────────── */
+/* ─── Module Accordion ─── */
+function ModuleAccordion({ mod, isActiveModule, currentLessonId, onSelect, chapterQuizConfig, onGoToChapterTest }) {
+  const [open, setOpen] = useState(isActiveModule);
+  const doneCount = mod.lessons.filter((l) => l.status === "completed").length;
+  const modPercent = mod.lessons.length > 0 ? Math.round((doneCount / mod.lessons.length) * 100) : 0;
 
+  return (
+    <div className="border-b border-slate-100 last:border-b-0">
+      {/* Module header */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-3 text-left hover:bg-slate-50/50 transition-colors"
+      >
+        <div className="flex-1 min-w-0 pr-2">
+          <span className={`block text-[13px] font-semibold ${isActiveModule ? "text-emerald-600" : "text-slate-800"}`}>
+            Chương {mod.index}: {mod.title}
+          </span>
+          <span className="text-[11px] text-slate-400 mt-0.5 block">
+            {doneCount}/{mod.lessons.length} bài
+          </span>
+        </div>
+        {open ? (
+          <CaretUp size={14} className="text-slate-400 flex-shrink-0" />
+        ) : (
+          <CaretDown size={14} className="text-slate-400 flex-shrink-0" />
+        )}
+      </button>
+
+      {/* Module content */}
+      {open && (
+        <div className="px-2 pb-3">
+          {/* Mini progress bar */}
+          <div className="px-1 mb-2">
+            <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${modPercent}%`, backgroundColor: getProgressColor(modPercent) }}
+              />
+            </div>
+          </div>
+
+          {/* Lessons */}
+          <div className="space-y-0.5">
+            {mod.lessons.map((lesson) => (
+              <LessonItem
+                key={lesson.id}
+                lesson={lesson}
+                isActive={lesson.id === currentLessonId}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+
+          {/* Chapter test button */}
+          <button
+            type="button"
+            onClick={onGoToChapterTest}
+            className="w-full flex items-start gap-2.5 py-2.5 px-3 mt-1 rounded-xl text-left
+              border border-dashed border-amber-200/60 bg-amber-50/40
+              hover:bg-amber-50 transition-colors"
+          >
+            <span className="pt-0.5 flex-shrink-0">
+              <Exam size={16} className="text-amber-500" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[12px] font-semibold text-amber-700 leading-snug">
+                Làm bài kiểm tra
+              </span>
+              <span className="text-[11px] text-amber-500/70 mt-0.5 block">
+                {chapterQuizConfig?.title || "Kiểm tra cuối chương"}
+              </span>
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Rich Content Styles ─── */
+const RICH_CONTENT_CLASSES = [
+  "text-[15px] leading-relaxed text-slate-800",
+  "[&_p]:mb-2",
+  "[&_ul]:pl-6 [&_ol]:pl-6 [&_ul]:mb-2 [&_ol]:mb-2",
+  "[&_li]:mb-1",
+  "[&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg",
+  "[&_i]:italic [&_em]:italic",
+  "[&_b]:font-bold [&_strong]:font-bold",
+  "[&_u]:underline",
+].join(" ");
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PAGE COMPONENT
+   ═══════════════════════════════════════════════════════════════════════ */
 export default function CourseLearningPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const currentUserId = String(user.userId || '1');
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserId = String(user.userId || "1");
 
-  // 1. Tạo State
   const [modules, setModules] = useState([]);
   const [currentLessonId, setCurrentLessonId] = useState(null);
   const [chapterQuizConfigs, setChapterQuizConfigs] = useState({});
   const [courseQuizConfig, setCourseQuizConfig] = useState(null);
+  const [courseInfo, setCourseInfo] = useState({ courseTitle: "Đang tải...", instructor: "" });
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // 2. Tạo state để lưu tên khóa học và giảng viên
-  const [courseInfo, setCourseInfo] = useState({ courseTitle: "Đang tải dữ liệu...", instructor: "" });
-  const rawData = courseInfo; // Dùng lại tên rawData để UI bên dưới không bị lỗi
-
-  // 3. Gọi API và Dịch dữ liệu Database -> React UI
+      // Fetch learning data
   useEffect(() => {
-    const fetchLearningData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/courses/${courseId}/learning`, {
-          headers: { 'x-user-id': currentUserId }
+        const res = await fetch(`http://localhost:5000/api/courses/${courseId}/learning`, {
+          headers: { "x-user-id": currentUserId },
         });
-        const result = await response.json();
+        const result = await res.json();
 
         if (result.success) {
-          setCourseInfo({
-            courseTitle: result.courseTitle,
-            instructor: result.instructor
-          });
-          // ĐÂY LÀ ĐOẠN "DỊCH THUẬT" SIÊU HAY
-          const mappedModules = result.data.map((mod, chapterIndex) => ({
-            id: mod.PathId,
-            index: chapterIndex + 1,
-            title: mod.PathName,
-            description: String(mod.Description ?? "").trim(),
-            lessons: mod.lessons.map((lesson, lessonIndex) => ({
-              id: lesson.NodeId,
-              index: lessonIndex + 1,
-              title: lesson.NodeName,
-              description: String(lesson.Description ?? "").trim(),
-              type: mapMaterialTypeToUi(lesson.MaterialType),
-              status: lesson.IsCompleted ? "completed" : "not_started",
-              // Lấy thêm trường link video và nội dung HTML từ Backend
-              videoUrl: lesson.MaterialUrl,
-              contentBody: lesson.Content
-            })),
+          setCourseInfo({ courseTitle: result.courseTitle, instructor: result.instructor });
+          const mapped = result.data.map((mod, ci) => ({
+            id: mod._id || mod.PathId,
+            index: ci + 1,
+            title: mod.pathName || mod.PathName,
+            description: String(mod.description ?? mod.Description ?? "").trim(),
+
+            lessons: (mod.Nodes || mod.lessons || []).map((lesson, li) => {
+              // Determine lesson type from materials
+              const materials = lesson.Materials || [];
+              const firstMaterial = materials[0];
+              const materialType = firstMaterial?.materialType || lesson.MaterialType || "TEXT";
+              const materialUrl = firstMaterial?.materialUrl || lesson.MaterialUrl || null;
+              const embedUrl = firstMaterial?.embedUrl || null;
+              const contentBody = lesson.content || lesson.Content || firstMaterial?.content || null;
+
+              return {
+                id: lesson._id || lesson.NodeId,
+                index: li + 1,
+                title: lesson.nodeName || lesson.NodeName,
+                description: String(lesson.description ?? lesson.Description ?? "").trim(),
+
+                type: mapMaterialTypeToUi(materialType),
+                status: lesson.IsCompleted ? "completed" : "not_started",
+                videoUrl: embedUrl || materialUrl,
+                contentBody: contentBody,
+                materials: materials.map((m) => ({
+                  id: m._id,
+                  title: m.title || m.fileName || "Tài liệu",
+                  type: m.materialType,
+                  url: m.materialUrl,
+                  embedUrl: m.embedUrl,
+                  fileName: m.fileName,
+                  fileSize: m.fileSize,
+                })),
+                duration: "10 phút",
+              };
+            }),
           }));
-
-          setModules(mappedModules);
-
-          // Chọn bài đầu tiên
-          if (mappedModules.length > 0 && mappedModules[0].lessons.length > 0) {
-            setCurrentLessonId(mappedModules[0].lessons[0].id);
+          setModules(mapped);
+          if (mapped.length > 0 && mapped[0].lessons.length > 0) {
+            setCurrentLessonId(mapped[0].lessons[0].id);
           }
         }
-      } catch (error) {
-        console.error("Lỗi:", error);
+      } catch (err) {
+        console.error("Fetch learning error:", err);
       }
     };
-    fetchLearningData();
+    fetchData();
   }, [courseId]);
 
+  // Fetch quiz configs
   useEffect(() => {
     if (!courseId || modules.length === 0) return;
-
     let cancelled = false;
-
     (async () => {
       const entries = await Promise.all(
         modules.map(async (mod) => {
@@ -396,453 +397,241 @@ export default function CourseLearningPage() {
             chapterIndex: mod.index - 1,
           });
           return [mod.id, res.ok ? res.config : null];
-        }),
+        })
       );
-
       if (cancelled) return;
       setChapterQuizConfigs(Object.fromEntries(entries));
-
       const courseRes = await getCourseQuizConfig(courseId, {
         courseTitle: courseInfo.courseTitle,
       });
-      if (!cancelled && courseRes.ok) {
-        setCourseQuizConfig(courseRes.config);
-      }
+      if (!cancelled && courseRes.ok) setCourseQuizConfig(courseRes.config);
     })();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [courseId, modules, courseInfo.courseTitle]);
 
-  // 4. Các hàm tính toán của React (Giữ nguyên không đổi)
   const allLessons = useMemo(() => flatLessons(modules), [modules]);
   const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
   const { lesson: currentLesson, mod: currentMod } = findLessonAndModule(modules, currentLessonId);
   const progress = useMemo(() => computeProgress(modules), [modules]);
 
-  // 5. Nút Đánh dấu hoàn thành
   const handleToggleComplete = async () => {
     if (!currentLesson) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/courses/${courseId}/progress`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUserId
-        },
-        body: JSON.stringify({ nodeId: currentLesson.id })
+      const res = await fetch(`http://localhost:5000/api/courses/${courseId}/progress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
+        body: JSON.stringify({ nodeId: currentLesson.id }),
       });
-
-      const result = await response.json();
+      const result = await res.json();
       if (result.success) {
-        // Dispatch sự kiện để cập nhật streak trên header
         window.dispatchEvent(new CustomEvent("streakUpdate", { detail: { hasStudiedToday: true } }));
-
-        // Cập nhật giao diện thành xanh
-        setModules(prev =>
-          prev.map(module => ({
-            ...module,
-            lessons: module.lessons.map(lesson =>
-              lesson.id === currentLesson.id
-                ? { ...lesson, status: "completed" }
-                : lesson
-            )
+        setModules((prev) =>
+          prev.map((mod) => ({
+            ...mod,
+            lessons: mod.lessons.map((l) =>
+              l.id === currentLesson.id ? { ...l, status: "completed" } : l
+            ),
           }))
         );
       }
-    } catch (error) {
-      console.error("Lỗi khi lưu tiến độ:", error);
+    } catch (err) {
+      console.error("Progress error:", err);
     }
   };
 
-  if (!rawData) {
+  const handleSelectLesson = (id) => setCurrentLessonId(id);
+  const handlePrev = () => {
+    if (currentIndex > 0) handleSelectLesson(allLessons[currentIndex - 1].id);
+  };
+  const handleNext = () => {
+    if (currentIndex < allLessons.length - 1) handleSelectLesson(allLessons[currentIndex + 1].id);
+  };
+
+  const isCompleted = currentLesson?.status === "completed";
+  const TypeIcon = TYPE_CONFIG[currentLesson?.type]?.icon ?? FileText;
+  const typeCfg = TYPE_CONFIG[currentLesson?.type] ?? TYPE_CONFIG.reading;
+
+  if (!courseInfo.courseTitle) {
     return (
-      <Box sx={{ maxWidth: 1280, mx: "auto", py: 8 }}>
+      <div className="max-w-7xl mx-auto px-4 py-16">
         <EmptyState
           variant="error"
-          icon={SearchOffRoundedIcon}
+          icon={BookOpen}
           title="Không tìm thấy khóa học"
           description="Khóa học này chưa có nội dung học hoặc bạn chưa đăng ký."
           actionLabel="Về Khóa học của tôi"
           onAction={() => navigate("/my-courses")}
         />
-      </Box>
+      </div>
     );
   }
 
-  const handleSelectLesson = (id) => setCurrentLessonId(id);
-
-  const handlePrev = () => {
-    if (currentIndex > 0) handleSelectLesson(allLessons[currentIndex - 1].id);
-  };
-
-  const handleNext = () => {
-    if (currentIndex < allLessons.length - 1)
-      handleSelectLesson(allLessons[currentIndex + 1].id);
-  };
-
-  const handleGoToChapterTest = (chapterId) => {
-    navigate(`/my-courses/${courseId}/test/chapter/${chapterId}`);
-  };
-
-  const handleGoToCourseTest = () => {
-    navigate(`/my-courses/${courseId}/test/final`);
-  };
-
-  const TypeIcon = TYPE_ICON[currentLesson?.type] ?? ArticleRoundedIcon;
-  const isCompleted = currentLesson?.status === "completed";
-
   return (
-    <Box sx={{ maxWidth: 1280, mx: "auto" }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* ── Breadcrumb ── */}
-      <Breadcrumbs
-        separator="/"
-        sx={{ mb: 2.5, "& .MuiBreadcrumbs-separator": { color: MUTED, mx: 0.5 } }}
-      >
-        <MuiLink
-          component={Link}
-          to="/my-courses"
-          underline="none"
-          sx={{
-            fontSize: 13,
-            color: MUTED,
-            fontWeight: 500,
-            "&:hover": { color: PRIMARY },
-          }}
-        >
+      <nav className="flex items-center gap-2 text-[13px] mb-5">
+        <Link to="/my-courses" className="text-slate-400 hover:text-emerald-600 font-medium transition-colors">
           Khóa học của tôi
-        </MuiLink>
-        <MuiLink
-          component={Link}
-          to={`/courses/${courseId}`}
-          underline="none"
-          sx={{
-            fontSize: 13,
-            color: MUTED,
-            fontWeight: 500,
-            maxWidth: 200,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            display: "block",
-            "&:hover": { color: PRIMARY },
-          }}
-        >
-          {rawData.courseTitle}
-        </MuiLink>
-        <Typography
-          sx={{
-            fontSize: 13,
-            color: TEXT,
-            fontWeight: 600,
-            maxWidth: 220,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {currentLesson
-            ? `Bài ${currentLesson.index}: ${currentLesson.title}`
-            : "Bài học"}
-        </Typography>
-      </Breadcrumbs>
+        </Link>
+        <span className="text-slate-300">/</span>
+        <Link to={`/courses/${courseId}`} className="text-slate-400 hover:text-emerald-600 font-medium transition-colors truncate max-w-[200px]">
+          {courseInfo.courseTitle}
+        </Link>
+        <span className="text-slate-300">/</span>
+        <span className="text-slate-800 font-semibold truncate max-w-[220px]">
+          {currentLesson ? `Bài ${currentLesson.index}: ${currentLesson.title}` : "Bài học"}
+        </span>
+      </nav>
 
-      {/* ── Course / lesson header ── */}
-      <Box
-        sx={{
-          mb: 3,
-          pb: 2.5,
-          borderBottom: `1px solid ${DIVIDER}`,
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "flex-start",
-          gap: 2,
-        }}
-      >
-        <Box
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            gap: { xs: 1.25, md: 1.5 },
-          }}
-        >
-          {/* Hàng 1: Chương — cỡ chữ lớn nhất trong cụm */}
-          {currentMod && (
-            <Typography
-              component="div"
-              sx={{
-                fontSize: { xs: 18, sm: 19, md: 20 },
-                lineHeight: 1.35,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              <Box component="span" sx={{ color: TEXT, fontWeight: 800 }}>
-                Chương {currentMod.index}:
-              </Box>
-              <Box component="span" sx={{ color: TEXT, fontWeight: 700, ml: 0.5 }}>
-                {currentMod.title}
-              </Box>
-            </Typography>
-          )}
+      {/* ── Course Header ── */}
+      <div className="mb-5 pb-4 border-b border-slate-100">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            {/* Module name */}
+            {currentMod && (
+              <h2 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
+                Chương {currentMod.index}: {currentMod.title}
+              </h2>
+            )}
 
-          {/* Hàng 2: Bài học — nhỏ hơn chương */}
-          {currentLesson && (
-            <>
-              <Typography
-                component="div"
-                sx={{
-                  fontSize: { xs: 14, sm: 15, md: 16 },
-                  lineHeight: 1.4,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                <Box component="span" sx={{ color: PRIMARY, fontWeight: 700 }}>
-                  Bài {currentLesson.index}:
-                </Box>
-                <Box component="span" sx={{ color: TEXT, fontWeight: 700, ml: 0.5 }}>
+            {/* Lesson name */}
+            {currentLesson && (
+              <div className="mt-1.5">
+                <h3 className="text-base sm:text-lg font-bold text-slate-800">
+                  <span className="text-emerald-600">Bài {currentLesson.index}:</span>{" "}
                   {currentLesson.title}
-                </Box>
-              </Typography>
-
-              {/* Hàng 3: Author + loại học liệu — dưới tên bài */}
-              {(rawData.instructor || currentLesson.type) && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  {rawData.instructor && (
-                    <HeaderMetaItem icon={PersonRoundedIcon} iconColor={ICON_COLORS.instructor}>
-                      <Typography
-                        sx={{
-                          fontSize: { xs: 12, md: 13 },
-                          fontWeight: 500,
-                          color: MUTED,
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {rawData.instructor}
-                      </Typography>
-                    </HeaderMetaItem>
+                </h3>
+                {/* Meta row */}
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  {courseInfo.instructor && (
+                    <span className="inline-flex items-center gap-1 text-[12px] text-slate-400 font-medium">
+                      <User size={13} className="text-blue-500" />
+                      {courseInfo.instructor}
+                    </span>
                   )}
-                  {currentLesson.type && (
-                    <LessonChip
-                      icon={TypeIcon}
-                      iconColor={TYPE_ICON_COLOR[currentLesson.type] ?? ICON_COLORS.reading}
-                      label={TYPE_LABEL[currentLesson.type] ?? currentLesson.type}
-                      sx={{
-                        flexShrink: 0,
-                        height: 22,
-                        fontSize: 10.5,
-                        fontWeight: 600,
-                        color: TYPE_ICON_COLOR[currentLesson.type] ?? ICON_COLORS.reading,
-                        border: "none",
-                        "& .MuiChip-icon": {
-                          fontSize: "12px !important",
-                          ml: 0.75,
-                        },
-                        "& .MuiChip-label": {
-                          px: 0.875,
-                          py: 0,
-                        },
-                      }}
-                    />
-                  )}
-                </Box>
-              )}
-            </>
-          )}
-        </Box>
+                  {currentLesson.type && <TypeBadge type={currentLesson.type} />}
+                </div>
+              </div>
+            )}
+          </div>
 
-        {/* Progress block */}
-        <Box
-          sx={{
-            minWidth: 220,
-            width: { xs: "100%", sm: "auto" },
-            flexShrink: 0,
-          }}
-        >
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
-            <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>
-              Tiến độ khóa học
-            </Typography>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: getProgressColor(progress) }}>
-              {progress}%
-            </Typography>
-          </Box>
-          <AppProgressBar value={progress} height={7} />
-        </Box>
-      </Box>
+          {/* Progress */}
+          <div className="min-w-[180px] w-full sm:w-auto flex-shrink-0">
+            <div className="flex justify-between mb-1">
+              <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                Tiến độ
+              </span>
+              <span className="text-[12px] font-bold" style={{ color: getProgressColor(progress) }}>
+                {progress}%
+              </span>
+            </div>
+            <AppProgressBar value={progress} height={6} />
+          </div>
+        </div>
+      </div>
 
-      {/* ── 2-col layout ── */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column-reverse", lg: "row" },
-          gap: 3,
-          alignItems: "flex-start",
-        }}
-      >
-        {/* ── Main lesson content ── */}
-        <Box sx={{ flex: "1 1 65%", minWidth: 0, width: "100%", display: "flex", flexDirection: "column", gap: 2 }}>
-          {/* Mô tả bài học — container riêng */}
-          <Box
-            sx={{
-              bgcolor: "#fff",
-              borderRadius: "16px",
-              border: `1px solid ${DIVIDER}`,
-              boxShadow: theme.ios18?.shadow?.sm,
-              p: { xs: 2, md: 2.5 },
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75 }}>
-              <MenuBookRoundedIcon sx={{ fontSize: 16, color: ICON_COLORS.content }} />
-              <Typography sx={{ fontSize: { xs: 16, sm: 17 }, fontWeight: 700, color: TEXT }}>
-                Mô tả
-              </Typography>
-            </Box>
-            <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+      {/* ── Main 2-col Layout ── */}
+      <div className="flex flex-col-reverse lg:flex-row gap-5 items-start">
+        {/* ═══ MAIN CONTENT ═══ */}
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Description card */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen size={16} className="text-indigo-500" />
+              <h4 className="text-[15px] font-bold text-slate-800">Mô tả</h4>
+            </div>
+            <p className="text-[14px] text-slate-500 leading-relaxed whitespace-pre-wrap">
               {currentLesson?.description || "Chưa có mô tả cho bài học này."}
-            </Typography>
-          </Box>
+            </p>
+          </div>
 
-          {/* Học liệu bài học */}
-          <Box
-            sx={{
-              bgcolor: "#fff",
-              borderRadius: "16px",
-              border: `1px solid ${DIVIDER}`,
-              boxShadow: theme.ios18?.shadow?.sm,
-              p: { xs: 2.5, md: 3.5 },
-            }}
-          >
-            {/* Khu vực hiển thị Video (chỉ hiện nếu type là video và có link) */}
+          {/* Main lesson content */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-6">
+            {/* Video player */}
             {currentLesson?.type === "video" && currentLesson?.videoUrl && (
-              <Box
-                sx={{
-                  width: "100%",
-                  aspectRatio: "16 / 9",
-                  borderRadius: "12px",
-                  mb: 3,
-                  bgcolor: "#000",
-                  border: `1px solid ${DIVIDER}`,
-                  overflow: "hidden"
-                }}
-              >
+              <div className="w-full aspect-video rounded-xl mb-5 bg-black border border-slate-200 overflow-hidden">
                 <LessonVideoPlayer url={currentLesson.videoUrl} />
-              </Box>
+              </div>
             )}
 
-            {/* Type chip (compact — header đã hiển thị đầy đủ) */}
+            {/* Duration chip */}
             {currentLesson?.duration && (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5 }}>
-                <LessonChip
-                  icon={AccessTimeRoundedIcon}
-                  iconColor={ICON_COLORS.duration}
-                  label={currentLesson.duration}
-                />
-              </Box>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200/50">
+                  <Clock size={12} />
+                  {currentLesson.duration}
+                </span>
+              </div>
             )}
 
-            {/* Mục tiêu — chỉ hiển thị khi có dữ liệu mock/objectives */}
+            {/* Objectives */}
             {currentLesson?.content?.objectives?.length > 0 && (
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT, mb: 1.25 }}>
+              <div className="mb-5">
+                <h4 className="flex items-center gap-1.5 text-[15px] font-bold text-slate-800 mb-3">
+                  <Target size={16} className="text-emerald-500" />
                   Mục tiêu bài học
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                </h4>
+                <div className="space-y-2">
                   {currentLesson.content.objectives.map((item, i) => (
-                    <Box key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                      <CheckCircleRoundedIcon
-                        sx={{ fontSize: 18, color: ICON_COLORS.objective, mt: 0.15, flexShrink: 0 }}
-                      />
-                      <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>
-                        {item}
-                      </Typography>
-                    </Box>
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" weight="fill" />
+                      <span className="text-[14px] text-slate-500 leading-relaxed">{item}</span>
+                    </div>
                   ))}
-                </Box>
-              </Box>
+                </div>
+              </div>
             )}
 
-            {/* Khu vực hiển thị Bài đọc (Rich Text HTML) */}
+            {/* Reading content (Rich HTML) */}
             {currentLesson?.contentBody && (
-              <Box sx={{ mb: 3, pt: 2, borderTop: `1px solid ${DIVIDER}` }}>
-                <Box
-                  sx={RICH_CONTENT_SX}
+              <div className="mb-5 pt-4 border-t border-slate-100">
+                <div
+                  className={RICH_CONTENT_CLASSES}
                   dangerouslySetInnerHTML={{ __html: currentLesson.contentBody }}
                 />
-              </Box>
-            )}
-            {/* Materials */}
-            {currentLesson?.materials?.length > 0 && (
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT, mb: 1.25 }}>
-                  Tài liệu kèm theo
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-                  {currentLesson.materials.map((file) => {
-                    const { Icon: FileIcon, color: fileColor } = getMaterialFileMeta(file.title);
-                    return (
-                      <Box
-                        key={file.id}
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          py: 1,
-                          px: 1.5,
-                          borderRadius: "10px",
-                          border: `1px solid ${DIVIDER}`,
-                          transition: "border-color 0.2s ease, background-color 0.2s ease",
-                          "&:hover": {
-                            borderColor: "rgba(8,145,178,0.18)",
-                            bgcolor: "rgba(8,145,178,0.03)",
-                            "& .material-download": { color: ICON_COLORS.download, opacity: 1 },
-                          },
-                        }}
-                      >
-                        <FileIcon sx={{ fontSize: 18, color: fileColor, flexShrink: 0 }} />
-                        <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 500, flex: 1, minWidth: 0 }}>
-                          {file.title}
-                        </Typography>
-                        <DownloadRoundedIcon
-                          className="material-download"
-                          sx={{ fontSize: 16, color: MUTED, flexShrink: 0, opacity: 0.55, transition: "color 0.2s ease, opacity 0.2s ease" }}
-                        />
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Box>
+              </div>
             )}
 
-            {/* ── Navigation buttons ── */}
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 1.5,
-                pt: 3,
-                mt: 1,
-                borderTop: `1px solid ${DIVIDER}`,
-              }}
-            >
+            {/* Materials */}
+            {currentLesson?.materials?.length > 0 && (
+              <div className="mb-5">
+                <h4 className="flex items-center gap-1.5 text-[15px] font-bold text-slate-800 mb-3">
+                  <FileText size={16} className="text-indigo-500" />
+                  Tài liệu kèm theo
+                </h4>
+                <div className="space-y-1.5">
+                  {currentLesson.materials.map((file) => {
+                    const { icon: FileIcon, color: fileColor } = getFileMeta(file.title);
+                    return (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-2.5 py-2 px-3 rounded-xl border border-slate-100
+                          hover:border-emerald-200/60 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+                      >
+                        <FileIcon size={18} className="flex-shrink-0" style={{ color: fileColor }} />
+                        <span className="text-[13px] text-slate-700 font-medium flex-1 min-w-0 truncate">
+                          {file.title}
+                        </span>
+                        <Download
+                          size={15}
+                          className="flex-shrink-0 text-slate-300 group-hover:text-emerald-500 transition-colors"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Navigation ── */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-5 mt-2 border-t border-slate-100">
               <AppButton
                 size="small"
                 variant="outlined"
                 disabled={currentIndex <= 0}
                 onClick={handlePrev}
-                startIcon={<ArrowBackRoundedIcon />}
-                sx={{ minWidth: 120 }}
+                startIcon={<ArrowLeft size={16} />}
+                className="min-w-[120px]"
               >
                 Bài trước
               </AppButton>
@@ -851,30 +640,13 @@ export default function CourseLearningPage() {
                 size="small"
                 variant={isCompleted ? "outlined" : "contained"}
                 onClick={handleToggleComplete}
-                startIcon={<CheckRoundedIcon sx={{ fontSize: "18px !important" }} />}
-                sx={{
-                  minWidth: 190,
-                  fontWeight: 600,
-                  ...(isCompleted
-                    ? {
-                      borderColor: alpha(SUCCESS, 0.5),
-                      color: SUCCESS,
-                      bgcolor: alpha(SUCCESS, 0.08),
-                      "&:hover": {
-                        borderColor: SUCCESS,
-                        bgcolor: alpha(SUCCESS, 0.14),
-                      },
-                    }
-                    : {
-                      bgcolor: SUCCESS,
-                      color: "#fff",
-                      boxShadow: `0 2px 8px ${alpha(SUCCESS, 0.28)}`,
-                      "&:hover": {
-                        bgcolor: "#15803D",
-                        boxShadow: `0 3px 10px ${alpha(SUCCESS, 0.34)}`,
-                      },
-                    }),
-                }}
+                startIcon={<CheckCircle size={16} />}
+                className="min-w-[190px] font-semibold"
+                style={
+                  isCompleted
+                    ? { borderColor: "rgba(22,163,74,0.5)", color: SUCCESS, backgroundColor: "rgba(22,163,74,0.08)" }
+                    : { backgroundColor: SUCCESS, color: "#fff", boxShadow: "0 2px 8px rgba(22,163,74,0.28)" }
+                }
               >
                 {isCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
               </AppButton>
@@ -884,231 +656,82 @@ export default function CourseLearningPage() {
                 variant="contained"
                 disabled={currentIndex >= allLessons.length - 1}
                 onClick={handleNext}
-                endIcon={<ArrowForwardRoundedIcon />}
-                sx={{ minWidth: 120 }}
+                endIcon={<ArrowRight size={16} />}
+                className="min-w-[120px]"
               >
                 Bài tiếp theo
               </AppButton>
-            </Box>
-          </Box>
-        </Box>
+            </div>
+          </div>
+        </div>
 
-        {/* ── Lesson list sidebar ── */}
-        <Box sx={{ flex: "0 0 32%", width: "100%", maxWidth: { lg: 400 } }}>
-          <Box sx={{ position: { lg: "sticky" }, top: 84 }}>
+        {/* ═══ SIDEBAR ═══ */}
+        <div className="w-full lg:w-[360px] flex-shrink-0">
+          <div className="lg:sticky lg:top-24 space-y-3">
+            {/* Module description */}
             {currentMod?.description && (
-              <Box
-                sx={{
-                  mb: 1.5,
-                  px: 2,
-                  py: 1.5,
-                  bgcolor: "#fff",
-                  borderRadius: "14px",
-                  border: `1px solid ${DIVIDER}`,
-                  boxShadow: theme.ios18?.shadow?.sm,
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: TEXT,
-                    mb: 0.5,
-                  }}
-                >
-                  Mô tả chương
-                </Typography>
-                <Typography sx={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <h4 className="text-[13px] font-bold text-slate-800 mb-1.5">Mô tả chương</h4>
+                <p className="text-[12px] text-slate-500 leading-relaxed whitespace-pre-wrap">
                   {currentMod.description}
-                </Typography>
-              </Box>
+                </p>
+              </div>
             )}
 
-            <Box
-              sx={{
-                bgcolor: "#fff",
-                borderRadius: "16px",
-                border: `1px solid ${DIVIDER}`,
-                boxShadow: theme.ios18?.shadow?.sm,
-                overflow: "hidden",
-              }}
-            >
-              {/* Sidebar header */}
-              <Box
-                sx={{
-                  px: 2.5,
-                  py: 1.75,
-                  borderBottom: `1px solid ${DIVIDER}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
-                  Nội dung khóa học
-                </Typography>
-                <Typography sx={{ fontSize: 12, color: MUTED }}>
-                  {allLessons.filter((l) => l.status === "completed").length}/
-                  {allLessons.length} bài
-                </Typography>
-              </Box>
+            {/* Lesson list */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <h4 className="text-[13px] font-bold text-slate-800">Nội dung khóa học</h4>
+                <span className="text-[11px] text-slate-400">
+                  {allLessons.filter((l) => l.status === "completed").length}/{allLessons.length} bài
+                </span>
+              </div>
 
-              {/* Accordion module list */}
-              <Box
-                sx={{
-                  px: 1,
-                  py: 1,
-                  maxHeight: { lg: "calc(100vh - 260px)" },
-                  overflowY: "auto",
-                }}
-              >
+              {/* Module accordions */}
+              <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
                 {modules.map((mod) => {
-                  const doneCount = mod.lessons.filter(
-                    (l) => l.status === "completed"
-                  ).length;
                   const isActiveModule = mod.lessons.some((l) => l.id === currentLessonId);
-                  const modPercent =
-                    mod.lessons.length > 0
-                      ? Math.round((doneCount / mod.lessons.length) * 100)
-                      : 0;
-
                   return (
-                    <Accordion
+                    <ModuleAccordion
                       key={mod.id}
-                      defaultExpanded={isActiveModule}
-                      disableGutters
-                      elevation={0}
-                      sx={{
-                        bgcolor: "transparent",
-                        "&:before": { display: "none" },
-                        boxShadow: "none",
-                      }}
-                    >
-                      <AccordionSummary
-                        expandIcon={
-                          <ExpandMoreRoundedIcon sx={{ fontSize: 18, color: MUTED }} />
-                        }
-                        sx={{
-                          minHeight: 44,
-                          px: 1,
-                          "& .MuiAccordionSummary-content": { my: 1 },
-                        }}
-                      >
-                        <Box sx={{ flex: 1, minWidth: 0, pr: 1 }}>
-                          <Typography
-                            sx={{
-                              fontSize: 12.5,
-                              fontWeight: isActiveModule ? 600 : 500,
-                              color: isActiveModule ? PRIMARY : TEXT,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            Chương {mod.index}: {mod.title}
-                          </Typography>
-                          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.2 }}>
-                            {doneCount}/{mod.lessons.length} bài
-                          </Typography>
-                        </Box>
-                      </AccordionSummary>
-
-                      <AccordionDetails sx={{ px: 0.5, pt: 0, pb: 1 }}>
-                        {/* Mini progress bar per module */}
-                        <AppProgressBar value={modPercent} height={3} sx={{ px: 1, mb: 0.75 }} />
-
-                        {mod.lessons.map((lesson) => {
-                          const isActive = lesson.id === currentLessonId;
-                          const LIcon = TYPE_ICON[lesson.type] ?? ArticleRoundedIcon;
-
-                          return (
-                            <Box
-                              key={lesson.id}
-                              component="button"
-                              type="button"
-                              onClick={() => handleSelectLesson(lesson.id)}
-                              sx={{
-                                width: "100%",
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: 1,
-                                py: 1,
-                                px: 1.25,
-                                border: "none",
-                                borderRadius: "10px",
-                                cursor: "pointer",
-                                textAlign: "left",
-                                fontFamily: "inherit",
-                                bgcolor: isActive ? alpha(PRIMARY, 0.08) : "transparent",
-                                transition: "background-color 0.15s ease",
-                                "&:hover": {
-                                  bgcolor: isActive
-                                    ? alpha(PRIMARY, 0.1)
-                                    : alpha(PRIMARY, 0.04),
-                                },
-                              }}
-                            >
-                              <Box sx={{ pt: 0.1, flexShrink: 0 }}>
-                                {lesson.status === "completed" ? (
-                                  <CheckRoundedIcon sx={{ fontSize: 18, color: SUCCESS }} />
-                                ) : isActive ? (
-                                  <PlayCircleRoundedIcon sx={{ fontSize: 18, color: PRIMARY }} />
-                                ) : (
-                                  <RadioButtonUncheckedRoundedIcon sx={{ fontSize: 18, color: "#CBD5E1" }} />
-                                )}
-                              </Box>
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography
-                                  sx={{
-                                    fontSize: 12.5,
-                                    fontWeight: isActive ? 600 : 500,
-                                    color: isActive ? PRIMARY : TEXT,
-                                    lineHeight: 1.35,
-                                  }}
-                                >
-                                  Bài {lesson.index}: {lesson.title}
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                    mt: 0.25,
-                                  }}
-                                >
-                                  <LIcon sx={{ fontSize: 11, color: TYPE_ICON_COLOR[lesson.type] ?? ICON_COLORS.reading }} />
-                                  <Typography sx={{ fontSize: 11, color: MUTED }}>
-                                    {lesson.duration}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </Box>
-                          );
-                        })}
-
-                        <OutlineTestItem
-                          label="Làm bài kiểm tra"
-                          subtitle={
-                            chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"
-                          }
-                          onClick={() => handleGoToChapterTest(mod.id)}
-                        />
-                      </AccordionDetails>
-                    </Accordion>
+                      mod={mod}
+                      isActiveModule={isActiveModule}
+                      currentLessonId={currentLessonId}
+                      onSelect={handleSelectLesson}
+                      chapterQuizConfig={chapterQuizConfigs[mod.id]}
+                      onGoToChapterTest={() => navigate(`/my-courses/${courseId}/test/chapter/${mod.id}`)}
+                    />
                   );
                 })}
 
-                <Box sx={{ px: 0.5, pt: 0.5, pb: 0.5 }}>
-                  <OutlineTestItem
-                    variant="course"
-                    label="Làm bài kiểm tra toàn khóa"
-                    subtitle={courseQuizConfig?.title || "Kiểm tra cuối khóa"}
-                    onClick={handleGoToCourseTest}
-                  />
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+                {/* Course test button */}
+                <div className="px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/my-courses/${courseId}/test/final`)}
+                    className="w-full flex items-start gap-2.5 py-2.5 px-3 rounded-xl text-left
+                      border border-dashed border-emerald-200/60 bg-emerald-50/40
+                      hover:bg-emerald-50 transition-colors"
+                  >
+                    <span className="pt-0.5 flex-shrink-0">
+                      <GraduationCap size={16} className="text-emerald-600" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[12px] font-semibold text-emerald-700 leading-snug">
+                        Làm bài kiểm tra toàn khóa
+                      </span>
+                      <span className="text-[11px] text-emerald-500/70 mt-0.5 block">
+                        {courseQuizConfig?.title || "Kiểm tra cuối khóa"}
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

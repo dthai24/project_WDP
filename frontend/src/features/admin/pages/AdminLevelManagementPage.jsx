@@ -137,10 +137,10 @@ export default function AdminLevelManagementPage() {
     try {
       const res = await createLevel(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể tạo trình độ');
+        toast.error(res.message ?? 'Khong the tao trinh do');
         return;
       }
-      toast.success('Đã tạo trình độ mới');
+      toast.success('Da tao trinh do moi');
       setCreateOpen(false);
       await loadLevels();
     } finally {
@@ -155,10 +155,10 @@ export default function AdminLevelManagementPage() {
     try {
       const res = await updateLevel(editingLevel.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật trình độ');
+        toast.error(res.message ?? 'Khong the cap nhat trinh do');
         return;
       }
-      toast.success('Đã cập nhật trình độ');
+      toast.success('Da cap nhat trinh do');
       setEditOpen(false);
       setEditingLevel(null);
       await loadLevels();
@@ -168,25 +168,16 @@ export default function AdminLevelManagementPage() {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          justifyContent: 'space-between',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1.5, sm: 2 },
-          mb: 2.5,
-        }}
-      >
-        <Box>
-          <Typography sx={{ fontSize: { xs: 22, sm: 24 }, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
-            Quản lý trình độ
-          </Typography>
-          <Typography sx={{ fontSize: 14, color: MUTED, mt: 0.5, lineHeight: 1.55, maxWidth: 560 }}>
-            Thêm, chỉnh sửa và sắp xếp trình độ khóa học (Cơ bản, Trung cấp, Nâng cao...).
-          </Typography>
-        </Box>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
+            Quan ly trinh do
+          </h1>
+          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
+            Them, chinh sua va sap xep trinh do khoa hoc (Co ban, Trung cap, Nang cao...).
+          </p>
+        </div>
 
         <AppButton
           startIcon={<AddRoundedIcon />}
@@ -205,9 +196,9 @@ export default function AdminLevelManagementPage() {
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}
         >
-          Tạo trình độ
+          Tao trinh do
         </AppButton>
-      </Box>
+      </div>
 
       <AdminCatalogToolbar
         statusFilter={queryState.status}
@@ -217,7 +208,7 @@ export default function AdminLevelManagementPage() {
         showReset={showReset}
         onReset={handleReset}
         totalCount={filteredLevels.length}
-        countLabel="trình độ"
+        countLabel="trinh do"
         CountIcon={LayersOutlinedIcon}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
@@ -263,6 +254,6 @@ export default function AdminLevelManagementPage() {
         saving={saving}
         existingNames={existingNames}
       />
-    </Box>
+    </div>
   );
 }

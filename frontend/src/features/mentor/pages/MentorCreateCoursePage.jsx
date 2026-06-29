@@ -33,7 +33,7 @@
  *   Sau khi lưu → navigate('/mentor/courses/create/content')
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useNavigate } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
@@ -57,27 +57,6 @@ import {
   isMentorCourseFormDirty,
   validateMentorCourseForm,
 } from '@/features/mentor/utils/mentorCourseFormUtils';
-
-function LeaveAwareBreadcrumbLink({ to, children, onNavigate, sx }) {
-  return (
-    <MuiLink
-      component="button"
-      type="button"
-      underline="hover"
-      onClick={() => onNavigate(to)}
-      sx={{
-        border: 'none',
-        background: 'none',
-        cursor: 'pointer',
-        font: 'inherit',
-        p: 0,
-        ...sx,
-      }}
-    >
-      {children}
-    </MuiLink>
-  );
-}
 
 export default function MentorCreateCoursePage() {
   const navigate = useNavigate();
@@ -240,29 +219,15 @@ export default function MentorCreateCoursePage() {
   );
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1080, mx: 'auto' }}>
-      <Breadcrumbs
-        separator="/"
-        sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: '#64748B', mx: 0.5 } }}
-      >
-        <LeaveAwareBreadcrumbLink
-          to="/home"
-          onNavigate={requestLeave}
-          sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
-        >
-          Trang chủ
-        </LeaveAwareBreadcrumbLink>
-        <LeaveAwareBreadcrumbLink
-          to="/mentor/courses"
-          onNavigate={requestLeave}
-          sx={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}
-        >
-          Khóa học của tôi
-        </LeaveAwareBreadcrumbLink>
-        <Typography sx={{ fontSize: 13, color: '#0F172A', fontWeight: 600 }}>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: '#0F172A' }}>
           Tạo khóa học
-        </Typography>
-      </Breadcrumbs>
+        </h1>
+        <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: '#64748B' }}>
+          Nhập thông tin cơ bản để bắt đầu tạo khóa học mới.
+        </p>
+      </div>
 
       <MentorCourseCreateStepIndicator currentStep={1} />
 
@@ -293,6 +258,6 @@ export default function MentorCreateCoursePage() {
         onSaveDraft={handleSaveDraft}
         saving={saving}
       />
-    </Box>
+    </div>
   );
 }

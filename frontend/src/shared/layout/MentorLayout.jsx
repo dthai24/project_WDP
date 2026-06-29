@@ -1,40 +1,31 @@
-import { Box } from '@mui/material';
-import { Navigate, Outlet } from 'react-router-dom';
-import Header from './Header';
-import Footer from './Footer';
-import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
-import { pageContentSx } from './MainLayout';
-import { MentorLayoutGuard } from '@/shared/routing/RoleShellRedirects';
+import { Outlet } from "react-router-dom";
+import Header from "./Header";
+import Footer from "./Footer";
+import Sidebar, { SIDEBAR_WIDTH } from "./Sidebar";
+import { MentorLayoutGuard } from "@/shared/routing/RoleShellRedirects";
 
 export default function MentorLayout() {
   return (
     <MentorLayoutGuard>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: '#FFFFFF',
-        }}
-      >
-        <Header logoTo="/mentor/courses" profilePath="/mentor/courses" showMyCoursesButton={false} />
+      <div className="min-h-[100dvh] flex flex-col bg-slate-50 dark:bg-slate-950 antialiased">
+        <Header
+          logoTo="/mentor/courses"
+          profilePath="/mentor/courses"
+          showMyCoursesButton={false}
+        />
         <Sidebar variant="mentor" />
 
-        <Box
-          component="main"
-          sx={{
-            ml: `${SIDEBAR_WIDTH}px`,
-            flex: 1,
-            bgcolor: '#FFFFFF',
-          }}
+        <main
+          className="flex-1 transition-all duration-200"
+          style={{ marginLeft: `${SIDEBAR_WIDTH}px` }}
         >
-          <Box sx={pageContentSx}>
+          <div className="w-full box-border py-4 sm:py-5 md:py-6 px-4 sm:px-5 md:px-6 lg:px-8 max-w-7xl mx-auto">
             <Outlet />
-          </Box>
-        </Box>
-      </Box>
+          </div>
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
     </MentorLayoutGuard>
   );
 }

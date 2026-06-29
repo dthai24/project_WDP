@@ -16,7 +16,7 @@ import {
   TextField,
   FormGroup,
   FormControlLabel,
-  Checkbox
+  Checkbox,
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 
@@ -25,7 +25,10 @@ import { toast } from "@/shared/ui/Toast";
 import ChangePasswordDialog from "@/features/auth/components/ChangePasswordDialog";
 import { underlineFieldSx as valueUnderlineSx } from "@/shared/ui/UnderlineFieldPopup";
 import ProfileImageCropDialog from "@/shared/ProfileImageCropDialog";
-import { fetchUserProfile, uploadUserAvatar } from "@/features/profile/services/profileService";
+import {
+  fetchUserProfile,
+  uploadUserAvatar,
+} from "@/features/profile/services/profileService";
 import {
   getStoredAvatarUrl,
   persistUserAvatar,
@@ -36,7 +39,6 @@ import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import CakeOutlinedIcon from "@mui/icons-material/CakeOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import DevicesOutlinedIcon from "@mui/icons-material/DevicesOutlined";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
@@ -45,8 +47,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 
-
-/* ─── Constants ─────────────────────────────────────────────────────────── */
+/* --- Constants --- */
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
 const MUTED = "#64748B";
@@ -58,7 +59,7 @@ const INITIAL_PROFILE = {
   email: "",
   phone: "",
   dateOfBirth: "",
-  role: "Học viên",
+  role: "Hoc vien",
   joinedAt: "",
   currentLevel: "",
   goals: [],
@@ -70,53 +71,49 @@ const INITIAL_PROFILE = {
   },
 };
 
-
-/* ─── Small inline helpers ───────────────────────────────────────────────── */
+/* --- Small inline helpers --- */
 
 /** Section card wrapper */
 function SectionCard({ children, sx = {} }) {
   return (
-    <Box
-      sx={{
-        bgcolor: "#fff",
-        borderRadius: "16px",
-        border: `1px solid ${DIVIDER}`,
-        p: { xs: 2.5, md: 3 },
-        mb: 2.5,
-        ...sx,
-      }}
+    <div
+      className="bg-white rounded-2xl border mb-2.5 p-3 md:p-4"
+      style={{ borderColor: DIVIDER, ...sx }}
     >
       {children}
-    </Box>
+    </div>
   );
 }
 
 /** Section heading row */
 function SectionHead({ title, icon: Icon, iconColor = PRIMARY, action }) {
   return (
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2.25 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+    <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center gap-2">
         {Icon && <Icon sx={{ fontSize: 18, color: iconColor }} />}
-        <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
+        <span
+          className="text-[15px] font-bold"
+          style={{ color: TEXT }}
+        >
           {title}
-        </Typography>
-      </Box>
+        </span>
+      </div>
       {action}
-    </Box>
+    </div>
   );
 }
 
-const LEVEL_OPTIONS = ["Mới bắt đầu", "Cơ bản", "Trung cấp", "Nâng cao"];
+const LEVEL_OPTIONS = ["Moi bat dau", "Co ban", "Trung cap", "Nang cao"];
 
 function formatDateDisplay(value) {
-  if (!value) return "—";
+  if (!value) return "-";
   if (value.includes("/")) return value;
   const [y, m, d] = value.split("-");
   if (!y || !m || !d) return value;
   return `${d}/${m}/${y}`;
 }
 
-/** Label/value info field — read or inline edit */
+/** Label/value info field - read or inline edit */
 function InfoRow({
   icon: Icon,
   iconColor = MUTED,
@@ -131,19 +128,17 @@ function InfoRow({
   placeholder,
 }) {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 1.25,
-        py: 1.4,
-      }}
-    >
-      <Icon sx={{ fontSize: 16, color: iconColor, flexShrink: 0, mt: 0.25 }} />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: 11, color: MUTED, fontWeight: 500, mb: 0.4, lineHeight: 1.2 }}>
+    <div className="flex items-start gap-[10px] py-[10px]">
+      <Icon
+        sx={{ fontSize: 16, color: iconColor, flexShrink: 0, marginTop: "2px" }}
+      />
+      <div className="flex-1 min-w-0">
+        <span
+          className="text-[11px] font-medium block mb-[3px] leading-[1.2]"
+          style={{ color: MUTED }}
+        >
           {label}
-        </Typography>
+        </span>
         {editing && !readOnly ? (
           inputType === "select" ? (
             <InputBase
@@ -185,10 +180,7 @@ function InfoRow({
                 fontWeight: 600,
                 color: TEXT,
                 lineHeight: 1.4,
-                "& .MuiInputBase-input": {
-                  p: 0,
-                  height: "auto",
-                },
+                "& .MuiInputBase-input": { p: 0, height: "auto" },
                 "& input[type='date']::-webkit-calendar-picker-indicator": {
                   opacity: 0.55,
                   cursor: "pointer",
@@ -208,10 +200,7 @@ function InfoRow({
                 fontWeight: 600,
                 color: TEXT,
                 lineHeight: 1.4,
-                "& .MuiInputBase-input": {
-                  p: 0,
-                  height: "auto",
-                },
+                "& .MuiInputBase-input": { p: 0, height: "auto" },
                 "& .MuiInputBase-input::placeholder": {
                   color: MUTED,
                   opacity: 0.7,
@@ -221,65 +210,64 @@ function InfoRow({
           )
         ) : (
           <Box sx={valueUnderlineSx}>
-            <Typography
-              sx={{
-                fontSize: 13.5,
+            <span
+              className="text-[13.5px] font-semibold leading-[1.4]"
+              style={{
                 color: readOnly && editing ? MUTED : TEXT,
-                fontWeight: 600,
-                lineHeight: 1.4,
               }}
             >
-              {inputType === "date" ? formatDateDisplay(value) : value || "—"}
-            </Typography>
+              {inputType === "date" ? formatDateDisplay(value) : value || "-"}
+            </span>
           </Box>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
 /** Learning stat row */
-function StatRow({ icon: Icon, iconColor, label, value, last = false, children }) {
+function StatRow({
+  icon: Icon,
+  iconColor,
+  label,
+  value,
+  last = false,
+  children,
+}) {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1.5,
-        py: 1.25,
+    <div
+      className="flex items-center gap-3 py-[10px]"
+      style={{
         borderBottom: last ? "none" : `1px solid ${DIVIDER}`,
       }}
     >
-      <Box
-        sx={{
-          width: 34,
-          height: 34,
-          borderRadius: "10px",
-          bgcolor: alpha(iconColor, 0.1),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
+      <div
+        className="w-[34px] h-[34px] rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: alpha(iconColor, 0.1) }}
       >
         <Icon sx={{ fontSize: 17, color: iconColor }} />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1.2 }}>
+      </div>
+      <div className="flex-1 min-w-0">
+        <span
+          className="text-[12px] font-medium leading-[1.2] block"
+          style={{ color: MUTED }}
+        >
           {label}
-        </Typography>
+        </span>
         {children ?? (
-          <Typography sx={{ fontSize: 15, color: TEXT, fontWeight: 700, lineHeight: 1.4 }}>
+          <span
+            className="text-[15px] font-bold leading-[1.4] block"
+            style={{ color: TEXT }}
+          >
             {value}
-          </Typography>
+          </span>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
-
-// ── Safe State Initialization Helpers ──
+// -- Safe State Initialization Helpers --
 const getInitialUser = () => {
   try {
     const userRaw = localStorage.getItem("user");
@@ -291,13 +279,13 @@ const getInitialUser = () => {
 
 const getInitialAvatar = () => getStoredAvatarUrl();
 
-/* ─── Page ───────────────────────────────────────────────────────────────── */
+/* --- Page --- */
 export default function ProfilePage() {
   const location = useLocation();
-  const isAdminShell = location.pathname.startsWith('/admin');
+  const isAdminShell = location.pathname.startsWith("/admin");
   const breadcrumbHome = isAdminShell
-    ? { to: '/admin/accounts', label: 'Quản trị' }
-    : { to: '/home', label: 'Trang chủ' };
+    ? { to: "/admin/accounts", label: "Quan tri" }
+    : { to: "/home", label: "Trang chu" };
 
   const currentUser = useMemo(() => getInitialUser(), []);
 
@@ -314,7 +302,6 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    // Safely parse inside the effect to avoid any dependency array tracking issues
     const cUser = getInitialUser();
     if (!cUser?.userId) return;
 
@@ -328,40 +315,48 @@ export default function ProfilePage() {
             setAvatarUrl(resolvedAvatar);
           }
 
-          setProfile(prev => ({
+          setProfile((prev) => ({
             ...prev,
             name: data.profile.name || "",
             email: data.profile.email || "",
             phone: data.profile.phone || "",
             dateOfBirth: data.profile.dateOfBirth?.split("T")[0] || "",
             currentLevel: data.profile.currentLevel || "",
-            joinedAt: data.profile.joinedAt ? new Date(data.profile.joinedAt).toLocaleDateString("vi-VN", { timeZone: "UTC" }) : "",
+            joinedAt: data.profile.joinedAt
+              ? new Date(data.profile.joinedAt).toLocaleDateString("vi-VN", {
+                  timeZone: "UTC",
+                })
+              : "",
             stats: data.profile.stats || prev.stats,
-
             rawLearningGoal: data.profile.learningGoal || "",
             rawCategories: data.profile.categories || [],
-
             goals: [
-              ...(data.profile.learningGoal ? [`Mục tiêu: ${data.profile.learningGoal}`] : []),
-              ...(data.profile.categories ? data.profile.categories.map(c => c.displayName) : [])
+              ...(data.profile.learningGoal
+                ? [`Muc tieu: ${data.profile.learningGoal}`]
+                : []),
+              ...(data.profile.categories
+                ? data.profile.categories.map((c) => c.displayName)
+                : []),
             ],
           }));
 
-          setFormData(prevForm => ({
+          setFormData((prevForm) => ({
             ...prevForm,
             name: p.name || prevForm.name,
             phone: p.phone || prevForm.phone,
-            dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : prevForm.dateOfBirth,
+            dateOfBirth: p.dateOfBirth
+              ? p.dateOfBirth.split("T")[0]
+              : prevForm.dateOfBirth,
           }));
         }
       } catch (err) {
-        console.error("Lỗi khi tải hồ sơ:", err);
+        console.error("Loi khi tai ho so:", err);
       }
     };
     fetchProfile();
   }, []);
 
-  const initials = (profile?.name || "Người dùng")
+  const initials = (profile?.name || "Nguoi dung")
     .split(" ")
     .filter(Boolean)
     .slice(-2)
@@ -376,36 +371,36 @@ export default function ProfilePage() {
     if (!currentUser?.userId) return;
 
     try {
-      const response = await fetch("http://localhost:5000/api/users/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": currentUser.userId
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          phone: formData.phone,
-          dateOfBirth: formData.dateOfBirth
-        })
-      });
+      const response = await fetch(
+        "http://localhost:5000/api/users/profile",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": currentUser.userId,
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            phone: formData.phone,
+            dateOfBirth: formData.dateOfBirth,
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.success) {
         setProfile((prev) => ({ ...prev, ...formData }));
         setEditMode(false);
 
-        // Optional: Update session storage to reflect new name in Navbar
         const updatedUser = { ...currentUser, fullName: formData.name };
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        // Force a small storage event to update Header if they listen to it, 
-        // though normally context is better.
         window.dispatchEvent(new Event("storage"));
       } else {
-        alert("Cập nhật thất bại: " + data.message);
+        alert("Cap nhat that bai: " + data.message);
       }
     } catch (err) {
-      console.error("Lỗi cập nhật hồ sơ:", err);
-      alert("Đã xảy ra lỗi khi cập nhật hồ sơ.");
+      console.error("Loi cap nhat ho so:", err);
+      alert("Da xay ra loi khi cap nhat ho so.");
     }
   };
 
@@ -420,7 +415,7 @@ export default function ProfilePage() {
   };
 
   // ==========================================
-  // LOGIC XỬ LÝ ẢNH ĐẠI DIỆN
+  // LOGIC XU LY ANH DAI DIEN
   // ==========================================
   const fileInputRef = useRef(null);
   const [tempImageSrc, setTempImageSrc] = useState(null);
@@ -428,17 +423,13 @@ export default function ProfilePage() {
     setCropperOpen(true);
   };
 
-  /**
-   * HAm: handleAvatarSelected
-   * TAc dng: B_t file t th input vA chuyn thAnh URL tm ` `a vAo khung c_t
-   */
   const handleAvatarSelected = (e) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
+    e.target.value = "";
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Vui lòng chọn file ảnh hợp lệ.');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui long chon file anh hop le.");
       return;
     }
 
@@ -452,12 +443,12 @@ export default function ProfilePage() {
       const FACE_SIZE = 380;
       const FACE_X = (FRAME_SIZE - FACE_SIZE) / 2;
       const FACE_Y = (FRAME_SIZE - FACE_SIZE) / 2;
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = FRAME_SIZE;
       canvas.height = FRAME_SIZE;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       const faceImg = new Image();
-      faceImg.crossOrigin = 'Anonymous';
+      faceImg.crossOrigin = "Anonymous";
       faceImg.src = faceBase64;
 
       faceImg.onload = () => {
@@ -468,7 +459,7 @@ export default function ProfilePage() {
           FACE_Y + FACE_SIZE / 2,
           FACE_SIZE / 2,
           0,
-          Math.PI * 2,
+          Math.PI * 2
         );
         ctx.closePath();
         ctx.clip();
@@ -476,95 +467,101 @@ export default function ProfilePage() {
         ctx.restore();
 
         const frameImg = new Image();
-        frameImg.crossOrigin = 'Anonymous';
+        frameImg.crossOrigin = "Anonymous";
         frameImg.src = frameUrl;
         frameImg.onload = () => {
           ctx.drawImage(frameImg, 0, 0, FRAME_SIZE, FRAME_SIZE);
-          resolve(canvas.toDataURL('image/png'));
+          resolve(canvas.toDataURL("image/png"));
         };
-        frameImg.onerror = () => reject('Lỗi tải Khung');
+        frameImg.onerror = () => reject("Loi tai Khung");
       };
-      faceImg.onerror = () => reject('Lỗi tải Mặt');
+      faceImg.onerror = () => reject("Loi tai Mat");
     });
   };
 
   const handleAvatarUpload = async ({ faceBase64, frameUrl }) => {
     if (!currentUser?.userId) {
-      toast.error('Vui lòng đăng nhập lại để cập nhật ảnh đại diện.');
+      toast.error("Vui long dang nhap lai de cap nhat anh dai dien.");
       return;
     }
 
     try {
-      localStorage.setItem('rawAvatar', faceBase64);
-      localStorage.setItem('rawFrame', frameUrl || '');
+      localStorage.setItem("rawAvatar", faceBase64);
+      localStorage.setItem("rawFrame", frameUrl || "");
 
-      const mergedBase64 = frameUrl ? await mergeAvatarWithFrame(faceBase64, frameUrl) : faceBase64;
+      const mergedBase64 = frameUrl
+        ? await mergeAvatarWithFrame(faceBase64, frameUrl)
+        : faceBase64;
       const res = await fetch(mergedBase64);
       const blob = await res.blob();
       const data = await uploadUserAvatar(blob);
 
       if (!data.success) {
-        toast.error(data.message ?? 'Không thể cập nhật ảnh đại diện');
+        toast.error(data.message ?? "Khong the cap nhat anh dai dien");
         return;
       }
 
       const finalUrl = persistUserAvatar(data.avatarUrl);
       setAvatarUrl(finalUrl);
       setProfile((prev) => ({ ...prev, avatarUrl: finalUrl }));
-      toast.success('Đã cập nhật ảnh đại diện');
+      toast.success("Da cap nhat anh dai dien");
 
       setCropperOpen(false);
-      if (tempImageSrc?.startsWith('blob:')) {
+      if (tempImageSrc?.startsWith("blob:")) {
         URL.revokeObjectURL(tempImageSrc);
       }
       setTempImageSrc(null);
     } catch (err) {
-      console.error('Upload error:', err);
-      toast.error('Tải ảnh thất bại');
+      console.error("Upload error:", err);
+      toast.error("Tai anh that bai");
     }
   };
 
   // ==========================================
-  // STATE: CẬP NHẬT MỤC TIÊU VÀ LĨNH VỰC
+  // STATE: CAP NHAT MUC TIEU VA LINH VUC
   // ==========================================
   const [openGoals, setOpenGoals] = useState(false);
   const [allCats, setAllCats] = useState([]);
   const [goalInput, setGoalInput] = useState("");
   const [selectedCats, setSelectedCats] = useState([]);
-  // ==========================================
-  // HÀM: MỞ POPUP VÀ TẢI DANH MỤC TỪ API
-  // Tác dụng: Lấy list categories và gán dữ liệu cũ vào Form
-  // ==========================================
+
   const handleOpenPopup = async () => {
-    // Lấy danh sách Categories từ API
     const res = await fetch("http://localhost:5000/api/categories");
     const data = await res.json();
     setAllCats(data.data);
-    // Đổ dữ liệu cũ vào form
     setGoalInput(profile.rawLearningGoal || "");
-    setSelectedCats(profile.rawCategories ? profile.rawCategories.map(c => c.categoryId) : []);
+    setSelectedCats(
+      profile.rawCategories
+        ? profile.rawCategories.map((c) => c.categoryId)
+        : []
+    );
     setOpenGoals(true);
   };
-  // ==========================================
-  // HÀM: LƯU MỤC TIÊU VÀ ĐÓNG POPUP
-  // Tác dụng: Đẩy dữ liệu xuống Backend và tự động F5
-  // ==========================================
+
   const saveGoals = async () => {
     await fetch("http://localhost:5000/api/users/goals", {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-user-id": currentUser.userId },
-      body: JSON.stringify({ learningGoal: goalInput, categoryIds: selectedCats })
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": currentUser.userId,
+      },
+      body: JSON.stringify({
+        learningGoal: goalInput,
+        categoryIds: selectedCats,
+      }),
     });
-    window.location.reload(); // Lưu xong thì tự F5 trang cho mới
+    window.location.reload();
   };
 
-
   return (
-    <Box sx={{ maxWidth: 1280, mx: "auto" }}>
-      {/* ── Breadcrumb ── */}
+    <div className="max-w-7xl mx-auto">
+      {/* --- Breadcrumb --- */}
       <Breadcrumbs
         separator="/"
-        sx={{ mb: 2.5, "& .MuiBreadcrumbs-separator": { color: MUTED, mx: 0.5 } }}
+        sx={{
+          mb: 2.5,
+          "& .MuiBreadcrumbs-separator": { color: MUTED, mx: 0.5 },
+        }}
       >
         <MuiLink
           component={Link}
@@ -584,50 +581,29 @@ export default function ProfilePage() {
           {breadcrumbHome.label}
         </MuiLink>
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
-          Hồ sơ cá nhân
+          Ho so ca nhan
         </Typography>
       </Breadcrumbs>
 
-      {/* ── Profile Header ── */}
-      <Box
-        sx={{
-          bgcolor: alpha(PRIMARY, 0.02),
+      {/* --- Profile Header --- */}
+      <div
+        className="rounded-[20px] p-3 md:p-4 mb-4 flex flex-wrap items-center gap-3 md:gap-4"
+        style={{
+          backgroundColor: alpha(PRIMARY, 0.02),
           border: `1px solid ${DIVIDER}`,
-          borderRadius: "20px",
-          p: { xs: 2.5, md: 3.5 },
-          mb: 3,
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: { xs: 2, md: 3 },
         }}
       >
         {/* Avatar */}
-        <Tooltip title="Đổi ảnh đại diện" placement="bottom">
-          <Box
+        <Tooltip title="Doi anh dai dien" placement="bottom">
+          <div
             onClick={handleAvatarClick}
-            sx={{
-              position: "relative",
-              width: { xs: 72, md: 88 },
-              height: { xs: 72, md: 88 },
-              flexShrink: 0,
-              cursor: "pointer",
-              borderRadius: "50%",
-              overflow: "hidden",
-              "&:hover .avatar-cam-overlay": { opacity: 1 },
-            }}
+            className="relative w-[72px] h-[72px] md:w-[88px] md:h-[88px] flex-shrink-0 cursor-pointer rounded-full overflow-hidden group"
           >
             {avatarUrl ? (
-              <Box
-                component="img"
+              <img
                 src={avatarUrl}
                 alt="avatar"
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  borderRadius: "50%",
-                }}
+                className="w-full h-full object-cover rounded-full"
               />
             ) : (
               <Avatar
@@ -645,35 +621,28 @@ export default function ProfilePage() {
               </Avatar>
             )}
             {/* Camera hover overlay */}
-            <Box
-              className="avatar-cam-overlay"
-              sx={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: "50%",
-                bgcolor: "rgba(8,145,178,0.55)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: 0,
-                transition: "opacity 0.2s",
-              }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+            <div className="absolute inset-0 rounded-full bg-cyan-600/55 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="white"
+              >
                 <path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-12H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V6.2A3 3 0 0 0 19 3.2z" />
               </svg>
-            </Box>
-          </Box>
+            </div>
+          </div>
         </Tooltip>
 
         {/* Info */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1, mb: 0.5 }}>
-            <Typography
-              sx={{ fontSize: { xs: 20, md: 24 }, fontWeight: 700, color: TEXT, lineHeight: 1.2 }}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span
+              className="text-xl md:text-2xl font-bold leading-[1.2]"
+              style={{ color: TEXT }}
             >
               {profile.name}
-            </Typography>
+            </span>
             <Chip
               label={profile.role}
               size="small"
@@ -686,57 +655,62 @@ export default function ProfilePage() {
                 borderRadius: "99px",
               }}
             />
-          </Box>
-          <Typography sx={{ fontSize: 13.5, color: MUTED, mb: 0.75 }}>
+          </div>
+          <p className="text-[13.5px] mb-1" style={{ color: MUTED }}>
             {profile.email}
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <CalendarTodayOutlinedIcon sx={{ fontSize: 13, color: MUTED }} />
-            <Typography sx={{ fontSize: 12, color: MUTED }}>
-              Tham gia từ {profile.joinedAt}
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+          </p>
+          <div className="flex items-center gap-1">
+            <CalendarTodayOutlinedIcon
+              sx={{ fontSize: 13, color: MUTED }}
+            />
+            <span className="text-[12px]" style={{ color: MUTED }}>
+              Tham gia tu {profile.joinedAt}
+            </span>
+          </div>
+        </div>
+      </div>
 
-      {/* ── 2-column layout ── */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", lg: "row" },
-          gap: 3,
-          alignItems: "flex-start",
-        }}
-      >
-        {/* ── Left column ── */}
-        <Box sx={{ flex: "1 1 65%", minWidth: 0, width: "100%" }}>
-          {/* Thông tin cá nhân */}
+      {/* --- 2-column layout --- */}
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        {/* --- Left column --- */}
+        <div className="flex-[1_1_65%] min-w-0 w-full">
+          {/* Thong tin ca nhan */}
           <SectionCard>
             <SectionHead
-              title="Thông tin cá nhân"
+              title="Thong tin ca nhan"
               icon={PersonRoundedIcon}
               iconColor="#2563EB"
               action={
                 editMode ? (
-                  <Box sx={{ display: "flex", gap: 0.75 }}>
+                  <div className="flex gap-2">
                     <AppButton
                       size="small"
                       variant="contained"
                       startIcon={<CheckRoundedIcon />}
                       onClick={handleSave}
-                      sx={{ fontSize: 12, height: 28, px: 1.25, minWidth: "auto" }}
+                      sx={{
+                        fontSize: 12,
+                        height: 28,
+                        px: 1.25,
+                        minWidth: "auto",
+                      }}
                     >
-                      Lưu
+                      Luu
                     </AppButton>
                     <AppButton
                       size="small"
                       variant="outlined"
                       onClick={handleCancel}
-                      sx={{ fontSize: 12, height: 28, px: 1.25, minWidth: "auto" }}
+                      sx={{
+                        fontSize: 12,
+                        height: 28,
+                        px: 1.25,
+                        minWidth: "auto",
+                      }}
                     >
-                      Hủy
+                      Huy
                     </AppButton>
-                  </Box>
+                  </div>
                 ) : (
                   <AppButton
                     size="small"
@@ -744,17 +718,17 @@ export default function ProfilePage() {
                     onClick={() => setEditMode(true)}
                     sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
                   >
-                    Chỉnh sửa
+                    Chinh sua
                   </AppButton>
                 )
               }
             />
 
-            <Box>
+            <div>
               <InfoRow
                 icon={PersonRoundedIcon}
                 iconColor="#2563EB"
-                label="Họ và tên"
+                label="Ho va ten"
                 value={editMode ? formData.name : profile.name}
                 editing={editMode}
                 name="name"
@@ -771,7 +745,7 @@ export default function ProfilePage() {
               <InfoRow
                 icon={PhoneOutlinedIcon}
                 iconColor="#16A34A"
-                label="Số điện thoại"
+                label="So dien thoai"
                 value={editMode ? formData.phone : profile.phone}
                 editing={editMode}
                 name="phone"
@@ -780,20 +754,22 @@ export default function ProfilePage() {
               <InfoRow
                 icon={CakeOutlinedIcon}
                 iconColor={ACCENT}
-                label="Ngày sinh"
-                value={editMode ? formData.dateOfBirth : profile.dateOfBirth}
+                label="Ngay sinh"
+                value={
+                  editMode ? formData.dateOfBirth : profile.dateOfBirth
+                }
                 editing={editMode}
                 name="dateOfBirth"
                 onChange={handleFormChange}
                 inputType="date"
               />
-            </Box>
+            </div>
           </SectionCard>
 
-          {/* Mục tiêu học tập */}
+          {/* Muc tieu hoc tap */}
           <SectionCard>
             <SectionHead
-              title="Mục tiêu học tập"
+              title="Muc tieu hoc tap"
               icon={RocketLaunchIcon}
               iconColor={ACCENT}
               action={
@@ -803,15 +779,22 @@ export default function ProfilePage() {
                   onClick={handleOpenPopup}
                   sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
                 >
-                  Cập nhật
+                  Cap nhat
                 </AppButton>
               }
             />
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.875 }}>
+            <div className="flex flex-wrap gap-[10px]">
               {profile?.goals?.map((goal) => (
                 <Chip
                   key={goal}
-                  icon={<AutoAwesomeIcon sx={{ fontSize: "14px !important", color: `${ACCENT} !important` }} />}
+                  icon={
+                    <AutoAwesomeIcon
+                      sx={{
+                        fontSize: "14px !important",
+                        color: `${ACCENT} !important`,
+                      }}
+                    />
+                  }
                   label={goal}
                   size="small"
                   sx={{
@@ -826,7 +809,7 @@ export default function ProfilePage() {
                 />
               ))}
               <Chip
-                label="+ Thêm mục tiêu"
+                label="+ Them muc tieu"
                 onClick={handleOpenPopup}
                 size="small"
                 sx={{
@@ -840,79 +823,80 @@ export default function ProfilePage() {
                   cursor: "pointer",
                   "&:hover": { borderColor: PRIMARY, color: PRIMARY },
                   transition: "border-color 0.2s, color 0.2s",
-
                 }}
               />
-            </Box>
+            </div>
           </SectionCard>
-        </Box>
+        </div>
 
-        {/* ── Right column ── */}
-        <Box sx={{ flex: "0 0 35%", width: "100%", maxWidth: { lg: 420 } }}>
-          <Box sx={{ position: { lg: "sticky" }, top: 84 }}>
-
-            {/* Tổng quan học tập */}
+        {/* --- Right column --- */}
+        <div
+          className="flex-[0_0_35%] w-full lg:max-w-[420px]"
+        >
+          <div className="lg:sticky" style={{ top: 84 }}>
+            {/* Tong quan hoc tap */}
             <SectionCard>
               <SectionHead
-                title="Tổng quan học tập"
+                title="Tong quan hoc tap"
                 icon={MenuBookOutlinedIcon}
                 iconColor={PRIMARY}
               />
               <StatRow
                 icon={MenuBookOutlinedIcon}
                 iconColor={PRIMARY}
-                label="Khóa đang học"
-                value={`${profile?.stats?.learning || 0} khóa`}
+                label="Khoa dang hoc"
+                value={`${profile?.stats?.learning || 0} khoa`}
               />
               <StatRow
                 icon={CheckCircleRoundedIcon}
                 iconColor={SUCCESS}
-                label="Khóa hoàn thành"
-                value={`${profile?.stats?.completed || 0} khóa`}
+                label="Khoa hoan thanh"
+                value={`${profile?.stats?.completed || 0} khoa`}
                 last
               />
             </SectionCard>
 
-            {/* Cài đặt tài khoản */}
+            {/* Cai dat tai khoan */}
             <SectionCard>
               <SectionHead
-                title="Cài đặt tài khoản"
+                title="Cai dat tai khoan"
                 icon={LockOutlinedIcon}
                 iconColor={MUTED}
               />
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  py: 0.75,
-                }}
-              >
-                <LockOutlinedIcon sx={{ fontSize: 17, color: MUTED }} />
-                <Typography sx={{ flex: 1, fontSize: 13, color: TEXT, fontWeight: 600 }}>
-                  Đổi mật khẩu
-                </Typography>
+              <div className="flex items-center gap-3 py-[6px]">
+                <LockOutlinedIcon
+                  sx={{ fontSize: 17, color: MUTED }}
+                />
+                <span
+                  className="flex-1 text-[13px] font-semibold"
+                  style={{ color: TEXT }}
+                >
+                  Doi mat khau
+                </span>
                 <AppButton
                   size="small"
                   variant="outlined"
                   onClick={() => setPasswordDialogOpen(true)}
-                  sx={{ fontSize: 11, height: 28, px: 1.5, minWidth: "auto" }}
+                  sx={{
+                    fontSize: 11,
+                    height: 28,
+                    px: 1.5,
+                    minWidth: "auto",
+                  }}
                 >
-                  Thay đổi
+                  Thay doi
                 </AppButton>
-              </Box>
+              </div>
             </SectionCard>
-
-
-          </Box>
-        </Box>
-      </Box>
+          </div>
+        </div>
+      </div>
 
       <ChangePasswordDialog
         open={passwordDialogOpen}
         onClose={() => setPasswordDialogOpen(false)}
       />
-      {/* ── Thẻ ẩn nhận File ── */}
+      {/* --- File input hidden --- */}
       <input
         type="file"
         accept="image/*"
@@ -920,41 +904,50 @@ export default function ProfilePage() {
         ref={fileInputRef}
         onChange={handleAvatarSelected}
       />
-      {/* 🚀 Popup cắt ảnh chuẩn form Mentor 🚀 */}
+      {/* Crop dialog */}
       <ProfileImageCropDialog
         open={cropperOpen}
-        imageSrc={tempImageSrc || localStorage.getItem('rawAvatar') || ''}
-        initialFrame={localStorage.getItem('rawFrame') || ''}
+        imageSrc={tempImageSrc || localStorage.getItem("rawAvatar") || ""}
+        initialFrame={localStorage.getItem("rawFrame") || ""}
         onClose={() => {
           setCropperOpen(false);
-          if (tempImageSrc?.startsWith('blob:')) {
+          if (tempImageSrc?.startsWith("blob:")) {
             URL.revokeObjectURL(tempImageSrc);
           }
           setTempImageSrc(null);
         }}
         onSave={handleAvatarUpload}
       />
-      <Dialog open={openGoals} onClose={() => setOpenGoals(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={openGoals}
+        onClose={() => setOpenGoals(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
-          Cập nhật Mục tiêu & Lĩnh vực
+          Cap nhat Muc tieu & Linh vuc
         </DialogTitle>
 
         <DialogContent dividers>
-          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}>
-            Mục tiêu học tập
+          <Typography
+            sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}
+          >
+            Muc tieu hoc tap
           </Typography>
           <TextField
             fullWidth
             size="small"
-            placeholder="Ví dụ: Lấy bằng giỏi, Tìm việc làm..."
+            placeholder="Vi du: Lay bang gioi, Tim viec lam..."
             value={goalInput}
             onChange={(e) => setGoalInput(e.target.value)}
             sx={{ mb: 3 }}
           />
-          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}>
-            Lĩnh vực quan tâm
+          <Typography
+            sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}
+          >
+            Linh vuc quan tam
           </Typography>
-          <FormGroup sx={{ flexDirection: 'row', gap: 1 }}>
+          <FormGroup sx={{ flexDirection: "row", gap: 1 }}>
             {allCats.map((cat) => (
               <FormControlLabel
                 key={cat.categoryId}
@@ -964,26 +957,43 @@ export default function ProfilePage() {
                     checked={selectedCats.includes(cat.categoryId)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedCats([...selectedCats, cat.categoryId]); // Thêm vào mảng
+                        setSelectedCats([
+                          ...selectedCats,
+                          cat.categoryId,
+                        ]);
                       } else {
-                        setSelectedCats(selectedCats.filter(id => id !== cat.categoryId)); // Rút khỏi mảng
+                        setSelectedCats(
+                          selectedCats.filter(
+                            (id) => id !== cat.categoryId
+                          )
+                        );
                       }
                     }}
                   />
                 }
-                label={<Typography sx={{ fontSize: 14 }}>{cat.displayName}</Typography>}
-                sx={{ width: '45%', m: 0 }}
+                label={
+                  <Typography sx={{ fontSize: 14 }}>
+                    {cat.displayName}
+                  </Typography>
+                }
+                sx={{ width: "45%", m: 0 }}
               />
             ))}
           </FormGroup>
         </DialogContent>
 
         <DialogActions sx={{ p: 2 }}>
-          <AppButton variant="outlined" onClick={() => setOpenGoals(false)}>Hủy</AppButton>
-          <AppButton variant="contained" onClick={saveGoals}>Lưu</AppButton>
+          <AppButton
+            variant="outlined"
+            onClick={() => setOpenGoals(false)}
+          >
+            Huy
+          </AppButton>
+          <AppButton variant="contained" onClick={saveGoals}>
+            Luu
+          </AppButton>
         </DialogActions>
       </Dialog>
-    </Box>
-
+    </div>
   );
 }

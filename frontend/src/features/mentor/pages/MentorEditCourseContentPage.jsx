@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Breadcrumbs, CircularProgress, Link as MuiLink, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
@@ -452,38 +452,15 @@ export default function MentorEditCourseContentPage() {
   );
 
   return (
-    <Box sx={{ width: '100%', maxWidth: { xs: '100%', xl: 1600 }, mx: 'auto' }}>
-      <Breadcrumbs
-        separator="/"
-        sx={{ mb: 1.5, '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 } }}
-      >
-        <MuiLink component={Link} to="/home" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-          Trang chủ
-        </MuiLink>
-        <MuiLink component={Link} to="/mentor/courses" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-          Khóa học của tôi
-        </MuiLink>
-        <MuiLink component={Link} to={`/mentor/courses/${courseId}`} underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-          Chi tiết khóa học
-        </MuiLink>
-        <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
-          Chỉnh sửa nội dung
-        </Typography>
-      </Breadcrumbs>
-
-      <Typography
-        component="h1"
-        sx={{
-          fontSize: { xs: 15, sm: 16 },
-          fontWeight: 600,
-          color: MUTED,
-          letterSpacing: '-0.01em',
-          lineHeight: 1.3,
-          mb: 0.75,
-        }}
-      >
-        Chỉnh sửa nội dung khóa học
-      </Typography>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: '#0F172A' }}>
+          Chỉnh sửa nội dung khóa học
+        </h1>
+        <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: '#64748B' }}>
+          Cập nhật chương, bài học và tài liệu cho khóa học.
+        </p>
+      </div>
 
       <Box
         sx={{
@@ -571,6 +548,6 @@ export default function MentorEditCourseContentPage() {
         cancelLabel="Hủy"
         destructive
       />
-    </Box>
+    </div>
   );
 }

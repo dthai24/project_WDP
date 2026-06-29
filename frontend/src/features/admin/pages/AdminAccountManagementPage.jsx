@@ -132,11 +132,11 @@ export default function AdminAccountManagementPage() {
       const res = await updateAccount(editingAccount.id, values);
 
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật tài khoản');
+        toast.error(res.message ?? 'Khong the cap nhat tai khoan');
         return;
       }
 
-      toast.success('Đã cập nhật vai trò và trạng thái tài khoản');
+      toast.success('Da cap nhat vai tro va trang thai tai khoan');
       setFormOpen(false);
       setEditingAccount(null);
       await loadAccounts();
@@ -151,11 +151,11 @@ export default function AdminAccountManagementPage() {
       const res = await createAccount(values);
 
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể tạo tài khoản');
+        toast.error(res.message ?? 'Khong the tao tai khoan');
         return;
       }
 
-      toast.success('Đã tạo tài khoản mới');
+      toast.success('Da tao tai khoan moi');
       setCreateOpen(false);
       await loadAccounts();
     } finally {
@@ -164,25 +164,17 @@ export default function AdminAccountManagementPage() {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          justifyContent: 'space-between',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1.5, sm: 2 },
-          mb: 2.5,
-        }}
-      >
-        <Box>
-          <Typography sx={{ fontSize: { xs: 22, sm: 24 }, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
-            Quản lý tài khoản
-          </Typography>
-          <Typography sx={{ fontSize: 14, color: MUTED, mt: 0.5, lineHeight: 1.55, maxWidth: 560 }}>
-            Theo dõi và quản lý tài khoản Admin, Mentor và Học viên trong hệ thống.
-          </Typography>
-        </Box>
+    <div className="w-full max-w-7xl mx-auto">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
+            Quan ly tai khoan
+          </h1>
+          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
+            Theo doi va quan ly tai khoan Admin, Mentor va Hoc vien trong he thong.
+          </p>
+        </div>
 
         <AppButton
           startIcon={<AddRoundedIcon />}
@@ -201,9 +193,9 @@ export default function AdminAccountManagementPage() {
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}
         >
-          Tạo tài khoản
+          Tao tai khoan
         </AppButton>
-      </Box>
+      </div>
 
       <AdminAccountsToolbar
         roleFilter={queryState.role}
@@ -256,6 +248,6 @@ export default function AdminAccountManagementPage() {
         onSubmit={handleCreateSubmit}
         saving={creating}
       />
-    </Box>
+    </div>
   );
 }

@@ -1,87 +1,61 @@
-/**
- * CourseDetailPage  ─  Trang chi tiết khóa học (student)
- *
- * Props: không có (page component, route: /courses/:id)
- *
- * URL params:
- *   id : string  — courseId từ useParams()
- */
 import { useState, useEffect } from "react";
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Breadcrumbs,
-  Chip,
-  Grid,
-  IconButton,
-  Link as MuiLink,
-  Typography,
-  alpha,
-} from "@mui/material";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
-import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
-import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
-import OpenInFullRoundedIcon from "@mui/icons-material/OpenInFullRounded";
-import CloseFullscreenRoundedIcon from "@mui/icons-material/CloseFullscreenRounded";
-import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
-import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import StarRoundedIcon from "@mui/icons-material/StarRounded";
-import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
-import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
-import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
-import AppButton from "@/shared/ui/AppButton";
-import ThumbnailImage from "@/shared/ui/ThumbnailImage";
-import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
+import {
+  BookOpen,
+  PlayCircle,
+  FileText,
+  Lock,
+  CheckCircle,
+  CalendarBlank,
+  Star,
+  Users,
+  User,
+  ClipboardText,
+  CaretDown,
+  ArrowsOut,
+  ArrowsIn,
+  GraduationCap,
+  Clock,
+  ArrowLeft,
+} from "@phosphor-icons/react";
+import { toast } from "@/shared/ui/Toast";
+import { enrollCourseApi } from "@/features/auth/services/authService";
 import CourseCard from "@/features/courses/components/CourseCard";
 import CourseCommentsSection from "@/features/courses/components/CourseCommentsSection";
 import { buildCourseDetailPath, buildCourseListPath } from "@/features/courses/utils/courseListParams";
-import { enrollCourseApi } from '@/features/auth/services/authService';
-import { toast } from "@/shared/ui/Toast";
 
-const PRIMARY = "#0891B2";
-const PRIMARY_DARK = "#0E7490";
-const ACCENT = "#EA580C";
+const ACCENT = "#059669";
+const ACCENT_DARK = "#047857";
 const TEXT = "#0F172A";
 const MUTED = "#64748B";
-const BORDER = "rgba(8,145,178,0.09)";
-const DIVIDER = "rgba(8,145,178,0.10)";
-const STICKY_TOP = 76;
 
-
-
-/* ─── Helpers (Giữ nguyên 100%) ─── */
-
-function getStatusChip(isEnrolled, progress) {
-  if (!isEnrolled) return { label: "Chưa đăng ký", sx: { bgcolor: "rgba(100,116,139,0.10)", color: MUTED, border: "1px solid rgba(100,116,139,0.18)" } };
-  if (progress >= 100) return { label: "Hoàn thành", sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" } };
-  if (progress > 0) return { label: "Đang học", sx: { bgcolor: "rgba(8,145,178,0.12)", color: PRIMARY, border: "1px solid rgba(8,145,178,0.20)" } };
-  return { label: "Đã đăng ký", sx: { bgcolor: "rgba(22,163,74,0.12)", color: "#16A34A", border: "1px solid rgba(22,163,74,0.20)" } };
+function getStatusBadge(isEnrolled, progress) {
+  if (!isEnrolled) return { label: "Not Enrolled", className: "bg-slate-100 text-slate-600 border-slate-200" };
+  if (progress >= 100) return { label: "Completed", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  if (progress > 0) return { label: "In Progress", className: "bg-brand-50 text-brand-700 border-brand-200" };
+  return { label: "Enrolled", className: "bg-green-50 text-green-700 border-green-200" };
 }
 
-function getLevelChipSx(level = "") {
+function getLevelBadge(level = "") {
   const l = level.toLowerCase();
-  if (l.includes("cơ bản")) return { bgcolor: "rgba(56,189,248,0.12)", color: "#0284C7", border: "1px solid rgba(56,189,248,0.22)" };
-  if (l.includes("trung cấp")) return { bgcolor: "rgba(245,158,11,0.12)", color: "#D97706", border: "1px solid rgba(245,158,11,0.22)" };
-  if (l.includes("nâng cao")) return { bgcolor: "rgba(234,88,12,0.12)", color: ACCENT, border: "1px solid rgba(234,88,12,0.22)" };
-  return { bgcolor: "#F1F5F9", color: MUTED };
+  if (l.includes("co ban") || l.includes("beginner")) return "bg-sky-50 text-sky-700 border-sky-200";
+  if (l.includes("trung cap") || l.includes("intermediate")) return "bg-amber-50 text-amber-700 border-amber-200";
+  if (l.includes("nang cao") || l.includes("advanced")) return "bg-orange-50 text-orange-700 border-orange-200";
+  return "bg-slate-100 text-slate-600";
 }
 
-function getCategoryChipSx(category = "") {
+function getCategoryBadge(category = "") {
   const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
-    IELTS: { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    TOEIC: { bgcolor: "rgba(14,116,144,0.10)", color: PRIMARY_DARK },
-    "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
-    "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
+    "Giao tiep": "bg-blue-50 text-blue-700 border-blue-200",
+    "Communication": "bg-blue-50 text-blue-700 border-blue-200",
+    IELTS: "bg-purple-50 text-purple-700 border-purple-200",
+    TOEIC: "bg-sky-50 text-sky-700 border-sky-200",
+    "Ngu phap": "bg-slate-100 text-slate-700 border-slate-200",
+    "Grammar": "bg-slate-100 text-slate-700 border-slate-200",
+    "Phat am": "bg-pink-50 text-pink-700 border-pink-200",
+    "Pronunciation": "bg-pink-50 text-pink-700 border-pink-200",
   };
-  return map[category] ?? { bgcolor: "#F1F5F9", color: MUTED };
+  return map[category] ?? "bg-slate-100 text-slate-600";
 }
 
 function formatStudentCount(count) {
@@ -89,127 +63,143 @@ function formatStudentCount(count) {
   return String(count);
 }
 
-/* ─── Sub-components (Giữ nguyên 100% Component giao diện của bạn) ─── */
-
-function SectionTitle({ children, sx }) {
+function SectionTitle({ children }) {
   return (
-    <Typography sx={{ fontWeight: 700, color: TEXT, fontSize: { xs: 18, sm: 20 }, lineHeight: 1.3, ...sx }}>
+    <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
       {children}
-    </Typography>
+    </h2>
   );
 }
 
 function CourseMetaRow({ course }) {
   const items = [
-    { icon: RouteOutlinedIcon, label: "Chương", value: `${course.stageCount} chương` },
-    { icon: MenuBookOutlinedIcon, label: "Bài", value: `${course.lessonCount} bài` },
-    { icon: ArticleOutlinedIcon, label: "Học liệu", value: `${course.materialCount} tài liệu` },
-    { icon: CalendarTodayOutlinedIcon, label: "Cập nhật", value: course.updatedAt || "—" },
+    { icon: BookOpen, label: "Chapters", value: `${course.stageCount} chapters` },
+    { icon: PlayCircle, label: "Lessons", value: `${course.lessonCount} lessons` },
+    { icon: FileText, label: "Materials", value: `${course.materialCount} materials` },
+    { icon: CalendarBlank, label: "Updated", value: course.updatedAt || "-" },
   ];
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(4, minmax(0, 1fr))" },
-        gap: { xs: 2, sm: 2.5 },
-        pt: 0.5,
-      }}
-    >
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
       {items.map(({ icon: Icon, label, value }) => (
-        <Box
-          key={label}
-          sx={{
-            pb: "6px",
-            borderBottom: "1px solid rgba(8,145,178,0.18)",
-            transition: "border-color 0.2s ease",
-            "&:hover": {
-              borderBottomColor: "rgba(8,145,178,0.45)",
-              "& .meta-icon": { color: PRIMARY },
-            },
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.4 }}>
-            <Icon className="meta-icon" sx={{ fontSize: 14, color: MUTED, transition: "color 0.2s ease" }} />
-            <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>{label}</Typography>
-          </Box>
-          <Typography sx={{ fontSize: 14, color: TEXT, fontWeight: 700 }}>{value}</Typography>
-        </Box>
+        <div key={label} className="pb-1.5 border-b border-brand-100/60 transition-colors hover:border-brand-300/60 group">
+          <div className="flex items-center gap-1 mb-0.5">
+            <Icon size={14} className="text-slate-400 group-hover:text-brand-600 transition-colors" />
+            <span className="text-xs text-slate-500 font-medium">{label}</span>
+          </div>
+          <p className="text-sm text-slate-900 font-bold">{value}</p>
+        </div>
       ))}
-    </Box>
+    </div>
   );
 }
 
-function CourseProgressBlock({ progress, sx }) {
+function CourseProgressBlock({ progress }) {
   const value = Math.min(Math.max(progress, 0), 100);
-  const textColor = getProgressColor(value);
   const completed = value >= 100;
+  const color = completed ? "bg-emerald-500" : value > 0 ? "bg-brand-500" : "bg-slate-200";
 
   return (
-    <Box sx={sx}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
-        <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 600 }}>Tiến độ học tập</Typography>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          {completed && <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 15, color: textColor }} />}
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: textColor }}>{value}%</Typography>
-        </Box>
-      </Box>
-      <AppProgressBar value={value} height={6} />
-    </Box>
+    <div>
+      <div className="flex justify-between items-center mb-1.5">
+        <span className="text-xs text-slate-500 font-semibold">Progress</span>
+        <div className="flex items-center gap-1">
+          {completed && <CheckCircle size={14} weight="fill" className="text-emerald-500" />}
+          <span className={`text-xs font-bold ${completed ? "text-emerald-600" : "text-brand-600"}`}>
+            {value}%
+          </span>
+        </div>
+      </div>
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${color}`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
 function CourseIntro({ course, isEnrolled }) {
   const [searchParams] = useSearchParams();
   const coursesListPath = buildCourseListPath(searchParams);
-  const statusChip = getStatusChip(isEnrolled, course.progress);
+  const statusBadge = getStatusBadge(isEnrolled, course.progress);
 
   return (
-    <Box>
-      <Breadcrumbs separator="/" sx={{ mb: 1.5, "& .MuiBreadcrumbs-separator": { color: MUTED, mx: 0.5 } }}>
-        <MuiLink component={Link} to="/home" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>Trang chủ</MuiLink>
-        <MuiLink component={Link} to={coursesListPath} underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>Khóa học</MuiLink>
-        <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>{course.title}</Typography>
-      </Breadcrumbs>
+    <div>
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-2 text-sm mb-4">
+        <Link to="/home" className="text-slate-500 hover:text-slate-700 transition-colors">
+          Home
+        </Link>
+        <span className="text-slate-300">/</span>
+        <Link to={coursesListPath} className="text-slate-500 hover:text-slate-700 transition-colors">
+          Courses
+        </Link>
+        <span className="text-slate-300">/</span>
+        <span className="text-slate-900 font-semibold truncate max-w-[200px]">
+          {course.title}
+        </span>
+      </nav>
 
-      <Typography sx={{ fontWeight: 700, color: TEXT, lineHeight: 1.3, fontSize: { xs: 20, sm: 22, md: 24 }, letterSpacing: "0.01em", mb: 1.25 }}>
+      {/* Title */}
+      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 leading-tight mb-3">
         {course.title}
-      </Typography>
+      </h1>
 
-      <Typography sx={{ fontSize: 15, color: MUTED, lineHeight: 1.65, mb: 2 }}>{course.shortDescription}</Typography>
+      {/* Description */}
+      <p className="text-sm sm:text-base text-slate-500 leading-relaxed mb-4 max-w-2xl">
+        {course.shortDescription}
+      </p>
 
-      <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2, mb: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <StarRoundedIcon sx={{ fontSize: 18, color: "#F59E0B" }} />
-          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{course.rating}</Typography>
-          <Typography sx={{ fontSize: 13, color: MUTED }}>({course.reviewCount.toLocaleString("vi-VN")} đánh giá)</Typography>
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <PeopleOutlineRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
-          <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>{formatStudentCount(course.studentCount)} học viên</Typography>
-        </Box>
-      </Box>
+      {/* Rating & Students */}
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        <div className="flex items-center gap-1">
+          <Star size={18} weight="fill" className="text-amber-400" />
+          <span className="text-sm font-bold text-slate-900">{course.rating}</span>
+          <span className="text-xs text-slate-500">
+            ({course.reviewCount.toLocaleString("vi-VN")} reviews)
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Users size={16} className="text-slate-400" />
+          <span className="text-xs text-slate-500 font-medium">
+            {formatStudentCount(course.studentCount)} students
+          </span>
+        </div>
+      </div>
 
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 2.5 }}>
-        <Chip label={statusChip.label} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }} />
-        {course.level && <Chip label={course.level} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getLevelChipSx(course.level) }} />}
-        {course.category && <Chip label={course.category} size="small" sx={{ height: 24, fontSize: 12, fontWeight: 600, borderRadius: "99px", ...getCategoryChipSx(course.category) }} />}
-      </Box>
+      {/* Badges */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusBadge.className}`}>
+          {statusBadge.label}
+        </span>
+        {course.level && (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getLevelBadge(course.level)}`}>
+            {course.level}
+          </span>
+        )}
+        {course.category && (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getCategoryBadge(course.category)}`}>
+            {course.category}
+          </span>
+        )}
+      </div>
 
       <CourseMetaRow course={course} />
-    </Box>
+    </div>
   );
 }
 
 function CTAInfoRow({ icon: Icon, label, children, showDivider }) {
   return (
-    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.25, py: 1.25, borderTop: showDivider ? `1px solid ${DIVIDER}` : "none" }}>
-      <Icon sx={{ fontSize: 18, color: MUTED, mt: "2px", flexShrink: 0 }} />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1.3, mb: children ? 0.5 : 0 }}>{label}</Typography>
+    <div className={`flex items-start gap-2.5 py-2.5 ${showDivider ? "border-t border-brand-100/60" : ""}`}>
+      <Icon size={18} className="text-slate-400 mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-slate-500 font-medium leading-tight mb-0.5">{label}</p>
         {children}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
@@ -218,61 +208,89 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
   const prerequisites = course.prerequisites ?? [];
 
   const getButtonProps = () => {
-    if (course.progress >= 100) return { label: "ÔN TẬP LẠI", variant: "contained", onClick: onContinue };
-    if (isEnrolled) return { label: "TIẾP TỤC HỌC", variant: "contained", onClick: onContinue };
-    return { label: "ĐĂNG KÝ HỌC", variant: "accent", onClick: onEnroll };
+    if (course.progress >= 100) return { label: "Review Again", variant: "primary", onClick: onContinue };
+    if (isEnrolled) return { label: "Continue Learning", variant: "primary", onClick: onContinue };
+    return { label: "Enroll Now", variant: "accent", onClick: onEnroll };
   };
 
   const btn = getButtonProps();
 
+  const variantStyles = {
+    primary: "bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950",
+    accent: "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800",
+  };
+
   return (
-    <Box sx={{ position: sticky ? { md: "sticky" } : "static", top: sticky ? { md: STICKY_TOP } : "auto", width: "100%", flexShrink: 0 }}>
-      <Box sx={{ bgcolor: "#fff", border: `1px solid ${BORDER}`, borderRadius: "20px", boxShadow: "0 8px 32px rgba(8,145,178,0.10)", overflow: "hidden" }}>
-        <ThumbnailImage
-          src={course.thumbnail}
-          label={course.title}
-          alt={course.title}
-          iconSize={32}
-          sx={{ aspectRatio: "16 / 9", width: "100%" }}
-        />
+    <div className={`${sticky ? "lg:sticky lg:top-20" : ""} w-full shrink-0`}>
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_32px_rgba(5,150,105,0.08)] overflow-hidden">
+        {/* Thumbnail */}
+        <div className="aspect-[16/9] bg-slate-50 relative overflow-hidden">
+          {course.thumbnail ? (
+            <img
+              src={course.thumbnail}
+              alt={course.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <GraduationCap size={40} weight="light" className="text-slate-300" />
+            </div>
+          )}
+        </div>
 
-        <Box sx={{ p: 2.5 }}>
-          <Typography sx={{ fontSize: 22, fontWeight: 800, color: TEXT, mb: 2, letterSpacing: "-0.02em" }}>
-            {course.isFree !== false ? "Miễn phí" : "Liên hệ"}
-          </Typography>
+        <div className="p-5">
+          <p className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">
+            {course.isFree !== false ? "Free" : "Contact Us"}
+          </p>
 
-          <AppButton fullWidth variant={btn.variant} onClick={btn.onClick} sx={{ borderRadius: "12px", py: 1.5, fontSize: 15, fontWeight: 800, letterSpacing: "0.04em", mb: isEnrolled ? 2 : 2.5 }}>
+          <button
+            onClick={btn.onClick}
+            className={`w-full py-3 px-4 rounded-xl text-sm font-extrabold tracking-wider transition-all duration-200 active:scale-[0.98] ${variantStyles[btn.variant]}`}
+          >
             {btn.label}
-          </AppButton>
+          </button>
 
-          {isEnrolled && <CourseProgressBlock progress={course.progress} sx={{ mb: 2.5 }} />}
+          {isEnrolled && (
+            <div className="mt-4 mb-2">
+              <CourseProgressBlock progress={course.progress} />
+            </div>
+          )}
 
-          <Box sx={{ display: "flex", flexDirection: "column", pt: 2, borderTop: `1px solid ${DIVIDER}` }}>
-            <CTAInfoRow icon={PersonOutlineOutlinedIcon} label="Giảng viên">
-              <Typography sx={{ fontSize: 14, color: TEXT, fontWeight: 600, lineHeight: 1.45 }}>{course.instructor || "S.T.A.R Mentor Team"}</Typography>
+          <div className="flex flex-col pt-3 mt-3 border-t border-brand-100/60">
+            <CTAInfoRow icon={User} label="Instructor">
+              <p className="text-sm text-slate-900 font-semibold leading-snug">
+                {course.instructor || "S.T.A.R Mentor Team"}
+              </p>
             </CTAInfoRow>
 
             {prerequisites.length > 0 && (
-              <CTAInfoRow icon={AssignmentOutlinedIcon} label="Yêu cầu" showDivider>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+              <CTAInfoRow icon={ClipboardText} label="Prerequisites" showDivider>
+                <div className="flex flex-col gap-1">
                   {prerequisites.map((prereq) => (
-                    <MuiLink key={prereq.id} component={Link} to={buildCourseDetailPath(prereq.id, searchParams)} underline="hover" sx={{ fontSize: 14, color: PRIMARY, fontWeight: 600, lineHeight: 1.45, display: "block", "&:hover": { color: PRIMARY_DARK } }}>
+                    <Link
+                      key={prereq.id}
+                      to={buildCourseDetailPath(prereq.id, searchParams)}
+                      className="text-sm text-brand-600 font-semibold leading-snug hover:text-brand-800 transition-colors"
+                    >
                       {prereq.title}
-                    </MuiLink>
+                    </Link>
                   ))}
-                </Box>
+                </div>
               </CTAInfoRow>
             )}
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 function LessonIcon({ type }) {
-  const Icon = type === "video" ? PlayCircleOutlineOutlinedIcon : ArticleRoundedIcon;
-  return <Icon sx={{ fontSize: 15, color: MUTED, flexShrink: 0 }} />;
+  const Icon = type === "video" ? PlayCircle : FileText;
+  return <Icon size={15} className="text-slate-400 shrink-0" />;
 }
 
 function CurriculumSection({ modules, isEnrolled, course }) {
@@ -281,10 +299,11 @@ function CurriculumSection({ modules, isEnrolled, course }) {
 
   const allExpanded = modules.every((m) => expandedIds.has(m.id));
 
-  const toggleModule = (id) => (_, isOpen) => {
+  const toggleModule = (id) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
-      if (isOpen) next.add(id); else next.delete(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -295,52 +314,101 @@ function CurriculumSection({ modules, isEnrolled, course }) {
   };
 
   return (
-    <Box>
-      <Box sx={{ pb: 1.75, mb: 0.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, borderBottom: `1px solid ${DIVIDER}` }}>
-        <Box>
-          <SectionTitle sx={{ mb: 0.5, fontSize: { xs: 16, sm: 17 } }}>Nội dung khóa học</SectionTitle>
-          <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-            {course.stageCount} chương • {course.lessonCount} bài
-          </Typography>
-        </Box>
-        <IconButton onClick={toggleAll} sx={{ flexShrink: 0, mt: 0.15, color: MUTED, p: 0.5, "&:hover": { bgcolor: "transparent", color: MUTED } }}>
-          {allExpanded ? <CloseFullscreenRoundedIcon sx={{ fontSize: 18 }} /> : <OpenInFullRoundedIcon sx={{ fontSize: 18 }} />}
-        </IconButton>
-      </Box>
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 pb-3 mb-1 border-b border-slate-100">
+        <div>
+          <SectionTitle>Course Content</SectionTitle>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            {course.stageCount} chapters &middot; {course.lessonCount} lessons
+          </p>
+        </div>
+        <button
+          onClick={toggleAll}
+          className="shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
+        >
+          {allExpanded ? <ArrowsIn size={18} /> : <ArrowsOut size={18} />}
+        </button>
+      </div>
 
-      {modules.map((mod, index) => (
-        <Accordion key={mod.id} expanded={expandedIds.has(mod.id)} onChange={toggleModule(mod.id)} disableGutters elevation={0} sx={{ bgcolor: "transparent", "&:before": { display: "none" }, borderBottom: `1px solid ${DIVIDER}`, "&:last-of-type": { borderBottom: "none" } }}>
-          <AccordionSummary expandIcon={<ExpandMoreRoundedIcon sx={{ color: MUTED, fontSize: 20 }} />} sx={{ px: 0, py: 0, minHeight: "unset", bgcolor: "transparent", transition: "background-color 0.15s ease", "&:hover": { bgcolor: alpha(PRIMARY, 0.03) }, "& .MuiAccordionSummary-content": { my: 2, alignItems: "center", gap: 1.25 } }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: MUTED, minWidth: 24, flexShrink: 0 }}>{String(index + 1).padStart(2, "0")}</Typography>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 700, fontSize: 14, color: TEXT, lineHeight: 1.35 }}>{mod.title}</Typography>
-              <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>{mod.lessonCount} bài học</Typography>
-            </Box>
-          </AccordionSummary>
+      {modules.map((mod, index) => {
+        const isOpen = expandedIds.has(mod.id);
+        return (
+          <div
+            key={mod.id}
+            className="border-b border-slate-100 last:border-b-0"
+          >
+            {/* Module Header */}
+            <button
+              onClick={() => toggleModule(mod.id)}
+              className="w-full flex items-center gap-3 py-3 px-0 text-left transition-colors hover:bg-brand-50/30 rounded-lg -mx-1 px-1"
+            >
+              <span className="text-xs font-bold text-slate-400 min-w-[20px] shrink-0">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 leading-snug">{mod.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{mod.lessonCount} lessons</p>
+              </div>
+              <CaretDown
+                size={16}
+                weight="bold"
+                className={`text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+              />
+            </button>
 
-          <AccordionDetails sx={{ p: 0, pb: 1.25 }}>
-            {mod.description && (
-              <Box sx={{ pl: 4, pr: 0, pt: 0, pb: 1.5, borderBottom: mod.lessons.length > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none" }}>
-                <Typography sx={{ fontSize: 12.5, color: MUTED, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{mod.description}</Typography>
-              </Box>
+            {/* Module Content */}
+            {isOpen && (
+              <div className="pb-3 pl-9">
+                {mod.description && (
+                  <div className="pb-3 mb-1 border-b border-slate-50">
+                    <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">
+                      {mod.description}
+                    </p>
+                  </div>
+                )}
+                {mod.lessons.map((lesson, lessonIndex) => {
+                  const isLocked = !isEnrolled && !lesson.isPreview;
+                  return (
+                    <div
+                      key={lesson.id}
+                      className={`flex items-center gap-2 py-2.5 ${
+                        lessonIndex > 0 ? "border-t border-slate-50" : ""
+                      } ${isLocked ? "opacity-50" : ""} transition-colors ${
+                        isLocked ? "" : "hover:bg-brand-50/30 rounded-lg -mx-1 px-1"
+                      }`}
+                    >
+                      {isLocked ? (
+                        <Lock size={15} className="text-slate-400 shrink-0" />
+                      ) : (
+                        <LessonIcon type={lesson.type} />
+                      )}
+                      <span
+                        className={`flex-1 text-xs leading-snug ${
+                          isLocked ? "text-slate-500" : lesson.isCompleted ? "text-slate-900 font-semibold" : "text-slate-700"
+                        }`}
+                      >
+                        {lesson.title}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {lesson.isPreview && !isEnrolled && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200">
+                            Preview
+                          </span>
+                        )}
+                        {lesson.isCompleted && (
+                          <CheckCircle size={14} weight="fill" className="text-emerald-500" />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
-            {mod.lessons.map((lesson, lessonIndex) => {
-              const isLocked = !isEnrolled && !lesson.isPreview;
-              return (
-                <Box key={lesson.id} sx={{ display: "flex", alignItems: "center", gap: 1, pl: 4, pr: 0, py: 1.25, borderTop: lessonIndex > 0 ? `1px solid ${alpha(DIVIDER, 0.85)}` : "none", opacity: isLocked ? 0.5 : 1, transition: "background-color 0.15s ease", "&:hover": { bgcolor: isLocked ? "transparent" : alpha(PRIMARY, 0.03) } }}>
-                  {isLocked ? <LockOutlinedIcon sx={{ fontSize: 15, color: MUTED, flexShrink: 0 }} /> : <LessonIcon type={lesson.type} />}
-                  <Typography sx={{ flex: 1, fontSize: 13, color: isLocked ? MUTED : TEXT, fontWeight: lesson.isCompleted ? 600 : 400, lineHeight: 1.4 }}>{lesson.title}</Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
-                    {lesson.isPreview && !isEnrolled && <Chip label="Xem thử" size="small" sx={{ height: 18, fontSize: 10, fontWeight: 700, borderRadius: "99px", bgcolor: alpha(ACCENT, 0.1), color: ACCENT }} />}
-                    {lesson.isCompleted && <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14, color: "#047857" }} />}
-                  </Box>
-                </Box>
-              );
-            })}
-          </AccordionDetails>
-        </Accordion>
-      ))}
-    </Box>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -350,153 +418,181 @@ function RelatedCoursesSection({ course }) {
   const [relatedCourses, setRelatedCourses] = useState([]);
 
   useEffect(() => {
-    // Phải có thông tin khóa học hiện tại mới đi tìm các khóa liên quan
     if (!course?.categoryId || !course?.levelId) return;
 
     const fetchRelated = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const headers = user.userId ? { 'x-user-id': user.userId } : {};
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        const headers = user.userId ? { "x-user-id": user.userId } : {};
 
-        // Lấy tất cả khóa học
-        const res = await fetch('http://localhost:5000/api/courses/student', { headers });
+        const res = await fetch("http://localhost:5000/api/courses/student", { headers });
         const data = await res.json();
 
         if (data.success) {
-          // 0. Loại bỏ chính khóa học mà user đang xem ra khỏi danh sách
-          const allCourses = data.data.filter(c => String(c.CourseId) !== String(course.id));
-
-          // 1. Lọc khóa học khớp CẢ danh mục VÀ trình độ
-          let exactMatch = allCourses.filter(c =>
-            String(c.CategoryId) === String(course.categoryId) &&
-            String(c.LevelId) === String(course.levelId)
+          const allCourses = (data.data || []).filter(
+            (c) => String(c._id || c.courseId || c.CourseId) !== String(course.id)
           );
 
-          // 2. Lọc khóa học khớp 1 TRONG 2 (nhưng không lấy trùng với mảng ở bước 1)
-          let partialMatch = allCourses.filter(c =>
-            (String(c.CategoryId) === String(course.categoryId) || String(c.LevelId) === String(course.levelId)) &&
-            !exactMatch.some(e => String(e.CourseId) === String(c.CourseId))
+          let exactMatch = allCourses.filter(
+            (c) =>
+              String(c.categoryId || c.CategoryId) === String(course.categoryId) &&
+              String(c.levelId || c.LevelId) === String(course.levelId)
           );
 
-          // 3. Gộp lại và CHỈ LẤY TỐI ĐA 5 khóa học
+          let partialMatch = allCourses.filter(
+            (c) =>
+              (String(c.categoryId || c.CategoryId) === String(course.categoryId) ||
+                String(c.levelId || c.LevelId) === String(course.levelId)) &&
+              !exactMatch.some((e) => String(e._id || e.courseId || e.CourseId) === String(c._id || c.courseId || c.CourseId))
+          );
+
           let finalRelated = [...exactMatch, ...partialMatch].slice(0, 5);
           setRelatedCourses(finalRelated);
         }
       } catch (error) {
-        console.error("Lỗi lấy khóa học liên quan:", error);
+        console.error("Failed to fetch related courses:", error);
       }
     };
 
     fetchRelated();
   }, [course]);
 
-  // Nếu không tìm thấy khóa nào thì ẩn luôn khu vực này cho đẹp
   if (relatedCourses.length === 0) return null;
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <SectionTitle>Khóa học liên quan</SectionTitle>
-        <AppButton
-          variant="text"
-          sx={{ fontWeight: 600, color: PRIMARY }}
-          onClick={() => navigate(`/courses?category=${course.categoryId}&level=${course.levelId}`)}
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <SectionTitle>Related Courses</SectionTitle>
+        <button
+          onClick={() =>
+            navigate(`/courses?category=${course.categoryId}&level=${course.levelId}`)
+          }
+          className="text-sm font-semibold text-brand-600 hover:text-brand-800 transition-colors"
         >
-          Xem thêm
-        </AppButton>
-      </Box>
-      <Grid container spacing={2.5} alignItems="stretch">
+          View all
+        </button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {relatedCourses.map((c) => (
-          <Grid key={c.CourseId} size={{ xs: 12, sm: 6, md: 4 }} sx={{ display: "flex" }}>
-            <CourseCard
-              course={c}
-              sx={{ width: "100%" }}
-              onEnroll={() => navigate(buildCourseDetailPath(c.CourseId, searchParams))}
-              onContinueLearning={() => navigate(buildCourseDetailPath(c.CourseId, searchParams))}
-            />
-          </Grid>
+          <CourseCard
+            key={c._id || c.courseId || c.CourseId}
+            course={c}
+            onContinueLearning={() =>
+              navigate(buildCourseDetailPath(c._id || c.courseId || c.CourseId, searchParams))
+            }
+          />
         ))}
-      </Grid>
-    </Box>
+      </div>
+    </div>
   );
 }
-
 
 export default function CourseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // 1. Tạo State lưu dữ liệu
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 2. Tự động gọi API lấy data từ Database khi mở trang
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const headers = user.userId ? { 'x-user-id': user.userId } : {};
-        // Vẫn dùng API cũ vì Backend của bạn chỉ có API này cho Detail
-        const res = await fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=course`, { headers });
-        const result = await res.json();
-        // Kiểm tra xem có dữ liệu không
-        if (result.success && result.data && result.data.length > 0) {
-          const dbData = result.data[0];
-          // 1. Xử lý ảnh lỗi và tạo URL tuyệt đối
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        const headers = user.userId ? { "x-user-id": user.userId } : {};
+
+        // Fetch course info
+        const [courseRes, contentRes] = await Promise.all([
+          fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=course`, { headers }),
+          fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=content`, { headers }),
+        ]);
+
+        const courseResult = await courseRes.json();
+        const contentResult = await contentRes.json();
+
+        if (courseResult.success && courseResult.data) {
+          const dbData = Array.isArray(courseResult.data) ? courseResult.data[0] : courseResult.data;
+          if (!dbData) {
+            setCourse(null);
+            return;
+          }
+
+          // Process thumbnail
           let courseImage = dbData.thumbnail || dbData.Thumbnail;
-          if (courseImage === 'CHƯA FIX LỖI ẢNH' || !courseImage) {
-            courseImage = null;
+          if (courseImage === "CHUA FIX LOI ANH" || !courseImage) {
+            const seed = dbData._id || dbData.courseId || dbData.CourseId || "course";
+            courseImage = `https://picsum.photos/seed/${seed}/640/360`;
           } else {
             let val = String(courseImage).trim();
-            if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image') || val.startsWith('blob:')) {
+            if (
+              val.startsWith("http://") ||
+              val.startsWith("https://") ||
+              val.startsWith("data:image") ||
+              val.startsWith("blob:")
+            ) {
               courseImage = val;
             } else {
-              courseImage = `http://localhost:5000${val.startsWith('/') ? val : '/' + val}`;
+              courseImage = `http://localhost:5000${val.startsWith("/") ? val : "/" + val}`;
             }
           }
-          // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
+
+          // Process content data (paths/nodes)
+          let paths = dbData.paths || dbData.Paths || [];
+          let totalLessons = dbData.totalLessons || dbData.TotalLessons || 0;
+
+          // If content endpoint returned data, use it for richer path/node info
+          if (contentResult.success && contentResult.data?.Paths) {
+            paths = contentResult.data.Paths;
+            totalLessons = contentResult.data.TotalLessons || totalLessons;
+          }
+
           const mappedCourse = {
-            id: dbData.CourseId,
-            title: dbData.CourseName,
-            description: dbData.Description,
-            shortDescription: dbData.Description,
+            id: dbData._id || dbData.courseId || dbData.CourseId,
+            title: dbData.courseName || dbData.CourseName,
+            description: dbData.description || dbData.Description,
+            shortDescription: dbData.description || dbData.Description,
             thumbnail: courseImage,
-            category: dbData.CategoryDisplayName,
-            categoryId: dbData.CategoryId,
-            level: dbData.LevelDisplayName,
-            levelId: dbData.LevelId,
-            instructor: dbData.InStructorName,
+            category: dbData.categoryDisplayName || dbData.CategoryDisplayName || dbData.categoryName || dbData.CategoryName,
+            categoryId: dbData.categoryId || dbData.CategoryId,
+            level: dbData.levelDisplayName || dbData.LevelDisplayName || dbData.levelName || dbData.LevelName,
+            levelId: dbData.levelId || dbData.LevelId,
+            instructor: dbData.instructorName || dbData.InstructorName || dbData.InStructorName,
             isEnrolled: Boolean(dbData.isEnrolled),
-            progress: dbData.progress,
-            lessonCount: dbData.TotalLessons || 0,
-            stageCount: dbData.Paths ? dbData.Paths.length : 0,
-            materialCount: dbData.TotalMaterials || 0,
-            updatedAt: dbData.UpdatedAt
-              ? new Date(dbData.UpdatedAt).toLocaleDateString("vi-VN")
-              : "—",
+            progress: dbData.progress || 0,
+            lessonCount: totalLessons,
+            stageCount: paths.length,
+            materialCount: dbData.totalMaterials || dbData.TotalMaterials || 0,
+            updatedAt: (dbData.updatedAt || dbData.UpdatedAt)
+              ? new Date(dbData.updatedAt || dbData.UpdatedAt).toLocaleDateString("vi-VN")
+              : "-",
             rating: 4.8,
             reviewCount: 154,
-            studentCount: 2000,
+            studentCount: dbData.studentCount || dbData.StudentCount || 2000,
             isFree: true,
             prerequisites: [],
-            modules: (dbData.Paths || []).map((path) => ({
-              id: path.PathId,
-              title: path.PathName,
-              description: path.Description ?? "",
-              lessonCount: path.Nodes ? path.Nodes.length : 0,
-              lessons: (path.Nodes || []).map((node, index) => ({
-                id: node.NodeId,
-                title: node.NodeName,
-                type: "video",
-                isPreview: index === 0,
-                isCompleted: false,
-              })),
-            })),
+            modules: paths.map((path) => {
+              const nodes = path.Nodes || path.nodes || [];
+              return {
+                id: path._id || path.pathId || path.PathId,
+                title: path.pathName || path.PathName,
+                description: (path.description || path.Description) ?? "",
+                lessonCount: nodes.length,
+                lessons: nodes.map((node, index) => ({
+                  id: node._id || node.nodeId || node.NodeId,
+                  title: node.nodeName || node.NodeName,
+                  type: "video",
+                  isPreview: index === 0,
+                  isCompleted: node.IsCompleted || false,
+                })),
+              };
+            }),
           };
           setCourse(mappedCourse);
+        } else {
+          setCourse(null);
         }
       } catch (err) {
-        console.error("Lỗi khi tải dữ liệu:", err);
+        console.error("Failed to load course data:", err);
+        setCourse(null);
       } finally {
         setLoading(false);
       }
@@ -504,31 +600,28 @@ export default function CourseDetailPage() {
     fetchCourseData();
   }, [id]);
 
-  // 3. Xử lý logic lúc bấm nút
   const handleEnroll = async () => {
-    // Đọc thông tin đăng nhập trực tiếp từ localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (!user.userId) {
-      toast.error('Vui lòng đăng nhập để đăng ký khóa học.');
+      toast.error("Please log in to enroll in this course.");
       return;
     }
 
     try {
-      // Gọi sang API service
       const res = await enrollCourseApi({
         userId: Number(user.userId),
-        courseId: Number(course.id) // Lấy đúng ID của khóa học đang xem
+        courseId: String(course.id),
       });
 
       if (res && (res.success === true || res.ok === true)) {
-        toast.success(`Đã đăng ký khóa "${course.title}" thành công!`);
-        setCourse(prev => ({ ...prev, isEnrolled: true }));
+        toast.success(`Enrolled in "${course.title}" successfully!`);
+        setCourse((prev) => ({ ...prev, isEnrolled: true }));
       } else {
-        toast.error(res?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+        toast.error(res?.message || "Enrollment failed. Please try again.");
       }
     } catch (error) {
-      console.error("Lỗi xử lý đăng ký:", error);
-      toast.error("Hệ thống gặp lỗi khi xử lý đăng ký.");
+      console.error("Enrollment error:", error);
+      toast.error("System error while processing enrollment.");
     }
   };
 
@@ -536,44 +629,93 @@ export default function CourseDetailPage() {
     navigate(`/my-courses/${id}/learn`);
   };
 
-  // Nếu đang loading thì hiện chữ chờ
   if (loading) {
-    return <Box sx={{ py: 10, textAlign: "center" }}>Đang tải khóa học...</Box>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-4 bg-slate-100 rounded w-48" />
+          <div className="h-8 bg-slate-100 rounded w-3/4" />
+          <div className="h-4 bg-slate-100 rounded w-1/2" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 bg-slate-100 rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Nếu API lỗi hoặc không tìm thấy khóa học
   if (!course) {
-    return <Box sx={{ py: 10, textAlign: "center" }}>Không tìm thấy khóa học này</Box>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 mb-4">
+          <BookOpen size={32} weight="light" className="text-slate-300" />
+        </div>
+        <h2 className="text-lg font-semibold text-slate-900 mb-1">Course not found</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          This course may have been removed or the link is invalid.
+        </p>
+        <button
+          onClick={() => navigate("/courses")}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-800 transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Back to courses
+        </button>
+      </div>
+    );
   }
 
   return (
-    <Box sx={{ maxWidth: 1280, mx: "auto" }}>
-      <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: { xs: 0, lg: 6 }, alignItems: "flex-start" }}>
-
-        <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start">
+        {/* Main Content */}
+        <div className="flex-1 min-w-0 w-full">
           <CourseIntro course={course} isEnrolled={course.isEnrolled} />
 
-          <Box sx={{ display: { xs: "block", lg: "none" }, mt: 3, mb: 1 }}>
-            <CourseStickyCTA course={course} isEnrolled={course.isEnrolled} onEnroll={handleEnroll} onContinue={handleContinue} sticky={false} />
-          </Box>
+          {/* Mobile CTA */}
+          <div className="block lg:hidden mt-5 mb-3">
+            <CourseStickyCTA
+              course={course}
+              isEnrolled={course.isEnrolled}
+              onEnroll={handleEnroll}
+              onContinue={handleContinue}
+              sticky={false}
+            />
+          </div>
 
-          <Box sx={{ mt: 5 }}>
-            <CurriculumSection modules={course.modules} isEnrolled={course.isEnrolled} course={course} />
-          </Box>
+          {/* Curriculum */}
+          <div className="mt-8">
+            <CurriculumSection
+              modules={course.modules}
+              isEnrolled={course.isEnrolled}
+              course={course}
+            />
+          </div>
 
-          <Box sx={{ mt: 5 }}>
+          {/* Comments */}
+          <div className="mt-8">
             <CourseCommentsSection courseId={course.id} isEnrolled={course.isEnrolled} />
-          </Box>
-        </Box>
+          </div>
+        </div>
 
-        <Box sx={{ display: { xs: "none", lg: "block" }, width: 380, flexShrink: 0 }}>
-          <CourseStickyCTA course={course} isEnrolled={course.isEnrolled} onEnroll={handleEnroll} onContinue={handleContinue} sticky />
-        </Box>
-      </Box>
+        {/* Desktop Sidebar CTA */}
+        <div className="hidden lg:block w-[360px] shrink-0">
+          <CourseStickyCTA
+            course={course}
+            isEnrolled={course.isEnrolled}
+            onEnroll={handleEnroll}
+            onContinue={handleContinue}
+            sticky
+          />
+        </div>
+      </div>
 
-      <Box sx={{ mt: { xs: 4, sm: 5 } }}>
+      {/* Related Courses */}
+      <div className="mt-10 sm:mt-12">
         <RelatedCoursesSection course={course} />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

@@ -1,250 +1,98 @@
-import { Box, Divider, Link, Typography, useTheme } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
-import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
-import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
-import Logo from "@/shared/ui/Logo";
+import { Link } from "react-router-dom";
+import {
+  GraduationCap,
+  Envelope,
+  MapPin,
+} from "@phosphor-icons/react";
 
-const BG = "#111827";
-const TITLE = "#F8FAFC";
-const TEXT = "#E5E7EB";
-const MUTED = "#94A3B8";
-const LINK = "#CBD5E1";
-const LINK_HOVER = "#22D3EE";
-const BORDER = "rgba(255,255,255,0.08)";
-
-const NAV_LINKS = [
-  { label: "Trang chủ", to: "/home" },
-  { label: "Khóa học", to: "/courses" },
-  { label: "Tin tức", to: "/news" },
-];
-
-const SUPPORT_LINKS = [
-  { label: "Về chúng tôi", href: "#" },
-  { label: "Hỗ trợ", href: "#" },
-  { label: "Điều khoản", href: "#" },
-  { label: "Chính sách bảo mật", href: "#" },
-];
-
-const linkSx = {
-  color: LINK,
-  fontSize: 13,
-  fontWeight: 500,
-  lineHeight: 1.5,
-  textDecoration: "none",
-  transition: "color 0.18s ease",
-  display: "inline-block",
-  "&:hover": {
-    color: LINK_HOVER,
-    textDecoration: "none",
-  },
+const FOOTER_LINKS = {
+  "Platform": [
+    { label: "Courses", path: "/courses" },
+    { label: "My Learning", path: "/my-courses" },
+    { label: "Practice", path: "/practice" },
+    { label: "Pricing", path: "/pricing" },
+  ],
+  "Support": [
+    { label: "Help Center", path: "/help" },
+    { label: "Contact Us", path: "/contact" },
+    { label: "FAQ", path: "/faq" },
+    { label: "Report Issue", path: "/report" },
+  ],
+  "Company": [
+    { label: "About Us", path: "/about" },
+    { label: "Blog", path: "/blog" },
+    { label: "Careers", path: "/careers" },
+    { label: "Privacy Policy", path: "/privacy" },
+  ],
 };
 
-const disabledLinkSx = {
-  color: MUTED,
-  fontSize: 13,
-  fontWeight: 500,
-  lineHeight: 1.5,
-  opacity: 0.75,
-};
-
-function ColumnTitle({ children }) {
+export default function Footer() {
   return (
-    <Typography
-      component="h3"
-      sx={{
-        fontSize: 14,
-        fontWeight: 700,
-        color: TITLE,
-        lineHeight: 1.4,
-        mb: 1.5,
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-function FooterLinkList({ items, ariaLabel }) {
-  return (
-    <Box
-      component="nav"
-      aria-label={ariaLabel}
-      sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}
-    >
-      {items.map((item) => {
-        if (item.to) {
-          return (
-            <Link key={item.label} component={RouterLink} to={item.to} sx={linkSx}>
-              {item.label}
-            </Link>
-          );
-        }
-        if (item.href) {
-          return (
-            <Link key={item.label} href={item.href} sx={linkSx}>
-              {item.label}
-            </Link>
-          );
-        }
-        return (
-          <Typography key={item.label} component="span" sx={disabledLinkSx}>
-            {item.label}
-            <Typography
-              component="span"
-              sx={{ ml: 0.75, fontSize: 11, fontWeight: 500, color: MUTED }}
-            >
-              (Đang cập nhật)
-            </Typography>
-          </Typography>
-        );
-      })}
-    </Box>
-  );
-}
-
-export default function Footer({
-  brand = "S.T.A.R Learning Path",
-  year = new Date().getFullYear(),
-}) {
-  const theme = useTheme();
-
-  return (
-    <Box
-      id="app-site-footer"
-      component="footer"
-      sx={{
-        width: "100%",
-        position: "relative",
-        ml: 0,
-        flexShrink: 0,
-        bgcolor: BG,
-        borderTop: `1px solid ${BORDER}`,
-        boxSizing: "border-box",
-        zIndex: theme.zIndex.appBar,
-      }}
-    >
-      <Box
-        sx={{
-          width: "100%",
-          maxWidth: 1280,
-          mx: "auto",
-          boxSizing: "border-box",
-          pt: { xs: 3, sm: 4, md: 5 },
-          pb: { xs: 2.5, sm: 3 },
-          px: { xs: 2, sm: 3 },
-        }}
-      >
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "1fr 1fr",
-              md: "minmax(0, 1.5fr) repeat(3, minmax(0, 1fr))",
-            },
-            gap: { xs: 2.5, sm: 3, md: 4 },
-          }}
-        >
+    <footer className="bg-slate-950 border-t border-slate-800/50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
           {/* Brand */}
-          <Box sx={{ minWidth: 0, gridColumn: { xs: "1 / -1", sm: "1 / -1", md: "auto" } }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.5 }}>
-              <Logo height={24} to="/home" />
-              <Typography
-                sx={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: TEXT,
-                  lineHeight: 1.3,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {brand}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                color: MUTED,
-                fontSize: 13,
-                lineHeight: 1.6,
-                maxWidth: 360,
-                mb: 2,
-              }}
-            >
-              Nền tảng học tiếng Anh theo lộ trình cá nhân hóa, giúp bạn theo dõi tiến độ và học
-              tập hiệu quả hơn.
-            </Typography>
-           
-          </Box>
+          <div className="col-span-2 md:col-span-1">
+            <Link to="/home" className="flex items-center gap-2.5 mb-4 group">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-105">
+                <GraduationCap size={20} weight="fill" className="text-white" />
+              </div>
+              <span className="text-lg font-extrabold text-white tracking-tight">
+                S.T.A.R
+              </span>
+            </Link>
+            <p className="text-sm text-slate-400 leading-relaxed max-w-xs mb-4">
+              Personalized English learning platform. Master English with interactive lessons, expert mentors, and real progress tracking.
+            </p>
+            <div className="flex flex-col gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2">
+                <MapPin size={14} />
+                <span>Ho Chi Minh City, Vietnam</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Envelope size={14} />
+                <span>hello@star-english.com</span>
+              </div>
+            </div>
+          </div>
 
-          {/* Navigation */}
-          <Box>
-            <ColumnTitle>Liên kết</ColumnTitle>
-            <FooterLinkList items={NAV_LINKS} ariaLabel="Liên kết điều hướng" />
-          </Box>
+          {/* Link Groups */}
+          {Object.entries(FOOTER_LINKS).map(([group, links]) => (
+            <div key={group}>
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
+                {group}
+              </h4>
+              <ul className="space-y-2">
+                {links.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      to={link.path}
+                      className="text-sm text-slate-500 hover:text-white transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
 
-          {/* Support */}
-          <Box>
-            <ColumnTitle>Hỗ trợ</ColumnTitle>
-            <FooterLinkList items={SUPPORT_LINKS} ariaLabel="Liên kết hỗ trợ" />
-          </Box>
-
-          {/* Contact */}
-          <Box>
-            <ColumnTitle>Liên hệ</ColumnTitle>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <EmailOutlinedIcon sx={{ fontSize: 16, color: MUTED, mt: 0.25, flexShrink: 0 }} />
-                <Box>
-                  <Typography sx={{ color: MUTED, fontSize: 12, lineHeight: 1.4, mb: 0.25 }}>
-                    Email hỗ trợ
-                  </Typography>
-                  <Typography sx={{ color: LINK, fontSize: 13, lineHeight: 1.5 }}>
-                    Đang cập nhật
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                <PhoneOutlinedIcon sx={{ fontSize: 16, color: MUTED, mt: 0.25, flexShrink: 0 }} />
-                <Box>
-                  <Typography sx={{ color: MUTED, fontSize: 12, lineHeight: 1.4, mb: 0.25 }}>
-                    Hotline
-                  </Typography>
-                  <Typography sx={{ color: LINK, fontSize: 13, lineHeight: 1.5 }}>
-                    Đang cập nhật
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-
-        <Divider sx={{ my: { xs: 2.5, sm: 3 }, borderColor: BORDER }} />
-
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            alignItems: { xs: "flex-start", sm: "center" },
-            justifyContent: "space-between",
-            gap: 1,
-            pt: 0.5,
-          }}
-        >
-          <Typography sx={{ color: MUTED, fontSize: 13, fontWeight: 500, lineHeight: 1.5 }}>
-            © {year} {brand}
-          </Typography>
-          <Typography
-            sx={{
-              color: MUTED,
-              fontSize: 12,
-              fontWeight: 500,
-              lineHeight: 1.5,
-            }}
-          >
-            Made for English learners
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+        {/* Bottom */}
+        <div className="mt-10 sm:mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-slate-500">
+            &copy; {new Date().getFullYear()} S.T.A.R English Learning Platform. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="text-xs text-slate-500 hover:text-white transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="text-xs text-slate-500 hover:text-white transition-colors">
+              Terms of Service
+            </Link>
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 }

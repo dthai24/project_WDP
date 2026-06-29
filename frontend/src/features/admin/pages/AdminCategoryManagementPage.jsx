@@ -138,10 +138,10 @@ export default function AdminCategoryManagementPage() {
     try {
       const res = await createCategory(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể tạo danh mục');
+        toast.error(res.message ?? 'Khong the tao danh muc');
         return;
       }
-      toast.success('Đã tạo danh mục mới');
+      toast.success('Da tao danh muc moi');
       setCreateOpen(false);
       await loadCategories();
     } finally {
@@ -156,10 +156,10 @@ export default function AdminCategoryManagementPage() {
     try {
       const res = await updateCategory(editingCategory.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật danh mục');
+        toast.error(res.message ?? 'Khong the cap nhat danh muc');
         return;
       }
-      toast.success('Đã cập nhật danh mục');
+      toast.success('Da cap nhat danh muc');
       setEditOpen(false);
       setEditingCategory(null);
       await loadCategories();
@@ -169,25 +169,16 @@ export default function AdminCategoryManagementPage() {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          justifyContent: 'space-between',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1.5, sm: 2 },
-          mb: 2.5,
-        }}
-      >
-        <Box>
-          <Typography sx={{ fontSize: { xs: 22, sm: 24 }, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
-            Quản lý danh mục
-          </Typography>
-          <Typography sx={{ fontSize: 14, color: MUTED, mt: 0.5, lineHeight: 1.55, maxWidth: 560 }}>
-            Thêm, chỉnh sửa và sắp xếp danh mục khóa học (IELTS, Giao tiếp, Phát âm...).
-          </Typography>
-        </Box>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
+            Quan ly danh muc
+          </h1>
+          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
+            Them, chinh sua va sap xep danh muc khoa hoc (IELTS, Giao tiep, Phat am...).
+          </p>
+        </div>
 
         <AppButton
           startIcon={<AddRoundedIcon />}
@@ -206,9 +197,9 @@ export default function AdminCategoryManagementPage() {
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}
         >
-          Tạo danh mục
+          Tao danh muc
         </AppButton>
-      </Box>
+      </div>
 
       <AdminCatalogToolbar
         statusFilter={queryState.status}
@@ -218,7 +209,7 @@ export default function AdminCategoryManagementPage() {
         showReset={showReset}
         onReset={handleReset}
         totalCount={filteredCategories.length}
-        countLabel="danh mục"
+        countLabel="danh muc"
         CountIcon={CategoryOutlinedIcon}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
@@ -264,6 +255,6 @@ export default function AdminCategoryManagementPage() {
         saving={saving}
         existingNames={existingNames}
       />
-    </Box>
+    </div>
   );
 }

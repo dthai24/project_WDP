@@ -1,44 +1,48 @@
-const { sql } = require('../config/db.js');
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
+const UserCourse = require('./MongoDB/UserCourse');
+const User = require('./MongoDB/User');
+const UserNode = require('./MongoDB/UserNode');
 
 const getStudentsInCourseModel = async (courseId) => {
-    const request = new sql.Request();
+  const enrollments = await UserCourse.find({ courseId: new ObjectId(courseId) })
+    .populate('userId', 'fullName email')
+    .sort({ enrollmentDate: -1 })
+    .lean();
 
-    request.input('courseId', sql.Int, Number(courseId));
-
-    const result = await request.query(`
-    SELECT 
-      uc.UserId,
-      u.FullName,
-      u.Email,
-      uc.CourseId,
-      uc.ProgressPercentage,
-      uc.EnrollmentDate
-    FROM [LearningPath_Base].[dbo].[User_Courses] uc
-    INNER JOIN [LearningPath_Base].[dbo].[Users] u
-      ON uc.UserId = u.UserId
-    WHERE uc.CourseId = @courseId
-    ORDER BY uc.EnrollmentDate DESC
-  `);
-
-    return result.recordset;
+  return enrollments.map(uc => ({
+    UserId: uc.userId?._id?.toString() || uc.userId?.toString(),
+    FullName: uc.userId?.fullName || '',
+    Email: uc.userId?.email || '',
+    CourseId: uc.courseId?.toString(),
+    ProgressPercentage: uc.progressPercentage,
+    EnrollmentDate: uc.enrollmentDate,
+  }));
 };
+
 async function getCompletionDates(userId) {
-  const request = new sql.Request();
+  const nodes = await UserNode.find({
+    userId: new ObjectId(userId),
+    isCompleted: true,
+  })
+    .select('completedAt')
+    .lean();
 
-  request.input("userId", sql.Int, userId);
+  const dateSet = new Set();
+  nodes.forEach(n => {
+    if (n.completedAt) {
+      const d = new Date(n.completedAt);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dateSet.add(`${y}-${m}-${day}`);
+    }
+  });
 
-  const result = await request.query(`
-        SELECT DISTINCT CONVERT(varchar(10), CompletedAt, 23) AS d
-        FROM User_Nodes
-        WHERE UserId = @userId
-          AND IsCompleted = 1
-        ORDER BY d DESC;
-    `);
-
-  return result.recordset.map((r) => r.d);
+  return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
 }
 
 module.exports = {
-    getStudentsInCourseModel,
-    getCompletionDates
-}
+  getStudentsInCourseModel,
+  getCompletionDates,
+};

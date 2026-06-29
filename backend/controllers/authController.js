@@ -1,5 +1,11 @@
-const { sql } = require('../config/db');
+const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const User = require('../models/MongoDB/User');
+const Role = require('../models/MongoDB/Role');
+const UserRole = require('../models/MongoDB/UserRole');
+const OtpVerification = require('../models/MongoDB/OtpVerification');
+const UserCategory = require('../models/MongoDB/UserCategory');
+const Level = require('../models/MongoDB/Level');
 
 const ROLE_STUDENT = 'Student';
 
@@ -115,31 +121,19 @@ const login = async (req, res) => {
   try {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Lấy thông tin user
-    const userReq = new sql.Request();
-    userReq.input('email', sql.NVarChar(150), normalizedEmail);
-    const userResult = await userReq.query('SELECT UserId, FullName, Email, Phone, Password, IsFirstLogin FROM Users WHERE Email = @email');
-
-    if (userResult.recordset.length === 0)
+    // 1. Lấy thông tin user từ MongoDB
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user)
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng.' });
 
-    const user = userResult.recordset[0];
-
-    if (user.Password !== password)
+    // So sánh mật khẩu (plain text hoặc bcrypt)
+    const isPasswordValid = user.password === password;
+    if (!isPasswordValid)
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng.' });
 
     // 2. Lấy danh sách roles của user từ User_Roles
-    const roleReq = new sql.Request();
-    roleReq.input('userId', sql.Int, user.UserId);
-    const roleResult = await roleReq.query(`
-      SELECT r.RoleName
-      FROM   User_Roles ur
-      JOIN   Roles      r ON r.RoleId = ur.RoleId
-      WHERE  ur.UserId = @userId
-    `);
-
-    // Mảng tên roles, ví dụ: ['Admin'] | ['Student'] | ['Mentor']
-    let roles = roleResult.recordset.map((r) => r.RoleName);
+    const userRoles = await UserRole.find({ userId: user._id }).populate('roleId', 'roleName');
+    let roles = userRoles.map((ur) => ur.roleId?.roleName).filter(Boolean);
 
     // Tài khoản đăng ký qua OTP là Student; fallback nếu chưa có bản ghi User_Roles
     if (roles.length === 0) {
@@ -150,12 +144,12 @@ const login = async (req, res) => {
       success: true,
       message: 'Đăng nhập thành công!',
       user: {
-        userId: user.UserId,
-        fullName: user.FullName,
-        email: user.Email,
-        phone: user.Phone,
-        isFirstLogin: user.IsFirstLogin === true || user.IsFirstLogin === 1,
-        roles,  // [] nếu Student chưa được gán role, hoặc ['Admin'] / ['Mentor']
+        userId: user._id.toString(),
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        isFirstLogin: user.isFirstLogin === true,
+        roles,
       },
     });
   } catch (err) {
@@ -184,41 +178,31 @@ const register = async (req, res) => {
 
   try {
     // Kiểm tra email đã tồn tại trong Users
-    const emailCheckReq = new sql.Request();
-    emailCheckReq.input('email', sql.NVarChar(150), email);
-    const emailCheck = await emailCheckReq.query('SELECT UserId FROM Users WHERE Email = @email');
-    if (emailCheck.recordset.length > 0)
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail)
       return res.status(409).json({ success: false, message: 'Email này đã được đăng ký. Vui lòng đăng nhập.' });
 
     // Kiểm tra phone đã tồn tại trong Users
-    const phoneCheckReq = new sql.Request();
-    phoneCheckReq.input('phone', sql.NVarChar(20), phone);
-    const phoneCheck = await phoneCheckReq.query('SELECT UserId FROM Users WHERE Phone = @phone');
-    if (phoneCheck.recordset.length > 0)
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone)
       return res.status(409).json({ success: false, message: 'Số điện thoại này đã được đăng ký.' });
 
     // Xoá OTP cũ nếu có
-    const deleteReq = new sql.Request();
-    deleteReq.input('email', sql.NVarChar(150), email);
-    await deleteReq.query('DELETE FROM OTP_Verification WHERE Email = @email');
+    await OtpVerification.deleteMany({ email });
 
     // Tạo OTP + thời hạn 3 phút
     const otpCode = generateOTP();
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
-    const insertReq = new sql.Request();
-    insertReq.input('email', sql.NVarChar(150), email);
-    insertReq.input('fullName', sql.NVarChar(100), fullName);
-    insertReq.input('phone', sql.NVarChar(20), phone);
-    insertReq.input('password', sql.NVarChar(255), password);
-    insertReq.input('dateOfBirth', sql.Date, new Date(dateOfBirth));
-    insertReq.input('otpCode', sql.NVarChar(6), otpCode);
-    insertReq.input('expiresAt', sql.DateTime, expiresAt);
-
-    await insertReq.query(`
-      INSERT INTO OTP_Verification (Email, FullName, Phone, Password, DateOfBirth, OtpCode, ExpiresAt)
-      VALUES (@email, @fullName, @phone, @password, @dateOfBirth, @otpCode, @expiresAt)
-    `);
+    await OtpVerification.create({
+      email,
+      fullName,
+      phone,
+      password,
+      dateOfBirth: new Date(dateOfBirth),
+      otpCode,
+      expiresAt,
+    });
 
     const { emailSent } = await sendOtpEmail({
       to: email,
@@ -251,65 +235,43 @@ const verifyOtp = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Email và mã OTP không được để trống.' });
 
   try {
-    const findReq = new sql.Request();
-    findReq.input('email', sql.NVarChar(150), email.toLowerCase().trim());
-    findReq.input('otpCode', sql.NVarChar(6), otpCode.trim());
+    const normalizedEmail = email.toLowerCase().trim();
+    const record = await OtpVerification.findOne({
+      email: normalizedEmail,
+      otpCode: otpCode.trim(),
+    });
 
-    const result = await findReq.query(
-      'SELECT * FROM OTP_Verification WHERE Email = @email AND OtpCode = @otpCode'
-    );
-
-    if (result.recordset.length === 0)
+    if (!record)
       return res.status(400).json({ success: false, message: 'Mã OTP không đúng. Vui lòng kiểm tra lại.' });
 
-    const record = result.recordset[0];
-
-    if (new Date() > new Date(record.ExpiresAt))
+    if (new Date() > new Date(record.expiresAt))
       return res.status(400).json({
         success: false,
         message: 'Mã OTP đã hết hạn (quá 3 phút). Vui lòng yêu cầu mã mới.',
       });
 
-    const transaction = new sql.Transaction();
-    await transaction.begin();
+    // Tạo user mới trong MongoDB
+    const newUser = await User.create({
+      fullName: record.fullName,
+      email: record.email,
+      phone: record.phone,
+      password: record.password,
+      dateOfBirth: record.dateOfBirth,
+      isFirstLogin: true,
+      isActive: true,
+    });
 
-    try {
-      // Chèn user mới vào Users
-      const insertReq = new sql.Request(transaction);
-      insertReq.input('fullName', sql.NVarChar(100), record.FullName);
-      insertReq.input('email', sql.NVarChar(150), record.Email);
-      insertReq.input('phone', sql.NVarChar(20), record.Phone);
-      insertReq.input('password', sql.NVarChar(255), record.Password);
-      insertReq.input('dateOfBirth', sql.Date, record.DateOfBirth);
-
-      const userResult = await insertReq.query(`
-        INSERT INTO Users (FullName, Email, Phone, Password, DateOfBirth)
-        OUTPUT INSERTED.UserId
-        VALUES (@fullName, @email, @phone, @password, @dateOfBirth)
-      `);
-
-      const newUserId = userResult.recordset[0]?.UserId;
-
-      if (newUserId) {
-        const assignRoleReq = new sql.Request(transaction);
-        assignRoleReq.input('userId', sql.Int, newUserId);
-        assignRoleReq.input('roleName', sql.NVarChar(50), ROLE_STUDENT);
-        await assignRoleReq.query(`
-          INSERT INTO User_Roles (UserId, RoleId)
-          SELECT @userId, RoleId FROM Roles WHERE RoleName = @roleName
-        `);
-      }
-
-      // Xoá bản ghi OTP
-      const deleteReq = new sql.Request(transaction);
-      deleteReq.input('email', sql.NVarChar(150), record.Email);
-      await deleteReq.query('DELETE FROM OTP_Verification WHERE Email = @email');
-
-      await transaction.commit();
-    } catch (dbErr) {
-      await transaction.rollback();
-      throw dbErr;
+    // Gán role Student
+    const studentRole = await Role.findOne({ roleName: ROLE_STUDENT });
+    if (studentRole) {
+      await UserRole.create({
+        userId: newUser._id,
+        roleId: studentRole._id,
+      });
     }
+
+    // Xoá bản ghi OTP
+    await OtpVerification.deleteOne({ _id: record._id });
 
     return res.json({
       success: true,
@@ -320,51 +282,35 @@ const verifyOtp = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
   }
 };
+
 // ============================================================
 // POST /api/auth/onboarding
 // Lấy kết quả 3 câu hỏi (Category, Level, Goal) lưu vào Users
 // ============================================================
-// POST /api/auth/onboarding
 const saveOnboarding = async (req, res) => {
-  // Thay vì lấy 1 categoryId, ta lấy mảng categoryIds
   const { userId, categoryIds, levelId, goal } = req.body;
 
-  // Validate kiểm tra mảng rỗng
   if (!userId || !categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0 || !levelId || !goal)
     return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin (chọn ít nhất 1 Lĩnh vực).' });
 
   try {
-    const userCheck = new sql.Request();
-    userCheck.input('userId', sql.Int, userId);
-    const userResult = await userCheck.query('SELECT UserId FROM Users WHERE UserId = @userId');
-
-    if (userResult.recordset.length === 0)
+    const user = await User.findById(userId);
+    if (!user)
       return res.status(404).json({ success: false, message: 'Người dùng không tồn tại.' });
 
-    // 1. Cập nhật bảng Users (Chỉ còn Level, Goal)
-    const updateReq = new sql.Request();
-    updateReq.input('userId', sql.Int, userId);
-    updateReq.input('levelId', sql.Int, levelId);
-    updateReq.input('goal', sql.NVarChar(100), goal);
-    await updateReq.query(`
-      UPDATE Users 
-      SET CurrentLevelId = @levelId, 
-          LearningGoal = @goal, 
-          IsFirstLogin = 0 
-      WHERE UserId = @userId
-    `);
+    // 1. Cập nhật bảng Users (Level, Goal)
+    await User.findByIdAndUpdate(userId, {
+      currentLevelId: levelId,
+      learningGoal: goal,
+      isFirstLogin: false,
+    });
 
     // 2. Xóa dữ liệu cũ trong bảng User_Categories (nếu có)
-    const deleteReq = new sql.Request();
-    deleteReq.input('userId', sql.Int, userId);
-    await deleteReq.query('DELETE FROM User_Categories WHERE UserId = @userId');
+    await UserCategory.deleteMany({ userId });
 
-    // 3. Vòng lặp Insert các lĩnh vực đã chọn vào bảng User_Categories
+    // 3. Insert các lĩnh vực đã chọn vào bảng User_Categories
     for (const catId of categoryIds) {
-      const insertReq = new sql.Request();
-      insertReq.input('userId', sql.Int, userId);
-      insertReq.input('categoryId', sql.Int, catId);
-      await insertReq.query('INSERT INTO User_Categories (UserId, CategoryId) VALUES (@userId, @categoryId)');
+      await UserCategory.create({ userId, categoryId: catId });
     }
 
     return res.json({ success: true, message: 'Đã lưu kết quả khảo sát thành công!' });
@@ -373,8 +319,6 @@ const saveOnboarding = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
   }
 };
-
-
 
 // ============================================================
 // POST /api/auth/forgot-password
@@ -389,30 +333,23 @@ const forgotPassword = async (req, res) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
-    const findReq = new sql.Request();
-    findReq.input('email', sql.NVarChar(150), normalizedEmail);
-    const result = await findReq.query('SELECT UserId, FullName FROM Users WHERE Email = @email');
-
-    if (result.recordset.length === 0)
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user)
       return res.status(404).json({ success: false, message: 'Email này chưa được đăng ký trong hệ thống.' });
 
-    const user = result.recordset[0];
     const otpCode = generateOTP();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
 
     // Lưu OTP vào cột ResetOtpCode, ResetOtpExpires trên bảng Users
-    const updateReq = new sql.Request();
-    updateReq.input('email', sql.NVarChar(150), normalizedEmail);
-    updateReq.input('otpCode', sql.NVarChar(6), otpCode);
-    updateReq.input('expiresAt', sql.DateTime, expiresAt);
-    await updateReq.query(
-      'UPDATE Users SET ResetOtpCode = @otpCode, ResetOtpExpires = @expiresAt WHERE Email = @email'
+    await User.updateOne(
+      { email: normalizedEmail },
+      { resetOtpCode: otpCode, resetOtpExpires: expiresAt }
     );
 
     const { emailSent } = await sendOtpEmail({
       to: normalizedEmail,
       subject: '🔑 Mã OTP đặt lại mật khẩu - S.T.A.R Learning Path',
-      html: buildResetPasswordHtml(user.FullName, otpCode),
+      html: buildResetPasswordHtml(user.fullName, otpCode),
       otpCode,
       label: 'đặt lại mật khẩu',
     });
@@ -449,32 +386,23 @@ const resetPassword = async (req, res) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
-    const findReq = new sql.Request();
-    findReq.input('email', sql.NVarChar(150), normalizedEmail);
-    const result = await findReq.query(
-      'SELECT UserId, ResetOtpCode, ResetOtpExpires FROM Users WHERE Email = @email'
-    );
-
-    if (result.recordset.length === 0)
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user)
       return res.status(404).json({ success: false, message: 'Email này không tồn tại trong hệ thống.' });
 
-    const user = result.recordset[0];
-
-    if (!user.ResetOtpCode)
+    if (!user.resetOtpCode)
       return res.status(400).json({ success: false, message: 'Không có yêu cầu đặt lại mật khẩu nào. Vui lòng thử lại từ đầu.' });
 
-    if (user.ResetOtpCode !== otp.trim())
+    if (user.resetOtpCode !== otp.trim())
       return res.status(400).json({ success: false, message: 'Mã OTP không đúng. Vui lòng kiểm tra lại.' });
 
-    if (new Date() > new Date(user.ResetOtpExpires))
+    if (new Date() > new Date(user.resetOtpExpires))
       return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn (quá 5 phút). Vui lòng yêu cầu mã mới.' });
 
     // Cập nhật mật khẩu và xoá OTP
-    const updateReq = new sql.Request();
-    updateReq.input('email', sql.NVarChar(150), normalizedEmail);
-    updateReq.input('newPassword', sql.NVarChar(255), newPassword);
-    await updateReq.query(
-      'UPDATE Users SET Password = @newPassword, ResetOtpCode = NULL, ResetOtpExpires = NULL, UpdatedAt = GETDATE() WHERE Email = @email'
+    await User.updateOne(
+      { email: normalizedEmail },
+      { password: newPassword, resetOtpCode: null, resetOtpExpires: null }
     );
 
     return res.json({

@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Breadcrumbs,
   CircularProgress,
-  Link as MuiLink,
   Typography,
 } from '@mui/material';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseCreateForm from '@/features/mentor/components/course/MentorCourseCreateForm';
@@ -194,26 +192,15 @@ export default function MentorEditCoursePage() {
   );
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Breadcrumbs separator="/" sx={{ mb: 2, '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 } }}>
-        <MuiLink component={Link} to="/home" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-          Trang chủ
-        </MuiLink>
-        <MuiLink component={Link} to="/mentor/courses" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-          Khóa học của tôi
-        </MuiLink>
-        <MuiLink component={Link} to={`/mentor/courses/${courseId}`} underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-          Chi tiết khóa học
-        </MuiLink>
-        <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>Chỉnh sửa thông tin</Typography>
-      </Breadcrumbs>
-
-      <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 0.5, maxWidth: 720 }}>
-        Chỉnh sửa thông tin khóa học
-      </Typography>
-      <Typography sx={{ ...PAGE_DESCRIPTION_SX, mb: 2.5 }}>
-        Cập nhật tên, mô tả và thông tin cơ bản của khóa học. Để chỉnh sửa nội dung bài học, hãy vào mục nội dung khóa học.
-      </Typography>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: '#0F172A' }}>
+          Chỉnh sửa thông tin khóa học
+        </h1>
+        <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: '#64748B' }}>
+          Cập nhật tên, mô tả và thông tin cơ bản của khóa học. Để chỉnh sửa nội dung bài học, hãy vào mục nội dung khóa học.
+        </p>
+      </div>
 
       <Box sx={{ maxWidth: 1080 }}>
         <MentorCourseCreateForm
@@ -230,6 +217,6 @@ export default function MentorEditCoursePage() {
           footer={footer}
         />
       </Box>
-    </Box>
+    </div>
   );
 }

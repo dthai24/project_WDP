@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { sql } = require('../config/db');
+const User = require('../models/MongoDB/User');
 
 /* ─── Multer storage: saves avatars to backend/uploads/avatars/ ──────────── */
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'avatars');
@@ -43,16 +43,8 @@ module.exports.uploadAvatar = async (req, res) => {
     // The static /uploads route is registered in server.js (see instructions).
     const avatarUrl = `/uploads/avatars/${req.file.filename}`;
 
-    // Persist the avatar URL into the Users table
-    const updateReq = new sql.Request();
-    updateReq.input('userId', sql.Int, userId);
-    updateReq.input('avatarUrl', sql.NVarChar(500), avatarUrl);
-
-    await updateReq.query(`
-      UPDATE Users
-      SET AvatarUrl = @avatarUrl, UpdatedAt = GETDATE()
-      WHERE UserId = @userId
-    `);
+    // Persist the avatar URL into the Users collection
+    await User.findByIdAndUpdate(userId, { avatarUrl, updatedAt: new Date() });
 
     return res.status(200).json({
       success: true,

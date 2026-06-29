@@ -24,36 +24,38 @@ const {
 } = require('../controllers/adminController');
 
 
+const UserRole = require('../models/MongoDB/UserRole');
+const Role = require('../models/MongoDB/Role');
+
 // Middleware kiểm tra quyền Admin
-const adminOnly = (req, res, next) => {
-  // Lấy userId từ protect middleware
-  const userId = req.user?.userId;
-  if (!userId) {
-    return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+const adminOnly = async (req, res, next) => {
+  try {
+    // Lấy userId từ protect middleware
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+    }
+    // Kiểm tra role Admin từ header hoặc có thể query DB
+    // Đơn giản: dùng header x-role-name hoặc query DB
+    const roleName = req.headers['x-role-name'];
+    if (roleName && roleName.toLowerCase() === 'admin') {
+      return next();
+    }
+    // Fallback: kiểm tra từ MongoDB
+    const adminRole = await Role.findOne({ roleName: { $regex: /^admin$/i } });
+    if (!adminRole) {
+      return res.status(500).json({ success: false, message: 'Lỗi cấu hình hệ thống' });
+    }
+    const userRole = await UserRole.findOne({ userId, roleId: adminRole._id });
+    if (userRole) {
+      return next();
+    } else {
+      return res.status(403).json({ success: false, message: 'Không có quyền Admin' });
+    }
+  } catch (err) {
+    console.error('[AdminOnly Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
   }
-  // Kiểm tra role Admin từ header hoặc có thể query DB
-  // Đơn giản: dùng header x-role-name hoặc query DB
-  const roleName = req.headers['x-role-name'];
-  if (roleName && roleName.toLowerCase() === 'admin') {
-    return next();
-  }
-  // Fallback: kiểm tra từ DB
-  const { sql } = require('../config/db');
-  new sql.Request()
-    .input('userId', sql.Int, userId)
-    .query(`
-      SELECT 1 FROM User_Roles ur
-      JOIN Roles r ON ur.RoleId = r.RoleId
-      WHERE ur.UserId = @userId AND r.RoleName = 'Admin'
-    `)
-    .then(result => {
-      if (result.recordset.length > 0) {
-        next();
-      } else {
-        return res.status(403).json({ success: false, message: 'Không có quyền Admin' });
-      }
-    })
-    .catch(() => res.status(500).json({ success: false, message: 'Lỗi server' }));
 };
 
 // ========== DASHBOARD ==========

@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { sql } = require('../config/db');
+const User = require('../models/MongoDB/User');
 
 const protect = async (req, res, next) => {
   try {
@@ -12,7 +12,6 @@ const protect = async (req, res, next) => {
       userId = decoded.userId;
     } 
     // 2. Fallback check for session-based custom header or body/query payload 
-    // (since frontend currently stores raw user object in sessionStorage)
     else if (req.headers['x-user-id']) {
       userId = req.headers['x-user-id'];
     } else if (req.body && req.body.userId) {
@@ -25,17 +24,14 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Unauthorized. No token or userId provided.' });
     }
 
-    // Verify user exists in DB
-    const checkReq = new sql.Request();
-    checkReq.input('userId', sql.Int, parseInt(userId, 10));
-    const result = await checkReq.query('SELECT UserId FROM Users WHERE UserId = @userId');
-
-    if (result.recordset.length === 0) {
+    // Verify user exists in MongoDB
+    const user = await User.findById(userId);
+    if (!user) {
       return res.status(401).json({ success: false, message: 'Unauthorized. User does not exist.' });
     }
 
     // Attach user to request
-    req.user = { userId: parseInt(userId, 10) };
+    req.user = { userId: user._id.toString(), _id: user._id };
     next();
   } catch (err) {
     console.error('[AuthMiddleware Error]', err.message);

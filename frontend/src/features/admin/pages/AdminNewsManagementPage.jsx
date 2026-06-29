@@ -147,25 +147,16 @@ export default function AdminNewsManagementPage() {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          justifyContent: 'space-between',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1.5, sm: 2 },
-          mb: 2.5,
-        }}
-      >
-        <Box>
-          <Typography sx={{ fontSize: { xs: 22, sm: 24 }, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
-            Quản lý tin tức
-          </Typography>
-          <Typography sx={{ fontSize: 14, color: MUTED, mt: 0.5, lineHeight: 1.55, maxWidth: 560 }}>
-            Quản lý tin tức hiển thị trên trang chủ.
-          </Typography>
-        </Box>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
+            Quan ly tin tuc
+          </h1>
+          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
+            Quan ly tin tuc hien thi tren trang chu.
+          </p>
+        </div>
 
         <AppButton
           startIcon={<AddRoundedIcon />}
@@ -184,9 +175,9 @@ export default function AdminNewsManagementPage() {
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}
         >
-          Thêm tin
+          Them tin
         </AppButton>
-      </Box>
+      </div>
 
       <AdminNewsToolbar
         categoryFilter={queryState.category}
@@ -225,6 +216,6 @@ export default function AdminNewsManagementPage() {
         onClose={handleEditDialogClose}
         onSaved={handleEditSaved}
       />
-    </Box>
+    </div>
   );
 }
