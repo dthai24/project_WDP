@@ -116,47 +116,143 @@ function isRetryableGeminiError(error) {
   );
 }
 
+function getMockResponse(userMessage, dbKnowledge = "") {
+  const msg = userMessage.toLowerCase().trim();
+  
+  let baseReply = "";
+  if (msg.includes("hello") || msg.includes("hi") || msg.includes("xin chào") || msg.includes("xin chao") || msg.includes("chào")) {
+    baseReply = `👋 **Xin chào!** Em là **EM Assistant** - trợ lý học tập thông minh của English Master.
+
+Em có thể giúp gì cho Anh/Chị hôm nay?
+- 🚀 **Tìm hiểu về các lộ trình học** (TOEIC, IELTS, Giao tiếp)
+- 🎮 **Các trò chơi luyện phản xạ từ vựng**
+- 💎 **Thông tin các gói nâng cấp Pro và Premium**
+
+Anh/Chị muốn bắt đầu tìm hiểu nội dung nào ạ?`;
+  } else if (msg.includes("toeic") || msg.includes("ets")) {
+    baseReply = `🚀 **Lộ trình ôn thi TOEIC 2026** tại English Master được thiết kế tối ưu:
+- 📊 Chia theo mục tiêu rõ ràng: **TOEIC 450+**, **650+**, và **850+**.
+- 📚 Học từ vựng thông minh qua **Flashcard** kết hợp thuật toán lặp lại ngắt quãng **SRS**.
+- 📝 Làm quiz kiểm tra thực tế, có giải thích đáp án chi tiết.
+
+Anh/Chị có đang ôn thi TOEIC để chuẩn bị ra trường hay đi làm không ạ?`;
+  } else if (msg.includes("ielts") || msg.includes("academic")) {
+    baseReply = `🎓 **Lộ trình học IELTS 7.5+** cực kỳ toàn diện:
+- 📚 Học từ vựng chuyên sâu (Academic & General Vocabulary) theo chủ đề thông dụng.
+- 🎙️ Thành viên **Premium** được mở khóa kho **Podcast** độc quyền từ giáo viên bản xứ.
+- 💬 Chat 1-1 trực tiếp với **Mentor** IELTS 8.5 để sửa bài Writing và Speaking.
+
+Anh/Chị đang hướng tới mục tiêu Band điểm bao nhiêu ạ?`;
+  } else if (msg.includes("giao tiếp") || msg.includes("giao tiep") || msg.includes("oxford")) {
+    baseReply = `🗣️ **Khóa học tiếng Anh Giao tiếp & Phổ thông**:
+- 🌍 Thiết kế chuẩn theo danh sách **Oxford 3000** từ cấp độ A1 đến C1.
+- 🎧 Tập trung phát triển phản xạ nghe - nói tự nhiên thông qua các trò chơi tương tác như **Memory Match** hay **Listening Challenge**.
+
+Anh/Chị muốn cải thiện kỹ năng nói hay phản xạ nghe trước tiên ạ?`;
+  } else if (msg.includes("gói") || msg.includes("goi") || msg.includes("nâng cấp") || msg.includes("nang cap") || msg.includes("pro") || msg.includes("premium") || msg.includes("giá") || msg.includes("gia") || msg.includes("nạp") || msg.includes("nap")) {
+    baseReply = `💎 **English Master cung cấp các gói học linh hoạt**:
+1. 🌟 **Gói Free**: Làm quiz 3 bài/ngày, xem thử tập đầu tiên của Video & Podcast bài giảng.
+2. ⭐️ **Gói Pro (99k/tháng)**: Không giới hạn làm quiz, mở khóa 100% kho tài liệu học tập, toàn bộ Video hoạt hình và Podcast bài giảng.
+3. 💎 **Gói Premium (399k/tháng)**: Bao gồm toàn bộ tính năng Pro + **Trợ lý AI Mentor 24/7** + đặt lịch **Chat 1-1 trực tiếp với Mentor**.
+
+Anh/Chị có thể nâng cấp trực tiếp tại trang **Bảng Giá** bất cứ lúc nào ạ!`;
+  } else if (msg.includes("mentor") || msg.includes("giáo viên") || msg.includes("giao vien")) {
+    baseReply = `👥 **Mạng lưới Mentor chuyên môn cao tại English Master**:
+- Cung cấp dịch vụ hỗ trợ **học tập 1-1** trực tiếp cho các học viên gói Premium.
+- Được xác thực năng lực nghiêm ngặt (chỉ Mentor có chứng chỉ IELTS cao mới được dạy Test Prep).
+- Anh/Chị có thể gửi hồ sơ ứng tuyển làm Mentor tại mục **Trở thành Mentor** trên trang chủ nhé!`;
+  } else {
+    baseReply = `🤖 **Trợ lý EM Assistant xin ghi nhận câu hỏi của Anh/Chị!**
+Hiện tại hệ thống AI đang hoạt động ở chế độ tương tác thông minh dự phòng. 
+
+Em có thể hỗ trợ nhanh về các chủ đề:
+- 🚀 Lộ trình ôn tập **TOEIC**, **IELTS** hay **Giao tiếp**.
+- 💎 Các tính năng độc quyền của gói **Pro** và **Premium**.
+- 👥 Thông tin kết nối với **Mentor**.
+
+Anh/Chị có thể viết rõ từ khóa cần tìm hiểu (ví dụ: "lộ trình TOEIC", "gói Premium",...) để em phản hồi chính xác nhất nhé!`;
+  }
+
+  if (dbKnowledge) {
+    baseReply += `\n\n*(Thông tin bổ sung từ dữ liệu lớp học:)*${dbKnowledge}`;
+  }
+  return baseReply;
+}
+
 // Chat endpoint
 router.post("/chat", async (req, res) => {
+  const { message, history } = req.body;
+  const cleanMessage = typeof message === "string" ? message.trim() : "";
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+
+  if (!cleanMessage) {
+    return res.status(400).json({ error: "Message is required" });
+  }
+
+  // Dynamic database knowledge retrieval
+  let dbKnowledge = "";
   try {
-    const { message, history } = req.body;
-    const cleanMessage = typeof message === "string" ? message.trim() : "";
-    const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+    const courses = await Course.find({ status: "Active" }).select("title category instructor mentorName price description");
+    const categories = await Category.find().select("name code description");
 
-    if (!cleanMessage) {
-      return res.status(400).json({ error: "Message is required" });
+    if (courses.length > 0 || categories.length > 0) {
+      dbKnowledge = "\n";
+      if (categories.length > 0) {
+        dbKnowledge += "• Danh mục: " + categories.map(c => `${c.name} (${c.code})`).join(", ") + "\n";
+      }
+      if (courses.length > 0) {
+        dbKnowledge += "• Khóa học hiện có: " + courses.map(c => `"${c.title}" (${c.instructor || c.mentorName || "Mentor"})`).join(", ") + "\n";
+      }
     }
+  } catch (dbErr) {
+    console.warn("DB knowledge fetch skipped:", dbErr.message);
+  }
 
-    if (!geminiApiKey || geminiApiKey.includes("your_gemini_api_key_here")) {
-      return res.status(500).json({
-        error: "Missing GEMINI_API_KEY",
-        message: "Vui lòng thêm GEMINI_API_KEY vào file server/.env và restart server.",
+  const isStream = req.body.stream === true;
+
+  // Fallback to Mock Response if API key is missing/placeholder/invalid format
+  const isInvalidKey = !geminiApiKey || 
+                       geminiApiKey.includes("your_gemini_api_key_here") || 
+                       geminiApiKey.startsWith("AQ."); // "AQ." is Vertex or invalid format for Generative API
+
+  if (isInvalidKey) {
+    console.warn("⚠️ Using Mock AI Assistant due to missing or invalid Gemini API Key format.");
+    const replyText = getMockResponse(cleanMessage, dbKnowledge);
+
+    if (isStream) {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      
+      // Simulate typing speed for streaming feel
+      const words = replyText.split(" ");
+      let currentIdx = 0;
+      
+      const interval = setInterval(() => {
+        if (currentIdx < words.length) {
+          const chunk = words.slice(currentIdx, currentIdx + 3).join(" ") + " ";
+          res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+          currentIdx += 3;
+        } else {
+          res.write("data: [DONE]\n\n");
+          res.end();
+          clearInterval(interval);
+        }
+      }, 80);
+      return;
+    } else {
+      return res.json({
+        success: true,
+        reply: replyText,
+        timestamp: new Date()
       });
     }
+  }
 
-    // Dynamic database knowledge retrieval
-    let dbKnowledge = "";
-    try {
-      const courses = await Course.find({ status: "Active" }).select("title category instructor mentorName price description");
-      const categories = await Category.find().select("name code description");
-
-      if (courses.length > 0 || categories.length > 0) {
-        dbKnowledge = "\n\nDỮ LIỆU THỰC TẾ TỪ DATABASE:\n";
-        if (categories.length > 0) {
-          dbKnowledge += "Danh mục khóa học hiện có:\n" + categories.map(c => `- ${c.name} (${c.code}): ${c.description || ""}`).join("\n") + "\n";
-        }
-        if (courses.length > 0) {
-          dbKnowledge += "Danh sách khóa học và giáo viên:\n" + courses.map(c => `- Khóa học: "${c.title}" thuộc danh mục ${c.category}. Giảng viên: ${c.instructor || c.mentorName || "Chưa rõ"}. Giá: ${c.price ? c.price.toLocaleString("vi-VN") + " VND" : "Miễn phí"}. Mô tả: ${c.description || ""}`).join("\n") + "\n";
-        }
-      }
-    } catch (dbErr) {
-      console.warn("DB knowledge fetch skipped:", dbErr.message);
-    }
-
+  try {
     console.log("📤 Sending to Gemini API...");
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const isStream = req.body.stream === true;
     let result;
     let resultStream;
     let usedModel = GEMINI_MODEL;
@@ -252,6 +348,44 @@ router.post("/chat", async (req, res) => {
   } catch (error) {
     console.error("❌ Chat API Error:", error);
     
+    // Auth / Credential error fallback
+    const isAuthError = error.message?.includes("invalid authentication credentials") || 
+                        error.message?.includes("API_KEY_INVALID") || 
+                        error.message?.includes("API key not valid") || 
+                        error.message?.includes("401");
+                        
+    if (isAuthError) {
+      console.warn("⚠️ API error was Auth-related. Falling back to Mock AI Assistant.");
+      const replyText = getMockResponse(cleanMessage, dbKnowledge);
+      
+      if (isStream) {
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        
+        const words = replyText.split(" ");
+        let currentIdx = 0;
+        const interval = setInterval(() => {
+          if (currentIdx < words.length) {
+            const chunk = words.slice(currentIdx, currentIdx + 3).join(" ") + " ";
+            res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+            currentIdx += 3;
+          } else {
+            res.write("data: [DONE]\n\n");
+            res.end();
+            clearInterval(interval);
+          }
+        }, 80);
+        return;
+      } else {
+        return res.json({
+          success: true,
+          reply: replyText,
+          timestamp: new Date()
+        });
+      }
+    }
+
     res.status(500).json({ 
       error: mapGeminiError(error),
       details: error.toString()

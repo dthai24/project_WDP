@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { BookOpen, Clock, Star, TrendingUp, Flame, Award, Play, ChevronRight, Search, Filter, GraduationCap, Video, FileText, HelpCircle, CheckCircle2, BarChart3, Calendar, Zap, Target, ArrowRight, Sparkles, Users, Globe, Layers, Brain, ChevronLeft, Trophy, Shield } from "lucide-react";
 import { allCourses, categories, enrolledCourses, getStreakData, getWeekHistory, STREAK_MILESTONES } from "../../services/data";
 import StreakTracker from "../../components/common/StreakTracker";
@@ -8,7 +9,6 @@ export default function StudentDashboard({ onNavigate }) {
   const [showStreak, setShowStreak] = useState(false);
   const streakData = getStreakData();
   const weekHistory = getWeekHistory();
-
 
   const featuredCourses = allCourses.slice(0, 4);
   const recommendedCourses = allCourses.slice(4, 6);
@@ -23,36 +23,43 @@ export default function StudentDashboard({ onNavigate }) {
 
           <div className="relative z-10 space-y-4">
             <h1 className="text-3xl md:text-4xl font-black tracking-tight">
-              Hoc tieng Anh thong minh hon
+              Học tiếng Anh thông minh hơn
             </h1>
             <p className="text-base text-white/80 max-w-xl font-medium">
-              Kham pha khoa hoc, hoc qua video, doc tai lieu va lam quiz de cung co kien thuc
+              Khám phá khóa học, học qua video, đọc tài liệu và làm quiz để củng cố kiến thức
             </p>
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 onClick={() => onNavigate("course-list")}
                 className="bg-white text-primary px-6 py-3 rounded-2xl font-bold text-sm hover:bg-rose-50 transition-all shadow-xl active:scale-[0.97] flex items-center gap-2"
               >
                 <GraduationCap className="w-4 h-4" />
-                <span>Kham pha khoa hoc</span>
+                <span>Khám phá khóa học</span>
               </button>
               <button
                 onClick={() => onNavigate("my-learning")}
                 className="bg-white/15 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-white/25 transition-all backdrop-blur-sm flex items-center gap-2"
               >
                 <BookOpen className="w-4 h-4" />
-                <span>Khoa hoc cua toi</span>
+                <span>Khóa học của tôi</span>
               </button>
+              <Link
+                to="/become-mentor"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-orange-500/20 active:scale-[0.97] flex items-center gap-2"
+              >
+                <Award className="w-4 h-4" />
+                <span>Đăng ký làm Mentor</span>
+              </Link>
             </div>
           </div>
 
           {/* Stats */}
           <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { value: `${allCourses.length}+`, label: "Khoa hoc", icon: BookOpen },
-              { value: "12.000+", label: "Hoc vien", icon: Users },
-              { value: "4.8", label: "Danh gia", icon: Star },
-              { value: "95%", label: "Hai long", icon: TrendingUp },
+              { value: `${allCourses.length}+`, label: "Khóa học", icon: BookOpen },
+              { value: "12.000+", label: "Học viên", icon: Users },
+              { value: "4.8", label: "Đánh giá", icon: Star },
+              { value: "95%", label: "Hài lòng", icon: TrendingUp },
             ].map((stat, i) => {
               const Icon = stat.icon;
               return (
@@ -79,11 +86,11 @@ export default function StudentDashboard({ onNavigate }) {
               <span className="text-lg font-black">{streakData.currentStreak}</span>
             </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-text-primary">Chuoi hoc tap</p>
+              <p className="text-xs font-bold text-text-primary">Chuỗi học tập</p>
               <p className="text-[10px] text-text-muted">
                 {streakData.currentStreak > 0
-                  ? `Duy tri ${streakData.currentStreak} ngay lien tiep`
-                  : "Bat dau chuoi hoc tap hom nay"}
+                  ? `Duy trì ${streakData.currentStreak} ngày liên tiếp`
+                  : "Bắt đầu chuỗi học tập hôm nay"}
               </p>
             </div>
           </div>
@@ -115,7 +122,7 @@ export default function StudentDashboard({ onNavigate }) {
         {/* Categories */}
 
         <div className="space-y-4">
-          <h2 className="text-lg font-black text-text-primary tracking-tight">Danh muc khoa hoc</h2>
+          <h2 className="text-lg font-black text-text-primary tracking-tight">Danh mục khóa học</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <button
               onClick={() => setActiveCategory("all")}
@@ -125,10 +132,9 @@ export default function StudentDashboard({ onNavigate }) {
                   : "bg-white text-text-secondary border-border/60 hover:border-primary/30 hover:text-primary"
               }`}
             >
-              Tat ca
+              Tất cả
             </button>
             {categories.map((cat) => {
-              const IconComponent = cat.icon ? eval(cat.icon) : BookOpen;
               return (
                 <button
                   key={cat.id}
@@ -150,12 +156,12 @@ export default function StudentDashboard({ onNavigate }) {
         {/* Featured Courses */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-text-primary tracking-tight">Khoa hoc noi bat</h2>
+            <h2 className="text-lg font-black text-text-primary tracking-tight">Khóa học nổi bật</h2>
             <button
               onClick={() => onNavigate("course-list")}
               className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
             >
-              <span>Xem tat ca</span>
+              <span>Xem tất cả</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -188,7 +194,7 @@ export default function StudentDashboard({ onNavigate }) {
                   <div className="flex items-center gap-3 text-[9px] font-semibold text-text-muted">
                     <span className="flex items-center gap-1">
                       <Video className="w-3 h-3" />
-                      {course.lessons} bai
+                      {course.lessons} bài
                     </span>
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3" />
@@ -196,11 +202,11 @@ export default function StudentDashboard({ onNavigate }) {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {course.hours} gio
+                      {course.hours} giờ
                     </span>
                   </div>
                   <button className="w-full mt-2 py-2 rounded-xl text-[10px] font-bold bg-primary/5 text-primary border border-primary/10 hover:bg-primary hover:text-white transition-all">
-                    Xem chi tiet
+                    Xem chi tiết
                   </button>
                 </div>
               </div>
@@ -213,7 +219,7 @@ export default function StudentDashboard({ onNavigate }) {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black text-text-primary tracking-tight flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-500" />
-              <span>Khoa hoc danh cho ban</span>
+              <span>Khoá học dành cho bạn</span>
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -244,7 +250,7 @@ export default function StudentDashboard({ onNavigate }) {
                   <div className="flex items-center gap-3 text-[9px] font-semibold text-text-muted">
                     <span className="flex items-center gap-1">
                       <Video className="w-3 h-3" />
-                      {course.lessons} bai
+                      {course.lessons} bài
                     </span>
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3" />
@@ -252,18 +258,18 @@ export default function StudentDashboard({ onNavigate }) {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {course.hours} gio
+                      {course.hours} giờ
                     </span>
                   </div>
                   <div className="bg-primary/5 rounded-xl px-3 py-2 border border-primary/10">
                     <p className="text-[9px] font-semibold text-primary flex items-center gap-1">
                       <Sparkles className="w-3 h-3" />
-                      Phu hop voi trinh do cua ban
+                      Phù hợp với trình độ của bạn
                     </p>
                   </div>
                   <button className="w-full mt-1 py-2.5 rounded-xl text-[10px] font-bold bg-primary text-white hover:bg-primary-dark transition-all flex items-center justify-center gap-1">
                     <Play className="w-3 h-3" />
-                    <span>Bat dau hoc</span>
+                    <span>Bắt đầu học</span>
                   </button>
                 </div>
               </div>
@@ -277,9 +283,9 @@ export default function StudentDashboard({ onNavigate }) {
           <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-black/15 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center sm:text-left">
-              <h3 className="text-2xl font-black tracking-tight">Tiep tuc hoc tap</h3>
+              <h3 className="text-2xl font-black tracking-tight">Tiếp tục học tập</h3>
               <p className="text-sm text-white/70 max-w-md">
-                Xem lai tien do hoc tap, tiep tuc bai hoc dang do va kham pha them nhieu kien thuc moi.
+                Xem lại tiến độ học tập, tiếp tục bài học dang dở và khám phá thêm nhiều kiến thức mới.
               </p>
             </div>
             <button
@@ -287,7 +293,7 @@ export default function StudentDashboard({ onNavigate }) {
               className="bg-white text-primary px-8 py-4 rounded-2xl font-bold text-sm hover:bg-rose-50 transition-all shadow-xl active:scale-[0.97] flex items-center gap-2 shrink-0"
             >
               <BookOpen className="w-4 h-4" />
-              <span>Xem khoa hoc cua toi</span>
+              <span>Xem khóa học của tôi</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

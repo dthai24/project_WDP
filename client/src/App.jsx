@@ -30,12 +30,12 @@ export default function App() {
     userRole === "Admin" ||
     currentUser.email === "admin@gmail.com" ||
     currentUser.email === "minh@gmail.com" ||
-    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))
+    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleName === "Admin"))
   );
 
   const isUserMentor = currentUser && (
     userRole === "Mentor" ||
-    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleId === 2 || r.roleName === "Mentor"))
+    (Array.isArray(currentUser.roles) && currentUser.roles.some(r => r.roleName === "Mentor"))
   );
 
   const shouldShowChatbot = !isUserAdmin && !isUserMentor;

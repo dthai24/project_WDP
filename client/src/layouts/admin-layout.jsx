@@ -65,7 +65,7 @@ const AdminLayout = () => {
   // Fetch unread count for the notification bell
   const fetchUnreadCount = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications/unread-count`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/mentor/applications/unread-count`);
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.count);
@@ -79,7 +79,7 @@ const AdminLayout = () => {
   const fetchHeaderNotifications = async () => {
     setNotifLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/mentor/applications`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/mentor/applications`);
       if (response.ok) {
         const data = await response.json();
         const mapped = data.slice(0, 8).map(app => ({
@@ -122,7 +122,7 @@ const AdminLayout = () => {
     }
 
     const isWhitelisted = user && (user.email === "admin@gmail.com" || user.email === "minh@gmail.com");
-    const isAdminUser = isWhitelisted || (user && (user.role === "Admin" || (Array.isArray(user.roles) && user.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))));
+    const isAdminUser = isWhitelisted || (user && (user.role === "Admin" || (Array.isArray(user.roles) && user.roles.some(r => r.roleName === "Admin"))));
     
     if (isWhitelisted && token) {
       return; // Grant bypass access, skip redirection and token clean-out
@@ -223,7 +223,7 @@ const AdminLayout = () => {
             <span className="text-white font-extrabold text-sm">L</span>
           </div>
           <div>
-            <h1 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">English Master</h1>
+            <h1 className="font-extrabold text-sm uppercase tracking-tight text-primary">English Master</h1>
             <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">System Admin</p>
           </div>
         </div>
@@ -272,7 +272,7 @@ const AdminLayout = () => {
                 <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-650 rounded-lg flex items-center justify-center shadow-md">
                   <span className="text-white font-extrabold text-sm">L</span>
                 </div>
-                <h1 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">English Master</h1>
+                <h1 className="font-extrabold text-sm uppercase tracking-tight text-primary">English Master</h1>
               </div>
               <button onClick={toggleMobileSidebar} className="text-slate-400 hover:text-slate-655">
                 <X className="w-5 h-5" />

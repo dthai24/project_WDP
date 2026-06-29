@@ -49,7 +49,7 @@ const isAdmin = (req, res, next) => {
   
   const hasAdminRole = req.user && (
     req.user.role === "Admin" ||
-    (req.user.roles && req.user.roles.some(r => r.roleId === 3 || r.roleName === "Admin")) ||
+    (req.user.roles && req.user.roles.some(r => r.roleName === "Admin")) ||
     req.user.email === "minh@gmail.com"
   );
   if (hasAdminRole) {
