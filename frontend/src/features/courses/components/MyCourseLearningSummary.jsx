@@ -27,7 +27,6 @@ function SummaryItem({ label, value }) {
 export default function MyCourseLearningSummary({
   learningCount = 0,
   completedCount = 0,
-  savedCount = 0,
   avgProgress = 0,
 }) {
   return (
@@ -41,7 +40,6 @@ export default function MyCourseLearningSummary({
     >
       <SummaryItem label="Đang học" value={learningCount} />
       <SummaryItem label="Hoàn thành" value={completedCount} />
-      <SummaryItem label="Đã lưu" value={savedCount} />
       <SummaryItem label="Tiến độ trung bình" value={`${avgProgress}%`} />
     </Box>
   );

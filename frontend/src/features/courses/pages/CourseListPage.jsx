@@ -5,7 +5,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import Loading from "@/shared/ui/Loading";
 import EmptyState from "@/shared/ui/EmptyState";
 import CourseCard from "@/features/courses/components/CourseCard";
-import useSavedCourses from "@/features/courses/hooks/useSavedCourses";
 import CourseCatalogToolbar from "@/features/courses/components/CourseCatalogToolbar";
 import CourseListPagination, { COURSE_LIST_PAGE_SIZE } from "@/features/courses/components/CourseListPagination";
 import { toast } from "@/shared/ui/Toast";
@@ -73,7 +72,6 @@ export default function CourseListPage() {
   const [categoriesList, setCategoriesList] = useState([]);
   const [levelsList, setLevelsList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { isSaved, toggleSave } = useSavedCourses();
 
   // Xử lý đồng bộ dữ liệu bộ lọc từ URL thanh địa chỉ
   const filters = useMemo(() => parseCourseListParams(searchParams), [searchParams]);
@@ -184,7 +182,7 @@ export default function CourseListPage() {
       return;
     }
     if (chip.type === "status") {
-      updateFilters({ statuses: filters.statuses.filter((v) => v !== chip.value), page: 1 });
+      updateFilters({ statuses: [], page: 1 });
     }
   };
 
@@ -244,8 +242,6 @@ export default function CourseListPage() {
               <Grid key={course.CourseId || index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                 <CourseCard
                   course={course}
-                  isSaved={isSaved(course.CourseId)}
-                  onToggleSave={() => toggleSave(course.CourseId)}
                   onContinueLearning={handleContinueLearning}
                 />
               </Grid>

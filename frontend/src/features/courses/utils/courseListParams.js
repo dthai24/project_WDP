@@ -105,7 +105,7 @@ export function parseCourseListParams(searchParams) {
   return {
     categories: parseMultiValues(searchParams, "category", null),
     levels: parseMultiValues(searchParams, "level", null),
-    statuses: parseMultiValues(searchParams, "status", VALID_STATUSES),
+    statuses: parseMultiValues(searchParams, "status", VALID_STATUSES).slice(0, 1),
     sort: VALID_SORT.has(sort) ? sort : COURSE_LIST_DEFAULTS.sort,
     page: parsePage(searchParams.get("page")),
     keyword: (searchParams.get("keyword") ?? "").trim(),
@@ -132,9 +132,9 @@ export function buildCourseListSearchParams(filters, currentSearchParams) {
     ...filters,
     categories: [...new Set(filters.categories ?? [])].filter((value) => value !== ""),
     levels: [...new Set(filters.levels ?? [])].filter((value) => value !== ""),
-    statuses: [...new Set(filters.statuses ?? [])].filter((value) =>
-      VALID_STATUSES.has(value)
-    ),
+    statuses: [...new Set(filters.statuses ?? [])]
+      .filter((value) => VALID_STATUSES.has(value))
+      .slice(0, 1),
     keyword: (filters.keyword ?? "").trim(),
     page: parsePage(String(filters.page ?? 1)),
     sort: VALID_SORT.has(filters.sort) ? filters.sort : COURSE_LIST_DEFAULTS.sort,

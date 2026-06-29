@@ -18,9 +18,9 @@ import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
 import AppButton from "@/shared/ui/AppButton";
 import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
-import CourseBookmarkButton from "./CourseBookmarkButton";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
 import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
+import { sanitizeThumbnail } from "@/shared/utils/thumbnailUtils";
 
 /* ─── HÀM HELPER ─── */
 const MUTED = "#64748B";
@@ -29,6 +29,22 @@ const TEXT = "#0F172A";
 function formatStudentCount(count) {
   if (count >= 1000) return count.toLocaleString("vi-VN");
   return String(count);
+}
+
+function countLessonsFromPaths(paths = []) {
+  return paths.reduce((sum, path) => sum + (path.Nodes?.length ?? 0), 0);
+}
+
+function countMaterialsFromPaths(paths = []) {
+  return paths.reduce(
+    (sum, path) =>
+      sum +
+      (path.Nodes ?? []).reduce(
+        (nodeSum, node) => nodeSum + (node.Materials?.length ?? 0),
+        0,
+      ),
+    0,
+  );
 }
 
 function normalizeCourse(course = {}) {
@@ -50,32 +66,34 @@ function normalizeCourse(course = {}) {
   } else if (currentProgress > 0) {
     checkEnrolled = true; // Đang học dở thì chắc chắn là đã đăng ký
   }
-  // 3. Xử lý ảnh Thumbnail bị lỗi
-  let courseImage = course.thumbnail || course.Thumbnail;
-  if (courseImage === 'CHƯA FIX LỖI ẢNH') {
-    courseImage = null;
-  }
+  // 3. Xử lý ảnh Thumbnail
+  const courseImage = sanitizeThumbnail(course.thumbnail || course.Thumbnail);
   // 4. Đếm số chương học (Paths)
+  const paths = course.Paths ?? [];
   let stageCount = 0;
-  if (course.Paths) {
-    stageCount = course.Paths.length;
+  if (paths.length > 0) {
+    stageCount = paths.length;
   } else if (course.TotalNodes != null) {
     stageCount = course.TotalNodes;
   }
+  const lessonCount =
+    course.TotalLessons != null ? course.TotalLessons : countLessonsFromPaths(paths);
+  const materialCount =
+    course.TotalMaterials != null ? course.TotalMaterials : countMaterialsFromPaths(paths);
   // 5. Gắn dữ liệu vào danh sách chuẩn bị trả về
   return {
     courseId: course.CourseId || course.id,
     courseName: course.CourseName || course.title || "Khóa học",
-    thumbnail: courseImage,
+    thumbnail: courseImage || null,
     category: course.CategoryDisplayName || course.CategoryName || course.Category || "",
     level: course.LevelDisplayName || course.LevelName || course.Level || "",
     instructor: course.Instructor || "S.T.A.R Mentor Team",
     rating: course.Rating || null,
     reviewCount: course.ReviewCount || 0,
     studentCount: course.StudentCount || 0,
-    totalLessons: course.TotalLessons || course.totalNodes || 0,
+    totalLessons: lessonCount,
     totalNodes: stageCount,
-    totalMaterials: course.TotalMaterials || 0,
+    totalMaterials: materialCount,
     progressPercentage: currentProgress,
     isEnrolled: checkEnrolled,
   };
@@ -142,12 +160,11 @@ function MetaInline({ icon: Icon, label }) {
 export default function CourseCard({
   course,
   variant = "catalog",
-  isSaved = false,
-  onToggleSave,
   onEnroll,
   onContinueLearning,
   onStartLearning,
   onClick,
+  sx: cardSx,
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -167,7 +184,7 @@ export default function CourseCard({
   const progressTextColor = getProgressColor(progressValue);
   const isCompleted = progressValue >= 100;
   const isNotStarted = isMyCourses && progressValue === 0;
-  const showProgress = isMyCourses || data.isEnrolled;
+  const showProgress = isMyCourses;
   const lastActivity = course.lastActivity;
 
   // Xử lý đường dẫn
@@ -180,6 +197,7 @@ export default function CourseCard({
       onClick={onClick}
       sx={{
         height: "100%",
+        width: "100%",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -198,6 +216,7 @@ export default function CourseCard({
           boxShadow: theme.ios18?.shadow?.md,
           borderColor: alpha(theme.palette.primary.main, 0.18),
         },
+        ...cardSx,
       }}
     >
       {/* 
@@ -224,13 +243,6 @@ export default function CourseCard({
           "&:last-child": { pb: 2 },
         }}
       >
-        {/* Nút lưu khóa học */}
-        {isCatalog && onToggleSave && (
-          <Box sx={{ position: "absolute", top: 10, right: 10, zIndex: 1 }}>
-            <CourseBookmarkButton isSaved={isSaved} onToggle={onToggleSave} />
-          </Box>
-        )}
-
         {/* Tiêu đề */}
         <Typography
           component={Link}
@@ -243,8 +255,12 @@ export default function CourseCard({
             color: TEXT,
             textDecoration: "none",
             cursor: "pointer",
-            pr: isCatalog && onToggleSave ? 4 : 0,
             transition: `color 0.18s ${theme.ios18?.transition}`,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            minHeight: "2.7em",
             "&:hover": { color: "primary.main" },
           }}
         >
@@ -252,9 +268,8 @@ export default function CourseCard({
         </Typography>
 
         {/* Đánh giá & Học viên */}
-        {(data.rating != null || data.studentCount > 0) && (
-          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.25 }}>
-            {data.rating != null && (
+        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.25, minHeight: 20 }}>
+          {data.rating != null && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
                 <StarRoundedIcon sx={{ fontSize: 15, color: "#F59E0B" }} />
                 <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1 }}>
@@ -278,20 +293,20 @@ export default function CourseCard({
                 </Typography>
               </Box>
             )}
+        </Box>
+
+        {/* Trình độ & Danh mục */}
+        {(data.level || data.category) && (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+            {data.level && <Chip label={data.level} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...levelStyle }} />}
+            {data.category && <Chip label={data.category} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...categoryStyle }} />}
           </Box>
         )}
 
-        {/* Trạng thái, Cấp độ, Danh mục */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-          <Chip label={statusChip.label} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }} />
-          {data.level && <Chip label={data.level} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...levelStyle }} />}
-          {data.category && <Chip label={data.category} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...categoryStyle }} />}
-        </Box>
-
-        {/* Thông tin Bài học, Chương, Học liệu */}
+        {/* Thông tin Chương, Bài học, Học liệu */}
         <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5, py: 0.5 }}>
-          <MetaInline icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
           <MetaInline icon={RouteOutlinedIcon} label={`${data.totalNodes} chương`} />
+          <MetaInline icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
           <MetaInline icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
         </Box>
 
@@ -305,6 +320,22 @@ export default function CourseCard({
             </Typography>
           </Box>
         )}
+
+        {/* Trạng thái */}
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+          <Chip
+            label={statusChip.label}
+            size="small"
+            sx={{
+              height: 26,
+              fontSize: 12.5,
+              fontWeight: 700,
+              borderRadius: "99px",
+              "& .MuiChip-label": { px: 1.25, lineHeight: 1.2 },
+              ...statusChip.sx,
+            }}
+          />
+        </Box>
 
         {/* Thanh Tiến độ (Nếu đang học) */}
         {showProgress && (

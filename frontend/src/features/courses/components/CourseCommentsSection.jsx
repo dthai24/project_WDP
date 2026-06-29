@@ -249,7 +249,7 @@ export default function CourseCommentsSection({ courseId, isEnrolled = false }) 
   return (
     <Box>
       <Box sx={{ pb: 2, mb: 0.5, borderBottom: `1px solid ${DIVIDER}` }}>
-        <SectionTitle sx={{ mb: 0.75 }}>Bình luận</SectionTitle>
+        <SectionTitle sx={{ mb: 0.75 }}>Bình luận & đánh giá</SectionTitle>
         <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
           {comments.length} bình luận
         </Typography>

@@ -105,6 +105,7 @@ export default function ThumbnailImage({
         position: 'relative',
         overflow: 'hidden',
         bgcolor: alpha(PRIMARY, 0.06),
+        flexShrink: 0,
         ...sx,
       }}
     >
@@ -113,7 +114,7 @@ export default function ThumbnailImage({
           icon={icon}
           label={label}
           iconSize={iconSize}
-          sx={placeholderSx}
+          sx={{ position: 'absolute', inset: 0, ...placeholderSx }}
         />
       ) : (
         <Box
@@ -124,6 +125,8 @@ export default function ThumbnailImage({
           decoding="async"
           onError={() => setFailed(true)}
           sx={{
+            position: 'absolute',
+            inset: 0,
             width: '100%',
             height: '100%',
             objectFit: 'cover',

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Breadcrumbs, Link as MuiLink, Stack, Typography, alpha, useTheme } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import MyCourseRow from "@/features/courses/components/MyCourseRow";
 import MyCoursesToolbar from "@/features/courses/components/MyCoursesToolbar";
@@ -10,7 +9,6 @@ import CourseListPagination, {
   COURSE_LIST_PAGE_SIZE,
 } from "@/features/courses/components/CourseListPagination";
 import EmptyState from "@/shared/ui/EmptyState";
-import useSavedCourses from "@/features/courses/hooks/useSavedCourses";
 import { buildActiveFilterChips, buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
 import { getMyCoursesApi } from "@/features/auth/services/authService";
 
@@ -34,15 +32,13 @@ const DEFAULT_FILTERS = {
 
 function getRowVariant(course) {
   if (course.enrollmentStatus === "completed") return "completed";
-  if (course.enrollmentStatus === "learning") return "learning";
-  return "saved";
+  return "learning";
 }
 
 function matchesStatusTab(course, tab) {
   if (tab === "all") return true;
   if (tab === "learning") return course.enrollmentStatus === "learning";
   if (tab === "completed") return course.enrollmentStatus === "completed";
-  if (tab === "saved") return course.enrollmentStatus === "none";
   return true;
 }
 
@@ -75,7 +71,6 @@ export default function MyCoursesListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { savedIds, isSaved, unsave } = useSavedCourses();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const keyword = (searchParams.get("keyword") ?? "").trim();
   const [allCourses, setAllCourses] = useState([]);
@@ -222,8 +217,6 @@ export default function MyCoursesListPage() {
             progressPercentage: currentProgress,
             enrollmentStatus: status,
 
-            // Các dữ liệu mặc định bắt buộc phải có để tránh lỗi giao diện
-            isSaved: false,
             modules: dbCourse.Paths || []
           });
         }
@@ -320,41 +313,24 @@ export default function MyCoursesListPage() {
     navigate(`/my-courses/${course.courseId}/learn`);
   };
 
-  const renderEmptyState = () => {
-    if (filters.statusTab === "saved") {
-      return (
-        <Box sx={{ py: 7, textAlign: "center", borderRadius: 3, border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}` }}>
-          <BookmarkBorderRoundedIcon sx={{ fontSize: 48, color: "#F59E0B", opacity: 0.45, mb: 1.5 }} />
-          <EmptyState
-            embedded
-            title="Bạn chưa lưu khóa học nào"
-            description="Lưu các khóa học bạn quan tâm để quay lại sau."
-            actionLabel="Khám phá khóa học"
-            onAction={() => navigate("/courses")}
-          />
-        </Box>
-      );
-    }
-
-    return (
-      <Box sx={{ py: 7, textAlign: "center", borderRadius: 3, border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}` }}>
-        <MenuBookOutlinedIcon sx={{ fontSize: 48, color: "primary.main", opacity: 0.3, mb: 1.5 }} />
-        <EmptyState
-          embedded
-          title={hasAnyCourse ? "Không tìm thấy khóa học phù hợp" : "Bạn chưa đăng ký khóa học nào"}
-          description={
-            hasAnyCourse
-              ? keyword
-                ? "Thử từ khóa khác hoặc xóa bộ lọc để xem thêm khóa học."
-                : "Thử chọn bộ lọc khác để xem thêm khóa học."
-              : "Khám phá các khóa học phù hợp để bắt đầu lộ trình học."
-          }
-          actionLabel={hasAnyCourse ? "Xóa bộ lọc" : "Khám phá khóa học"}
-          onAction={() => (hasAnyCourse ? handleResetFilters() : navigate("/courses"))}
-        />
-      </Box>
-    );
-  };
+  const renderEmptyState = () => (
+    <Box sx={{ py: 7, textAlign: "center", borderRadius: 3, border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}` }}>
+      <MenuBookOutlinedIcon sx={{ fontSize: 48, color: "primary.main", opacity: 0.3, mb: 1.5 }} />
+      <EmptyState
+        embedded
+        title={hasAnyCourse ? "Không tìm thấy khóa học phù hợp" : "Bạn chưa đăng ký khóa học nào"}
+        description={
+          hasAnyCourse
+            ? keyword
+              ? "Thử từ khóa khác hoặc xóa bộ lọc để xem thêm khóa học."
+              : "Thử chọn bộ lọc khác để xem thêm khóa học."
+            : "Khám phá các khóa học phù hợp để bắt đầu lộ trình học."
+        }
+        actionLabel={hasAnyCourse ? "Xóa bộ lọc" : "Khám phá khóa học"}
+        onAction={() => (hasAnyCourse ? handleResetFilters() : navigate("/courses"))}
+      />
+    </Box>
+  );
 
   return (
     <Box sx={{ width: "100%", maxWidth: 1280, mx: "auto" }}>
@@ -402,11 +378,6 @@ export default function MyCoursesListPage() {
                 course={course}
                 variant={getRowVariant(course)}
                 onAction={handleLearningAction}
-                onUnsave={
-                  course.enrollmentStatus === "none"
-                    ? () => unsave(course.courseId)
-                    : undefined
-                }
               />
             ))}
           </Stack>
