@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create Axios instance for API requests
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5050",
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -130,7 +130,7 @@ export const adminApi = {
 
 export const healthApi = {
   checkHealth: async () => {
-    const response = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5050"}/api/health`);
+    const response = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/health`);
     return response.data;
   }
 };
