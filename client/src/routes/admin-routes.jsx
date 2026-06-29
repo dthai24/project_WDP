@@ -2,12 +2,11 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../layouts/admin-layout";
 import Dashboard from "../pages/Admin/dashboard";
-import CourseApproval from "../pages/Admin/course-approval";
 import CategoryManagement from "../pages/Admin/category-management";
 import UserControl from "../pages/Admin/user-control";
 import CourseManagement from "../pages/Admin/course-management";
 import Notifications from "../pages/Admin/notifications";
-import MentorRequests from "../pages/Admin/mentor-requests";
+import MentorApprovalList from "../pages/Admin/MentorApprovalList";
 
 const AdminRoutes = () => {
   return (
@@ -15,9 +14,6 @@ const AdminRoutes = () => {
       <Route element={<AdminLayout />}>
         {/* /admin maps to Dashboard */}
         <Route index element={<Dashboard />} />
-        
-        {/* /admin/approvals maps to Course Approvals Queue */}
-        <Route path="approvals" element={<CourseApproval />} />
         
         {/* /admin/categories maps to Category Management */}
         <Route path="categories" element={<CategoryManagement />} />
@@ -28,8 +24,8 @@ const AdminRoutes = () => {
         {/* /admin/courses maps to Course Management */}
         <Route path="courses" element={<CourseManagement />} />
 
-        {/* /admin/mentors maps to Mentor Requests */}
-        <Route path="mentors" element={<MentorRequests />} />
+        {/* /admin/mentor-approval-list maps to Mentor Approval List */}
+        <Route path="mentor-approval-list" element={<MentorApprovalList />} />
 
         {/* /admin/notifications maps to Notifications */}
         <Route path="notifications" element={<Notifications />} />

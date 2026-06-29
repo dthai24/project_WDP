@@ -24,6 +24,7 @@ router.delete("/users/:id", adminController.deleteUser);
 
 // Course Status Toggle
 router.get("/courses", adminController.getCourses);
+router.get("/courses/:id/curriculum", adminController.getCourseCurriculum);
 router.patch("/courses/:id/status", adminController.toggleCourseStatus);
 
 // Mentor Registration Approvals

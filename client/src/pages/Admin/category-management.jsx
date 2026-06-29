@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { adminApi } from "../../services/api";
-import { Plus, Edit2, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 
@@ -15,6 +16,7 @@ const PREDEFINED_CODES = [
 ];
 
 const CategoryManagement = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("list"); // "list" or "history"
   const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 6, pages: 1 });
@@ -248,10 +250,17 @@ const CategoryManagement = () => {
   ];
 
   return (
-    <div className="space-y-6 text-slate-850 font-sans">
+    <div className="space-y-6 text-slate-855 font-sans animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-6 gap-4">
         <div>
+          <button
+            onClick={() => navigate("/admin")}
+            className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 font-bold text-xs uppercase tracking-wider mb-2.5 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Category Management</h1>
           <p className="text-sm text-slate-500 mt-1">
             Manage English levels and tracks. View configuration update log history.

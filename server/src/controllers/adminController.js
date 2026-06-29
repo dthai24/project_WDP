@@ -987,6 +987,55 @@ const markAllNotificationsRead = async (req, res) => {
     return res.status(500).json({ success: false, message: "Unable to mark notifications as read." });
   }
 };
+
+const getCourseCurriculum = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let queryId = id;
+    try {
+      queryId = new mongoose.Types.ObjectId(id);
+    } catch (e) {}
+
+    const modules = await mongoose.connection.db
+      .collection("modules")
+      .find({ $or: [{ courseId: queryId }, { courseId: id }] })
+      .sort({ order: 1 })
+      .toArray();
+
+    const curriculum = await Promise.all(
+      modules.map(async (m) => {
+        const lessons = await mongoose.connection.db
+          .collection("lessons")
+          .find({ $or: [{ moduleId: m._id }, { moduleId: m._id.toString() }] })
+          .sort({ order: 1 })
+          .toArray();
+
+        return {
+          _id: m._id,
+          title: m.title,
+          order: m.order,
+          lessons: lessons.map(l => ({
+            _id: l._id,
+            title: l.title,
+            type: l.type,
+            order: l.order,
+            duration: l.duration,
+            free: l.free
+          }))
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: curriculum
+    });
+  } catch (error) {
+    console.error("Error loading course curriculum:", error);
+    return res.status(500).json({ success: false, message: "Unable to load curriculum tree." });
+  }
+};
+
 module.exports = {
   getStatistics,
   getCategories,
@@ -1000,6 +1049,7 @@ module.exports = {
   deleteUser,
   getCourses,
   toggleCourseStatus,
+  getCourseCurriculum,
   getMentorRegistrations,
   processMentorRegistration,
   getNotifications,

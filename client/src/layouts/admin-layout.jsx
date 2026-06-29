@@ -65,13 +65,13 @@ const AdminLayout = () => {
   // Fetch unread count for the notification bell
   const fetchUnreadCount = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/mentor/applications/unread-count`);
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.count);
+      const res = await adminApi.getNotifications();
+      if (res && res.success) {
+        const unread = (res.data || []).filter(n => !n.isRead).length;
+        setUnreadCount(unread);
       }
     } catch (error) {
-      console.error("Lỗi fetch unread count:", error);
+      console.error("Error fetching unread count:", error);
     }
   };
 
@@ -79,17 +79,11 @@ const AdminLayout = () => {
   const fetchHeaderNotifications = async () => {
     setNotifLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/mentor/applications`);
-      if (response.ok) {
-        const data = await response.json();
-        const mapped = data.slice(0, 8).map(app => ({
-          _id: app._id,
-          title: `Đăng ký Mentor: ${app.fullName}`,
-          message: `Giới thiệu: ${app.bio}`,
-          isRead: app.isReadByAdmin || app.status !== "pending",
-          createdAt: app.createdAt
-        }));
-        setNotifications(mapped);
+      const res = await adminApi.getNotifications();
+      if (res && res.success) {
+        setNotifications((res.data || []).slice(0, 8));
+        const unread = (res.data || []).filter(n => !n.isRead).length;
+        setUnreadCount(unread);
       }
     } catch (err) {
       console.error("Error fetching header notifications:", err);
@@ -100,11 +94,11 @@ const AdminLayout = () => {
 
   useEffect(() => {
     fetchUnreadCount();
-    const intervalUnread = setInterval(fetchUnreadCount, 10000);
+    const intervalUnread = setInterval(fetchUnreadCount, 15000);
     
     fetchHeaderNotifications();
     const intervalNotifs = setInterval(fetchHeaderNotifications, 30000);
-    
+
     return () => {
       clearInterval(intervalUnread);
       clearInterval(intervalNotifs);
@@ -121,8 +115,13 @@ const AdminLayout = () => {
       console.error("Error parsing user session:", e);
     }
 
-    const isWhitelisted = user && (user.email === "admin@gmail.com" || user.email === "minh@gmail.com");
-    const isAdminUser = isWhitelisted || (user && (user.role === "Admin" || (Array.isArray(user.roles) && user.roles.some(r => r.roleName === "Admin"))));
+    const isWhitelisted = user && (user.email === "admin@gmail.com" || user.email === "minh@gmail.com" || user.email === "admin@wdp.edu.vn");
+    const isAdminUser = isWhitelisted || (user && (
+      user.roleId === 1 ||
+      user.roleName === "Admin" ||
+      user.role === "Admin" || 
+      (Array.isArray(user.roles) && user.roles.some(r => r.roleId === 1 || r.roleId === 3 || r.roleName === "Admin"))
+    ));
     
     if (isWhitelisted && token) {
       return; // Grant bypass access, skip redirection and token clean-out
@@ -141,29 +140,29 @@ const AdminLayout = () => {
       icon: LayoutDashboard
     },
     {
-      path: "/admin/courses",
-      label: "Course Management",
-      icon: BookOpen
-    },
-    {
-      path: "/admin/approvals",
-      label: "Approvals & Status",
-      icon: CheckSquare
-    },
-    {
-      path: "/admin/mentors",
-      label: "Mentor Requests",
-      icon: Award
-    },
-    {
       path: "/admin/categories",
-      label: "Category Management",
+      label: "Categories",
       icon: Folder
     },
     {
       path: "/admin/users",
-      label: "User Control",
+      label: "Users Control",
       icon: Users
+    },
+    {
+      path: "/admin/courses",
+      label: "Courses",
+      icon: BookOpen
+    },
+    {
+      path: "/admin/mentor-approval-list",
+      label: "Mentor Approvals",
+      icon: Award
+    },
+    {
+      path: "/admin/notifications",
+      label: "System Alerts",
+      icon: Bell
     }
   ];
 
@@ -429,7 +428,14 @@ const AdminLayout = () => {
                       )}
                     </div>
                     {/* Footer */}
-                    <div className="px-4 py-2.5 bg-slate-50/30 border-t border-slate-100 text-center">
+                    <div className="px-4 py-2.5 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
+                      <Link
+                        to="/admin/notifications"
+                        onClick={() => setNotifDropdownOpen(false)}
+                        className="text-[10px] text-blue-600 hover:text-blue-700 font-bold uppercase tracking-wider"
+                      >
+                        View all
+                      </Link>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                         {unreadCount} UNREAD ALERTS
                       </span>

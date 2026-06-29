@@ -7,7 +7,13 @@ const mongoose = require("mongoose");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+console.log("==> [BACKEND CORS] Secure pipeline opened for http://localhost:3000");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -45,7 +51,10 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/wdp_english";
+let MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/wdp_english";
+if (MONGODB_URI.includes("/learning_path")) {
+  MONGODB_URI = MONGODB_URI.replace("/learning_path", "/wdp_english");
+}
 
 mongoose
   .connect(MONGODB_URI)

@@ -87,6 +87,11 @@ export const adminApi = {
     return response.data;
   },
 
+  getCourseCurriculum: async (courseId) => {
+    const response = await api.get(`/api/admin/courses/${courseId}/curriculum`);
+    return response.data;
+  },
+
   toggleCourseStatus: async (courseId, status) => {
     const response = await api.patch(`/api/admin/courses/${courseId}/status`, { status });
     return response.data;

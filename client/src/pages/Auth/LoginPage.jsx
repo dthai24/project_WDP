@@ -3,6 +3,12 @@ import { Sparkles, ArrowLeft, Eye, EyeOff, Mail, Lock, User } from "lucide-react
 
 const testAccounts = [
   {
+    email: "admin@wdp.edu.vn",
+    password: "Admin@123",
+    name: "Admin",
+    role: "Admin",
+  },
+  {
     email: "admin@gmail.com",
     password: "123456",
     name: "Admin User",
@@ -97,9 +103,11 @@ export default function LoginPage({ onLogin, onBackHome }) {
       if (response.ok && res && res.success) {
         const userSession = {
           email: res.user.email,
-          name: res.user.name,
-          role: res.user.role,
-          roles: res.user.roles,
+          name: res.user.name || (res.user.roleName === "Admin" ? "Admin" : ""),
+          role: res.user.role || res.user.roleName,
+          roleId: res.user.roleId,
+          roleName: res.user.roleName,
+          roles: res.user.roles || (res.user.roleName === "Admin" ? [{ roleId: 1, roleName: "Admin" }] : []),
           loggedInAt: new Date().toISOString(),
         };
 
@@ -107,6 +115,13 @@ export default function LoginPage({ onLogin, onBackHome }) {
         localStorage.setItem("learnpath_token", res.token);
         localStorage.setItem("learnpath_user", JSON.stringify(userSession));
         localStorage.setItem("lexiora_user", JSON.stringify(userSession));
+
+        // Force redirect for admin users
+        if (res.user.email === "admin@wdp.edu.vn" || res.user.roleName === "Admin" || res.user.roleId === 1) {
+          console.log("==> [FRONTEND AUTH] Admin detected, forcing window.location.href to /admin");
+          window.location.href = "/admin";
+          return;
+        }
         
         onLogin(userSession);
         setIsSubmitting(false);
@@ -141,17 +156,33 @@ export default function LoginPage({ onLogin, onBackHome }) {
         return;
       }
 
+      const isAdmin = account.email === "admin@gmail.com" || account.email === "admin@wdp.edu.vn" || account.role === "Admin";
+      const isMentor = account.email === "mentor@gmail.com" || account.role === "Mentor";
+
       const userSession = {
         email: account.email,
         name: account.name,
         role: account.role,
-        roles: account.email === "admin@gmail.com" || account.role === "Admin"
+        roleId: isAdmin ? 1 : (isMentor ? 2 : 3),
+        roleName: isAdmin ? "Admin" : (isMentor ? "Mentor" : "Student"),
+        roles: isAdmin
           ? [{ roleId: 1, roleName: "Admin" }]
-          : (account.email === "mentor@gmail.com" || account.role === "Mentor"
+          : (isMentor
             ? [{ roleId: 2, roleName: "Mentor" }]
             : [{ roleId: 3, roleName: "Student" }]),
         loggedInAt: new Date().toISOString(),
       };
+
+      // Persist to localStorage for fallback sessions
+      localStorage.setItem("learnpath_token", "mock_fallback_jwt_token_2026");
+      localStorage.setItem("learnpath_user", JSON.stringify(userSession));
+      localStorage.setItem("lexiora_user", JSON.stringify(userSession));
+
+      if (isAdmin) {
+        console.log("==> [FRONTEND AUTH] Admin detected (fallback), forcing window.location.href to /admin");
+        window.location.href = "/admin";
+        return;
+      }
 
       onLogin(userSession);
       setIsSubmitting(false);

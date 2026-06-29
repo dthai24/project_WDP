@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { adminApi } from "../../services/api";
-import { UserCheck, UserMinus, Eye, Loader2, AlertCircle } from "lucide-react";
+import { UserCheck, UserMinus, Eye, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import { useNavigate } from "react-router-dom";
 
 const UserControl = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
   const [search, setSearch] = useState("");
@@ -257,9 +259,16 @@ const UserControl = () => {
   ];
 
   return (
-    <div className="space-y-6 text-slate-855 font-sans">
+    <div className="space-y-6 text-slate-855 font-sans animate-in fade-in duration-300">
       {/* Header */}
       <div className="border-b border-slate-200/80 pb-6">
+        <button
+          onClick={() => navigate("/admin")}
+          className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 font-bold text-xs uppercase tracking-wider mb-2.5 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </button>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">User Control</h1>
         <p className="text-sm text-slate-500 mt-1">
           Monitor registered user accounts. View profiles or manage block/unblock status.

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { adminApi } from "../../services/api";
-import { Bell, AlertCircle, Loader2, Check, Eye, Trash2, MailOpen, Mail } from "lucide-react";
+import { Bell, AlertCircle, Loader2, Check, Eye, Trash2, MailOpen, Mail, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Notifications() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -57,6 +59,13 @@ export default function Notifications() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-6 gap-4">
         <div>
+          <button
+            onClick={() => navigate("/admin")}
+            className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 font-bold text-xs uppercase tracking-wider mb-2.5 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <Bell className="w-6 h-6 text-blue-655" />
             <span>System Notifications</span>
