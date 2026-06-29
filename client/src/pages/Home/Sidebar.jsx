@@ -119,7 +119,7 @@ export function Sidebar({
               animate={{
                 opacity: 1,
               }}
-              className="font-bold text-lg tracking-wide whitespace-nowrap"
+              className="font-bold text-lg tracking-wide whitespace-nowrap text-primary"
             >
               English Master
             </motion.span>

@@ -358,7 +358,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                 else navigate("/");
               }}>
                 <img src="/images/logo.png" alt="English Master" className="w-8 h-8 object-contain" />
-                <span className="text-lg font-black text-text-primary tracking-tight hidden sm:inline">English Master</span>
+                <span className="text-lg font-black text-primary tracking-tight hidden sm:inline">English Master</span>
               </div>
               {!currentUser && (
                 <div className="hidden lg:flex items-center gap-1">
