@@ -18,6 +18,7 @@ export default function MentorCourseImageBox({
   onChange,
   disabled,
   title = 'Ảnh đại diện khóa học',
+  compact = false,
 }) {
   const inputRef = useRef(null);
   const [cropOpen, setCropOpen] = useState(false);
@@ -63,7 +64,7 @@ export default function MentorCourseImageBox({
 
   return (
     <Box sx={{ height: '100%' }}>
-      <Typography sx={SECTION_TITLE_SX}>{title}</Typography>
+      {!compact && title ? <Typography sx={SECTION_TITLE_SX}>{title}</Typography> : null}
 
       <Box
         sx={{
@@ -124,7 +125,7 @@ export default function MentorCourseImageBox({
           sx={{
             display: 'flex',
             flexWrap: 'wrap',
-            justifyContent: 'center',
+            justifyContent: compact ? 'flex-start' : 'center',
             gap: 1,
             width: '100%',
           }}
@@ -173,7 +174,7 @@ export default function MentorCourseImageBox({
           >
             {error}
           </Typography>
-        ) : (
+        ) : !compact ? (
           <Typography
             sx={{
               fontSize: 11,
@@ -193,7 +194,7 @@ export default function MentorCourseImageBox({
               'JPG, PNG hoặc WEBP. Tối đa 5MB.'
             )}
           </Typography>
-        )}
+        ) : null}
       </Box>
 
       <MentorCourseImageCropDialog

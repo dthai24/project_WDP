@@ -9,7 +9,6 @@ import {
   useTheme,
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import UnpublishedRoundedIcon from '@mui/icons-material/UnpublishedRounded';
@@ -65,7 +64,6 @@ export default function MentorCourseDetailHeader({
   const navigate = useNavigate();
   const published = isCoursePublished(course);
   const statusChip = getStatusChip(published);
-  const editPath = `/mentor/courses/${course.CourseId}/edit`;
   const questionsPath = `/mentor/courses/${course.CourseId ?? course.courseId}/questions`;
 
   // console.log(course)
@@ -164,29 +162,6 @@ export default function MentorCourseDetailHeader({
               width: { xs: '100%', sm: 'auto' },
             }}
           >
-            {/* 
-            ----------------Button Edit Course----------------
-             */}
-            <AppButton
-              variant="outlined"
-              startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
-              onClick={() => navigate(editPath)}
-              sx={{
-                height: 38,
-                borderRadius: '999px',
-                fontSize: 13,
-                fontWeight: 700,
-                px: 2,
-                flex: { xs: '1 1 0', sm: '0 0 auto' },
-                minWidth: { xs: 0, sm: 'auto' },
-              }}
-            >
-              Chỉnh sửa
-            </AppButton>
-
-            {/* 
-            -------------Button Question Bank---------------
-             */}
             <AppButton
               variant="outlined"
               startIcon={<QuizOutlinedIcon sx={{ fontSize: 16 }} />}

@@ -105,7 +105,7 @@ export default function MentorCourseDetailPage() {
     switch (activeTab) {
       // ------Course-------
       case MENTOR_COURSE_DETAIL_TABS.COURSE:
-        return <MentorCourseOverviewTab course={course} />;
+        return <MentorCourseOverviewTab course={course} onCourseUpdated={loadCourse} />;
       // ---------Content-----------
       case MENTOR_COURSE_DETAIL_TABS.CONTENT:
         return <MentorCourseContentTab course={course} />;
@@ -115,7 +115,7 @@ export default function MentorCourseDetailPage() {
       case MENTOR_COURSE_DETAIL_TABS.COMMENTS:
         return <MentorCourseCommentsTab courseId={course.CourseId} />;
       default:
-        return <MentorCourseOverviewTab course={course} />;
+        return <MentorCourseOverviewTab course={course} onCourseUpdated={loadCourse} />;
     }
   };
 
