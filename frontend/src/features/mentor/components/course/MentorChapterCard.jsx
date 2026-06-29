@@ -598,7 +598,7 @@ export default function MentorChapterCard({
       )}
 
       {tabMode ? (
-        <Collapse in={lessonSectionOpen} unmountOnExit>
+        <Collapse in={lessonSectionOpen} unmountOnExit collapsedSize={0}>
           <Box sx={{ mt: 2.5, scrollMarginTop: BUILDER_SCROLL_MARGIN_TOP }}>
             {activeLesson ? (
               <MentorLessonBlock
@@ -721,9 +721,15 @@ export default function MentorChapterCard({
   );
 
   const body = (
-    <Box sx={{ px: 2, py: 2.5 }}>
+    <Box
+      sx={{
+        px: 2,
+        pt: tabMode && !chapterSectionOpen ? 0 : 2.5,
+        pb: 2.5,
+      }}
+    >
       {tabMode ? (
-        <Collapse in={chapterSectionOpen} unmountOnExit>
+        <Collapse in={chapterSectionOpen} unmountOnExit collapsedSize={0}>
           <Box sx={{ scrollMarginTop: BUILDER_STICKY_ACTION_BAR_TOP + 8 }}>
             <ContentFieldLabel>Tên chương *</ContentFieldLabel>
             <Box sx={contentFieldSx(Boolean(errors.PathName), CHAPTER_THEME)}>
@@ -788,7 +794,7 @@ export default function MentorChapterCard({
         <Box
           sx={(theme) => ({
             ...breakoutBodyPaddingSx()(theme),
-            mt: chapterSectionOpen || lessonSectionOpen ? 2.5 : 0,
+            mt: chapterSectionOpen ? 2.5 : 0,
             borderBottom: '1px solid rgba(15,23,42,0.06)',
           })}
         >

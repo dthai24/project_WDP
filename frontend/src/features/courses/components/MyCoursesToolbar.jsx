@@ -15,20 +15,17 @@ import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
 import SortOutlinedIcon from "@mui/icons-material/SortOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
-import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 
 const MUTED = "#64748B";
 const ICON = "#94A3B8";
 const PRIMARY = "#0891B2";
-const SAVED = "#F59E0B";
 
 const STATUS_TABS = [
   { value: "all", label: "Tất cả" },
   { value: "learning", label: "Đang học" },
   { value: "completed", label: "Hoàn thành" },
-  { value: "saved", label: "Đã lưu", icon: BookmarkRoundedIcon },
 ];
 
 function getMenuPaperSx(theme) {
@@ -290,26 +287,11 @@ export default function MyCoursesToolbar({
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1.5 }}>
         {STATUS_TABS.map((tab) => {
           const active = statusTab === tab.value;
-          const TabIcon = tab.icon;
-          const isSavedTab = tab.value === "saved";
-          const accent = isSavedTab ? SAVED : PRIMARY;
 
           return (
             <Chip
               key={tab.value}
-              label={
-                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-                  {TabIcon && (
-                    <TabIcon
-                      sx={{
-                        fontSize: 15,
-                        color: isSavedTab ? SAVED : "inherit",
-                      }}
-                    />
-                  )}
-                  {tab.label}
-                </Box>
-              }
+              label={tab.label}
               onClick={() => onStatusTabChange?.(tab.value)}
               sx={{
                 height: 32,
@@ -317,17 +299,11 @@ export default function MyCoursesToolbar({
                 fontWeight: 600,
                 borderRadius: "99px",
                 cursor: "pointer",
-                bgcolor: active ? alpha(accent, 0.12) : "transparent",
-                color: active ? accent : isSavedTab ? SAVED : MUTED,
-                border: `1px solid ${
-                  active
-                    ? alpha(accent, 0.28)
-                    : isSavedTab
-                      ? alpha(SAVED, 0.22)
-                      : "rgba(100,116,139,0.2)"
-                }`,
+                bgcolor: active ? alpha(PRIMARY, 0.12) : "transparent",
+                color: active ? PRIMARY : MUTED,
+                border: `1px solid ${active ? alpha(PRIMARY, 0.28) : "rgba(100,116,139,0.2)"}`,
                 "&:hover": {
-                  bgcolor: active ? alpha(accent, 0.16) : alpha(accent, 0.06),
+                  bgcolor: active ? alpha(PRIMARY, 0.16) : alpha(PRIMARY, 0.06),
                 },
               }}
             />

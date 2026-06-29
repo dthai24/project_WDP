@@ -196,6 +196,62 @@ function CompactMultiSelect({
   );
 }
 
+function CompactSingleSelect({
+  icon,
+  value = "",
+  onChange,
+  options,
+  placeholder,
+  iconColor = ICON,
+}) {
+  const theme = useTheme();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const hasValue = Boolean(value);
+  const label = hasValue
+    ? options.find((opt) => opt.value === value)?.label ?? value
+    : placeholder;
+
+  const selectValue = (optionValue) => {
+    const next = value === optionValue ? "" : optionValue;
+    onChange({ target: { value: next ? [next] : [] } });
+    setAnchorEl(null);
+  };
+
+  return (
+    <>
+      <FilterTrigger
+        icon={icon}
+        label={label}
+        hasValue={hasValue}
+        open={open}
+        onClick={(event) => setAnchorEl(event.currentTarget)}
+        iconColor={iconColor}
+      />
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        slotProps={{
+          paper: { sx: getMenuPaperSx(theme) },
+          list: { dense: true, sx: { py: 0.5 } },
+        }}
+      >
+        {options.map((opt) => (
+          <FilterMenuItem
+            key={opt.value}
+            selected={value === opt.value}
+            label={opt.label}
+            onClick={() => selectValue(opt.value)}
+          />
+        ))}
+      </Menu>
+    </>
+  );
+}
+
 function CompactSelect({ icon, value, onChange, options, iconColor = ICON }) {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -317,9 +373,9 @@ export default function CourseCatalogToolbar({
             placeholder="Trình độ"
             iconColor="#2563EB"
           />
-          <CompactMultiSelect
+          <CompactSingleSelect
             icon={FactCheckOutlinedIcon}
-            value={statuses}
+            value={statuses[0] ?? ""}
             onChange={onStatusesChange}
             options={statusOptions}
             placeholder="Trạng thái"

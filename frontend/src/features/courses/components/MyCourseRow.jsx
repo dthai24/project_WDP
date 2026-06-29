@@ -18,8 +18,6 @@
  *     completedLessons:   number,
  *     modules?:           array      // cấu trúc chương nếu có
  *   }
- *   isSaved   : boolean
- *   onSave    : (courseId) => void
  *   onContinue: (courseId) => void   — navigate đến /my-courses/:courseId/learn
  *   onClick   : (courseId) => void   — navigate đến /courses/:courseId (detail)
  */
@@ -41,8 +39,6 @@ import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
-import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
-import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -56,7 +52,6 @@ import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/cata
 const MUTED = "#64748B";
 const TEXT = "#0F172A";
 const PRIMARY = "#0891B2";
-const SAVED = "#F59E0B";
 
 const ghostIconSx = {
   transition: "all 0.2s ease",
@@ -77,7 +72,6 @@ function normalizeCourse(course = {}) {
     totalMaterials: course.totalMaterials ?? 0,
     progressPercentage: progress,
     enrollmentStatus: course.enrollmentStatus ?? "none",
-    isSaved: course.isSaved ?? false,
     currentStage: course.currentStage ?? null,
     currentLesson: course.currentLesson ?? null,
     lastActivity: course.lastActivity ?? null,
@@ -111,17 +105,6 @@ function getLearningStatusChip() {
 
 
 
-function getSavedStatusChip() {
-  return {
-    label: "Đã lưu",
-    sx: {
-      bgcolor: "rgba(245,158,11,0.10)",
-      color: "#D97706",
-      border: "1px solid rgba(245,158,11,0.22)",
-    },
-  };
-}
-
 function MetaItem({ icon: Icon, label }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -133,8 +116,8 @@ function MetaItem({ icon: Icon, label }) {
   );
 }
 
-function RowTopActions({ showBookmark, isSaved, onBookmarkToggle, showExpand, expanded, onExpandToggle }) {
-  if (!showBookmark && !showExpand) return null;
+function RowTopActions({ showExpand, expanded, onExpandToggle }) {
+  if (!showExpand) return null;
 
   return (
     <Box
@@ -148,46 +131,20 @@ function RowTopActions({ showBookmark, isSaved, onBookmarkToggle, showExpand, ex
         zIndex: 1,
       }}
     >
-      {showBookmark && (
-        <Tooltip title={isSaved ? "Bỏ lưu" : "Lưu khóa học"}>
-          <IconButton
-            size="small"
-            aria-label={isSaved ? "Bỏ lưu" : "Lưu khóa học"}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onBookmarkToggle?.();
-            }}
-            sx={{
-              ...ghostIconSx,
-              color: isSaved ? SAVED : MUTED,
-              "&:hover": { bgcolor: "transparent", color: isSaved ? SAVED : PRIMARY },
-            }}
-          >
-            {isSaved ? (
-              <BookmarkRoundedIcon sx={{ fontSize: 20 }} />
-            ) : (
-              <BookmarkBorderRoundedIcon sx={{ fontSize: 20 }} />
-            )}
-          </IconButton>
-        </Tooltip>
-      )}
-      {showExpand && (
-        <Tooltip title={expanded ? "Thu gọn" : "Xem tiến độ khóa học"}>
-          <IconButton
-            size="small"
-            aria-label={expanded ? "Thu gọn" : "Xem tiến độ khóa học"}
-            onClick={() => onExpandToggle?.()}
-            sx={ghostIconSx}
-          >
-            {expanded ? (
-              <ExpandLessRoundedIcon sx={{ fontSize: 20 }} />
-            ) : (
-              <ExpandMoreRoundedIcon sx={{ fontSize: 20 }} />
-            )}
-          </IconButton>
-        </Tooltip>
-      )}
+      <Tooltip title={expanded ? "Thu gọn" : "Xem tiến độ khóa học"}>
+        <IconButton
+          size="small"
+          aria-label={expanded ? "Thu gọn" : "Xem tiến độ khóa học"}
+          onClick={() => onExpandToggle?.()}
+          sx={ghostIconSx}
+        >
+          {expanded ? (
+            <ExpandLessRoundedIcon sx={{ fontSize: 20 }} />
+          ) : (
+            <ExpandMoreRoundedIcon sx={{ fontSize: 20 }} />
+          )}
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 }
@@ -196,7 +153,6 @@ export default function MyCourseRow({
   course,
   variant = "learning",
   onAction,
-  onUnsave,
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -205,30 +161,21 @@ export default function MyCourseRow({
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const data = normalizeCourse(course);
-  const isSavedRow = variant === "saved";
   const isCompleted = variant === "completed";
   const isLearning = variant === "learning";
-  const canExpand = !isSavedRow && (data.modules.length > 0 || data.currentLessonDetail);
+  const canExpand = data.modules.length > 0 || data.currentLessonDetail;
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, "/my-courses");
   const learningPath = `/my-courses/${data.courseId}/learn`;
   const titlePath = detailPath;
   const progressTextColor = getProgressColor(progressValue);
 
-  const statusChip = isSavedRow
-    ? getSavedStatusChip()
-    : isCompleted
-      ? getCompletedStatusChip()
-      : getLearningStatusChip();
+  const statusChip = isCompleted ? getCompletedStatusChip() : getLearningStatusChip();
 
-  const actionLabel = isSavedRow ? "Xem chi tiết" : isCompleted ? "Ôn tập lại" : "Tiếp tục học";
+  const actionLabel = isCompleted ? "Ôn tập lại" : "Tiếp tục học";
 
   const handleAction = () => {
-    if (isSavedRow) {
-      navigate(detailPath);
-    } else {
-      navigate(learningPath);
-    }
+    navigate(learningPath);
   };
 
   return (
@@ -251,9 +198,6 @@ export default function MyCourseRow({
       }}
     >
       <RowTopActions
-        showBookmark={isSavedRow && Boolean(onUnsave)}
-        isSaved={isSavedRow}
-        onBookmarkToggle={onUnsave}
         showExpand={canExpand}
         expanded={expanded}
         onExpandToggle={() => setExpanded((prev) => !prev)}
@@ -267,7 +211,7 @@ export default function MyCourseRow({
           gap: { xs: 2, md: 2.5 },
           p: { xs: 2, md: 2.25 },
           pt: { xs: 4.5, md: 2.25 },
-          pr: { xs: 2, md: canExpand || isSavedRow ? 7 : 2.25 },
+          pr: { xs: 2, md: canExpand ? 7 : 2.25 },
         }}
       >
         <ThumbnailImage
@@ -345,14 +289,6 @@ export default function MyCourseRow({
           </Box>
 
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
-            {isSavedRow && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <BookmarkRoundedIcon sx={{ fontSize: 13, color: SAVED }} />
-                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
-                  Đã lưu để học sau
-                </Typography>
-              </Box>
-            )}
             {isLearning && data.currentStage != null && data.currentLesson != null && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <PlaceOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8" }} />
@@ -361,7 +297,7 @@ export default function MyCourseRow({
                 </Typography>
               </Box>
             )}
-            {!isSavedRow && data.lastActivity && (
+            {data.lastActivity && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <AccessTimeOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8" }} />
                 <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
@@ -371,8 +307,7 @@ export default function MyCourseRow({
             )}
           </Box>
 
-          {!isSavedRow && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 0.25 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 0.25 }}>
               <AppProgressBar value={progressValue} height={6} sx={{ flex: 1 }} />
               <Typography
                 sx={{
@@ -385,8 +320,7 @@ export default function MyCourseRow({
               >
                 {progressValue}%
               </Typography>
-            </Box>
-          )}
+          </Box>
         </Box>
 
         <Box
@@ -399,7 +333,7 @@ export default function MyCourseRow({
           <AppButton
             fullWidth={isMobile}
             size="small"
-            variant={isSavedRow ? "outlined" : "contained"}
+            variant="contained"
             onClick={handleAction}
             sx={{ minWidth: { md: 140 }, whiteSpace: "nowrap" }}
           >

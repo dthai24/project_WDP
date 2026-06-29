@@ -382,7 +382,7 @@ export default function MentorContentOverview({
                     </Box>
                   </Box>
 
-                  <Collapse in={chapterExpanded}>
+                  <Collapse in={chapterExpanded} unmountOnExit collapsedSize={0}>
                     <Box sx={{ pl: 2.25 }}>
                       {nodes.map((node, nodeIndex) => {
                         const materials = filterLearningMaterials(
@@ -427,7 +427,7 @@ export default function MentorContentOverview({
                             </Box>
 
                             {hasMaterials ? (
-                              <Collapse in={lessonExpanded}>
+                              <Collapse in={lessonExpanded} unmountOnExit collapsedSize={0}>
                                 <Box sx={{ pl: hasMaterials ? 2.25 : 0 }}>
                                   {materials.map((material, materialIndex) => {
                                     const materialOutline = getMaterialOutline(material, materialIndex);
