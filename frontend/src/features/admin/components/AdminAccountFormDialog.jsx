@@ -94,6 +94,12 @@ function AdminAccountSummaryCard({ account }) {
         <SummaryField label="Email" value={account.email} />
         <SummaryField label="Số điện thoại" value={account.phone} />
         <SummaryField label="Ngày sinh" value={formatAccountDateOfBirth(account.dateOfBirth)} />
+        {account.role === 'Student' && (
+          <>
+            <SummaryField label="Chuỗi ngày học (Streak)" value={account.streak ? `${account.streak} ngày` : '0 ngày'} />
+            <SummaryField label="Điểm kinh nghiệm (XP)" value={account.xp ? `${account.xp} XP` : '0 XP'} />
+          </>
+        )}
       </Box>
     </Box>
   );
@@ -120,11 +126,14 @@ export default function AdminAccountFormDialog({
   account,
   onSubmit,
   saving = false,
+  mode = 'edit',
 }) {
   const [role, setRole] = useState('Student');
   const [status, setStatus] = useState('ACTIVE');
   const [errors, setErrors] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const isView = mode === 'view';
 
   useEffect(() => {
     if (open && account) {
@@ -183,10 +192,12 @@ export default function AdminAccountFormDialog({
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>Chỉnh sửa tài khoản</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>
+          {isView ? 'Chi tiết tài khoản' : 'Chỉnh sửa trạng thái tài khoản'}
+        </DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           <Typography sx={{ fontSize: 13, color: MUTED, mb: 2, lineHeight: 1.5 }}>
-            Chỉ có thể thay đổi vai trò và trạng thái của tài khoản.
+            {isView ? 'Xem chi tiết thông tin tài khoản.' : 'Chỉ có thể thay đổi trạng thái của tài khoản.'}
           </Typography>
 
           <AdminAccountSummaryCard account={account} />
@@ -199,6 +210,7 @@ export default function AdminAccountFormDialog({
               value={role}
               options={ADMIN_ACCOUNT_FORM_ROLE_OPTIONS}
               colorMap={ADMIN_ACCOUNT_ROLE_CHIP_SX}
+              disabled={true} // Admin cannot edit role directly
               onChange={(value) => {
                 setRole(value);
                 setErrors((prev) => {
@@ -217,6 +229,7 @@ export default function AdminAccountFormDialog({
               value={status}
               options={ADMIN_ACCOUNT_FORM_STATUS_OPTIONS}
               colorMap={ADMIN_ACCOUNT_STATUS_CHIP_SX}
+              disabled={isView}
               onChange={(value) => {
                 setStatus(value);
                 setErrors((prev) => {
@@ -231,17 +244,29 @@ export default function AdminAccountFormDialog({
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <AppButton variant="outlined" onClick={onClose} disabled={saving}>
-            Hủy
-          </AppButton>
-          <AppButton
-            loading={saving}
-            disabled={!hasChanges}
-            onClick={handleSaveClick}
-            sx={{ bgcolor: PRIMARY, '&:hover': { bgcolor: '#0E7490' } }}
-          >
-            Lưu thay đổi
-          </AppButton>
+          {isView ? (
+            <AppButton
+              variant="contained"
+              onClick={onClose}
+              sx={{ bgcolor: PRIMARY, '&:hover': { bgcolor: '#0E7490' } }}
+            >
+              Đóng
+            </AppButton>
+          ) : (
+            <>
+              <AppButton variant="outlined" onClick={onClose} disabled={saving}>
+                Hủy
+              </AppButton>
+              <AppButton
+                loading={saving}
+                disabled={!hasChanges}
+                onClick={handleSaveClick}
+                sx={{ bgcolor: PRIMARY, '&:hover': { bgcolor: '#0E7490' } }}
+              >
+                Lưu thay đổi
+              </AppButton>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -250,12 +275,20 @@ export default function AdminAccountFormDialog({
         onClose={() => !saving && setConfirmOpen(false)}
         onConfirm={handleConfirmSave}
         loading={saving}
-        title="Lưu thay đổi tài khoản?"
-        message={[
-          `Bạn sắp cập nhật tài khoản ${account.fullName}.`,
-          ...changeSummary,
-        ].join(' ')}
-        confirmLabel="Lưu thay đổi"
+        title={
+          status === 'BLOCKED' && account.status !== 'BLOCKED'
+            ? "Xác nhận block tài khoản?"
+            : "Lưu thay đổi tài khoản?"
+        }
+        message={
+          status === 'BLOCKED' && account.status !== 'BLOCKED'
+            ? `Bạn có chắc muốn block ${account.fullName} không?`
+            : [
+                `Bạn sắp cập nhật tài khoản ${account.fullName}.`,
+                ...changeSummary,
+              ].join(' ')
+        }
+        confirmLabel="Xác nhận"
         cancelLabel="Hủy"
       />
     </>

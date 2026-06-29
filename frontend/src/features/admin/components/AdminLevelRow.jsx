@@ -74,6 +74,13 @@ export default function AdminLevelRow({ level, onEdit }) {
         </Box>
       </Box>
 
+      <Box sx={{ minWidth: 0 }}>
+        <MobileField label="Danh mục liên kết">
+          <Typography sx={VALUE_SX}>{level.categoryId?.displayName || '—'}</Typography>
+        </MobileField>
+        <DesktopValue value={level.categoryId?.displayName || '—'} />
+      </Box>
+
       <Box>
         <MobileField label="Trạng thái">
           <Chip

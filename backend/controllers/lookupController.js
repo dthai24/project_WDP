@@ -23,16 +23,23 @@ const getCategories = async (_req, res) => {
   }
 };
 
-const getLevels = async (_req, res) => {
+const getLevels = async (req, res) => {
   try {
-    const levels = await Level.find({ isActive: true })
-      .select('_id displayName')
+    const { categoryId } = req.query;
+    const filter = { isActive: true };
+    if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
+      filter.categoryId = categoryId;
+    }
+
+    const levels = await Level.find(filter)
+      .select('_id displayName categoryId')
       .sort({ sortOrder: 1 })
       .lean();
 
     const data = levels.map(l => ({
       levelId: l._id.toString(),
       displayName: l.displayName,
+      categoryId: l.categoryId ? l.categoryId.toString() : null,
     }));
 
     return res.json({ success: true, data });

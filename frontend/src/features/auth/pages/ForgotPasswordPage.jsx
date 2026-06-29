@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <Logo height={56} link={false} className="brand-logo" />
-          <h1>S.T.A.R Learning Path</h1>
+          <h1>English Master</h1>
           <p>Khôi phục mật khẩu của bạn</p>
         </div>
 

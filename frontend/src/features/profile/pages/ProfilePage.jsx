@@ -301,6 +301,17 @@ export default function ProfilePage() {
     currentLevel: INITIAL_PROFILE.currentLevel,
   });
 
+  const [applyMentorOpen, setApplyMentorOpen] = useState(false);
+  const [submittingApply, setSubmittingApply] = useState(false);
+  const [levelsList, setLevelsList] = useState([]);
+  const [applyForm, setApplyForm] = useState({
+    name: '',
+    email: '',
+    age: '',
+    levels: [],
+    evidence: '',
+  });
+
   useEffect(() => {
     const cUser = getInitialUser();
     if (!cUser?.userId) return;
@@ -395,12 +406,13 @@ export default function ProfilePage() {
         const updatedUser = { ...currentUser, fullName: formData.name };
         localStorage.setItem("user", JSON.stringify(updatedUser));
         window.dispatchEvent(new Event("storage"));
+        toast.success("Cập nhật hồ sơ thành công!");
       } else {
-        alert("Cap nhat that bai: " + data.message);
+        toast.error("Cập nhật thất bại: " + data.message);
       }
     } catch (err) {
       console.error("Loi cap nhat ho so:", err);
-      alert("Da xay ra loi khi cap nhat ho so.");
+      toast.error("Đã xảy ra lỗi khi cập nhật hồ sơ.");
     }
   };
 
@@ -551,6 +563,75 @@ export default function ProfilePage() {
       }),
     });
     window.location.reload();
+  };
+
+  useEffect(() => {
+    if (profile.name) {
+      setApplyForm((prev) => ({
+        ...prev,
+        name: profile.name,
+        email: profile.email,
+      }));
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    const fetchLevels = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/lookup/levels");
+        const data = await res.json();
+        if (data.success) {
+          setLevelsList(data.data || []);
+        }
+      } catch (err) {
+        console.error("Loi tai levels:", err);
+      }
+    };
+    fetchLevels();
+  }, []);
+
+  const handleApplySubmit = async () => {
+    if (!applyForm.name.trim() || !applyForm.age || !applyForm.evidence.trim()) {
+      toast.error("Vui lòng điền đầy đủ các thông tin bắt buộc.");
+      return;
+    }
+    if (applyForm.levels.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một trình độ giảng dạy.");
+      return;
+    }
+
+    setSubmittingApply(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/users/apply-mentor", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: applyForm.name,
+          email: applyForm.email,
+          age: applyForm.age,
+          levels: applyForm.levels,
+          evidence: applyForm.evidence,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Gửi đơn ứng tuyển thành công! Đang chờ phê duyệt.");
+        setApplyMentorOpen(false);
+        setApplyForm((prev) => ({ ...prev, age: '', levels: [], evidence: '' }));
+      } else {
+        toast.error(data.message || "Gửi đơn ứng tuyển thất bại.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Đã xảy ra lỗi hệ thống.");
+    } finally {
+      setSubmittingApply(false);
+    }
   };
 
   return (
@@ -887,6 +968,30 @@ export default function ProfilePage() {
                   Thay doi
                 </AppButton>
               </div>
+              {(profile.role?.toLowerCase() === "student" || profile.role === "Hoc vien") && (
+                <div className="flex items-center gap-3 py-[6px] border-t border-slate-100 mt-2 pt-2">
+                  <PersonRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
+                  <span
+                    className="flex-1 text-[13px] font-semibold"
+                    style={{ color: TEXT }}
+                  >
+                    Ung tuyen lam Mentor
+                  </span>
+                  <AppButton
+                    size="small"
+                    variant="contained"
+                    onClick={() => setApplyMentorOpen(true)}
+                    sx={{
+                      fontSize: 11,
+                      height: 28,
+                      px: 1.5,
+                      minWidth: "auto",
+                    }}
+                  >
+                    Dang ky
+                  </AppButton>
+                </div>
+              )}
             </SectionCard>
           </div>
         </div>
@@ -896,6 +1001,107 @@ export default function ProfilePage() {
         open={passwordDialogOpen}
         onClose={() => setPasswordDialogOpen(false)}
       />
+
+      {/* Mentor Application Dialog */}
+      <Dialog
+        open={applyMentorOpen}
+        onClose={() => setApplyMentorOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
+          Ung tuyen lam Mentor
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <Typography sx={{ fontSize: 13, color: MUTED, mb: 3 }}>
+            Vui long cung cap day du thong tin nang luc va chung chi cua ban de tro thanh giang vien/mentor tren he thong.
+          </Typography>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <TextField
+              label="Ho va ten"
+              size="small"
+              fullWidth
+              value={applyForm.name}
+              onChange={(e) => setApplyForm({ ...applyForm, name: e.target.value })}
+            />
+
+            <TextField
+              label="Email"
+              size="small"
+              fullWidth
+              disabled
+              value={applyForm.email}
+            />
+
+            <TextField
+              label="Tuoi"
+              size="small"
+              fullWidth
+              type="number"
+              value={applyForm.age}
+              onChange={(e) => setApplyForm({ ...applyForm, age: e.target.value })}
+            />
+
+            <Box>
+              <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, mb: 1 }}>
+                Trinh do giang day ung tuyen
+              </Typography>
+              <FormGroup sx={{ flexDirection: 'row', gap: 1 }}>
+                {levelsList.map((lv) => (
+                  <FormControlLabel
+                    key={lv.levelId}
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={applyForm.levels.includes(lv.levelId)}
+                        onChange={(e) => {
+                          const nextLevels = e.target.checked
+                            ? [...applyForm.levels, lv.levelId]
+                            : applyForm.levels.filter((id) => id !== lv.levelId);
+                          setApplyForm({ ...applyForm, levels: nextLevels });
+                        }}
+                      />
+                    }
+                    label={<Typography sx={{ fontSize: 13 }}>{lv.displayName}</Typography>}
+                    sx={{ width: '45%', m: 0 }}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+
+            <TextField
+              label="Tai lieu minh chuong (Link anh/url chung chi...)"
+              size="small"
+              fullWidth
+              required
+              multiline
+              rows={3}
+              placeholder="Nhap duong dan den chung chi Google Drive, Dropbox hoac noi dung mo ta nang luc cua ban..."
+              value={applyForm.evidence}
+              onChange={(e) => setApplyForm({ ...applyForm, evidence: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <AppButton
+            variant="outlined"
+            onClick={() => setApplyMentorOpen(false)}
+            disabled={submittingApply}
+          >
+            Huy
+          </AppButton>
+          <AppButton
+            variant="contained"
+            onClick={handleApplySubmit}
+            loading={submittingApply}
+          >
+            Gui don ung tuyen
+          </AppButton>
+        </DialogActions>
+      </Dialog>
       {/* --- File input hidden --- */}
       <input
         type="file"

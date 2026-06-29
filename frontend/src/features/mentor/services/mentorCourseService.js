@@ -134,8 +134,9 @@ export async function fetchCourseLevels() {
     return {
       ok: true,
       levels: (data.data ?? []).map((item) => ({
-        value: item.levelId,
+        value: item.levelId || item._id,
         label: item.displayName,
+        categoryId: item.categoryId?._id || item.categoryId || null,
       })),
     };
   } catch (err) {

@@ -60,16 +60,20 @@ const updateProfile = async (req, res) => {
   const userId = req.user.userId;
   const { name, phone, dateOfBirth } = req.body;
 
-  if (!name || !phone || !dateOfBirth) {
-    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ tên, số điện thoại và ngày sinh.' });
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp họ tên.' });
   }
 
   try {
-    await User.findByIdAndUpdate(userId, {
-      fullName: name,
-      phone,
-      dateOfBirth: new Date(dateOfBirth),
-    });
+    const updateData = { fullName: name };
+    if (phone !== undefined) updateData.phone = phone;
+    if (dateOfBirth) {
+      updateData.dateOfBirth = new Date(dateOfBirth);
+    } else if (dateOfBirth === '') {
+      updateData.dateOfBirth = null;
+    }
+
+    await User.findByIdAndUpdate(userId, updateData);
 
     return res.json({
       success: true,
@@ -140,4 +144,40 @@ const updateGoals = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, changePassword, updateGoals };
+const MentorApplication = require('../models/MongoDB/MentorApplication');
+
+// ============================================================
+// POST /api/users/apply-mentor
+// ============================================================
+const applyMentor = async (req, res) => {
+  const userId = req.user.userId;
+  const { name, email, age, levels, evidence } = req.body;
+
+  if (!name || !email || !age || !evidence) {
+    return res.status(400).json({ success: false, message: 'Thiếu thông tin yêu cầu.' });
+  }
+
+  try {
+    const existing = await MentorApplication.findOne({ userId, status: 'pending' });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Bạn đã có một yêu cầu ứng tuyển đang chờ xử lý.' });
+    }
+
+    const application = await MentorApplication.create({
+      userId,
+      name,
+      email,
+      age: Number(age),
+      levels: levels || [],
+      evidence,
+      status: 'pending'
+    });
+
+    return res.status(201).json({ success: true, message: 'Gửi đơn ứng tuyển thành công. Đang chờ phê duyệt.', data: application });
+  } catch (err) {
+    console.error('[ApplyMentor Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+module.exports = { getProfile, updateProfile, changePassword, updateGoals, applyMentor };

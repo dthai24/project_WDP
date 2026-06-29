@@ -116,7 +116,7 @@ export default function RegisterPage() {
       <div className="auth-card" style={{ maxWidth: '520px' }}>
         <div className="auth-brand">
           <Logo height={56} link={false} className="brand-logo" />
-          <h1>S.T.A.R Learning Path</h1>
+          <h1>English Master</h1>
           <p>Tạo tài khoản mới - Bắt đầu hành trình</p>
         </div>
 

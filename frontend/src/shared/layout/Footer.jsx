@@ -38,7 +38,7 @@ export default function Footer() {
                 <GraduationCap size={20} weight="fill" className="text-white" />
               </div>
               <span className="text-lg font-extrabold text-white tracking-tight">
-                S.T.A.R
+                English Master
               </span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed max-w-xs mb-4">
@@ -81,7 +81,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-10 sm:mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-slate-500">
-            &copy; {new Date().getFullYear()} S.T.A.R English Learning Platform. All rights reserved.
+            &copy; {new Date().getFullYear()} English Master Learning Platform. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link to="/privacy" className="text-xs text-slate-500 hover:text-white transition-colors">

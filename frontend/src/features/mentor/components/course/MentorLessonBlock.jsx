@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Box, Collapse, IconButton, InputBase, Typography } from '@mui/material';
+import { Box, Collapse, IconButton, InputBase, Typography, Checkbox, FormControlLabel } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
@@ -123,6 +123,20 @@ export default function MentorLessonBlock({
         theme={LESSON_THEME}
         placeholder="Mô tả ngắn về nội dung bài học (tuỳ chọn)"
         labelSx={{ mt: 2 }}
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={Boolean(node.isFree)}
+            onChange={(event) => onChange?.(node.tempId, { isFree: event.target.checked })}
+            disabled={disabled}
+            size="small"
+            sx={{ color: '#0891B2', '&.Mui-checked': { color: '#0891B2' } }}
+          />
+        }
+        label={<Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Đây là bài học miễn phí (Học thử)</Typography>}
+        sx={{ mt: 1.5, display: 'flex' }}
       />
   </>
   );
