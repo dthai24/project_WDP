@@ -168,22 +168,52 @@ export default function MentorCourseQuestionsPage() {
           </Typography>
         </Breadcrumbs>
 
-        <AppButton
-          variant="outlined"
-          startIcon={<ArrowBackRoundedIcon />}
-          onClick={() => navigate(`/mentor/courses/${courseId}`)}
+        <Box
           sx={{
-            height: 40,
-            px: 2,
-            fontSize: 13,
-            fontWeight: 600,
-            borderRadius: '999px',
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: 'flex-end',
+            gap: 1,
             flexShrink: 0,
+            ml: { sm: 'auto' },
             width: { xs: '100%', sm: 'auto' },
           }}
         >
-          Quay lại khóa học
-        </AppButton>
+          <AppButton
+            variant="outlined"
+            startIcon={<ArrowBackRoundedIcon />}
+            onClick={() => navigate(`/mentor/courses/${courseId}`)}
+            sx={{
+              height: 40,
+              px: 2,
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: '999px',
+              width: { xs: '100%', sm: 'auto' },
+            }}
+          >
+            Quay lại khóa học
+          </AppButton>
+          <AppButton
+            startIcon={<ArrowBackRoundedIcon sx={{ fontSize: 18 }} />}
+            onClick={() => navigate('/mentor/question-banks')}
+            sx={{
+              height: 40,
+              px: 2,
+              fontSize: 13,
+              fontWeight: 700,
+              borderRadius: '999px',
+              width: { xs: '100%', sm: 'auto' },
+              bgcolor: PRIMARY,
+              color: '#fff',
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+            }}
+          >
+            Quay lại Ngân hàng câu hỏi
+          </AppButton>
+        </Box>
       </Box>
 
       <Typography

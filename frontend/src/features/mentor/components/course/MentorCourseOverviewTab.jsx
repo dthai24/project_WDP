@@ -7,8 +7,6 @@ import SignalCellularAltOutlinedIcon from '@mui/icons-material/SignalCellularAlt
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import UpdateOutlinedIcon from '@mui/icons-material/UpdateOutlined';
-import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
-import UnpublishedRoundedIcon from '@mui/icons-material/UnpublishedRounded';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import {
@@ -42,7 +40,7 @@ import {
   courseDetailToEditCourse,
   courseDetailToEditForm,
 } from '@/features/mentor/utils/mentorCourseEditStorage';
-import { formatMentorCourseDate, countCourseStudents, isCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
+import { formatMentorCourseDate, countCourseStudents } from '@/features/mentor/utils/mentorCourseUtils';
 import { resolveCategoryChipSx, resolveLevelChipSx } from '@/shared/catalog/catalogRegistry';
 
 const FIELD_COLORS = {
@@ -55,13 +53,6 @@ const FIELD_COLORS = {
 
 function chipSxToColor(chipSx) {
   return chipSx.color ?? MUTED;
-}
-
-function getStatusMeta(published) {
-  if (published) {
-    return { color: '#047857', icon: PublishRoundedIcon };
-  }
-  return { color: MUTED, icon: UnpublishedRoundedIcon };
 }
 
 function InfoRow({ label, value, icon: Icon, iconColor, valueSx, rootSx, children }) {
@@ -184,8 +175,6 @@ export default function MentorCourseOverviewTab({ course, onCourseUpdated }) {
     [hasStudents],
   );
 
-  const published = isCoursePublished(course);
-  const statusMeta = getStatusMeta(published);
   const categoryColor = chipSxToColor(
     resolveCategoryChipSx({
       id: course.CategoryId,
@@ -361,33 +350,38 @@ export default function MentorCourseOverviewTab({ course, onCourseUpdated }) {
         )}
 
         <Box>
-          <InfoRow
-            label="Tên khóa học"
-            value={course.CourseName}
-            icon={MenuBookOutlinedIcon}
-            iconColor={FIELD_COLORS.title}
-            valueSx={{ fontSize: 14, fontWeight: 700, color: PRIMARY }}
-          >
-            {editing ? (
-              <InlineInput
-                name="CourseName"
-                value={form.CourseName}
-                onChange={handleFormChange}
-                disabled={saving}
-                placeholder="Tên khóa học"
-                maxLength={MENTOR_COURSE_NAME_MAX}
-                error={formErrors.CourseName}
-              />
-            ) : null}
-          </InfoRow>
-
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1.4fr) minmax(0, 1fr)' },
               columnGap: 2,
             }}
           >
+            <InfoRow
+              label="Tên khóa học"
+              value={course.CourseName}
+              icon={MenuBookOutlinedIcon}
+              iconColor={FIELD_COLORS.title}
+              valueSx={{ fontSize: 14, fontWeight: 700, color: PRIMARY }}
+            >
+              {editing ? (
+                <InlineInput
+                  name="CourseName"
+                  value={form.CourseName}
+                  onChange={handleFormChange}
+                  disabled={saving}
+                  placeholder="Tên khóa học"
+                  maxLength={MENTOR_COURSE_NAME_MAX}
+                  error={formErrors.CourseName}
+                />
+              ) : null}
+            </InfoRow>
+            <InfoRow
+              label="Giảng viên"
+              value={course.InStructorName}
+              icon={PersonOutlineOutlinedIcon}
+              iconColor={FIELD_COLORS.instructor}
+            />
             <InfoRow
               label="Danh mục"
               value={course.CategoryDisplayName}
@@ -424,19 +418,6 @@ export default function MentorCourseOverviewTab({ course, onCourseUpdated }) {
                 />
               ) : null}
             </InfoRow>
-            <InfoRow
-              label="Giảng viên"
-              value={course.InStructorName}
-              icon={PersonOutlineOutlinedIcon}
-              iconColor={FIELD_COLORS.instructor}
-            />
-            <InfoRow
-              label="Trạng thái"
-              value={published ? 'Đã xuất bản' : 'Bản nháp'}
-              icon={statusMeta.icon}
-              iconColor={statusMeta.color}
-              valueSx={{ color: statusMeta.color }}
-            />
             <InfoRow
               label="Ngày tạo"
               value={formatMentorCourseDate(course.CourseCreateAt)}

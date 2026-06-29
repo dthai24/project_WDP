@@ -163,7 +163,7 @@ export function hasActiveCourseStudentFilters(query = {}) {
 }
 
 export const STUDENT_TABLE_GRID_COLUMNS =
-  'minmax(200px, 1.4fr) minmax(120px, 0.8fr) minmax(140px, 1fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(110px, 0.6fr) minmax(120px, auto)';
+  'minmax(200px, 1.4fr) minmax(120px, 0.8fr) minmax(140px, 1fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(110px, 0.6fr)';
 
 export const STUDENT_TABLE_HEADERS = [
   'Học viên',
@@ -172,7 +172,6 @@ export const STUDENT_TABLE_HEADERS = [
   'Bài học hiện tại',
   'Lần học gần nhất',
   'Ngày đăng ký',
-  'Thao tác',
 ];
 
 export const COURSE_STUDENTS_PAGE_SIZE = 10;

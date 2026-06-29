@@ -59,7 +59,9 @@ export default function MentorQuestionBankDetailHeader({
   const backPath = courseId
     ? `/mentor/courses/${courseId}/questions`
     : '/mentor/question-banks';
-  const backLabel = courseId ? 'Quay lại khóa học' : 'Quay lại danh sách';
+  const backLabel = courseId
+    ? (isCreateMode ? 'Quay lại' : 'Quay lại khóa học')
+    : 'Quay lại danh sách';
 
   const handleBack = () => {
     if (onBack) {
