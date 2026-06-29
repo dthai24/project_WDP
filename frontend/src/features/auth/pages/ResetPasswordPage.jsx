@@ -125,7 +125,7 @@ export default function ResetPasswordPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <LockOutlinedIcon sx={{ fontSize: 40, color: 'primary.main', mb: 0.5 }} />
-          <h1>S.T.A.R Learning Path</h1>
+          <h1>English Master</h1>
           <p>Đặt lại mật khẩu</p>
         </div>
 

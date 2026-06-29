@@ -136,7 +136,7 @@ export default function HomePage() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tighter text-slate-900 leading-[1.05] mb-5">
                 Master English with{" "}
                 <span className="gradient-text">
-                  S.T.A.R
+                  English Master
                 </span>
               </h1>
 
@@ -247,7 +247,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mb-12 sm:mb-16">
             <p className="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3">
-              Why S.T.A.R
+              Why English Master
             </p>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 mb-4">
               Learning English,{" "}
@@ -474,7 +474,7 @@ export default function HomePage() {
               What our students say
             </h2>
             <p className="text-base text-slate-500 leading-relaxed max-w-lg">
-              Real stories from real learners who transformed their English skills with S.T.A.R.
+              Real stories from real learners who transformed their English skills with English Master.
             </p>
           </div>
 
@@ -486,7 +486,7 @@ export default function HomePage() {
               avatar="MA"
             />
             <TestimonialCard
-              quote="I prepared for IELTS with S.T.A.R and achieved my target score. The mock tests and feedback from mentors were invaluable."
+              quote="I prepared for IELTS with English Master and achieved my target score. The mock tests and feedback from mentors were invaluable."
               name="Quoc Huy Tran"
               role="Working Professional"
               avatar="QH"
@@ -513,7 +513,7 @@ export default function HomePage() {
                 Ready to start learning?
               </h2>
               <p className="text-base sm:text-lg text-slate-400 leading-relaxed mb-8 max-w-lg mx-auto">
-                Join thousands of students who are already mastering English with S.T.A.R. Your journey starts with one click.
+                Join thousands of students who are already mastering English with English Master. Your journey starts with one click.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link

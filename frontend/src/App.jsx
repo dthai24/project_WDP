@@ -31,6 +31,10 @@ import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuest
 import AdminAccountManagementPage from '@/features/admin/pages/AdminAccountManagementPage';
 import AdminCategoryManagementPage from '@/features/admin/pages/AdminCategoryManagementPage';
 import AdminLevelManagementPage from '@/features/admin/pages/AdminLevelManagementPage';
+import AdminApplicationsPage from '@/features/admin/pages/AdminApplicationsPage';
+import AdminCoursesPage from '@/features/admin/pages/AdminCoursesPage';
+import AdminDashboardPage from '@/features/admin/pages/AdminDashboardPage';
+import AdminEditHistoryPage from '@/features/admin/pages/AdminEditHistoryPage';
 import AdminNewsManagementPage from '@/features/admin/pages/AdminNewsManagementPage';
 import AdminNewsCreatePage from '@/features/admin/pages/AdminNewsCreatePage';
 import AdminNewsCreateContentPage from '@/features/admin/pages/AdminNewsCreateContentPage';
@@ -192,7 +196,11 @@ export default function App() {
         }
       >
         <Route index element={<AdminShellIndexRedirect />} />
+        <Route path="dashboard" element={<AdminDashboardPage />} />
         <Route path="accounts" element={<AdminAccountManagementPage />} />
+        <Route path="applications" element={<AdminApplicationsPage />} />
+        <Route path="courses" element={<AdminCoursesPage />} />
+        <Route path="history" element={<AdminEditHistoryPage />} />
         <Route path="categories" element={<AdminCategoryManagementPage />} />
         <Route path="levels" element={<AdminLevelManagementPage />} />
         <Route path="news/create/content" element={<AdminNewsCreateContentPage />} />

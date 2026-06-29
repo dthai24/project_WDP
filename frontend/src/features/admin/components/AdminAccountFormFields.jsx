@@ -182,6 +182,7 @@ export function FormFieldSelect({
   onChange,
   error = '',
   colorMap = {},
+  disabled = false,
 }) {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -196,13 +197,14 @@ export function FormFieldSelect({
       <Box
         component="button"
         type="button"
-        onClick={(e) => setAnchorEl(e.currentTarget)}
+        onClick={(e) => !disabled && setAnchorEl(e.currentTarget)}
         sx={{
           ...contentInputSx(Boolean(error)),
           display: 'flex',
           alignItems: 'center',
           gap: 0.75,
-          cursor: 'pointer',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.7 : 1,
           font: 'inherit',
           textAlign: 'left',
           width: '100%',

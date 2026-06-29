@@ -43,7 +43,7 @@ const sendOtpEmail = async ({ to, subject, html, otpCode, label }) => {
 
   try {
     await createTransporter().sendMail({
-      from: `"S.T.A.R Learning Path" <${process.env.EMAIL_USER.trim()}>`,
+      from: `"English Master" <${process.env.EMAIL_USER.trim()}>`,
       to,
       subject,
       html,
@@ -68,7 +68,7 @@ const otpDeliveryMessage = (email, emailSent) =>
 const buildRegisterOtpHtml = (fullName, otpCode) => `
   <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#0f0e17;border-radius:16px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#6c63ff,#a78bfa);padding:32px 24px;text-align:center;">
-      <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px;">⭐ S.T.A.R Learning Path</h1>
+      <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px;">⭐ English Master</h1>
       <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">Xác thực tài khoản của bạn</p>
     </div>
     <div style="padding:32px 24px;background:#1a1830;">
@@ -80,7 +80,7 @@ const buildRegisterOtpHtml = (fullName, otpCode) => `
       <p style="color:#8885a0;font-size:13px;text-align:center;">⏰ Mã có hiệu lực trong <strong style="color:#f6b93b;">3 phút</strong>. Vui lòng không chia sẻ với bất kỳ ai.</p>
     </div>
     <div style="padding:16px 24px;background:#0f0e17;text-align:center;">
-      <p style="color:#555;font-size:12px;margin:0;">© ${new Date().getFullYear()} S.T.A.R Learning Path. All rights reserved.</p>
+      <p style="color:#555;font-size:12px;margin:0;">© ${new Date().getFullYear()} English Master. All rights reserved.</p>
     </div>
   </div>
 `;
@@ -89,7 +89,7 @@ const buildRegisterOtpHtml = (fullName, otpCode) => `
 const buildResetPasswordHtml = (fullName, otpCode) => `
   <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#0f0e17;border-radius:16px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#f6b93b,#ff6b6b);padding:32px 24px;text-align:center;">
-      <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px;">🔑 S.T.A.R Learning Path</h1>
+      <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px;">🔑 English Master</h1>
       <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">Yêu cầu đặt lại mật khẩu</p>
     </div>
     <div style="padding:32px 24px;background:#1a1830;">
@@ -101,7 +101,7 @@ const buildResetPasswordHtml = (fullName, otpCode) => `
       <p style="color:#8885a0;font-size:13px;text-align:center;">⏰ Mã có hiệu lực trong <strong style="color:#f6b93b;">5 phút</strong>. Nếu bạn không yêu cầu điều này, hãy bỏ qua email này.</p>
     </div>
     <div style="padding:16px 24px;background:#0f0e17;text-align:center;">
-      <p style="color:#555;font-size:12px;margin:0;">© ${new Date().getFullYear()} S.T.A.R Learning Path. All rights reserved.</p>
+      <p style="color:#555;font-size:12px;margin:0;">© ${new Date().getFullYear()} English Master. All rights reserved.</p>
     </div>
   </div>
 `;
@@ -125,6 +125,11 @@ const login = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
     if (!user)
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng.' });
+
+    // Kiểm tra trạng thái khóa tài khoản
+    if (user.isActive === false) {
+      return res.status(403).json({ success: false, message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
+    }
 
     // So sánh mật khẩu (plain text hoặc bcrypt)
     const isPasswordValid = user.password === password;
@@ -206,7 +211,7 @@ const register = async (req, res) => {
 
     const { emailSent } = await sendOtpEmail({
       to: email,
-      subject: '🔐 Mã xác thực OTP của bạn - S.T.A.R Learning Path',
+      subject: '🔐 Mã xác thực OTP của bạn - English Master',
       html: buildRegisterOtpHtml(fullName, otpCode),
       otpCode,
       label: 'đăng ký',
@@ -348,7 +353,7 @@ const forgotPassword = async (req, res) => {
 
     const { emailSent } = await sendOtpEmail({
       to: normalizedEmail,
-      subject: '🔑 Mã OTP đặt lại mật khẩu - S.T.A.R Learning Path',
+      subject: '🔑 Mã OTP đặt lại mật khẩu - English Master',
       html: buildResetPasswordHtml(user.fullName, otpCode),
       otpCode,
       label: 'đặt lại mật khẩu',

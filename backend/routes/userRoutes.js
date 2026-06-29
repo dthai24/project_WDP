@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/authMiddleware');
-const { getProfile, updateProfile, changePassword, updateGoals } = require('../controllers/userController');
+const { getProfile, updateProfile, changePassword, updateGoals, applyMentor } = require('../controllers/userController');
 const { uploadAvatar, avatarUploadMiddleware } = require('../controllers/avatarController');
 
 // All routes require authentication
@@ -14,5 +14,9 @@ router.post('/avatar', protect, avatarUploadMiddleware, uploadAvatar);
 
 // PUT /api/users/goals 
 router.put('/goals', protect, updateGoals);
+
+// POST /api/users/apply-mentor
+router.post('/apply-mentor', protect, applyMentor);
+
 module.exports = router;
 

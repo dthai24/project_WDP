@@ -13,6 +13,7 @@ import {
   ChartLine,
   Question,
 } from "@phosphor-icons/react";
+import { isAdmin } from "@/features/auth/utils/authUtils";
 
 const NAV_ITEMS = [
   { label: "Home", path: "/home", icon: House },
@@ -21,7 +22,7 @@ const NAV_ITEMS = [
   { label: "Practice", path: "/practice", icon: Question },
 ];
 
-export default function Header() {
+export default function Header({ logoTo, profilePath }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
@@ -85,37 +86,39 @@ export default function Header() {
         <div className="flex items-center justify-between h-16 sm:h-[68px]">
           {/* Logo */}
           <Link
-            to={user ? "/home" : "/"}
+            to={logoTo || (user ? (isAdmin(user) ? "/admin/dashboard" : "/home") : "/")}
             className="flex items-center gap-2.5 shrink-0 group"
           >
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-105">
               <GraduationCap size={20} weight="fill" className="text-white" />
             </div>
             <span className="text-lg font-extrabold text-slate-900 tracking-tight hidden sm:block">
-              S.T.A.R
+              English Master
             </span>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_ITEMS.map((item) => {
-              const active = isActive(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    active
-                      ? "bg-brand-50 text-brand-700"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <item.icon size={16} weight={active ? "fill" : "regular"} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          {!isAdmin(user) && (
+            <nav className="hidden md:flex items-center gap-1">
+              {NAV_ITEMS.map((item) => {
+                const active = isActive(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                      active
+                        ? "bg-brand-50 text-brand-700"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <item.icon size={16} weight={active ? "fill" : "regular"} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
 
           {/* Right Side */}
           <div className="flex items-center gap-2">
@@ -159,7 +162,7 @@ export default function Header() {
                     </div>
 
                     <Link
-                      to="/profile"
+                      to={profilePath || "/profile"}
                       onClick={() => setProfileOpen(false)}
                       className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                     >
@@ -220,7 +223,7 @@ export default function Header() {
       </div>
 
       {/* Mobile Nav */}
-      {mobileOpen && (
+      {mobileOpen && !isAdmin(user) && (
         <div className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-xl">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-1">
             {NAV_ITEMS.map((item) => {

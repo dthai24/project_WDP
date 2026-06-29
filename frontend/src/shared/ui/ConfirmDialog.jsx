@@ -6,7 +6,9 @@ import {
   Typography,
   alpha,
   useTheme,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import AppButton from "./AppButton";
 
 export default function ConfirmDialog({
@@ -37,9 +39,25 @@ export default function ConfirmDialog({
           },
         },
       }}
+      sx={{ '& .MuiDialog-paper': { position: 'relative' } }}
     >
-      <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{title}</DialogTitle>
-      <DialogContent>
+      <IconButton
+        aria-label="close"
+        onClick={onClose}
+        disabled={loading}
+        sx={{
+          position: "absolute",
+          left: 12,
+          top: 12,
+          color: (theme) => theme.palette.grey[500],
+          zIndex: 10,
+        }}
+      >
+        <CloseIcon sx={{ fontSize: 20 }} />
+      </IconButton>
+
+      <DialogTitle sx={{ fontWeight: 700, pb: 1, pl: 6 }}>{title}</DialogTitle>
+      <DialogContent sx={{ pl: 6 }}>
         <Typography variant="body2" color="text.secondary">
           {message}
         </Typography>

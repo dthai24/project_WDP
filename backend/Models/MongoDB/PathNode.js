@@ -5,6 +5,7 @@ const pathNodeSchema = new mongoose.Schema({
   nodeName: { type: String, required: true, maxlength: 255 },
   nodeOrder: { type: Number, required: true },
   description: String,
+  isFree: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model('PathNode', pathNodeSchema);

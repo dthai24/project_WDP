@@ -9,14 +9,16 @@ import { resolveSeedColorCode } from '@/shared/catalog/catalogColorPalette';
  * Backend returns: LevelId, LevelName, DisplayName, SortOrder, CreatedAt
  */
 function mapLevel(raw) {
+  const id = raw.LevelId || raw._id || raw.id;
   return {
-    id: raw.LevelId,
-    levelName: raw.LevelName || '',
-    displayName: raw.DisplayName || '',
-    sortOrder: Number(raw.SortOrder) || 0,
-    colorCode: raw.ColorCode || resolveSeedColorCode('level', raw.LevelId) || null,
-    status: raw.Status || 'ACTIVE',
-    createdAt: raw.CreatedAt || null,
+    id,
+    levelName: raw.LevelName || raw.levelName || '',
+    displayName: raw.DisplayName || raw.displayName || '',
+    sortOrder: Number(raw.SortOrder || raw.sortOrder) || 0,
+    colorCode: raw.ColorCode || raw.colorCode || resolveSeedColorCode('level', id) || null,
+    status: raw.Status || raw.status || 'ACTIVE',
+    createdAt: raw.CreatedAt || raw.createdAt || null,
+    categoryId: raw.CategoryId || raw.categoryId || null,
   };
 }
 
@@ -32,6 +34,7 @@ export async function createLevel(payload) {
     LevelName: payload.levelName || payload.displayName?.toLowerCase().replace(/\s+/g, '-') || '',
     DisplayName: payload.displayName,
     SortOrder: payload.sortOrder || 1,
+    CategoryId: payload.CategoryId || null,
   });
   if (!res.ok) {
     return { ok: false, message: res.message || 'Không thể tạo trình độ' };
@@ -44,6 +47,7 @@ export async function updateLevel(id, payload) {
     LevelName: payload.levelName || payload.displayName?.toLowerCase().replace(/\s+/g, '-') || '',
     DisplayName: payload.displayName,
     SortOrder: payload.sortOrder || 1,
+    CategoryId: payload.CategoryId || null,
   });
   if (!res.ok) {
     return { ok: false, message: res.message || 'Không thể cập nhật trình độ' };

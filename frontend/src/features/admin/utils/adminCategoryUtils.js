@@ -58,8 +58,14 @@ export function filterAndSortCategories(categories = [], query = {}) {
     if (sort === 'name_asc') {
       return a.displayName.localeCompare(b.displayName, 'vi');
     }
+    if (sort === 'name_desc') {
+      return b.displayName.localeCompare(a.displayName, 'vi');
+    }
     const dateA = new Date(a.createdAt ?? 0).getTime();
     const dateB = new Date(b.createdAt ?? 0).getTime();
+    if (sort === 'oldest') {
+      return dateA - dateB;
+    }
     return dateB - dateA;
   });
 

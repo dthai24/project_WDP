@@ -55,7 +55,7 @@ export function getPrimaryRoleLabel(user = getUser()) {
 
 /** Trang mặc định theo role — single source of truth cho redirect. */
 export const ROLE_DEFAULT_PATHS = {
-  Admin: "/admin/accounts",
+  Admin: "/admin/dashboard",
   Mentor: "/mentor/courses",
   Student: "/home",
   /** Student bị chặt khỏi shell Mentor/Admin — ưu tiên trang khóa học. */

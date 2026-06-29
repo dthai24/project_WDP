@@ -8,6 +8,10 @@ import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
 import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined";
+import BookOutlinedIcon from "@mui/icons-material/BookOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import { isStudent } from "@/features/auth/utils/authUtils";
 
 export function isAdminAccountsActive(pathname) {
@@ -110,12 +114,36 @@ export function getMentorMenuItems() {
 export function getAdminMenuItems() {
   return [
     {
+      id: "admin-dashboard",
+      label: "Tổng quan",
+      to: "/admin/dashboard",
+      Icon: DashboardOutlinedIcon,
+      disabled: false,
+      isActiveMatch: (pathname) => pathname === "/admin/dashboard",
+    },
+    {
       id: "admin-accounts",
       label: "Tài khoản",
       to: "/admin/accounts",
       Icon: ManageAccountsOutlinedIcon,
       disabled: false,
       isActiveMatch: isAdminAccountsActive,
+    },
+    {
+      id: "admin-courses",
+      label: "Khóa học",
+      to: "/admin/courses",
+      Icon: BookOutlinedIcon,
+      disabled: false,
+      isActiveMatch: (pathname) => pathname === "/admin/courses" || pathname.startsWith("/admin/courses/"),
+    },
+    {
+      id: "admin-applications",
+      label: "Ứng tuyển",
+      to: "/admin/applications",
+      Icon: AssignmentIndOutlinedIcon,
+      disabled: false,
+      isActiveMatch: (pathname) => pathname === "/admin/applications" || pathname.startsWith("/admin/applications/"),
     },
     {
       id: "admin-categories",
@@ -140,6 +168,14 @@ export function getAdminMenuItems() {
       Icon: NewspaperOutlinedIcon,
       disabled: false,
       isActiveMatch: isAdminNewsActive,
+    },
+    {
+      id: "admin-history",
+      label: "Nhật ký chỉnh sửa",
+      to: "/admin/history",
+      Icon: HistoryOutlinedIcon,
+      disabled: false,
+      isActiveMatch: (pathname) => pathname === "/admin/history",
     },
   ];
 }

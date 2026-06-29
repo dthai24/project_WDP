@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Alert, Box, InputBase, Typography } from '@mui/material';
 import { MENTOR_COURSE_DESCRIPTION_MAX, MENTOR_COURSE_NAME_MAX } from '@/features/mentor/utils/mentorCourseFormUtils';
 import { contentFieldSx, contentInputInnerSx } from './mentorCourseContentStyles';
@@ -119,6 +120,19 @@ export default function MentorCourseBasicInfoForm({
   optionsLoading = false,
   lockCategoryAndLevel = false,
 }) {
+  const filteredLevelOptions = levelOptions.filter((opt) => {
+    if (!form.CategoryId) return true;
+    return String(opt.categoryId) === String(form.CategoryId);
+  });
+
+  useEffect(() => {
+    if (form.LevelId && form.CategoryId) {
+      const exists = filteredLevelOptions.some(opt => String(opt.value) === String(form.LevelId));
+      if (!exists) {
+        onChange?.({ target: { name: 'LevelId', value: '' } });
+      }
+    }
+  }, [form.CategoryId, form.LevelId, filteredLevelOptions, onChange]);
   return (
     <Box>
       <Typography sx={{ ...SECTION_TITLE_SX, fontSize: 14, fontWeight: 600, mb: 2 }}>
@@ -168,7 +182,7 @@ export default function MentorCourseBasicInfoForm({
           onChange={onChange}
           disabled={disabled || optionsLoading || lockCategoryAndLevel}
           type="select"
-          selectOptions={levelOptions}
+          selectOptions={filteredLevelOptions}
           placeholder={optionsLoading ? 'Đang tải...' : 'Chọn trình độ'}
         />
       </Box>

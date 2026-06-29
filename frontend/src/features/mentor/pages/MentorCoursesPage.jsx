@@ -170,26 +170,6 @@ export default function MentorCoursesPage() {
             Quản lý tất cả khóa học bạn đang giảng dạy.
           </p>
         </div>
-
-        <AppButton
-          startIcon={<AddRoundedIcon />}
-          onClick={handleCreateCourse}
-          sx={{
-            height: 44,
-            px: 2.5,
-            fontSize: 14,
-            fontWeight: 700,
-            borderRadius: '999px',
-            bgcolor: '#0891B2',
-            color: '#fff',
-            flexShrink: 0,
-            width: { xs: '100%', sm: 'auto' },
-            boxShadow: 'none',
-            '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-          }}
-        >
-          Tạo khóa học
-        </AppButton>
       </div>
 
       <MentorCoursesToolbar
@@ -232,6 +212,27 @@ export default function MentorCoursesPage() {
             onPageChange={handlePageChange}
           />
         </>
+      )}
+      {!loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+          <AppButton
+            startIcon={<AddRoundedIcon />}
+            onClick={handleCreateCourse}
+            sx={{
+              height: 48,
+              px: 4,
+              fontSize: 14,
+              fontWeight: 700,
+              borderRadius: '999px',
+              bgcolor: '#0891B2',
+              color: '#fff',
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+              '&:hover': { bgcolor: '#0E7490', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' },
+            }}
+          >
+            Tạo khóa học mới
+          </AppButton>
+        </div>
       )}
     </div>
   );

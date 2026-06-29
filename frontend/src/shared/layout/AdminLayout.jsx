@@ -18,7 +18,7 @@ export default function AdminLayout() {
         <Sidebar variant="admin" />
 
         <main
-          className="flex-1 transition-all duration-200"
+          className="flex-1 transition-all duration-200 pt-16 sm:pt-[68px]"
           style={{
             marginLeft: `${SIDEBAR_WIDTH}px`,
             minHeight: `calc(100dvh - ${HEADER_HEIGHT}px)`,
