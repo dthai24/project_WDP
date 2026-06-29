@@ -19,11 +19,13 @@ const mentorRoutes = require("./routes/mentorRoutes");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 app.use("/api/mentor", mentorRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", chatRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // Simple health check route
 app.get("/api/health", (req, res) => {
@@ -43,14 +45,12 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/learning_path";
-const { seedDatabase } = require("./controllers/authController");
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/wdp_english";
 
 mongoose
   .connect(MONGODB_URI)
-  .then(async () => {
-    console.log("Successfully connected to MongoDB.");
-    await seedDatabase();
+  .then(() => {
+    console.log(`Successfully connected to MongoDB — DB: wdp_english`);
   })
   .catch((error) => {
     console.warn("MongoDB connection failed:", error.message);
@@ -62,7 +62,7 @@ const https = require("https");
 const keyPath = path.join(__dirname, "../cert/server.key");
 const certPath = path.join(__dirname, "../cert/server.crt");
 
-if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+if (fs.existsSync(keyPath) && fs.existsSync(certPath) && process.env.NODE_ENV === 'production') {
   try {
     const options = {
       key: fs.readFileSync(keyPath),

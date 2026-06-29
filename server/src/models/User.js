@@ -39,12 +39,23 @@ const userSchema = new mongoose.Schema(
 userSchema.post("init", function (doc) {
   if (doc.roles && doc.roles.length > 0) {
     const primaryRole = doc.roles[0];
-    if (primaryRole.roleId === 3 || primaryRole.roleName === "Admin") {
+    const roleName = primaryRole.roleName?.trim();
+    
+    if (roleName === "Admin") {
       doc.role = "Admin";
-    } else if (primaryRole.roleId === 2 || primaryRole.roleName === "Mentor") {
+    } else if (roleName === "Mentor") {
       doc.role = "Mentor";
-    } else if (primaryRole.roleId === 1 || primaryRole.roleName === "Student" || primaryRole.roleName === "Learner") {
-      doc.role = doc.role || "Learner";
+    } else if (roleName === "Learner" || roleName === "Student") {
+      doc.role = "Learner";
+    } else {
+      // Fallback matching logic
+      if (primaryRole.roleId === 3) {
+        doc.role = "Admin";
+      } else if (primaryRole.roleId === 2) {
+        doc.role = "Mentor";
+      } else if (primaryRole.roleId === 1) {
+        doc.role = "Learner";
+      }
     }
   }
   if (!doc.name && doc.fullName) {

@@ -141,6 +141,7 @@ const reviewApplication = async (req, res) => {
       let user = await User.findOne({ email: application.email.toLowerCase() });
       if (user) {
         user.role = "Mentor";
+        user.roles = [{ roleId: 2, roleName: "Mentor" }];
         await user.save();
         console.log(`Đã nâng cấp quyền Mentor thành công cho tài khoản có sẵn: ${application.email}`);
       } else {
@@ -150,7 +151,8 @@ const reviewApplication = async (req, res) => {
           email: application.email.toLowerCase(),
           name: application.fullName,
           password: randomPassword, // mật khẩu ngẫu nhiên mới cho guest
-          role: "Mentor"
+          role: "Mentor",
+          roles: [{ roleId: 2, roleName: "Mentor" }]
         });
         await user.save();
         console.log(`Đã tạo tài khoản Mentor mới cho khách hàng ${application.email} với mật khẩu ngẫu nhiên: ${randomPassword}`);

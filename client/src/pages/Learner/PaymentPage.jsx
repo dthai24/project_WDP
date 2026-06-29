@@ -2,18 +2,54 @@ import React, { useState } from "react";
 import { ArrowLeft, CheckCircle2, Shield, Lock, CreditCard, Wallet, Building2, ChevronRight, AlertCircle, Sparkles, Award, Clock, BookOpen, Star, Check } from "lucide-react";
 import { formatPrice, paymentMethods, enrollCourse } from "../../services/data";
 
-export default function PaymentPage({ course, onNavigate, onBack }) {
+export default function PaymentPage({ course, currentUser, onNavigate, onBack }) {
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [step, setStep] = useState("review"); // review | processing | success
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   const isFree = course.price === null || course.price === undefined;
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!agreeTerms) return;
     setStep("processing");
-    setTimeout(() => {
+    
+    // Gọi API thông báo bắt đầu giao dịch thanh toán
+    try {
+      await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/payment/initiate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: currentUser?.email || "learnpath.project@gmail.com",
+          userName: currentUser?.name || "Học viên",
+          courseTitle: course.title,
+          price: course.price,
+          paymentMethod: selectedMethod || "Miễn phí"
+        })
+      });
+    } catch (err) {
+      console.warn("Lỗi gửi email bắt đầu thanh toán:", err.message);
+    }
+
+    setTimeout(async () => {
       enrollCourse(course.id);
+      
+      // Gọi API thông báo giao dịch hoàn tất thành công
+      try {
+        await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/payment/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: currentUser?.email || "learnpath.project@gmail.com",
+            userName: currentUser?.name || "Học viên",
+            courseTitle: course.title,
+            price: course.price,
+            paymentMethod: selectedMethod || "Miễn phí"
+          })
+        });
+      } catch (err) {
+        console.warn("Lỗi gửi email thanh toán thành công:", err.message);
+      }
+
       setStep("success");
     }, 2000);
   };
