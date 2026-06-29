@@ -151,13 +151,6 @@ export default function MentorCourseStudentsTab({ courseId }) {
   // Nếu có filter active thì hiện nút reset
   const showReset = hasActiveCourseStudentFilters(filters);
 
-  // Hàm xử lý khi bấm xem chi tiết học viên
-  // Hiện tại chưa làm nên dùng void student để tránh warning biến không dùng
-  const handleViewDetail = (student) => {
-    // TODO: mở drawer/dialog chi tiết tiến độ học viên
-    void student;
-  };
-
   return (
     <Box sx={CREATE_CARD_SX}>
       <Box sx={DETAIL_SECTION_HEADER_SX}>
@@ -188,7 +181,6 @@ export default function MentorCourseStudentsTab({ courseId }) {
         loading={loading}
         hasAnyStudents={allStudents.length > 0}
         isFiltered={showReset}
-        onViewDetail={handleViewDetail}
         onClearFilters={() => {
           setPage(1);
           setFilters(DEFAULT_FILTERS);

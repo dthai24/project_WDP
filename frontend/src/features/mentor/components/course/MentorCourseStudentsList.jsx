@@ -27,14 +27,13 @@ function ListHeader() {
         ...DETAIL_PANEL_HEADER_SX,
       }}
     >
-      {STUDENT_TABLE_HEADERS.map((label, index) => (
+      {STUDENT_TABLE_HEADERS.map((label) => (
         <Typography
           key={label}
           sx={{
             fontSize: 11,
             fontWeight: 700,
             color: MUTED,
-            textAlign: index === STUDENT_TABLE_HEADERS.length - 1 ? 'right' : 'left',
           }}
         >
           {label}
@@ -49,7 +48,6 @@ export default function MentorCourseStudentsList({
   loading,
   hasAnyStudents,
   isFiltered,
-  onViewDetail,
   onClearFilters,
 }) {
   if (loading) {
@@ -87,7 +85,6 @@ export default function MentorCourseStudentsList({
         <MentorCourseStudentRow
           key={student.userId}
           student={student}
-          onViewDetail={onViewDetail}
         />
       ))}
     </Box>

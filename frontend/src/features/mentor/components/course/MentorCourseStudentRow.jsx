@@ -5,10 +5,7 @@ import {
   LinearProgress,
   Typography,
   alpha,
-  useTheme,
 } from '@mui/material';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import AppButton from '@/shared/ui/AppButton';
 import { PRIMARY, TEXT, MUTED, SURFACE_SUBTLE, BORDER_SUBTLE } from './mentorCourseCreateStyles';
 import {
   STUDENT_STATUS_CHIP_SX,
@@ -57,8 +54,7 @@ function DesktopValue({ value }) {
   );
 }
 
-export default function MentorCourseStudentRow({ student, onViewDetail }) {
-  const theme = useTheme();
+export default function MentorCourseStudentRow({ student }) {
   const statusSx = STUDENT_STATUS_CHIP_SX[student.status] ?? STUDENT_STATUS_CHIP_SX.not_started;
   const progressColor = getStudentProgressColor(student.progressPercentage);
   const progressValue = Math.min(100, Math.max(0, student.progressPercentage ?? 0));
@@ -207,25 +203,6 @@ export default function MentorCourseStudentRow({ student, onViewDetail }) {
           value={formatStudentDate(student.enrollmentDate)}
         />
         <DesktopValue value={formatStudentDate(student.enrollmentDate)} />
-      </Box>
-
-      {/* Thao tác */}
-      <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-        <AppButton
-          variant="outlined"
-          startIcon={<VisibilityOutlinedIcon sx={{ fontSize: 15 }} />}
-          onClick={() => onViewDetail(student)}
-          sx={{
-            height: 34,
-            borderRadius: '999px',
-            fontSize: 12,
-            fontWeight: 700,
-            px: 1.5,
-            borderColor: alpha(theme.palette.primary.main, 0.2),
-          }}
-        >
-          Xem chi tiết
-        </AppButton>
       </Box>
     </Box>
   );
