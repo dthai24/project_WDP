@@ -36,7 +36,7 @@ export default function AppRoutes({ currentUser, onLogin, onLogout }) {
                 userSession.email === "minh@gmail.com" || 
                 userSession.email === "admin@gmail.com" || 
                 userSession.role === "Admin" || 
-                (Array.isArray(userSession.roles) && userSession.roles.some(r => r.roleId === 3 || r.roleName === "Admin"))
+                (Array.isArray(userSession.roles) && userSession.roles.some(r => r.roleName === "Admin"))
               );
               if (isAdminUser) {
                 navigate("/admin");

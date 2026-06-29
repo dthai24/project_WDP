@@ -74,7 +74,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
 
   const renderDashboard = () => {
     const myDecks = [
-      { id: 1, title: "Tu vung IELTS Academic", count: 180, learned: 112, review: 12 },
+      { id: 1, title: "Từ vựng IELTS Academic", count: 180, learned: 112, review: 12 },
       { id: 2, title: "ETS TOEIC Vocab 2026", count: 320, learned: 154, review: 6 },
       { id: 3, title: "English for Communication (B2)", count: 95, learned: 82, review: 0 }
     ];
@@ -90,17 +90,17 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
     ];
 
     const quickGames = [
-      { title: "Noi tu (Memory Match)", desc: "Ghep doi tu va nghia", icon: Gamepad2, color: "bg-pink-50 text-pink-600 border-pink-100" },
-      { title: "Trac nghiem Phan xa", desc: "Chon nghia tu nhanh", icon: Sparkles, color: "bg-purple-50 text-purple-600 border-purple-100" },
-      { title: "Word Scramble", desc: "Sap xep chu cai thanh tu", icon: Layers, color: "bg-rose-50 text-rose-600 border-rose-100" },
-      { title: "Listening Challenge", desc: "Nghe phat am dien tu", icon: Brain, color: "bg-violet-50 text-violet-600 border-violet-100" }
+      { title: "Nối từ (Memory Match)", desc: "Ghép đôi từ và nghĩa", icon: Gamepad2, color: "bg-pink-50 text-pink-600 border-pink-100" },
+      { title: "Trắc nghiệm Phản xạ", desc: "Chọn nghĩa từ nhanh", icon: Sparkles, color: "bg-purple-50 text-purple-600 border-purple-100" },
+      { title: "Word Scramble", desc: "Sắp xếp chữ cái thành từ", icon: Layers, color: "bg-rose-50 text-rose-600 border-rose-100" },
+      { title: "Listening Challenge", desc: "Nghe phát âm điền từ", icon: Brain, color: "bg-violet-50 text-violet-600 border-violet-100" }
     ];
 
     const roadmaps = [
-      { title: "On thi TOEIC", badge: "ETS 2026", desc: "Tu vung phan chia theo level 450+, 650+, 850+.", icon: "target", color: "from-rose-500 to-pink-600" },
-      { title: "On thi IELTS", badge: "IELTS 7.5+", desc: "Kho tu vung IELTS Academic va General.", icon: "award", color: "from-purple-500 to-indigo-600" },
-      { title: "THPT Quoc Gia", badge: "Lop 10-12", desc: "Day du tu vung theo sach giao khoa.", icon: "book", color: "from-pink-500 to-purple-600" },
-      { title: "Giao tiep", badge: "Oxford 3000", desc: "Lo trinh chuan tu A1 den C1.", icon: "globe", color: "from-rose-500 to-orange-600" }
+      { title: "Ôn thi TOEIC", badge: "ETS 2026", desc: "Từ vựng phân chia theo level 450+, 650+, 850+.", icon: "target", color: "from-rose-500 to-pink-600" },
+      { title: "Ôn thi IELTS", badge: "IELTS 7.5+", desc: "Kho từ vựng IELTS Academic và General.", icon: "award", color: "from-purple-500 to-indigo-600" },
+      { title: "THPT Quốc Gia", badge: "Lớp 10-12", desc: "Đầy đủ từ vựng theo sách giáo khoa.", icon: "book", color: "from-pink-500 to-purple-600" },
+      { title: "Giao tiếp", badge: "Oxford 3000", desc: "Lộ trình chuẩn từ A1 đến C1.", icon: "globe", color: "from-rose-500 to-orange-600" }
     ];
 
     return (
@@ -116,11 +116,11 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
               <span className="text-lg font-black">{streakData.currentStreak}</span>
             </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-text-primary">Chuoi hoc tap</p>
+              <p className="text-xs font-bold text-text-primary">Chuỗi học tập</p>
               <p className="text-[10px] text-text-muted">
                 {streakData.currentStreak > 0
-                  ? `Duy tri ${streakData.currentStreak} ngay lien tiep`
-                  : "Bat dau chuoi hoc tap hom nay"}
+                  ? `Duy trì ${streakData.currentStreak} ngày liên tiếp`
+                  : "Bắt đầu chuỗi học tập hôm nay"}
               </p>
             </div>
           </div>
@@ -151,10 +151,10 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
 
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-text-primary tracking-tight">
-              Chao ban quay tro lai, <span className="text-primary">{currentUser.name}</span>
+              Chào bạn quay trở lại, <span className="text-primary">{currentUser.name}</span>
             </h2>
             <p className="text-xs text-text-secondary font-medium">
-              Phuong phap hoc ngat quang SRS giup ban ghi nho tu vung vinh vien.
+              Phương pháp học ngắt quãng SRS giúp bạn ghi nhớ từ vựng vĩnh viễn.
             </p>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto scrollbar-hide pb-1 md:pb-0">
@@ -162,21 +162,21 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
               <Flame className="w-4 h-4 text-primary" />
               <div className="text-left">
                 <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest leading-none">Streak</p>
-                <p className="text-sm font-black text-primary leading-none mt-1">15 ngay</p>
+                <p className="text-sm font-black text-primary leading-none mt-1">15 ngày</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-purple-50 px-4 py-2.5 rounded-2xl border border-purple-100/50 shrink-0">
               <Zap className="w-4 h-4 text-purple-600" />
               <div className="text-left">
-                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest leading-none">Hoc luc</p>
+                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest leading-none">Học lực</p>
                 <p className="text-sm font-black text-purple-600 leading-none mt-1">2,450 XP</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-amber-50 px-4 py-2.5 rounded-2xl border border-amber-100/50 shrink-0">
               <Target className="w-4 h-4 text-amber-600" />
               <div className="text-left">
-                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none">Muc tieu</p>
-                <p className="text-sm font-black text-amber-600 leading-none mt-1">20 tu/ngay</p>
+                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none">Mục tiêu</p>
+                <p className="text-sm font-black text-amber-600 leading-none mt-1">20 từ/ngày</p>
               </div>
             </div>
           </div>
@@ -191,28 +191,28 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                 <div className="space-y-3">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-bold uppercase tracking-wider">
                     <Brain className="w-3.5 h-3.5" />
-                    <span>Thuat toan SRS</span>
+                    <span>Thuật toán SRS</span>
                   </div>
                   <h3 className="text-3xl font-black tracking-tight leading-tight">
-                    Hom nay ban co 18 tu can on tap!
+                    Hôm nay bạn có 18 từ cần ôn tập!
                   </h3>
                   <p className="text-sm text-white/70 max-w-md font-medium">
-                    Hay duy tri nhip hoc hang ngay de ngan chan duong cong lang quen tu nhien cua nao bo.
+                    Hãy duy trì nhịp học hàng ngày để ngăn chặn đường cong lãng quên tự nhiên của não bộ.
                   </p>
                 </div>
                 <button className="bg-white text-primary hover:bg-rose-50 px-6 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-[0.97] transition-all flex items-center gap-2 shrink-0">
                   <Play className="w-4 h-4 fill-primary" />
-                  <span>On tap ngay</span>
+                  <span>Ôn tập ngay</span>
                 </button>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-black text-text-primary tracking-tight">Bo tu vung cua toi</h3>
+                <h3 className="text-lg font-black text-text-primary tracking-tight">Bộ từ vựng của tôi</h3>
                 <button className="btn-ghost btn-sm flex items-center gap-1">
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Tao bo moi</span>
+                  <span>Tạo bộ mới</span>
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -224,16 +224,16 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                         <div className="flex items-center justify-between">
                           <BookOpen className="w-5 h-5 text-primary" />
                           {deck.review > 0 ? (
-                            <span className="badge-primary">Can on: {deck.review}</span>
+                            <span className="badge-primary">Cần ôn: {deck.review}</span>
                           ) : (
-                            <span className="badge-success">Da hoan thanh</span>
+                            <span className="badge-success">Đã hoàn thành</span>
                           )}
                         </div>
                         <h4 className="font-bold text-text-primary text-sm leading-snug">{deck.title}</h4>
                         <div className="space-y-1">
                           <div className="flex justify-between text-[10px] text-text-secondary font-bold">
-                            <span>Tien trinh</span>
-                            <span>{deck.learned}/{deck.count} tu ({percentage}%)</span>
+                            <span>Tiến trình</span>
+                            <span>{deck.learned}/{deck.count} từ ({percentage}%)</span>
                           </div>
                           <div className="progress-bar">
                             <div className="progress-fill" style={{ width: `${percentage}%` }} />
@@ -242,10 +242,10 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                       </div>
                       <div className="mt-6 grid grid-cols-2 gap-3">
                         <button className="py-2 rounded-xl text-[11px] font-bold bg-primary/5 hover:bg-primary/10 text-primary border border-primary/10 transition-colors text-center">
-                          Hoc tu moi
+                          Học từ mới
                         </button>
                         <button className="py-2 rounded-xl text-[11px] font-bold bg-text-primary hover:bg-text-primary/90 text-white transition-colors text-center">
-                          Luyen tap
+                          Luyện tập
                         </button>
                       </div>
                     </div>
@@ -260,9 +260,9 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
               <div className="flex justify-between items-center">
                 <h4 className="font-bold text-text-primary text-sm tracking-tight flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-primary" />
-                  <span>Tien trinh tuan nay</span>
+                  <span>Tiến trình tuần này</span>
                 </h4>
-                <span className="badge-primary">Streak: 15 ngay</span>
+                <span className="badge-primary">Streak: 15 ngày</span>
               </div>
               <div className="grid grid-cols-7 gap-2.5 text-center">
                 {weeklyActivity.map((activity, index) => (
@@ -286,7 +286,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
             <div className="space-y-4">
               <h4 className="font-bold text-text-primary text-sm tracking-tight flex items-center gap-1.5">
                 <Gamepad className="w-4 h-4 text-primary" />
-                <span>Tro choi luyen phan xa</span>
+                <span>Trò chơi luyện phản xạ</span>
               </h4>
               <div className="grid grid-cols-1 gap-3">
                 {quickGames.map((game, index) => {
@@ -313,9 +313,9 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
           <div className="text-left max-w-xl space-y-1">
             <h3 className="text-lg font-black text-text-primary tracking-tight flex items-center gap-1.5">
               <Compass className="w-5 h-5 text-primary" />
-              <span>Kham pha them lo trinh chuan</span>
+              <span>Khám phá thêm lộ trình chuẩn</span>
             </h3>
-            <p className="text-xs text-text-secondary">Cac khoa hoc duoc xay dung theo chuan ETS TOEIC va IELTS Academic.</p>
+            <p className="text-xs text-text-secondary">Các khoá học được xây dựng theo chuẩn ETS TOEIC và IELTS Academic.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {roadmaps.map((item, index) => (
@@ -334,7 +334,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                   <p className="text-[10px] text-text-secondary leading-relaxed">{item.desc}</p>
                 </div>
                 <button className="mt-4 w-full py-2 bg-primary/5 hover:bg-primary hover:text-white rounded-xl text-[10px] font-bold text-primary border border-primary/10 transition-all duration-200 text-center flex items-center justify-center gap-1">
-                  <span>Kham pha</span>
+                  <span>Khám phá</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
@@ -358,12 +358,12 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                 else navigate("/");
               }}>
                 <img src="/images/logo.png" alt="English Master" className="w-8 h-8 object-contain" />
-                <span className="text-lg font-black text-text-primary tracking-tight hidden sm:inline">English Master</span>
+                <span className="text-lg font-black text-primary tracking-tight hidden sm:inline">English Master</span>
               </div>
               {!currentUser && (
                 <div className="hidden lg:flex items-center gap-1">
                   <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-text-secondary hover:text-primary hover:bg-surface-muted transition-all">
-                    <span>Danh muc</span>
+                    <span>Danh mục</span>
                     <ChevronDown className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -377,7 +377,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                   <Search className="w-4 h-4 text-text-muted shrink-0" />
                   <input
                     type="text"
-                    placeholder="Tim kiem khoa hoc..."
+                    placeholder="Tìm kiếm khoá học..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted font-medium"
@@ -390,9 +390,9 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
             <div className="flex items-center gap-3">
               {!currentUser && (
                 <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-text-secondary">
-                  <a href="#features" className="hover:text-primary transition-colors">Tinh nang</a>
-                  <a href="#roadmaps" className="hover:text-primary transition-colors">Lo trinh</a>
-                  <Link to="/become-mentor" className="hover:text-primary transition-colors">Day hoc</Link>
+                  <a href="#features" className="hover:text-primary transition-colors">Tính năng</a>
+                  <a href="#roadmaps" className="hover:text-primary transition-colors">Lộ trình</a>
+                  <Link to="/become-mentor" className="hover:text-primary transition-colors">Dạy học</Link>
                 </div>
               )}
 
@@ -409,7 +409,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                         }`}
                       >
                         <BookOpen className="w-3.5 h-3.5" />
-                        <span>Khoa hoc</span>
+                        <span>Khoá học</span>
                       </button>
 
                       <button
@@ -421,7 +421,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                         }`}
                       >
                         <Search className="w-3.5 h-3.5" />
-                        <span>Kham pha</span>
+                        <span>Khám phá</span>
                       </button>
                     </>
                   )}
@@ -438,7 +438,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                     <div className="text-left">
                       <p className="text-xs font-bold text-text-primary leading-tight">{currentUser.name}</p>
                       <p className="text-[9px] font-semibold text-primary leading-tight">
-                        {currentUser.role === "Admin" ? "Quan tri vien" : currentUser.role === "Mentor" ? "Giang vien" : "Hoc vien"}
+                        {currentUser.role === "Admin" ? "Quản trị viên" : currentUser.role === "Mentor" ? "Giảng viên" : "Học viên"}
                       </p>
                     </div>
                   </div>
@@ -450,7 +450,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                       }}
                       className="px-3 py-2 rounded-xl text-xs font-bold bg-surface-muted text-text-secondary hover:text-primary border border-border/40 transition-all duration-200"
                     >
-                      {currentUser.role === "Mentor" ? "Dashboard" : "Trang chu"}
+                      {currentUser.role === "Mentor" ? "Dashboard" : "Trang chủ"}
                     </button>
                   )}
                   <button
@@ -460,7 +460,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                     </svg>
-                    <span className="hidden sm:inline">Dang xuat</span>
+                    <span className="hidden sm:inline">Đăng xuất</span>
                   </button>
                 </div>
               ) : (
@@ -468,7 +468,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                   <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-text-secondary hover:text-primary">
                     {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                   </button>
-                  <button onClick={onLoginClick} className="btn-primary">Dang nhap</button>
+                  <button onClick={onLoginClick} className="btn-primary">Đăng nhập</button>
                 </div>
               )}
             </div>
@@ -483,15 +483,15 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
             <Search className="w-4 h-4 text-text-muted shrink-0" />
             <input
               type="text"
-              placeholder="Tim kiem khoa hoc..."
+              placeholder="Tìm kiếm khoá học..."
               className="w-full bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted font-medium"
             />
           </div>
-          <a href="#features" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Tinh nang</a>
-          <a href="#methods" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Phuong phap SRS</a>
-          <a href="#roadmaps" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Lo trinh hoc</a>
-          <a href="#faq" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Hoi dap</a>
-          <Link to="/become-mentor" className="block text-sm font-semibold text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Tro thanh Mentor</Link>
+          <a href="#features" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Tính năng</a>
+          <a href="#methods" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Phương pháp SRS</a>
+          <a href="#roadmaps" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Lộ trình học</a>
+          <a href="#faq" className="block text-sm font-semibold text-text-secondary hover:text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Hỏi đáp</a>
+          <Link to="/become-mentor" className="block text-sm font-semibold text-primary py-2" onClick={() => setMobileMenuOpen(false)}>Trở thành Mentor</Link>
         </div>
       )}
 
@@ -515,7 +515,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
         ) : currentView === "quiz" ? (
           <QuizPage course={selectedCourse} moduleTitle={quizConfig?.moduleTitle} onNavigate={handleNavigate} onBack={handleBack} isFinal={quizConfig?.isFinal} />
         ) : currentView === "payment" && selectedCourse ? (
-          <PaymentPage course={selectedCourse} onNavigate={handleNavigate} onBack={handleBack} />
+          <PaymentPage course={selectedCourse} currentUser={currentUser} onNavigate={handleNavigate} onBack={handleBack} />
         ) : currentView === "completion" && selectedCourse ? (
           <CompletionPage course={selectedCourse} onNavigate={handleNavigate} onBack={handleBack} />
         ) : (

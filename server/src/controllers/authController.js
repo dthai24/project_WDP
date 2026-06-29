@@ -56,6 +56,68 @@ const login = async (req, res) => {
   }
 };
 
+// Register user
+const register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ họ tên, email và mật khẩu." });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: "Mật khẩu phải chứa ít nhất 6 ký tự." });
+    }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: "Email này đã được sử dụng. Vui lòng chọn email khác." });
+    }
+
+    // Tạo user mới, mặc định là Learner
+    const newUser = new User({
+      name,
+      fullName: name,
+      email: email.toLowerCase(),
+      password,
+      role: "Learner",
+      roles: [{ roleId: 3, roleName: "Learner" }],
+      xp: 0,
+      streak: 0,
+      isBlocked: false
+    });
+
+    await newUser.save();
+
+    // Ký JWT Token tự động để đăng nhập ngay sau khi đăng ký
+    const token = jwt.sign(
+      { id: newUser._id, role: newUser.role },
+      process.env.JWT_SECRET || "english_master_secret_key_123",
+      { expiresIn: "24h" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      token,
+      email: newUser.email,
+      name: newUser.name,
+      role: newUser.role,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        roles: newUser.roles,
+        xp: newUser.xp,
+        streak: newUser.streak
+      }
+    });
+  } catch (error) {
+    console.error("Lỗi đăng ký tài khoản:", error);
+    return res.status(500).json({ success: false, message: "Lỗi hệ thống khi đăng ký tài khoản." });
+  }
+};
+
 // Seed database function
 const seedDatabase = async () => {
   try {
@@ -81,14 +143,14 @@ const seedDatabase = async () => {
           email: "admin@gmail.com",
           password: "123456",
           role: "Admin",
-          roles: [{ roleId: 3, roleName: "Admin" }]
+          roles: [{ roleId: 1, roleName: "Admin" }]
         },
         {
           name: "Minh",
           email: "minh@gmail.com",
           password: "Minh_1234",
           role: "Admin",
-          roles: [{ roleId: 3, roleName: "Admin" }]
+          roles: [{ roleId: 1, roleName: "Admin" }]
         },
         {
           name: "Mentor User",
@@ -102,7 +164,7 @@ const seedDatabase = async () => {
           email: "student@gmail.com",
           password: "123456",
           role: "Student",
-          roles: [{ roleId: 1, roleName: "Student" }],
+          roles: [{ roleId: 3, roleName: "Student" }],
           xp: 1520,
           streak: 8
         },
@@ -111,7 +173,7 @@ const seedDatabase = async () => {
           email: "nguyenvana@gmail.com",
           password: "123456",
           role: "Student",
-          roles: [{ roleId: 1, roleName: "Student" }],
+          roles: [{ roleId: 3, roleName: "Student" }],
           xp: 850,
           streak: 3
         },
@@ -120,7 +182,7 @@ const seedDatabase = async () => {
           email: "tranthib@gmail.com",
           password: "123456",
           role: "Student",
-          roles: [{ roleId: 1, roleName: "Student" }],
+          roles: [{ roleId: 3, roleName: "Student" }],
           xp: 2100,
           streak: 15
         }
@@ -246,5 +308,6 @@ const seedDatabase = async () => {
 
 module.exports = {
   login,
+  register,
   seedDatabase
 };

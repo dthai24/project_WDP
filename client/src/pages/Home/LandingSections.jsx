@@ -10,19 +10,19 @@ import {
 const categories = [
   { name: "TOEIC", count: 24, color: "bg-rose-50 text-rose-600 border-rose-100" },
   { name: "IELTS", count: 18, color: "bg-purple-50 text-purple-600 border-purple-100" },
-  { name: "Giao tiep", count: 32, color: "bg-blue-50 text-blue-600 border-blue-100" },
-  { name: "Ngu phap", count: 15, color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
-  { name: "Phat am", count: 12, color: "bg-amber-50 text-amber-600 border-amber-100" },
-  { name: "Tu vung", count: 41, color: "bg-violet-50 text-violet-600 border-violet-100" },
+  { name: "Giao tiếp", count: 32, color: "bg-blue-50 text-blue-600 border-blue-100" },
+  { name: "Ngữ pháp", count: 15, color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+  { name: "Phát âm", count: 12, color: "bg-amber-50 text-amber-600 border-amber-100" },
+  { name: "Từ vựng", count: 41, color: "bg-violet-50 text-violet-600 border-violet-100" },
 ];
 
 const featuredCourses = [
   {
-    title: "On thi TOEIC 2026",
-    instructor: "Ms. Nguyen Thuy Anh",
+    title: "Ôn thi TOEIC 2026",
+    instructor: "Ms. Nguyễn Thùy Anh",
     rating: 4.8,
     students: 12450,
-    level: "Co ban - Nang cao",
+    level: "Cơ bản - Nâng cao",
     lessons: 48,
     hours: 36,
     badge: "ETS 2026",
@@ -34,7 +34,7 @@ const featuredCourses = [
     instructor: "Mr. David Tran",
     rating: 4.9,
     students: 8720,
-    level: "Trung cap - Nang cao",
+    level: "Trung cấp - Nâng cao",
     lessons: 62,
     hours: 48,
     badge: "IELTS 7.5+",
@@ -43,10 +43,10 @@ const featuredCourses = [
   },
   {
     title: "English for Communication B2",
-    instructor: "Ms. Le Hoang Yen",
+    instructor: "Ms. Lê Hoàng Yến",
     rating: 4.7,
     students: 15300,
-    level: "Trung cap",
+    level: "Trung cấp",
     lessons: 36,
     hours: 24,
     badge: "Oxford 3000",
@@ -54,14 +54,14 @@ const featuredCourses = [
     image: "https://picsum.photos/seed/communication-course/400/225"
   },
   {
-    title: "Ngu phap Tieng Anh Co ban",
-    instructor: "Mr. Pham Minh Duc",
+    title: "Ngữ pháp Tiếng Anh Cơ bản",
+    instructor: "Mr. Phạm Minh Đức",
     rating: 4.6,
     students: 21000,
-    level: "Co ban",
+    level: "Cơ bản",
     lessons: 28,
     hours: 18,
-    badge: "Pho thong",
+    badge: "Phổ thông",
     gradient: "from-emerald-500 to-teal-600",
     image: "https://picsum.photos/seed/grammar-course/400/225"
   },
@@ -69,11 +69,11 @@ const featuredCourses = [
 
 const popularCourses = [
   {
-    title: "Luyen thi THPT Quoc Gia",
-    instructor: "Ms. Tran Thu Ha",
+    title: "Luyện thi THPT Quốc Gia",
+    instructor: "Ms. Trần Thu Hà",
     rating: 4.8,
     students: 28400,
-    level: "Lop 10-12",
+    level: "Lớp 10-12",
     lessons: 72,
     hours: 54,
     badge: "Global Success",
@@ -85,19 +85,19 @@ const popularCourses = [
     instructor: "Mr. John Smith",
     rating: 4.9,
     students: 9800,
-    level: "Tat ca cap do",
+    level: "Tất cả cấp độ",
     lessons: 24,
     hours: 16,
-    badge: "Phat am",
+    badge: "Phát âm",
     gradient: "from-amber-500 to-orange-600",
     image: "https://picsum.photos/seed/pronunciation-course/400/225"
   },
   {
     title: "Business English Essentials",
-    instructor: "Ms. Pham Quynh Trang",
+    instructor: "Ms. Phạm Quỳnh Trang",
     rating: 4.7,
     students: 6200,
-    level: "Trung cap",
+    level: "Trung cấp",
     lessons: 40,
     hours: 30,
     badge: "Business",
@@ -105,11 +105,11 @@ const popularCourses = [
     image: "https://picsum.photos/seed/business-course/400/225"
   },
   {
-    title: "Tu vung theo chu de (Thematic)",
-    instructor: "Ms. Nguyen Kim Ngan",
+    title: "Từ vựng theo chủ đề (Thematic)",
+    instructor: "Ms. Nguyễn Kim Ngân",
     rating: 4.8,
     students: 19500,
-    level: "Co ban - Trung cap",
+    level: "Cơ bản - Trung cấp",
     lessons: 56,
     hours: 42,
     badge: "Oxford 3000",
@@ -119,38 +119,38 @@ const popularCourses = [
 ];
 
 const stats = [
-  { value: "120.000+", label: "Nguoi hoc" },
-  { value: "60+", label: "Lo trinh" },
-  { value: "10 Trieu+", label: "Tu vung da thuoc" },
-  { value: "98.5%", label: "Ty le nho tu dai han" }
+  { value: "120.000+", label: "Người học" },
+  { value: "60+", label: "Lộ trình" },
+  { value: "10 Triệu+", label: "Từ vựng đã thuộc" },
+  { value: "98.5%", label: "Tỷ lệ nhớ từ dài hạn" }
 ];
 
 const roadmaps = [
-  { title: "On thi TOEIC", badge: "ETS 2026", desc: "Tu vung phan chia theo level 450+, 650+, 850+. Giao trinh Hackers TOEIC, ETS moi nhat.", icon: "target", color: "from-rose-500 to-pink-600" },
-  { title: "On thi IELTS", badge: "IELTS 7.5+", desc: "Kho tu vung IELTS Academic va General theo chu de thong dung.", icon: "award", color: "from-purple-500 to-indigo-600" },
-  { title: "THPT Quoc Gia", badge: "Lop 10-12", desc: "Day du tu vung theo sach giao khoa Global Success lop 10, 11, 12.", icon: "book", color: "from-pink-500 to-purple-600" },
-  { title: "Giao tiep & Pho thong", badge: "Oxford 3000", desc: "Lo trinh chuan tu A1, A2 den B2, C1 theo khung tham chieu chau Au.", icon: "globe", color: "from-rose-500 to-orange-600" }
+  { title: "Ôn thi TOEIC", badge: "ETS 2026", desc: "Từ vựng phân chia theo level 450+, 650+, 850+. Giáo trình Hackers TOEIC, ETS mới nhất.", icon: "target", color: "from-rose-500 to-pink-600" },
+  { title: "Ôn thi IELTS", badge: "IELTS 7.5+", desc: "Kho từ vựng IELTS Academic và General theo chủ đề thông dụng.", icon: "award", color: "from-purple-500 to-indigo-600" },
+  { title: "THPT Quốc Gia", badge: "Lớp 10-12", desc: "Đầy đủ từ vựng theo sách giáo khoa Global Success lớp 10, 11, 12.", icon: "book", color: "from-pink-500 to-purple-600" },
+  { title: "Giao tiếp & Phổ thông", badge: "Oxford 3000", desc: "Lộ trình chuẩn từ A1, A2 đến B2, C1 theo khung tham chiếu châu Âu.", icon: "globe", color: "from-rose-500 to-orange-600" }
 ];
 
 const features = [
-  { title: "Flashcard Thong Minh", desc: "Hoc tu vung qua the ghi nho thong minh voi day du phat am chuan, nghia tieng Viet, vi du thuc te.", icon: Layers, color: "text-primary bg-primary/5 border-primary/10" },
-  { title: "Lap Lai Ngat Quang (SRS)", desc: "Thuat toan SRS tu do do luong do quen cua ban de nhac nh on tap vao dung thoi diem vang.", icon: Brain, color: "text-purple-600 bg-purple-50 border-purple-100" },
-  { title: "6 Che Do Game Tuong Tac", desc: "Tranh nha cham bang cach vua choi vua hoc: Ghep cap, Trac nghiem phan xa, Word Scramble.", icon: Gamepad2, color: "text-rose-600 bg-rose-50 border-rose-100" },
-  { title: "Ca Nhan Hoa Bang AI", desc: "Tao bo tu vung rieng cua ban tu Excel hoac de AI goi y dinh nghia, cau vi du.", icon: Sparkles, color: "text-violet-600 bg-violet-50 border-violet-100" }
+  { title: "Flashcard Thông Minh", desc: "Học từ vựng qua thẻ ghi nhớ thông minh với đầy đủ phát âm chuẩn, nghĩa tiếng Việt, ví dụ thực tế.", icon: Layers, color: "text-primary bg-primary/5 border-primary/10" },
+  { title: "Lặp Lại Ngắt Quãng (SRS)", desc: "Thuật toán SRS tự đo lường độ quên của bạn để nhắc nhở ôn tập vào đúng thời điểm vàng.", icon: Brain, color: "text-purple-600 bg-purple-50 border-purple-100" },
+  { title: "6 Chế Độ Game Tương Tác", desc: "Tránh nhàm chán bằng cách vừa chơi vừa học: Ghép cặp, Trắc nghiệm phản xạ, Word Scramble.", icon: Gamepad2, color: "text-rose-600 bg-rose-50 border-rose-100" },
+  { title: "Cá Nhân Hóa Bằng AI", desc: "Tạo bộ từ vựng riêng của bạn từ Excel hoặc để AI gợi ý định nghĩa, câu ví dụ.", icon: Sparkles, color: "text-violet-600 bg-violet-50 border-violet-100" }
 ];
 
 const platformFeatures = [
-  { title: "Da giang vien cung luc", desc: "Dang ky nhieu khoa hoc tu nhieu Mentor khac nhau. Cung mot cap do co the co nhieu lop cua nhieu giao vien.", icon: Users },
-  { title: "Chuyen mon hoa theo linh vuc", desc: "Giao vien bi khoa chuyen mon nghiem ngat. Co chung chi IELTS cao chi duoc day mang Test Prep.", icon: ShieldCheck },
-  { title: "Noi dung hoan chinh truoc khi duyet", desc: "Mentor phai upload 100% noi dung (video, bai doc, quiz) cua toan bo khoa hoc trong 1 lan duy nhat.", icon: BarChart3 },
-  { title: "Xac minh nang luc bang Test-out", desc: "Hoc vien khong bi bat buoc hoc theo lo trinh tuyen tinh. Neu thay module qua de, duoc lam Test-out Quiz.", icon: GraduationCap }
+  { title: "Đa giảng viên cùng lúc", desc: "Đăng ký nhiều khóa học từ nhiều Mentor khác nhau. Cùng một cấp độ có thể có nhiều lớp của nhiều giáo viên.", icon: Users },
+  { title: "Chuyên môn hóa theo lĩnh vực", desc: "Giáo viên bị khóa chuyên môn nghiêm ngặt. Có chứng chỉ IELTS cao chỉ được dạy mảng Test Prep.", icon: ShieldCheck },
+  { title: "Nội dung hoàn chỉnh trước khi duyệt", desc: "Mentor phải upload 100% nội dung (video, bài đọc, quiz) của toàn bộ khóa học trong 1 lần duy nhất.", icon: BarChart3 },
+  { title: "Xác minh năng lực bằng Test-out", desc: "Học viên không bị bắt buộc học theo lộ trình tuyến tính. Nếu thấy module quá dễ, được làm Test-out Quiz.", icon: GraduationCap }
 ];
 
 const faqs = [
-  { q: "English Master hoat dong theo phuong phap nao?", a: "English Master ap dung phuong phap Lap Lai Ngat Quang (Spaced Repetition System - SRS) lay cam hung tu thuat toan Anki. He thong tu dong phan tich lich su hoc cua ban va dua cac tu kho lap lai nhieu lan, trong khi gian cach thoi gian on tap cua cac tu de, giup ban nho sau va luu giu vao tri nho dai han." },
-  { q: "Nen tang nay co hoan toan mien phi khong?", a: "Co! Ban hoan toan co the tu hoc tu vung, tu tao flashcard va luyen tap toan bo 6 che do game hoan toan mien phi." },
-  { q: "Toi co the tu tao hoc lieu (bo tu vung) rieng khong?", a: "Hoan toan duoc. Ban co the tu tao cac deck tu vung bang cach nhap thu cong, nhap tu file Excel hoac su dung tro ly AI cua English Master de dich nghia va tu sinh cau vi du cuc ky nhanh chong." },
-  { q: "Lam the nao de tro thanh Mentor cua English Master?", a: "Chung toi luon chao don cac chuyen gia ngon ngu. Ban chi can click vao nut 'Tro thanh Mentor' duoi chan trang hoac tren thanh cong cu, dien thong tin va tai len chung chi (IELTS, TOEIC...). Ban quan tri se duyet va nang cap tai khoan cua ban trong 24 gio." }
+  { q: "English Master hoạt động theo phương pháp nào?", a: "English Master áp dụng phương pháp Lặp Lại Ngắt Quãng (Spaced Repetition System - SRS) lấy cảm hứng từ thuật toán Anki. Hệ thống tự động phân tích lịch sử học của bạn và đưa các từ khó lặp lại nhiều lần, trong khi giãn cách thời gian ôn tập của các từ dễ, giúp bạn nhớ sâu và lưu giữ vào trí nhớ dài hạn." },
+  { q: "Nền tảng này có hoàn toàn miễn phí không?", a: "Có! Bạn hoàn toàn có thể tự học từ vựng, tự tạo flashcard và luyện tập toàn bộ 6 chế độ game hoàn toàn miễn phí." },
+  { q: "Tôi có thể tự tạo học liệu (bộ từ vựng) riêng không?", a: "Hoàn toàn được. Bạn có thể tự tạo các deck từ vựng bằng cách nhập thủ công, nhập từ file Excel hoặc sử dụng trợ lý AI của English Master để dịch nghĩa và tự sinh câu ví dụ cực kỳ nhanh chóng." },
+  { q: "Làm thế nào để trở thành Mentor của English Master?", a: "Chúng tôi luôn chào đón các chuyên gia ngôn ngữ. Bạn chỉ cần click vào nút 'Trở thành Mentor' dưới chân trang hoặc trên thanh công cụ, điền thông tin và tải lên chứng chỉ (IELTS, TOEIC...). Ban quản trị sẽ duyệt và nâng cấp tài khoản của bạn trong 24 giờ." }
 ];
 
 function CourseCard({ course, featured }) {
@@ -174,11 +174,11 @@ function CourseCard({ course, featured }) {
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-[10px] font-semibold">
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {course.hours} gio
+              {course.hours} giờ
             </span>
             <span className="flex items-center gap-1">
               <BookOpen className="w-3 h-3" />
-              {course.lessons} bai
+              {course.lessons} bài
             </span>
           </div>
         </div>
@@ -232,7 +232,7 @@ function CourseRow({ title, courses, viewAll }) {
         <div className="flex items-center gap-3">
           {viewAll && (
             <button className="text-xs font-bold text-primary hover:text-primary-dark transition-colors flex items-center gap-1">
-              Xem tat ca
+              Xem tất cả
               <ArrowRight className="w-3 h-3" />
             </button>
           )}
@@ -285,15 +285,15 @@ export function HeroSection({ onLoginClick }) {
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-primary text-[11px] font-bold uppercase tracking-[0.18em]">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Giai phap hoc tieng Anh so 1 Viet Nam</span>
+            <span>Giải pháp học tiếng Anh số 1 Việt Nam</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-text-primary tracking-tight leading-[1.1] text-balance">
-            Hoc tu vung thong minh
+            Học từ vựng thông minh
             <br />
-            <span className="text-primary">hieu qua gap 3 lan</span>
+            <span className="text-primary">hiệu quả gấp 3 lần</span>
           </h1>
           <p className="text-base sm:text-lg text-text-secondary leading-relaxed max-w-2xl mx-auto font-medium">
-            English Master ket hop phuong phap <strong className="text-primary font-extrabold">Lap lai ngat quang (SRS)</strong> cung he thong Flashcard thong minh va tro choi tuong tac. Giup ban nho tu vung vinh vien, but pha band diem TOEIC, IELTS de dang!
+            English Master kết hợp phương pháp <strong className="text-primary font-extrabold">Lặp lại ngắt quãng (SRS)</strong> cùng hệ thống Flashcard thông minh và trò chơi tương tác. Giúp bạn nhớ từ vựng vĩnh viễn, bứt phá band điểm TOEIC, IELTS dễ dàng!
           </p>
           <div className="max-w-xl mx-auto relative">
             <div className="flex items-center gap-0 bg-white rounded-2xl border border-border/60 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden">
@@ -301,7 +301,7 @@ export function HeroSection({ onLoginClick }) {
                 <Search className="w-5 h-5 text-text-muted shrink-0" />
                 <input
                   type="text"
-                  placeholder="Tim kiem khoa hoc, tu vung, lo trinh..."
+                  placeholder="Tìm kiếm khoá học, từ vựng, lộ trình..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted font-medium"
@@ -309,13 +309,13 @@ export function HeroSection({ onLoginClick }) {
               </div>
               <button onClick={onLoginClick} className="bg-primary text-white px-6 py-3.5 font-bold text-sm hover:bg-primary-dark transition-colors shrink-0 flex items-center gap-2">
                 <Search className="w-4 h-4" />
-                <span className="hidden sm:inline">Tim kiem</span>
+                <span className="hidden sm:inline">Tìm kiếm</span>
               </button>
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-            <span className="text-[11px] font-semibold text-text-muted">Pho bien:</span>
-            {["TOEIC 2026", "IELTS 7.5+", "Giao tiep B2", "Ngu phap co ban"].map((tag, i) => (
+            <span className="text-[11px] font-semibold text-text-muted">Phổ biến:</span>
+            {["TOEIC 2026", "IELTS 7.5+", "Giao tiếp B2", "Ngữ pháp cơ bản"].map((tag, i) => (
               <button
                 key={i}
                 className="px-3 py-1.5 rounded-lg bg-white border border-border/60 text-[11px] font-semibold text-text-secondary hover:border-primary/30 hover:text-primary hover:bg-primary/5 transition-all"
@@ -337,7 +337,7 @@ export function CategoriesSection() {
         <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide pb-1">
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/5 text-primary border border-primary/10 text-xs font-bold shrink-0">
             <Filter className="w-3.5 h-3.5" />
-            <span>Tat ca</span>
+            <span>Tất cả</span>
           </div>
           {categories.map((cat, i) => (
             <button
@@ -358,12 +358,12 @@ export function FeaturedCoursesSection() {
   return (
     <section className="section-container py-10 space-y-10">
       <CourseRow
-        title="Khoa hoc noi bat"
+        title="Khoá học nổi bật"
         courses={featuredCourses}
         viewAll={true}
       />
       <CourseRow
-        title="Khoa hoc pho bien"
+        title="Khoá học phổ biến"
         courses={popularCourses}
         viewAll={true}
       />
@@ -392,32 +392,32 @@ export function SRSMethodSection() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
         <div className="lg:col-span-5 space-y-6">
           <h2 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight leading-[1.2]">
-            Lap Lai Ngat Quang
+            Lặp Lại Ngắt Quãng
             <br />
-            <span className="text-primary">Spaced Repetition</span> la gi?
+            <span className="text-primary">Spaced Repetition</span> là gì?
           </h2>
           <p className="text-sm text-text-secondary leading-relaxed">
-            Theo nghien cuu ve <strong className="text-text-primary font-bold">Duong cong lang quen (Forgetting Curve)</strong> cua Hermann Ebbinghaus, bo nao con nguoi co xu huong quen 80% kien thuc moi sau vai ngay.
+            Theo nghiên cứu về <strong className="text-text-primary font-bold">Đường cong lãng quên (Forgetting Curve)</strong> của Hermann Ebbinghaus, bộ não con người có xu hướng quên 80% kiến thức mới sau vài ngày.
           </p>
           <p className="text-sm text-text-secondary leading-relaxed">
-            He thong cua <strong className="text-primary font-semibold">English Master</strong> se tinh toan thoi gian va tu dong dua ra cac tu vung on tap <strong className="text-text-primary font-bold">ngay truoc thoi diem ban chuan bi quen</strong>. Phuong phap nay giup chuyen thong tin tu tri nho ngan han sang tri nho dai han hieu qua nhat.
+            Hệ thống của <strong className="text-primary font-semibold">English Master</strong> sẽ tính toán thời gian và tự động đưa ra các từ vựng ôn tập <strong className="text-text-primary font-bold">ngay trước thời điểm bạn chuẩn bị quên</strong>. Phương pháp này giúp chuyển thông tin từ trí nhớ ngắn hạn sang trí nhớ dài hạn hiệu quả nhất.
           </p>
         </div>
         <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="card-hover p-6 text-center space-y-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg mx-auto">1</div>
-            <h4 className="font-bold text-text-primary text-sm">Hoc qua Flashcard</h4>
-            <p className="text-xs text-text-secondary leading-relaxed">Xem tu vung, phat am, nghia va vi du. Danh dau muc do nho cua ban.</p>
+            <h4 className="font-bold text-text-primary text-sm">Học qua Flashcard</h4>
+            <p className="text-xs text-text-secondary leading-relaxed">Xem từ vựng, phát âm, nghĩa và ví dụ. Đánh dấu mức độ nhớ của bạn.</p>
           </div>
           <div className="card-hover p-6 text-center space-y-3">
             <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-lg mx-auto">2</div>
-            <h4 className="font-bold text-text-primary text-sm">He thong SRS tu dong</h4>
-            <p className="text-xs text-text-secondary leading-relaxed">Thuat toan tinh toan thoi diem ban sap quen va tu dong nhac on tap.</p>
+            <h4 className="font-bold text-text-primary text-sm">Hệ thống SRS tự động</h4>
+            <p className="text-xs text-text-secondary leading-relaxed">Thuật toán tính toán thời điểm bạn sắp quên và tự động nhắc ôn tập.</p>
           </div>
           <div className="card-hover p-6 text-center space-y-3">
             <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-lg mx-auto">3</div>
-            <h4 className="font-bold text-text-primary text-sm">Ghi nho vinh vien</h4>
-            <p className="text-xs text-text-secondary leading-relaxed">Lap lai dung thoi diem vang giup chuyen kien thuc vao tri nho dai han.</p>
+            <h4 className="font-bold text-text-primary text-sm">Ghi nhớ vĩnh viễn</h4>
+            <p className="text-xs text-text-secondary leading-relaxed">Lặp lại đúng thời điểm vàng giúp chuyển kiến thức vào trí nhớ dài hạn.</p>
           </div>
         </div>
       </div>
@@ -431,9 +431,9 @@ export function FeaturesSection() {
       <div className="section-container section-padding space-y-12">
         <div className="text-center max-w-2xl mx-auto space-y-4">
           <h2 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight">
-            Cong cu hoc tap <span className="text-primary">toan dien</span>
+            Công cụ học tập <span className="text-primary">toàn diện</span>
           </h2>
-          <p className="text-sm text-text-secondary">English Master cung cap day du cong cu giup ban chinh phuc tieng Anh tu co ban den nang cao.</p>
+          <p className="text-sm text-text-secondary">English Master cung cấp đầy đủ công cụ giúp bạn chinh phục tiếng Anh từ cơ bản đến nâng cao.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {features.map((feature, index) => {
@@ -463,7 +463,7 @@ export function PlatformFeaturesSection() {
         <h2 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight">
           English Master <span className="text-primary">Platform</span>
         </h2>
-        <p className="text-sm text-text-secondary">He sinh thai hoc tieng Anh khong dong bo, ca nhan hoa va co kha nang mo rong toan cau.</p>
+        <p className="text-sm text-text-secondary">Hệ sinh thái học tiếng Anh không đồng bộ, cá nhân hóa và có khả năng mở rộng toàn cầu.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {platformFeatures.map((feature, index) => {
@@ -491,9 +491,9 @@ export function RoadmapsSection() {
       <div className="section-container section-padding space-y-10">
         <div className="text-center max-w-2xl mx-auto space-y-4">
           <h2 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight">
-            Lo trinh hoc <span className="text-primary">chuan ETS</span>
+            Lộ trình học <span className="text-primary">chuẩn ETS</span>
           </h2>
-          <p className="text-sm text-text-secondary">Cac khoa hoc duoc xay dung theo chuan ETS TOEIC va IELTS Academic.</p>
+          <p className="text-sm text-text-secondary">Các khóa học được xây dựng theo chuẩn ETS TOEIC và IELTS Academic.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {roadmaps.map((item, index) => (
@@ -512,7 +512,7 @@ export function RoadmapsSection() {
                 <p className="text-[10px] text-text-secondary leading-relaxed">{item.desc}</p>
               </div>
               <button className="mt-4 w-full py-2 bg-primary/5 hover:bg-primary hover:text-white rounded-xl text-[10px] font-bold text-primary border border-primary/10 transition-all duration-200 text-center flex items-center justify-center gap-1">
-                <span>Kham pha</span>
+                <span>Khám phá</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
@@ -531,7 +531,7 @@ export function FAQSection() {
     <section id="faq" className="section-container section-padding">
       <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">
         <h2 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight">
-          Cau hoi <span className="text-primary">thuong gap</span>
+          Câu hỏi <span className="text-primary">thường gặp</span>
         </h2>
       </div>
       <div className="max-w-3xl mx-auto space-y-4">
@@ -559,20 +559,20 @@ export function CTASection({ onLoginClick }) {
     <section className="bg-gradient-to-br from-primary to-primary-dark">
       <div className="section-container py-20 text-center space-y-6">
         <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          Bat dau hanh trinh chinh phuc
+          Bắt đầu hành trình chinh phục
           <br />
-          tieng Anh cua ban ngay hom nay
+          tiếng Anh của bạn ngay hôm nay
         </h2>
         <p className="text-white/70 max-w-lg mx-auto text-sm">
-          Hoc mien phi, khong gioi han. English Master dong hanh cung ban tren moi neo duong chinh phuc ngon ngu.
+          Học miễn phí, không giới hạn. English Master đồng hành cùng bạn trên mọi nẻo đường chinh phục ngôn ngữ.
         </p>
         <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
           <button onClick={onLoginClick} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-sm bg-white text-primary hover:bg-rose-50 shadow-xl active:scale-[0.97] transition-all duration-200">
             <Play className="w-4 h-4 fill-primary" />
-            <span>Hoc mien phi ngay</span>
+            <span>Học miễn phí ngay</span>
           </button>
           <button onClick={() => window.location.href = "#features"} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-sm bg-white/10 text-white border border-white/20 hover:bg-white/20 active:scale-[0.97] transition-all duration-200">
-            Kham pha tinh nang
+            Khám phá tính năng
           </button>
         </div>
       </div>
@@ -591,25 +591,25 @@ export function Footer() {
               <span className="text-xl font-black text-white tracking-tight">English Master</span>
             </div>
             <p className="text-sm leading-relaxed max-w-md">
-              English Master la he sinh thai hoc tieng Anh khong dong bo, dua tren phuong phap Lap Lai Ngat Quang (SRS) giup ban ghi nho tu vung vinh vien.
+              English Master là hệ sinh thái học tiếng Anh không đồng bộ, dựa trên phương pháp Lặp Lại Ngắt Quãng (SRS) giúp bạn ghi nhớ từ vựng vĩnh viễn.
             </p>
           </div>
           <div className="space-y-4">
-            <h4 className="font-bold text-white text-sm uppercase tracking-wider">San pham</h4>
+            <h4 className="font-bold text-white text-sm uppercase tracking-wider">Sản phẩm</h4>
             <ul className="space-y-2.5 text-sm">
-              <li><a href="#features" className="hover:text-white transition-colors">Tinh nang</a></li>
-              <li><a href="#methods" className="hover:text-white transition-colors">Phuong phap SRS</a></li>
-              <li><a href="#roadmaps" className="hover:text-white transition-colors">Lo trinh hoc</a></li>
-              <li><a href="#faq" className="hover:text-white transition-colors">Hoi dap</a></li>
+              <li><a href="#features" className="hover:text-white transition-colors">Tính năng</a></li>
+              <li><a href="#methods" className="hover:text-white transition-colors">Phương pháp SRS</a></li>
+              <li><a href="#roadmaps" className="hover:text-white transition-colors">Lộ trình học</a></li>
+              <li><a href="#faq" className="hover:text-white transition-colors">Hỏi đáp</a></li>
             </ul>
           </div>
           <div className="space-y-4">
-            <h4 className="font-bold text-white text-sm uppercase tracking-wider">Ho tro</h4>
+            <h4 className="font-bold text-white text-sm uppercase tracking-wider">Hỗ trợ</h4>
             <ul className="space-y-2.5 text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">Trung tam tro giup</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Lien he</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Dieu khoan su dung</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Chinh sach bao mat</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Trung tâm trợ giúp</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Liên hệ</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Điều khoản sử dụng</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Chính sách bảo mật</a></li>
             </ul>
           </div>
         </div>
