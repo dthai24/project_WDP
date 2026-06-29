@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
+import ViewListRoundedIcon from '@mui/icons-material/ViewListRounded';
+import ViewModuleRoundedIcon from '@mui/icons-material/ViewModuleRounded';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from '@/shared/ui/Toast';
 import AppButton from '@/shared/ui/AppButton';
@@ -44,6 +46,7 @@ export default function AdminCategoryManagementPage() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [viewMode, setViewMode] = useState('list');
 
   const queryState = useMemo(
     () => parseAdminCategoryListParams(searchParams),
@@ -180,25 +183,53 @@ export default function AdminCategoryManagementPage() {
           </p>
         </div>
 
-        <AppButton
-          startIcon={<AddRoundedIcon />}
-          onClick={() => setCreateOpen(true)}
-          sx={{
-            height: 44,
-            px: 2.5,
-            fontSize: 14,
-            fontWeight: 700,
-            borderRadius: '999px',
-            bgcolor: '#0891B2',
-            color: '#fff',
-            flexShrink: 0,
-            width: { xs: '100%', sm: 'auto' },
-            boxShadow: 'none',
-            '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-          }}
-        >
-          Tao danh muc
-        </AppButton>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-end' } }}>
+          <Box sx={{ border: '1px solid rgba(15,23,42,0.08)', borderRadius: '999px', p: 0.5, display: 'inline-flex', bgcolor: 'rgba(15,23,42,0.02)' }}>
+            <IconButton
+              size="small"
+              onClick={() => setViewMode('list')}
+              sx={{
+                color: viewMode === 'list' ? '#0891B2' : '#94A3B8',
+                bgcolor: viewMode === 'list' ? '#fff' : 'transparent',
+                boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                '&:hover': { bgcolor: viewMode === 'list' ? '#fff' : 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              <ViewListRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => setViewMode('grid')}
+              sx={{
+                color: viewMode === 'grid' ? '#0891B2' : '#94A3B8',
+                bgcolor: viewMode === 'grid' ? '#fff' : 'transparent',
+                boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                '&:hover': { bgcolor: viewMode === 'grid' ? '#fff' : 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              <ViewModuleRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+
+          <AppButton
+            startIcon={<AddRoundedIcon />}
+            onClick={() => setCreateOpen(true)}
+            sx={{
+              height: 44,
+              px: 2.5,
+              fontSize: 14,
+              fontWeight: 700,
+              borderRadius: '999px',
+              bgcolor: '#0891B2',
+              color: '#fff',
+              flexShrink: 0,
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+            }}
+          >
+            Tao danh muc
+          </AppButton>
+        </Box>
       </div>
 
       <AdminCatalogToolbar
@@ -224,6 +255,11 @@ export default function AdminCategoryManagementPage() {
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={openEditDialog}
         onClearFilters={handleReset}
+        viewMode={viewMode}
+        sortBy={queryState.sort}
+        statusFilter={queryState.status}
+        onSortChange={handleSortChange}
+        onStatusChange={handleStatusChange}
       />
 
       <AppPagination

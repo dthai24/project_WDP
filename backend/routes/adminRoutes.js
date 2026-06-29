@@ -21,6 +21,15 @@ const {
   getCourses,
   updateCourse,
   deleteCourse,
+  getApplications,
+  getApplicationDetail,
+  approveApplication,
+  rejectApplication,
+  approveCourse,
+  rejectCourse,
+  approveCourseUpdates,
+  rejectCourseUpdates,
+  getAuditLogs,
 } = require('../controllers/adminController');
 
 
@@ -89,5 +98,18 @@ router.delete('/levels/:levelId', protect, adminOnly, deleteLevel);
 router.get('/courses', protect, adminOnly, getCourses);
 router.put('/courses/:courseId', protect, adminOnly, updateCourse);
 router.delete('/courses/:courseId', protect, adminOnly, deleteCourse);
+router.post('/courses/:courseId/approve', protect, adminOnly, approveCourse);
+router.post('/courses/:courseId/reject', protect, adminOnly, rejectCourse);
+router.post('/courses/:courseId/approve-updates', protect, adminOnly, approveCourseUpdates);
+router.post('/courses/:courseId/reject-updates', protect, adminOnly, rejectCourseUpdates);
+
+// ========== MENTOR APPLICATIONS ==========
+router.get('/applications', protect, adminOnly, getApplications);
+router.get('/applications/:applicationId', protect, adminOnly, getApplicationDetail);
+router.post('/applications/:applicationId/approve', protect, adminOnly, approveApplication);
+router.post('/applications/:applicationId/reject', protect, adminOnly, rejectApplication);
+
+// ========== EDIT HISTORY ==========
+router.get('/history', protect, adminOnly, getAuditLogs);
 
 module.exports = router;

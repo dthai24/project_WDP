@@ -17,6 +17,9 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   ADMIN_ACCOUNT_ROLE_OPTIONS,
   ADMIN_ACCOUNT_STATUS_OPTIONS,
@@ -195,6 +198,8 @@ export default function AdminAccountsToolbar({
   onReset,
   activeFilterChips = [],
   onRemoveFilterChip,
+  keyword = '',
+  onKeywordChange,
   roleOptions = ADMIN_ACCOUNT_ROLE_OPTIONS,
   statusOptions = ADMIN_ACCOUNT_STATUS_OPTIONS,
   sortOptions = ADMIN_ACCOUNT_SORT_OPTIONS,
@@ -203,6 +208,11 @@ export default function AdminAccountsToolbar({
   const [roleAnchor, setRoleAnchor] = useState(null);
   const [statusAnchor, setStatusAnchor] = useState(null);
   const [sortAnchor, setSortAnchor] = useState(null);
+
+  const [searchVal, setSearchVal] = useState(keyword);
+  useEffect(() => {
+    setSearchVal(keyword);
+  }, [keyword]);
 
   const roleLabel = roleOptions.find((o) => o.value === roleFilter)?.label ?? 'Vai trò';
   const statusLabel = statusOptions.find((o) => o.value === statusFilter)?.label ?? 'Trạng thái';
@@ -216,7 +226,40 @@ export default function AdminAccountsToolbar({
         borderBottom: '1px solid rgba(15,23,42,0.08)',
       }}
     >
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+        {/* Search input */}
+        <TextField
+          size="small"
+          placeholder="Tìm kiếm tài khoản..."
+          value={searchVal}
+          onChange={(e) => {
+            setSearchVal(e.target.value);
+            onKeywordChange?.(e.target.value);
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ fontSize: 18, color: '#94A3B8' }} />
+              </InputAdornment>
+            ),
+            sx: {
+              borderRadius: '9999px',
+              fontSize: 13,
+              bgcolor: 'rgba(15,23,42,0.02)',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(15,23,42,0.08)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(15,23,42,0.16)',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#0891B2',
+              },
+            }
+          }}
+          sx={{ width: { xs: '100%', sm: 260 } }}
+        />
+
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, flex: 1, minWidth: 0 }}>
           <FilterTrigger
             icon={BadgeOutlinedIcon}

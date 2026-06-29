@@ -154,7 +154,7 @@ export default function MyCoursesListPage() {
             thumbnail: courseImage,
             category: dbCourse.CategoryDisplayName || dbCourse.CategoryName || "Chưa phân loại",
             level: dbCourse.LevelDisplayName || dbCourse.levelName || "Cơ bản",
-            instructor: dbCourse.Instructor || "S.T.A.R Mentor Team",
+            instructor: dbCourse.Instructor || "English Master Mentor Team",
             totalLessons: dbCourse.TotalLessons || 0,
             totalNodes: dbCourse.Paths?.length || 0,
             progressPercentage: currentProgress,

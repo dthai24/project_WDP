@@ -16,7 +16,7 @@ export default function MentorLayout() {
         <Sidebar variant="mentor" />
 
         <main
-          className="flex-1 transition-all duration-200"
+          className="flex-1 transition-all duration-200 pt-16 sm:pt-[68px]"
           style={{ marginLeft: `${SIDEBAR_WIDTH}px` }}
         >
           <div className="w-full box-border py-4 sm:py-5 md:py-6 px-4 sm:px-5 md:px-6 lg:px-8 max-w-7xl mx-auto">

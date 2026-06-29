@@ -119,8 +119,17 @@ export default function AdminAccountManagementPage() {
     if (type in defaults) updateQuery({ [type]: defaults[type], page: 1 });
   };
 
+  const [dialogMode, setDialogMode] = useState('edit');
+
   const openEditDialog = (account) => {
     setEditingAccount(account);
+    setDialogMode('edit');
+    setFormOpen(true);
+  };
+
+  const openViewDialog = (account) => {
+    setEditingAccount(account);
+    setDialogMode('view');
     setFormOpen(true);
   };
 
@@ -176,25 +185,6 @@ export default function AdminAccountManagementPage() {
           </p>
         </div>
 
-        <AppButton
-          startIcon={<AddRoundedIcon />}
-          onClick={() => setCreateOpen(true)}
-          sx={{
-            height: 44,
-            px: 2.5,
-            fontSize: 14,
-            fontWeight: 700,
-            borderRadius: '999px',
-            bgcolor: '#0891B2',
-            color: '#fff',
-            flexShrink: 0,
-            width: { xs: '100%', sm: 'auto' },
-            boxShadow: 'none',
-            '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-          }}
-        >
-          Tao tai khoan
-        </AppButton>
       </div>
 
       <AdminAccountsToolbar
@@ -209,6 +199,8 @@ export default function AdminAccountManagementPage() {
         totalCount={filteredAccounts.length}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
+        keyword={queryState.q || ''}
+        onKeywordChange={(val) => updateQuery({ q: val, page: 1 })}
       />
 
       <AdminAccountList
@@ -218,6 +210,7 @@ export default function AdminAccountManagementPage() {
         hasAnyAccounts={accounts.length > 0}
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={openEditDialog}
+        onView={openViewDialog}
         onClearFilters={handleReset}
       />
 
@@ -237,17 +230,10 @@ export default function AdminAccountManagementPage() {
         account={editingAccount}
         onSubmit={handleFormSubmit}
         saving={saving}
+        mode={dialogMode}
       />
 
-      <AdminAccountCreateDialog
-        open={createOpen}
-        onClose={() => {
-          if (creating) return;
-          setCreateOpen(false);
-        }}
-        onSubmit={handleCreateSubmit}
-        saving={creating}
-      />
+
     </div>
   );
 }

@@ -8,7 +8,7 @@ export default function Logo({
   to = "/",
   link = true,
   className = "",
-  alt = "S.T.A.R Learning Path",
+  alt = "English Master Learning Path",
 }) {
   const image = (
     <img

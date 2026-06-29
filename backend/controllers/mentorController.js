@@ -252,6 +252,52 @@ const updateCourseContent = async (req, res) => {
             return res.status(ownership.status).json({ success: false, message: ownership.message });
         }
 
+        const courseDoc = await Course.findById(courseId);
+        if (!courseDoc) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học.' });
+        }
+
+        if (courseDoc.status === 'active') {
+            const tempPaths = paths.map(pathData => {
+                const nodes = pathData.nodes || pathData.Nodes || [];
+                return {
+                    pathName: String(pathData.PathName || pathData.pathName || '').trim(),
+                    description: pathData.Description || pathData.description || null,
+                    order: Number(pathData.PathOrder || pathData.order) || 1,
+                    nodes: nodes.map(nodeData => {
+                        const materials = nodeData.materials || nodeData.Materials || [];
+                        return {
+                            nodeName: String(nodeData.NodeName || nodeData.nodeName || '').trim(),
+                            nodeOrder: Number(nodeData.NodeOrder || nodeData.nodeOrder) || 1,
+                            description: nodeData.Description || nodeData.description || null,
+                            isFree: Boolean(nodeData.isFree ?? nodeData.IsFree ?? false),
+                            materials: materials.map(matData => ({
+                                materialType: String(matData.MaterialType || matData.materialType || '').trim().toUpperCase(),
+                                title: String(matData.Title || matData.title || '').trim(),
+                                materialUrl: matData.MaterialUrl || matData.materialUrl || null,
+                                materialOrder: Number(matData.MaterialOrder || matData.materialOrder) || 1,
+                                sourceType: matData.SourceType || matData.sourceType || null,
+                                fileName: matData.FileName || matData.fileName || null,
+                                fileSize: matData.FileSize || matData.fileSize || null,
+                                embedUrl: matData.EmbedUrl || matData.embedUrl || null,
+                                content: matData.Content || matData.content || null,
+                            })).filter(m => m.materialType)
+                        };
+                    })
+                };
+            });
+
+            courseDoc.tempContent = tempPaths;
+            courseDoc.hasPendingUpdates = true;
+            await courseDoc.save();
+
+            return res.status(200).json({
+                success: true,
+                message: 'Yêu cầu cập nhật nội dung đã được gửi và đang chờ Admin phê duyệt. Nội dung hiện tại vẫn hiển thị cho học viên.',
+                courseId,
+            });
+        }
+
         // Delete existing paths, nodes, and materials for this course
         const existingPaths = await Path.find({ courseId }).select('_id').lean();
         const pathIds = existingPaths.map(p => p._id);

@@ -9,23 +9,33 @@ import { apiGet, apiPost, apiPut } from '@/features/admin/services/adminApiClien
  *   IsFirstLogin, CreatedAt, UpdatedAt, CurrentLevelId, LearningGoal, Roles (comma-separated)
  */
 function mapUserToAccount(user) {
-  const roles = (user.Roles || '').split(',').map((r) => r.trim()).filter(Boolean);
+  let roles = [];
+  if (Array.isArray(user.roles)) {
+    roles = user.roles;
+  } else if (user.Roles) {
+    roles = user.Roles.split(',').map((r) => r.trim()).filter(Boolean);
+  }
+
   // Determine primary role: Admin > Mentor > Student
   let role = 'Student';
   if (roles.includes('Admin')) role = 'Admin';
   else if (roles.includes('Mentor')) role = 'Mentor';
 
+  const isActiveVal = user.isActive !== undefined ? user.isActive : true;
+
   return {
-    id: user.UserId,
-    fullName: user.FullName || '',
-    username: user.Email ? user.Email.split('@')[0] : '',
-    email: user.Email || '',
-    phone: user.Phone || '',
-    dateOfBirth: user.DateOfBirth || '',
+    id: user.UserId || user._id,
+    fullName: user.FullName || user.fullName || '',
+    username: user.Email ? user.Email.split('@')[0] : (user.email ? user.email.split('@')[0] : ''),
+    email: user.Email || user.email || '',
+    phone: user.Phone || user.phone || '',
+    dateOfBirth: user.DateOfBirth || user.dateOfBirth || '',
     role,
-    status: 'ACTIVE',
-    createdAt: user.CreatedAt || null,
-    lastLoginAt: user.UpdatedAt || null,
+    status: isActiveVal ? 'ACTIVE' : 'BLOCKED',
+    createdAt: user.CreatedAt || user.createdAt || null,
+    lastLoginAt: user.UpdatedAt || user.updatedAt || null,
+    streak: user.streak || 0,
+    xp: user.xp || 0,
   };
 }
 
@@ -52,7 +62,7 @@ export async function createAccount(payload) {
 }
 
 export async function updateAccount(id, payload) {
-  const userId = Number(id);
+  const userId = id;
 
   // Update roles if provided
   if (payload.role) {
@@ -75,6 +85,9 @@ export async function updateAccount(id, payload) {
   if (payload.email) updateData.Email = payload.email;
   if (payload.phone !== undefined) updateData.Phone = payload.phone;
   if (payload.dateOfBirth !== undefined) updateData.DateOfBirth = payload.dateOfBirth;
+  if (payload.status !== undefined) {
+    updateData.IsActive = payload.status === 'ACTIVE';
+  }
 
   if (Object.keys(updateData).length > 0) {
     const userRes = await apiPut(`/users/${userId}`, updateData);

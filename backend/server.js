@@ -47,7 +47,7 @@ app.use('/api/question-bank', questionBankRoutes)
 // Static: serve course avatars
 app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 // ---- Health-check ----
-app.use('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running' }));
+app.use('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'English Master Backend is running' }));
 
 // ---- Start ----
 const server = app.listen(PORT, () => {

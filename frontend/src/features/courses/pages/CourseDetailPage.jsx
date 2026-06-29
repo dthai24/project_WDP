@@ -262,7 +262,7 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
           <div className="flex flex-col pt-3 mt-3 border-t border-brand-100/60">
             <CTAInfoRow icon={User} label="Instructor">
               <p className="text-sm text-slate-900 font-semibold leading-snug">
-                {course.instructor || "S.T.A.R Mentor Team"}
+                {course.instructor || "English Master Mentor Team"}
               </p>
             </CTAInfoRow>
 

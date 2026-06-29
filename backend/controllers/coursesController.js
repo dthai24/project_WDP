@@ -22,7 +22,7 @@ const getStudentCourses = async (req, res) => {
       sort: req.query.sort || 'newest'
     };
 
-    let query = { isPublished: true };
+    let query = { isPublished: true, status: 'active' };
 
     // Search by course name
     if (filters.search) {
@@ -471,6 +471,8 @@ const getLearningPath = async (req, res) => {
       success: true,
       courseTitle: course.courseName,
       instructor: course.instructorId?.fullName || 'Giảng viên',
+      hasPendingUpdates: course.hasPendingUpdates || false,
+      tempContent: course.tempContent || null,
       data: pathsWithNodes
     });
   } catch (err) {
@@ -660,6 +662,7 @@ const createFinalCourse = async (req, res) => {
               nodeName: String(nodeData.NodeName).trim(),
               nodeOrder: nodeData.NodeOrder || 1,
               description: nodeData.Description || null,
+              isFree: Boolean(nodeData.isFree ?? nodeData.IsFree ?? false),
             });
             totalLessons++;
 
@@ -740,7 +743,7 @@ const enrollCourse = async (req, res) => {
 
 const getFeaturedCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ isPublished: true })
+    const courses = await Course.find({ isPublished: true, status: 'active' })
       .populate('categoryId', 'displayName')
       .populate('levelId', 'displayName')
       .populate('instructorId', 'fullName')
@@ -764,7 +767,7 @@ const getFeaturedCourses = async (req, res) => {
 
 const getFeaturedPaths = async (req, res) => {
   try {
-    const courses = await Course.find({ isPublished: true })
+    const courses = await Course.find({ isPublished: true, status: 'active' })
       .populate('categoryId', 'displayName')
       .populate('levelId', 'displayName')
       .populate('instructorId', 'fullName')

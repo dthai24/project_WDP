@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { getUser } from "@/features/auth/utils/authUtils";
 import {
@@ -14,10 +15,10 @@ const COLOR_INACTIVE = "#475569";
 const BG_ACTIVE = "rgba(8, 145, 178, 0.1)";
 const BG_HOVER = "rgba(8, 145, 178, 0.06)";
 
-function SidebarItemContent({ label, Icon, active, disabled }) {
+function SidebarItemContent({ label, Icon, active, disabled, badgeCount = 0 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-[3px] w-full py-[10px] px-[4px] rounded-xl no-underline transition-all duration-200 ${
+      className={`flex flex-col items-center justify-center gap-[3px] w-full py-[10px] px-[4px] rounded-xl no-underline transition-all duration-200 relative ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       }`}
       style={{
@@ -40,11 +41,16 @@ function SidebarItemContent({ label, Icon, active, disabled }) {
       >
         {label}
       </span>
+      {badgeCount > 0 ? (
+        <span className="absolute top-[6px] right-[10px] min-w-[16px] h-[16px] rounded-full bg-red-550 text-white text-[9px] font-extrabold flex items-center justify-center px-[4px] shadow-sm animate-pulse z-10" style={{ backgroundColor: '#EF4444' }}>
+          {badgeCount}
+        </span>
+      ) : null}
     </div>
   );
 }
 
-function SidebarItem({ item }) {
+function SidebarItem({ item, badgeCount = 0 }) {
   const location = useLocation();
   const { label, to, Icon, disabled, end = false, isActiveMatch } = item;
 
@@ -76,6 +82,7 @@ function SidebarItem({ item }) {
           Icon={Icon}
           active={active}
           disabled={false}
+          badgeCount={badgeCount}
         />
       </Link>
     );
@@ -89,6 +96,7 @@ function SidebarItem({ item }) {
           Icon={Icon}
           active={isActive}
           disabled={false}
+          badgeCount={badgeCount}
         />
       )}
     </NavLink>
@@ -103,6 +111,47 @@ export default function Sidebar({ variant = "student" }) {
       : variant === "admin"
         ? getAdminMenuItems()
         : getStudentMenuItems(user);
+
+  const [pendingApps, setPendingApps] = useState(0);
+  const [pendingCourses, setPendingCourses] = useState(0);
+
+  useEffect(() => {
+    if (variant !== "admin") return;
+
+    const fetchCounts = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          "x-role-name": "admin",
+        };
+
+        const [appsRes, coursesRes] = await Promise.all([
+          fetch("http://localhost:5000/api/admin/applications", { headers }),
+          fetch("http://localhost:5000/api/admin/courses", { headers }),
+        ]);
+
+        const appsData = await appsRes.json();
+        const coursesData = await coursesRes.json();
+
+        if (appsData.success && Array.isArray(appsData.data)) {
+          const pending = appsData.data.filter((a) => a.status === "pending").length;
+          setPendingApps(pending);
+        }
+
+        if (coursesData.success && Array.isArray(coursesData.data)) {
+          const pending = coursesData.data.filter((c) => c.status === "pending").length;
+          setPendingCourses(pending);
+        }
+      } catch (err) {
+        console.error("fetchCounts error:", err);
+      }
+    };
+
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 15000);
+    return () => clearInterval(interval);
+  }, [variant]);
 
   return (
     <aside
@@ -128,9 +177,13 @@ export default function Sidebar({ variant = "student" }) {
         aside::-webkit-scrollbar { display: none; }
       `}</style>
       <div className="flex flex-col gap-[6px] w-full">
-        {menuItems.map((item) => (
-          <SidebarItem key={item.id} item={item} />
-        ))}
+        {menuItems.map((item) => {
+          let badge = 0;
+          if (item.id === "admin-applications") badge = pendingApps;
+          if (item.id === "admin-courses") badge = pendingCourses;
+
+          return <SidebarItem key={item.id} item={item} badgeCount={badge} />;
+        })}
       </div>
     </aside>
   );

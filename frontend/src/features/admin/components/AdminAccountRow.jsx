@@ -8,6 +8,7 @@ import {
   alpha,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
   ADMIN_ACCOUNT_ROLE_CHIP_SX,
   ADMIN_ACCOUNT_ROLE_LABELS,
@@ -52,7 +53,7 @@ function DesktopValue({ value }) {
   );
 }
 
-export default function AdminAccountRow({ account, onEdit }) {
+export default function AdminAccountRow({ account, onEdit, onView }) {
   const roleSx = ADMIN_ACCOUNT_ROLE_CHIP_SX[account.role] ?? ADMIN_ACCOUNT_ROLE_CHIP_SX.Student;
   const statusSx = ADMIN_ACCOUNT_STATUS_CHIP_SX[account.status] ?? ADMIN_ACCOUNT_STATUS_CHIP_SX.ACTIVE;
 
@@ -148,8 +149,29 @@ export default function AdminAccountRow({ account, onEdit }) {
         <DesktopValue value={formatAccountDate(account.createdAt)} />
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, justifySelf: 'end' }}>
-        <Tooltip title="Chỉnh sửa vai trò & trạng thái">
+      <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, justifySelf: 'end', gap: 1 }}>
+        <Tooltip title="Xem chi tiết tài khoản">
+          <IconButton
+            size="small"
+            aria-label="Xem tài khoản"
+            onClick={() => onView?.(account)}
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: '10px',
+              border: '1px solid rgba(15,23,42,0.08)',
+              color: MUTED,
+              '&:hover': {
+                color: PRIMARY,
+                bgcolor: alpha(PRIMARY, 0.06),
+                borderColor: alpha(PRIMARY, 0.2),
+              },
+            }}
+          >
+            <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Chỉnh sửa trạng thái">
           <IconButton
             size="small"
             aria-label="Chỉnh sửa tài khoản"
