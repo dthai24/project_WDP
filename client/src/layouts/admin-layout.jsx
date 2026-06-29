@@ -223,7 +223,7 @@ const AdminLayout = () => {
             <span className="text-white font-extrabold text-sm">L</span>
           </div>
           <div>
-            <h1 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">English Master</h1>
+            <h1 className="font-extrabold text-sm uppercase tracking-tight text-primary">English Master</h1>
             <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">System Admin</p>
           </div>
         </div>
@@ -272,7 +272,7 @@ const AdminLayout = () => {
                 <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-650 rounded-lg flex items-center justify-center shadow-md">
                   <span className="text-white font-extrabold text-sm">L</span>
                 </div>
-                <h1 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">English Master</h1>
+                <h1 className="font-extrabold text-sm uppercase tracking-tight text-primary">English Master</h1>
               </div>
               <button onClick={toggleMobileSidebar} className="text-slate-400 hover:text-slate-655">
                 <X className="w-5 h-5" />
