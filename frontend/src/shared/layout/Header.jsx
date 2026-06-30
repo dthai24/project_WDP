@@ -16,6 +16,7 @@ import {
   Bell,
 } from "@phosphor-icons/react";
 import { isAdmin, isStudent } from "@/features/auth/utils/authUtils";
+import StreakBadge from "@/shared/ui/StreakBadge";
 
 const NAV_ITEMS = [
   { label: "Home", path: "/home", icon: House },
@@ -129,6 +130,9 @@ export default function Header({ logoTo, profilePath }) {
 
           {/* Right Side */}
           <div className="flex items-center gap-2">
+            {user && isStudent(user) && (
+              <StreakBadge userId={user.userId || user.id || user.UserId} />
+            )}
             {user && (
               <div className="relative mr-1" ref={notiRef}>
                 <button

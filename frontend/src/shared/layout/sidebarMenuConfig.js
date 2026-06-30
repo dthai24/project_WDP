@@ -83,20 +83,6 @@ export function getStudentMenuItems(user) {
       disabled: !student,
     },
     {
-      id: "streak",
-      label: "Streak học",
-      to: "/home",
-      Icon: WhatshotOutlinedIcon,
-      disabled: !student,
-    },
-    {
-      id: "notifications",
-      label: "Thông báo",
-      to: "/home",
-      Icon: NotificationsOutlinedIcon,
-      disabled: !student,
-    },
-    {
       id: 'news',
       label: 'Tin tức',
       to: '/news',
