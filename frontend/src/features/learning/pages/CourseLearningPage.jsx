@@ -65,6 +65,7 @@ import {
   getChapterQuizConfig,
   getCourseQuizConfig,
 } from "@/features/mentor/services/chapterQuizConfigService";
+import studentFeatureService from "@/services/studentFeatureService";
 
 /* ─── Constants ─── */
 const BRAND = "#10b981";
@@ -324,11 +325,31 @@ export default function CourseLearningPage() {
   const [courseInfo, setCourseInfo] = useState({ courseTitle: "Đang tải...", instructor: "" });
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  const [essayText, setEssayText] = useState("");
+  const [gradingEssay, setGradingEssay] = useState(false);
+  const [essayResult, setEssayResult] = useState(null);
+  const [essayHistory, setEssayHistory] = useState([]);
+
+  // Fetch essay history when currentLesson changes
+  useEffect(() => {
+    async function loadEssayHistory() {
+      if (!currentUserId || !currentLessonId) return;
+      const res = await studentFeatureService.getEssayHistory(currentUserId);
+      if (res.success && Array.isArray(res.data)) {
+        const filtered = res.data.filter(sub => String(sub.nodeId?._id || sub.nodeId) === String(currentLessonId));
+        setEssayHistory(filtered);
+      }
+    }
+    loadEssayHistory();
+    setEssayText("");
+    setEssayResult(null);
+  }, [currentLessonId, currentUserId]);
+
       // Fetch learning data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/courses/${courseId}/learning`, {
+        const res = await fetch(`http://localhost:5050/api/courses/${courseId}/learning`, {
           headers: { "x-user-id": currentUserId },
         });
         const result = await res.json();
@@ -417,7 +438,7 @@ export default function CourseLearningPage() {
   const handleToggleComplete = async () => {
     if (!currentLesson) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/courses/${courseId}/progress`, {
+      const res = await fetch(`http://localhost:5050/api/courses/${courseId}/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
         body: JSON.stringify({ nodeId: currentLesson.id }),
@@ -436,6 +457,23 @@ export default function CourseLearningPage() {
       }
     } catch (err) {
       console.error("Progress error:", err);
+    }
+  };
+
+  const handleGradeEssay = async () => {
+    if (!essayText.trim() || !currentUserId || !currentLesson) return;
+    setGradingEssay(true);
+    const res = await studentFeatureService.submitEssay(
+      currentUserId,
+      courseId,
+      currentLesson.id,
+      essayText
+    );
+    setGradingEssay(false);
+    if (res.success) {
+      setEssayResult(res.data);
+      setEssayHistory(prev => [res.data, ...prev]);
+      setEssayText("");
     }
   };
 
@@ -622,6 +660,97 @@ export default function CourseLearningPage() {
                 </div>
               </div>
             )}
+
+            {/* AI Essay Sandbox Practice Workspace */}
+            <div className="mt-8 pt-6 border-t border-slate-100 font-sans">
+              <h4 className="flex items-center gap-1.5 text-[15px] font-extrabold text-slate-800 mb-3">
+                <Sparkle size={18} className="text-emerald-500 animate-pulse" weight="fill" />
+                Luyện viết luận & Chấm điểm tự động bằng AI (Hybrid Evaluation)
+              </h4>
+              <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                Thực hành viết một đoạn văn ngắn hoặc bài luận liên quan đến nội dung bài học này. Trợ lý AI sẽ chấm điểm chi tiết theo 3 tiêu chí: Ngữ pháp, Từ vựng, và Độ mạch lạc của bài viết.
+              </p>
+
+              <textarea
+                value={essayText}
+                onChange={(e) => setEssayText(e.target.value)}
+                placeholder="Nhập bài viết bằng tiếng Anh của bạn tại đây (tối thiểu 30 từ)..."
+                disabled={gradingEssay}
+                rows={5}
+                className="w-full border border-slate-200/80 rounded-2xl p-4 text-[13.5px] outline-none resize-y transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 mb-4"
+              />
+
+              <div className="flex justify-end mb-6">
+                <AppButton
+                  size="small"
+                  variant="contained"
+                  onClick={handleGradeEssay}
+                  disabled={gradingEssay || essayText.trim().length < 15}
+                  style={{ backgroundColor: '#10b981', color: '#fff' }}
+                >
+                  {gradingEssay ? 'Đang chấm điểm bằng AI...' : 'Nộp bài & Chấm điểm AI'}
+                </AppButton>
+              </div>
+
+              {/* Grading Result */}
+              {essayResult && (
+                <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 mb-8 animate-fadeIn">
+                  <h5 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-1.5">
+                    <Trophy size={16} className="text-amber-500" weight="fill" />
+                    Kết quả chấm điểm AI:
+                  </h5>
+                  
+                  {/* Scores grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-emerald-600">{essayResult.score}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Tổng điểm</p>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-indigo-500">{essayResult.grammarScore}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Ngữ pháp</p>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-purple-500">{essayResult.vocabularyScore}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Từ vựng</p>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-pink-500">{essayResult.coherenceScore}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Mạch lạc</p>
+                    </div>
+                  </div>
+
+                  {/* Feedback */}
+                  <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                    <p className="text-xs font-bold text-slate-700 mb-2">Nhận xét chi tiết:</p>
+                    <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{essayResult.feedback}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Submissions History */}
+              {essayHistory.length > 0 && (
+                <div className="mt-6">
+                  <h5 className="text-[13px] font-bold text-slate-700 mb-3">Lịch sử làm bài ({essayHistory.length} lượt):</h5>
+                  <div className="space-y-2.5">
+                    {essayHistory.map((sub, idx) => (
+                      <div key={sub._id || idx} className="border border-slate-100 rounded-2xl p-4 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-[11px] text-slate-400">
+                            Nộp ngày: {new Date(sub.createdAt || sub.submittedAt).toLocaleDateString('vi-VN')} {new Date(sub.createdAt || sub.submittedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            Điểm: {sub.score}/100
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 italic line-clamp-2 mb-2 font-medium">"{sub.essayText}"</p>
+                        <p className="text-[11px] text-slate-400 bg-white border border-slate-50 p-2 rounded-xl mt-1 leading-relaxed"><strong className="text-slate-500">AI:</strong> {sub.feedback}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* ── Navigation ── */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-5 mt-2 border-t border-slate-100">

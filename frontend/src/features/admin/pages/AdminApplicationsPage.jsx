@@ -52,7 +52,7 @@ export default function AdminApplicationsPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/applications', {
+      const res = await fetch('http://localhost:5050/api/admin/applications', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-role-name': 'admin'
@@ -90,7 +90,7 @@ export default function AdminApplicationsPage() {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/admin/applications/${selectedApp._id}/approve`, {
+      const res = await fetch(`http://localhost:5050/api/admin/applications/${selectedApp._id}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -127,7 +127,7 @@ export default function AdminApplicationsPage() {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/admin/applications/${selectedApp._id}/reject`, {
+      const res = await fetch(`http://localhost:5050/api/admin/applications/${selectedApp._id}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -72,7 +72,7 @@ export default function AdminCoursesPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/courses', {
+      const res = await fetch('http://localhost:5050/api/admin/courses', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-role-name': 'admin'
@@ -103,7 +103,7 @@ export default function AdminCoursesPage() {
     setDetailsLoading(true);
     setCourseDetails(null);
     try {
-      const res = await fetch(`http://localhost:5000/api/courses/${course._id}/learning`);
+      const res = await fetch(`http://localhost:5050/api/courses/${course._id}/learning`);
       const data = await res.json();
       if (data.success) {
         setCourseDetails(data);
@@ -134,8 +134,8 @@ export default function AdminCoursesPage() {
     try {
       const token = localStorage.getItem('token');
       const url = isUpdateAction
-        ? `http://localhost:5000/api/admin/courses/${selectedCourse._id}/approve-updates`
-        : `http://localhost:5000/api/admin/courses/${selectedCourse._id}/approve`;
+        ? `http://localhost:5050/api/admin/courses/${selectedCourse._id}/approve-updates`
+        : `http://localhost:5050/api/admin/courses/${selectedCourse._id}/approve`;
 
       const res = await fetch(url, {
         method: 'POST',
@@ -186,8 +186,8 @@ export default function AdminCoursesPage() {
     try {
       const token = localStorage.getItem('token');
       const url = isUpdateAction
-        ? `http://localhost:5000/api/admin/courses/${selectedCourse._id}/reject-updates`
-        : `http://localhost:5000/api/admin/courses/${selectedCourse._id}/reject`;
+        ? `http://localhost:5050/api/admin/courses/${selectedCourse._id}/reject-updates`
+        : `http://localhost:5050/api/admin/courses/${selectedCourse._id}/reject`;
 
       const res = await fetch(url, {
         method: 'POST',
@@ -234,7 +234,7 @@ export default function AdminCoursesPage() {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/admin/courses/${courseToToggle._id}`, {
+      const res = await fetch(`http://localhost:5050/api/admin/courses/${courseToToggle._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -252,7 +252,7 @@ export default function AdminCoursesPage() {
       });
       
       // Also update its status in the DB
-      const res2 = await fetch(`http://localhost:5000/api/admin/courses/${courseToToggle._id}/${targetStatus === 'active' ? 'approve' : 'reject'}`, {
+      const res2 = await fetch(`http://localhost:5050/api/admin/courses/${courseToToggle._id}/${targetStatus === 'active' ? 'approve' : 'reject'}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
