@@ -42,6 +42,7 @@ import AdminNewsEditPage from '@/features/admin/pages/AdminNewsEditPage';
 import AdminNewsEditContentPage from '@/features/admin/pages/AdminNewsEditContentPage';
 import NewsListPage from '@/features/news/pages/NewsListPage';
 import NewsDetailPage from '@/features/news/pages/NewsDetailPage';
+import BecomeMentor from '@/features/mentor/pages/BecomeMentor';
 
 import MainLayout from '@/shared/layout/MainLayout';
 import MentorLayout from '@/shared/layout/MentorLayout';
@@ -92,6 +93,17 @@ export default function App() {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<RoleAwareHome />} />
         <Route path="home" element={<RoleAwareHome />} />
+        <Route
+          path="become-mentor"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <BecomeMentor />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="courses"
