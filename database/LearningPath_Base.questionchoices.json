@@ -1,0 +1,168 @@
+[{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d095"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d091"
+  },
+  "title": "A",
+  "order": 1,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d096"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d091"
+  },
+  "title": "B",
+  "order": 2,
+  "isTrue": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d097"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d092"
+  },
+  "title": "A",
+  "order": 1,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d098"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d092"
+  },
+  "title": "B",
+  "order": 2,
+  "isTrue": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d099"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d093"
+  },
+  "title": "bbccc",
+  "order": 1,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d09a"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d093"
+  },
+  "title": "ads",
+  "order": 2,
+  "isTrue": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d09b"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d093"
+  },
+  "title": "bcc",
+  "order": 3,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d09c"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d093"
+  },
+  "title": "ads",
+  "order": 4,
+  "isTrue": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d09d"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d094"
+  },
+  "title": "Dạ em chào đại ca",
+  "order": 1,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d09e"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d094"
+  },
+  "title": "Hoàng Hưng và 4 chú chó đốm",
+  "order": 2,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d09f"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d094"
+  },
+  "title": "Hẹ hẹ hẹ hẹ",
+  "order": 3,
+  "isTrue": false,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d0a0"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d094"
+  },
+  "title": "ki mồ chíiiii",
+  "order": 4,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d0a1"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d094"
+  },
+  "title": "ngon thíiiiiiiiiiiiiiiiiiiiiiiiiii",
+  "order": 5,
+  "isTrue": true,
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d0a2"
+  },
+  "questionId": {
+    "$oid": "6a42b0c8e3c24fb9bdb8d094"
+  },
+  "title": "mlemmm mlemmmm",
+  "order": 6,
+  "isTrue": true,
+  "__v": 0
+}]
