@@ -13,6 +13,7 @@ import {
   ChartLine,
   Question,
   Sparkle,
+  Bell,
 } from "@phosphor-icons/react";
 import { isAdmin, isStudent } from "@/features/auth/utils/authUtils";
 
@@ -29,8 +30,10 @@ export default function Header({ logoTo, profilePath }) {
   const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notiOpen, setNotiOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const profileRef = useRef(null);
+  const notiRef = useRef(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -53,6 +56,9 @@ export default function Header({ logoTo, profilePath }) {
     function handleClickOutside(e) {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
+      }
+      if (notiRef.current && !notiRef.current.contains(e.target)) {
+        setNotiOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -123,6 +129,46 @@ export default function Header({ logoTo, profilePath }) {
 
           {/* Right Side */}
           <div className="flex items-center gap-2">
+            {user && (
+              <div className="relative mr-1" ref={notiRef}>
+                <button
+                  type="button"
+                  onClick={() => setNotiOpen(!notiOpen)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-50 relative transition-colors text-slate-500 hover:text-slate-800"
+                >
+                  <Bell size={20} weight="regular" />
+                  <span className="absolute top-[4px] right-[4px] min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-extrabold flex items-center justify-center px-[3px]">
+                    3
+                  </span>
+                </button>
+
+                {notiOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-100 shadow-elevated py-2.5 z-50 font-sans">
+                    <div className="px-4 py-1.5 border-b border-slate-50 mb-2 flex justify-between items-center">
+                      <span className="text-[13px] font-extrabold text-slate-800">Thông báo mới</span>
+                      <span className="text-[10px] text-cyan-600 font-bold cursor-pointer hover:underline">Đánh dấu đã đọc</span>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-50">
+                      <div className="px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                        <p className="text-[11.5px] font-bold text-slate-800 leading-snug">📝 AI đã chấm bài viết luận của bạn!</p>
+                        <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">Bài viết Node 2 thuộc lộ trình "Ôn thi TOEIC 2026" đạt 85/100 điểm.</p>
+                        <span className="text-[9px] text-slate-400 block mt-1">5 phút trước</span>
+                      </div>
+                      <div className="px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                        <p className="text-[11.5px] font-bold text-slate-800 leading-snug">🔥 Đạt chuỗi học tập (Streak)!</p>
+                        <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">Chúc mừng bạn đã duy trì học liên tiếp 5 ngày.</p>
+                        <span className="text-[9px] text-slate-400 block mt-1">2 giờ trước</span>
+                      </div>
+                      <div className="px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                        <p className="text-[11.5px] font-bold text-slate-800 leading-snug">📚 Khóa học có chương mới</p>
+                        <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">Khóa học "TOEIC Nâng Cao" vừa cập nhật Chương 3.</p>
+                        <span className="text-[9px] text-slate-400 block mt-1">1 ngày trước</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {user ? (
               <div className="relative" ref={profileRef}>
                 <button
