@@ -49,6 +49,7 @@ function BankRow({ bank, onManage }) {
           {questionCount} câu hỏi · Cập nhật {formatMentorCourseDate(bank.updatedAt)}
         </Typography>
       </Box>
+
       <AppButton
         onClick={() => onManage(bank)}
         sx={{
@@ -157,6 +158,7 @@ export default function MentorCourseQuestionsPage() {
           >
             Quay lại khóa học
           </AppButton>
+
           <AppButton
             startIcon={<ArrowBackRoundedIcon sx={{ fontSize: 18 }} />}
             onClick={() => navigate('/mentor/question-banks')}
@@ -190,6 +192,7 @@ export default function MentorCourseQuestionsPage() {
       >
         Ngân hàng câu hỏi theo chương
       </Typography>
+
       <Typography sx={{ fontSize: 14, color: MUTED, mb: 2.5, maxWidth: 720, lineHeight: 1.55 }}>
         Khóa học:{' '}
         <Box component="span" sx={{ fontWeight: 700, color: TEXT }}>

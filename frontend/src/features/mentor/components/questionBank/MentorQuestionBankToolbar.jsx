@@ -18,10 +18,8 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import { mentorQuestionBankFilterOptionsMock } from '@/features/mentor/data/mentorQuestionBankMock';
 import { QB_LIST_DEFAULTS } from '@/features/mentor/utils/mentorQuestionBankListParams';
-
 const MUTED = '#64748B';
 const ICON = '#94A3B8';
-
 function getMenuPaperSx(theme) {
   return {
     mt: 0.75,
@@ -32,7 +30,6 @@ function getMenuPaperSx(theme) {
     minWidth: 168,
   };
 }
-
 function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor = ICON }) {
   const theme = useTheme();
   return (
@@ -94,7 +91,6 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor =
     </Box>
   );
 }
-
 function FilterMenu({ anchorEl, open, onClose, options, value, onSelect }) {
   const theme = useTheme();
   return (
@@ -151,7 +147,6 @@ function FilterMenu({ anchorEl, open, onClose, options, value, onSelect }) {
     </Menu>
   );
 }
-
 function ActiveFilterChip({ label, onDelete }) {
   return (
     <Chip
@@ -175,7 +170,6 @@ function ActiveFilterChip({ label, onDelete }) {
     />
   );
 }
-
 /** Toolbar filter/sort — search xử lý qua Header SearchBox (param q). */
 export default function MentorQuestionBankToolbar({
   statusFilter = 'all',
@@ -198,12 +192,10 @@ export default function MentorQuestionBankToolbar({
   const [statusAnchor, setStatusAnchor] = useState(null);
   const [questionStatusAnchor, setQuestionStatusAnchor] = useState(null);
   const [sortAnchor, setSortAnchor] = useState(null);
-
   const statusLabel = statusOptions.find((o) => o.value === statusFilter)?.label ?? 'Trạng thái KH';
   const questionStatusLabel =
     questionStatusOptions.find((o) => o.value === questionStatusFilter)?.label ?? 'Trạng thái câu hỏi';
   const sortLabel = sortOptions.find((o) => o.value === sortBy)?.label ?? 'Sắp xếp';
-
   return (
     <Box
       sx={{
@@ -231,7 +223,6 @@ export default function MentorQuestionBankToolbar({
             iconColor="#0891B2"
           />
         </Box>
-
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.5 }}>
             <QuizOutlinedIcon sx={{ fontSize: 14, color: '#0891B2' }} />
@@ -275,7 +266,6 @@ export default function MentorQuestionBankToolbar({
           ) : null}
         </Box>
       </Box>
-
       {/* Filter Menu IsPublished Course */}
       <FilterMenu
         anchorEl={statusAnchor}
@@ -303,7 +293,6 @@ export default function MentorQuestionBankToolbar({
         value={sortBy}
         onSelect={onSortChange}
       />
-
       {activeFilterChips.length > 0 && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.625, mt: 1 }}>
           {activeFilterChips.map((chip) => (

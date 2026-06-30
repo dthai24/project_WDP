@@ -22,11 +22,9 @@ import {
   formatMentorCourseDate,
   truncateText,
 } from '@/features/mentor/utils/mentorCourseUtils';
-
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
 const PRIMARY = '#0891B2';
-
 const METRIC_COLORS = {
   total: '#0891B2',
   published: '#047857',
@@ -35,7 +33,6 @@ const METRIC_COLORS = {
   quiz: '#2563EB',
   updated: '#7C3AED',
 };
-
 const PILL_CHIP_SX = {
   borderRadius: '999px',
   height: 24,
@@ -48,7 +45,6 @@ const PILL_CHIP_SX = {
     fontWeight: 700,
   },
 };
-
 //_______Status Chip IsPublished Course______________________
 function getStatusChip(IsPublished) {
   if (IsPublished) {
@@ -70,7 +66,6 @@ function getStatusChip(IsPublished) {
     },
   };
 }
-
 function CourseThumbnail({ courseName, thumbnail }) {
   return (
     <Box
@@ -100,12 +95,10 @@ function CourseThumbnail({ courseName, thumbnail }) {
         :
         <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
       }
-
       {courseName && <Typography sx={{ display: 'none' }}>{courseName}</Typography>}
     </Box>
   );
 }
-
 function MetricItem({ icon: Icon, label, value, iconColor }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
@@ -116,21 +109,17 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
     </Box>
   );
 }
-
 export default function MentorQuestionBankRow({ bankItem }) {
   const theme = useTheme();
   const navigate = useNavigate();
   const statusChip = getStatusChip(bankItem.IsPublished);
-
   const handleManageQuestions = () => {
     if (!bankItem.CourseId) {
       toast.info('Không xác định được khóa học.');
       return;
     }
-
     navigate(`/mentor/question-banks/manage?courseId=${bankItem.CourseId}`);
   };
-
   return (
     <Box
       sx={{
@@ -147,7 +136,6 @@ export default function MentorQuestionBankRow({ bankItem }) {
       }}
     >
       <CourseThumbnail courseName={bankItem.CourseName} thumbnail={bankItem.Thumbnail} />
-
       <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
         <Typography
           sx={{
@@ -161,7 +149,6 @@ export default function MentorQuestionBankRow({ bankItem }) {
         >
           {bankItem.CourseName}
         </Typography>
-
         <Typography
           sx={{
             fontSize: 13,
@@ -176,7 +163,6 @@ export default function MentorQuestionBankRow({ bankItem }) {
         >
           {truncateText(bankItem.CourseDescription, 140)}
         </Typography>
-
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
           <MetricItem
             icon={QuizOutlinedIcon}
@@ -221,7 +207,6 @@ export default function MentorQuestionBankRow({ bankItem }) {
             </Typography>
           </Box>
         </Box>
-
         <AppButton
           onClick={handleManageQuestions}
           sx={{
@@ -243,7 +228,6 @@ export default function MentorQuestionBankRow({ bankItem }) {
           Quản lý câu hỏi
         </AppButton>
       </Box>
-
       <Box
         sx={{
           position: { xs: 'absolute', md: 'static' },

@@ -39,19 +39,16 @@ import {
   isQuestionActive,
   isQuestionBankWritingSkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
-
 const SKILL_NAV_ITEMS = [
   { skill: TEST_SKILL_LISTENING, label: TEST_SKILL_LABELS[TEST_SKILL_LISTENING], icon: HeadphonesRoundedIcon },
   { skill: TEST_SKILL_READING, label: TEST_SKILL_LABELS[TEST_SKILL_READING], icon: MenuBookRoundedIcon },
   { skill: TEST_SKILL_WRITING, label: TEST_SKILL_LABELS[TEST_SKILL_WRITING], icon: EditNoteRoundedIcon },
 ];
-
 const OUTLINE_SKILL_ITEMS = [
   { skill: TEST_SKILL_LISTENING, icon: HeadphonesRoundedIcon },
   { skill: TEST_SKILL_READING, icon: MenuBookRoundedIcon },
   { skill: TEST_SKILL_WRITING, icon: EditNoteRoundedIcon },
 ];
-
 function SkillNavButton({
   label,
   icon: Icon,
@@ -116,11 +113,9 @@ function SkillNavButton({
     </Box>
   );
 }
-
 function BaiTab({ label, selected, disabled, accentColor, hasContent = false, onClick }) {
   const StatusIcon = hasContent ? CheckCircleOutlineRoundedIcon : RadioButtonUncheckedRoundedIcon;
   const statusColor = hasContent ? '#047857' : alpha(MUTED, 0.85);
-
   return (
     <Box
       component="button"
@@ -156,7 +151,6 @@ function BaiTab({ label, selected, disabled, accentColor, hasContent = false, on
     </Box>
   );
 }
-
 function OutlineNavItem({
   label,
   meta,
@@ -238,14 +232,12 @@ function OutlineNavItem({
     </Box>
   );
 }
-
 function truncateQuestionLabel(text, max = 48) {
   const trimmed = String(text ?? '').trim();
   if (!trimmed) return 'Chưa có nội dung';
   if (trimmed.length <= max) return trimmed;
   return `${trimmed.slice(0, max - 1)}…`;
 }
-
 export default function MentorQuestionBankBuilderPanel({
   sections = [],
   activeSkill,
@@ -284,12 +276,10 @@ export default function MentorQuestionBankBuilderPanel({
   const isWritingSkill = isQuestionBankWritingSkill(activeSkill);
   const addLabel = isWritingSkill ? 'Thêm nhóm câu hỏi' : 'Thêm bài';
   const countLabel = isWritingSkill ? 'nhóm' : 'bài';
-
   const baiCountBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
     acc[skill] = getNonEmptyQuestionBankSections(getSectionsBySkill(sections, skill)).length;
     return acc;
   }, {});
-
   const countBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
     acc[skill] = getSectionsBySkill(sections, skill).reduce(
       (sum, section) => sum + getFilledTestQuestions(section?.Questions).length,
@@ -297,19 +287,15 @@ export default function MentorQuestionBankBuilderPanel({
     );
     return acc;
   }, {});
-
   const errorBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
     acc[skill] = getSectionsBySkill(sections, skill).some((section) => Boolean(sectionErrors[section.tempId]));
     return acc;
   }, {});
-
   const filledSections = getNonEmptyQuestionBankSections(sections);
   const hasContentOutline = filledSections.length > 0;
-
   const handleNavigate = (target) => {
     onNavigateToItem?.(target);
   };
-
   return (
     <Box
       id="question-bank-builder-root"
@@ -366,7 +352,6 @@ export default function MentorQuestionBankBuilderPanel({
           </Box>
         </Box>
       </Box>
-
       <Box
         sx={{
           flex: 1,
@@ -411,7 +396,6 @@ export default function MentorQuestionBankBuilderPanel({
               {emptyHint}
             </Typography>
           ) : null}
-
           <Box id="qb-questions" sx={{ opacity: disabled ? 0.6 : 1, scrollMarginTop: 24 }}>
             <Box sx={{ pointerEvents: disabled ? 'none' : 'auto' }}>
               {activeSection ? (
@@ -460,7 +444,6 @@ export default function MentorQuestionBankBuilderPanel({
                       </Typography>
                     )}
                   </Box>
-
                   <Box id={`qb-section-${activeSection.tempId}`} sx={{ scrollMarginTop: 24, minWidth: 0 }}>
                     <MentorTestSectionCard
                       section={activeSection}
@@ -488,7 +471,6 @@ export default function MentorQuestionBankBuilderPanel({
             </Box>
           </Box>
         </Box>
-
         <Box
           sx={{
             position: { lg: 'sticky' },
@@ -515,7 +497,6 @@ export default function MentorQuestionBankBuilderPanel({
               </Box>
               <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Mục lục nội dung</Typography>
             </Box>
-
             {!hasContentOutline ? (
               <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
                 Thêm câu hỏi để xem mục lục và điều hướng nhanh.
@@ -536,13 +517,11 @@ export default function MentorQuestionBankBuilderPanel({
                 {OUTLINE_SKILL_ITEMS.map(({ skill, icon: Icon }) => {
                   const skillSectionsOutline = getNonEmptyQuestionBankSections(getSectionsBySkill(sections, skill));
                   if (skillSectionsOutline.length === 0) return null;
-
                   const theme = TEST_SKILL_CHIP_COLORS[skill];
                   const skillQuestionCount = skillSectionsOutline.reduce(
                     (sum, section) => sum + getFilledTestQuestions(section?.Questions).length,
                     0,
                   );
-
                   return (
                     <Box key={skill} sx={{ mb: 0.35 }}>
                       <OutlineNavItem
@@ -553,13 +532,11 @@ export default function MentorQuestionBankBuilderPanel({
                         selected={activeSkill === skill}
                         onClick={() => handleNavigate({ type: 'skill', skill })}
                       />
-
                       {skillSectionsOutline.map((section) => {
                         const questions = getFilledTestQuestions(section?.Questions ?? []);
                         const sectionLabel = getQuestionBankSectionTabLabel(section, sections);
                         const isSectionActive =
                           activeSkill === skill && String(activeSectionId) === String(section.tempId);
-
                         return (
                           <Box key={section.tempId}>
                             <OutlineNavItem
@@ -573,7 +550,6 @@ export default function MentorQuestionBankBuilderPanel({
                                 handleNavigate({ type: 'section', skill, sectionTempId: section.tempId })
                               }
                             />
-
                             {questions.map((question, questionIndex) => (
                               <OutlineNavItem
                                 key={question.tempId}
@@ -602,7 +578,6 @@ export default function MentorQuestionBankBuilderPanel({
               </Box>
             )}
           </Box>
-
           <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.75, mb: 1.25 }}>
               <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Mục lục khóa học</Typography>
@@ -610,7 +585,6 @@ export default function MentorQuestionBankBuilderPanel({
                 <MentorChapterCardMenu variant="course" onQuizSetup={onCourseQuizSetup} />
               ) : null}
             </Box>
-
             <Box
               sx={{
                 p: 1.25,
@@ -640,7 +614,6 @@ export default function MentorQuestionBankBuilderPanel({
                 </Box>
               </Box>
             </Box>
-
             {chaptersLoading ? (
               <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
                 <Loading size={24} />
@@ -698,7 +671,6 @@ export default function MentorQuestionBankBuilderPanel({
                         lessonTitle: node.NodeName ?? node.lessonTitle ?? `Bài ${nodeIndex + 1}`,
                       }));
                     const isSelected = String(chapterId) === String(selectedChapterId);
-
                     return (
                       <Box key={chapterId ?? chapterIndex} sx={{ mb: 0.35 }}>
                         <OutlineNavItem

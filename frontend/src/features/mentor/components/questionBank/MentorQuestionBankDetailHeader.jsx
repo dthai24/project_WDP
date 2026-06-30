@@ -18,14 +18,12 @@ import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCardMenu from '@/features/mentor/components/course/MentorChapterCardMenu';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
-
 const PILL_CHIP_SX = {
   borderRadius: '999px',
   height: 24,
   fontSize: 12,
   fontWeight: 700,
 };
-
 function MetaLine({ icon: Icon, label, value }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
@@ -39,7 +37,6 @@ function MetaLine({ icon: Icon, label, value }) {
     </Box>
   );
 }
-
 export default function MentorQuestionBankDetailHeader({
   bankTitle = '',
   courseName = '',
@@ -55,14 +52,12 @@ export default function MentorQuestionBankDetailHeader({
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
-
   const backPath = courseId
     ? `/mentor/courses/${courseId}/questions`
     : '/mentor/question-banks';
   const backLabel = courseId
     ? (isCreateMode ? 'Quay lại' : 'Quay lại khóa học')
     : 'Quay lại danh sách';
-
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -70,13 +65,10 @@ export default function MentorQuestionBankDetailHeader({
     }
     navigate(backPath);
   };
-
   const displayTitle =
     bankTitle ||
     (isCreateMode ? 'Chọn chương để tạo ngân hàng câu hỏi' : 'Ngân hàng câu hỏi');
-
   const breadcrumbLabel = isCreateMode && !bankTitle ? 'Tạo mới' : displayTitle;
-
   return (
     <Box sx={{ mb: 2.5 }}>
       <Box
@@ -155,7 +147,6 @@ export default function MentorQuestionBankDetailHeader({
             {breadcrumbLabel}
           </Typography>
         </Breadcrumbs>
-
         <AppButton
           variant="outlined"
           startIcon={<ArrowBackRoundedIcon sx={{ fontSize: 18 }} />}
@@ -175,7 +166,6 @@ export default function MentorQuestionBankDetailHeader({
           {backLabel}
         </AppButton>
       </Box>
-
       <Box
         sx={{
           p: { xs: 2, sm: 2.25 },
@@ -208,7 +198,6 @@ export default function MentorQuestionBankDetailHeader({
               sx={{ fontSize: 24, color: PRIMARY, display: { xs: 'none', md: 'block' } }}
             />
           </Box>
-
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box
               sx={{
@@ -260,7 +249,6 @@ export default function MentorQuestionBankDetailHeader({
                 <MentorChapterCardMenu onQuizSetup={onQuizSetup} />
               ) : null}
             </Box>
-
             <Box
               sx={{
                 display: 'flex',
@@ -289,7 +277,6 @@ export default function MentorQuestionBankDetailHeader({
               ) : null}
             </Box>
           </Box>
-
           {actions ? (
             <Box
               sx={{
