@@ -306,10 +306,7 @@ export default function BecomeMentor() {
                         Sending application...
                       </>
                     ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        Submit Application
-                      </>
+                      "Submit Application"
                     )}
                   </button>
                 </div>
