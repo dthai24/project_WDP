@@ -67,29 +67,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
     // Only block if we are currently inside the course player or quiz page
     if (currentView !== "course-player" && currentView !== "quiz") return null;
 
-    // 1. Check quiz backup
-    const quizBackup = localStorage.getItem(`lexiora_quiz_backup_${currentUser.email}`);
-    if (quizBackup) {
-      try {
-        const parsed = JSON.parse(quizBackup);
-        if (parsed.quizStarted && !parsed.quizCompleted && Object.keys(parsed.answers || {}).length > 0) {
-          return "quiz";
-        }
-      } catch (e) {}
-    }
-
-    // 2. Check essay backup
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(`lexiora_course_essay_backup_${currentUser.email}_`)) {
-        const content = localStorage.getItem(key);
-        if (content && content.trim().length > 0) {
-          return "essay";
-        }
-      }
-    }
-
-    return null;
+    return window.lexioraActiveUnsavedWork || null;
   };
 
   const confirmExit = (action) => {
