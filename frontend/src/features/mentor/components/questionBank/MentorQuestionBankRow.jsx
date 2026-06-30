@@ -88,7 +88,7 @@ function CourseThumbnail({ courseName, thumbnail }) {
       {thumbnail ?
         <Box
           component="img"
-          src={`http://localhost:5000${thumbnail}`}
+          src={`http://localhost:5050${thumbnail}`}
           alt={courseName || 'Course thumbnail'}
           sx={{
             width: '100%',

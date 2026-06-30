@@ -1,4 +1,4 @@
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5050').replace(/\/+$/, '') + '/api';
 
 async function parseUploadResponse(response) {
   const data = await response.json().catch(() => ({}));

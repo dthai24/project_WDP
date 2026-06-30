@@ -383,7 +383,7 @@ export default function ProfilePage() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/users/profile",
+        "http://localhost:5050/api/users/profile",
         {
           method: "PUT",
           headers: {
@@ -538,7 +538,7 @@ export default function ProfilePage() {
   const [selectedCats, setSelectedCats] = useState([]);
 
   const handleOpenPopup = async () => {
-    const res = await fetch("http://localhost:5000/api/categories");
+    const res = await fetch("http://localhost:5050/api/categories");
     const data = await res.json();
     setAllCats(data.data);
     setGoalInput(profile.rawLearningGoal || "");
@@ -551,7 +551,7 @@ export default function ProfilePage() {
   };
 
   const saveGoals = async () => {
-    await fetch("http://localhost:5000/api/users/goals", {
+    await fetch("http://localhost:5050/api/users/goals", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -578,7 +578,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchLevels = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/lookup/levels");
+        const res = await fetch("http://localhost:5050/api/lookup/levels");
         const data = await res.json();
         if (data.success) {
           setLevelsList(data.data || []);
@@ -603,7 +603,7 @@ export default function ProfilePage() {
     setSubmittingApply(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/users/apply-mentor", {
+      const res = await fetch("http://localhost:5050/api/users/apply-mentor", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

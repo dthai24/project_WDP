@@ -57,6 +57,10 @@ export default function CourseTestPage() {
   const [activeSkillType, setActiveSkillType] = useState(TEST_SKILL_LISTENING);
   const [activeGroupIndex, setActiveGroupIndex] = useState(0);
 
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftState, setDraftState] = useState(null);
+  const storageKey = `activeTestAttempt_${courseId}_${scope}_${chapterId || 'final'}`;
+
   const autoSubmittedRef = useRef(false);
   const submitInFlightRef = useRef(false);
 
@@ -135,6 +139,65 @@ export default function CourseTestPage() {
     }));
   }, []);
 
+  // Save draft state to localStorage
+  useEffect(() => {
+    if (pageState === PAGE_STATE.IN_PROGRESS && attempt && paper) {
+      const stateToSave = {
+        answers,
+        attempt,
+        paper,
+        activeSkillType,
+        activeGroupIndex,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(storageKey, JSON.stringify(stateToSave));
+    }
+  }, [answers, attempt, paper, activeSkillType, activeGroupIndex, pageState, storageKey]);
+
+  // Load draft check
+  useEffect(() => {
+    if (pageState === PAGE_STATE.INTRO) {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const expiresAt = new Date(parsed.attempt.expiresAt).getTime();
+          if (expiresAt > Date.now()) {
+            setDraftState(parsed);
+            setHasDraft(true);
+          } else {
+            localStorage.removeItem(storageKey);
+          }
+        } catch (e) {
+          console.error("Error parsing saved test state:", e);
+        }
+      }
+    }
+  }, [pageState, storageKey]);
+
+  const handleRestoreDraft = () => {
+    if (!draftState) return;
+    setAnswers(draftState.answers || {});
+    setAttempt(draftState.attempt);
+    setPaper(draftState.paper);
+    setActiveSkillType(draftState.activeSkillType || TEST_SKILL_LISTENING);
+    setActiveGroupIndex(draftState.activeGroupIndex || 0);
+    
+    const expiresAt = new Date(draftState.attempt.expiresAt).getTime();
+    const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+    setRemainingSeconds(remaining);
+    setTotalSeconds((meta?.timeLimitMinutes || draftState.attempt.timeLimitMinutes || 15) * 60);
+    
+    setPageState(PAGE_STATE.IN_PROGRESS);
+    setHasDraft(false);
+  };
+
+  const handleDiscardDraft = () => {
+    localStorage.removeItem(storageKey);
+    setHasDraft(false);
+    setDraftState(null);
+  };
+
   const handleSubmit = useCallback(async (options = {}) => {
     if (!attempt?.attemptId || submitInFlightRef.current) return;
 
@@ -155,6 +218,7 @@ export default function CourseTestPage() {
     setMeta(res.meta);
     setAttempt(res.attempt);
     setResult(res.result);
+    localStorage.removeItem(storageKey);
     allowLeave();
     setPageState(PAGE_STATE.RESULT);
   }, [attempt, answers, allowLeave]);
@@ -208,6 +272,7 @@ export default function CourseTestPage() {
   };
 
   const handleRetry = async () => {
+    localStorage.removeItem(storageKey);
     setPaper(null);
     setAttempt(null);
     setAnswers({});
@@ -390,6 +455,16 @@ export default function CourseTestPage() {
         confirmLabel={TEST_LEAVE_DIALOG.confirmLabel}
         cancelLabel={TEST_LEAVE_DIALOG.cancelLabel}
         destructive
+      />
+
+      <ConfirmDialog
+        open={hasDraft}
+        onClose={handleDiscardDraft}
+        onConfirm={handleRestoreDraft}
+        title="Tiếp tục làm bài?"
+        message="Hệ thống phát hiện bạn có một bài làm chưa hoàn thành trước đó. Bạn có muốn tiếp tục làm tiếp không?"
+        confirmLabel="Làm tiếp"
+        cancelLabel="Làm bài mới"
       />
     </Box>
   );

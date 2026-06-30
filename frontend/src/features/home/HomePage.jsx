@@ -98,7 +98,7 @@ export default function HomePage() {
         const currentUser = userRaw ? JSON.parse(userRaw) : null;
         const headers = currentUser?.userId ? { "x-user-id": currentUser.userId } : {};
 
-        const res = await fetch("http://localhost:5000/api/courses/student?sort=popular&limit=6", { headers });
+        const res = await fetch("http://localhost:5050/api/courses/student?sort=popular&limit=6", { headers });
         const result = await res.json();
 
         if (result.success && Array.isArray(result.data)) {
