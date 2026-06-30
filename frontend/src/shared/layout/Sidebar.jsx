@@ -114,34 +114,6 @@ export default function Sidebar({ variant = "student" }) {
 
   const [pendingApps, setPendingApps] = useState(0);
   const [pendingCourses, setPendingCourses] = useState(0);
-  const [streakCount, setStreakCount] = useState(0);
-
-  useEffect(() => {
-    if (variant !== "student" || !user) return;
-    const userId = user.userId || user.id || user.UserId;
-    if (!userId) return;
-
-    const fetchStreak = async () => {
-      try {
-        const res = await fetch(`http://localhost:5050/api/courses/streak?userId=${userId}`);
-        const data = await res.json();
-        if (data.success) {
-          setStreakCount(data.streak || 0);
-        }
-      } catch (err) {
-        console.error("Failed to fetch streak in sidebar:", err);
-      }
-    };
-    fetchStreak();
-
-    const handleStreakUpdate = () => {
-      fetchStreak();
-    };
-    window.addEventListener("streakUpdate", handleStreakUpdate);
-    return () => {
-      window.removeEventListener("streakUpdate", handleStreakUpdate);
-    };
-  }, [variant, user]);
 
   useEffect(() => {
     if (variant !== "admin") return;
@@ -209,8 +181,6 @@ export default function Sidebar({ variant = "student" }) {
           let badge = 0;
           if (item.id === "admin-applications") badge = pendingApps;
           if (item.id === "admin-courses") badge = pendingCourses;
-          if (item.id === "streak") badge = streakCount;
-          if (item.id === "notifications") badge = 3; // 3 mock notifications
 
           return <SidebarItem key={item.id} item={item} badgeCount={badge} />;
         })}
