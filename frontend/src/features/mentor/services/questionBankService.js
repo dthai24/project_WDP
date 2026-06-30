@@ -26,7 +26,7 @@ import {
 import { uploadListeningFilesInSections, validateListeningSectionsHaveAudio } from '@/features/mentor/utils/mentorQuestionBankUploadUtils';
 
 const QB_STORAGE_KEY = 'mentor_question_banks_v1';
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
 const QB_LIST_CACHE_TTL_MS = 60_000;
 
 let banksApiCache = null;

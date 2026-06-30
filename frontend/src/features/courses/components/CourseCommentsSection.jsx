@@ -151,7 +151,7 @@ export default function CourseCommentsSection({ courseId, isEnrolled = false }) 
     const fetchComments = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5000/api/courses/${courseId}/comments`);
+        const res = await fetch(`http://localhost:5050/api/courses/${courseId}/comments`);
         const result = await res.json();
 
         if (!cancelled && result.success && Array.isArray(result.data)) {
@@ -208,7 +208,7 @@ export default function CourseCommentsSection({ courseId, isEnrolled = false }) 
 
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/courses/${courseId}/comments`, {
+      const res = await fetch(`http://localhost:5050/api/courses/${courseId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

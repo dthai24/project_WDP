@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:5050/api';
 
 // ==========================================
 // CÁC HÀM HELPER GỌI API CHO GỌN CODE
