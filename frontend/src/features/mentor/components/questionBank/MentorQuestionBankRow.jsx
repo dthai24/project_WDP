@@ -128,7 +128,7 @@ export default function MentorQuestionBankRow({ bankItem }) {
       return;
     }
 
-    navigate(`/mentor/courses/${bankItem.CourseId}/questions`);
+    navigate(`/mentor/question-banks/manage?courseId=${bankItem.CourseId}`);
   };
 
   return (

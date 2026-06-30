@@ -27,6 +27,7 @@ import MentorCourseDetailPage from '@/features/mentor/pages/MentorCourseDetailPa
 import MentorQuestionBankListPage from '@/features/mentor/pages/MentorQuestionBankListPage';
 import MentorQuestionBankCreatePage from '@/features/mentor/pages/MentorQuestionBankCreatePage';
 import MentorQuestionBankDetailPage from '@/features/mentor/pages/MentorQuestionBankDetailPage';
+import MentorQuestionBankManagePage from '@/features/mentor/pages/MentorQuestionBankManagePage';
 import MentorCourseQuestionsPage from '@/features/mentor/pages/MentorCourseQuestionsPage';
 import AdminAccountManagementPage from '@/features/admin/pages/AdminAccountManagementPage';
 import AdminCategoryManagementPage from '@/features/admin/pages/AdminCategoryManagementPage';
@@ -225,6 +226,7 @@ export default function App() {
         <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
         <Route path="courses" element={<MentorCoursesPage />} />
         <Route path="question-banks/create" element={<MentorQuestionBankCreatePage />} />
+        <Route path="question-banks/manage" element={<MentorQuestionBankManagePage />} />
         <Route path="question-banks/:questionBankId" element={<MentorQuestionBankDetailPage />} />
         <Route path="question-banks" element={<MentorQuestionBankListPage />} />
         <Route path="news" element={<MentorNewsPage />} />

@@ -325,7 +325,7 @@ export default function MentorChapterQuizSetupDialog({
       navigate(`/mentor/courses/${courseId}/questions`);
       return;
     }
-    navigate(`/mentor/question-banks/create?courseId=${courseId}&chapterId=${chapterId}`);
+    navigate(`/mentor/question-banks/manage?courseId=${courseId}&chapterId=${chapterId}`);
   };
 
   const handleSave = async () => {

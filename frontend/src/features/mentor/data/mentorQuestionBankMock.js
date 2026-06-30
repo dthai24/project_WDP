@@ -45,6 +45,90 @@ export const mentorQuestionBankMock = [
   },
 ];
 
+/** Map mock course → item cho MentorQuestionBankList. */
+export function mapQuestionBankMockToListItems(items = mentorQuestionBankMock) {
+  return items.map((item) => ({
+    CourseId: item.courseId,
+    CourseName: item.courseName,
+    CourseDescription: item.description,
+    IsPublished: item.status === 'published',
+    TotalQuestion: item.totalQuestionCount ?? 0,
+    TotalQuestionIsPublic: item.publishedQuestionCount ?? 0,
+    TotalDraftQuestion: item.draftQuestionCount ?? 0,
+    ChapterWithQuestionCount: item.chapterWithQuestionCount ?? 0,
+    QuizCount: item.quizCount ?? 0,
+    UpdatedAt: item.questionBankUpdatedAt,
+    Thumbnail: null,
+  }));
+}
+
+/** Mục lục chương demo cho editor (cột phải). */
+export const mentorCourseChaptersOutlineMock = {
+  1: [
+    {
+      chapterId: 1,
+      chapterTitle: 'Khởi động & Làm quen thuật ngữ',
+      lessons: [{ lessonId: 101, lessonTitle: 'Chào hỏi công sở' }],
+    },
+    {
+      chapterId: 2,
+      chapterTitle: 'Kỹ năng viết Email chuyên nghiệp',
+      lessons: [{ lessonId: 201, lessonTitle: 'Cấu trúc email' }],
+    },
+  ],
+  3: [
+    {
+      chapterId: 1,
+      chapterTitle: 'Chào hỏi & Giới thiệu bản thân',
+      lessons: [{ lessonId: 301, lessonTitle: 'Hello & Hi' }],
+    },
+    {
+      chapterId: 2,
+      chapterTitle: 'Mua sắm & Hỏi giá',
+      lessons: [{ lessonId: 302, lessonTitle: 'How much is it?' }],
+    },
+    {
+      chapterId: 3,
+      chapterTitle: 'Nhà hàng & Gọi món',
+      lessons: [{ lessonId: 303, lessonTitle: 'Can I have the menu?' }],
+    },
+  ],
+};
+
+/** Bank theo chương — demo MentorCourseQuestionsPage. */
+export const mentorCourseChapterBanksMock = {
+  3: [
+    {
+      id: 3001,
+      chapterId: 1,
+      chapterTitle: 'Chào hỏi & Giới thiệu bản thân',
+      title: 'Chào hỏi & Giới thiệu bản thân',
+      totalQuestionCount: 15,
+      updatedAt: '2026-04-01T10:00:00.000Z',
+    },
+    {
+      id: 3002,
+      chapterId: 2,
+      chapterTitle: 'Mua sắm & Hỏi giá',
+      title: 'Mua sắm & Hỏi giá',
+      totalQuestionCount: 18,
+      updatedAt: '2026-03-28T14:30:00.000Z',
+    },
+  ],
+};
+
+export function getMockChapterBanksForCourse(courseId) {
+  return mentorCourseChapterBanksMock[Number(courseId)] ?? [];
+}
+
+export function getMockCourseFromQuestionBank(courseId) {
+  return mentorQuestionBankMock.find((item) => String(item.courseId) === String(courseId)) ?? null;
+}
+
+export function getMockChaptersForCourse(courseId) {
+  return mentorCourseChaptersOutlineMock[Number(courseId)] ?? [];
+}
+
 export const mentorQuestionBankFilterOptionsMock = {
   statusOptions: [
     { value: 'all', label: 'Tất cả' },

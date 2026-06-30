@@ -1,8 +1,7 @@
 /**
- * MentorCourseQuestionsPage — danh sách ngân hàng câu hỏi theo chương của một khóa học.
- * Route: /mentor/courses/:courseId/questions
+ * MentorCourseQuestionsPage — UI + mock, không gọi API.
  */
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Box,
   Breadcrumbs,
@@ -15,15 +14,12 @@ import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
-import Loading from '@/shared/ui/Loading';
 import EmptyState from '@/shared/ui/EmptyState';
-import { mentorQuestionBankMock } from '@/features/mentor/data/mentorQuestionBankMock';
 import {
-  fetchCourseForQB,
-  getQuestionBanksByCourse,
-} from '@/features/mentor/services/questionBankService';
+  getMockChapterBanksForCourse,
+  getMockCourseFromQuestionBank,
+} from '@/features/mentor/data/mentorQuestionBankMock';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
-import { buildQuestionBankChapterPath } from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
@@ -50,7 +46,7 @@ function BankRow({ bank, onManage }) {
           {bank.chapterTitle || bank.title || `Chương #${bank.chapterId}`}
         </Typography>
         <Typography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
-          {questionCount} câu hỏi · Cập nhật {formatMentorCourseDate(bank.updatedAt ?? bank.questionBankUpdatedAt)}
+          {questionCount} câu hỏi · Cập nhật {formatMentorCourseDate(bank.updatedAt)}
         </Typography>
       </Box>
       <AppButton
@@ -78,48 +74,14 @@ function BankRow({ bank, onManage }) {
 export default function MentorCourseQuestionsPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [banks, setBanks] = useState([]);
-  const [courseName, setCourseName] = useState('');
 
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      setLoading(true);
-      try {
-        const [courseRes, banksRes] = await Promise.all([
-          fetchCourseForQB(courseId),
-          getQuestionBanksByCourse(courseId),
-        ]);
-
-        if (!mounted) return;
-
-        const mockCourse = mentorQuestionBankMock.find(
-          (c) => String(c.courseId) === String(courseId),
-        );
-        setCourseName(
-          courseRes.ok
-            ? courseRes.course?.courseName
-            : mockCourse?.courseName ?? `Khóa học #${courseId}`,
-        );
-        setBanks(banksRes.ok ? banksRes.banks : []);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [courseId]);
+  const course = getMockCourseFromQuestionBank(courseId);
+  const banks = useMemo(() => getMockChapterBanksForCourse(courseId), [courseId]);
+  const courseName = course?.courseName ?? `Khóa học #${courseId}`;
 
   const handleManage = (bank) => {
     navigate(
-      buildQuestionBankChapterPath(bank.id, {
-        courseId,
-        chapterId: bank.chapterId,
-      }),
+      `/mentor/question-banks/manage?courseId=${courseId}&chapterId=${bank.chapterId}`,
     );
   };
 
@@ -161,7 +123,7 @@ export default function MentorCourseQuestionsPage() {
             underline="hover"
             sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
           >
-            {courseName || `Khóa học #${courseId}`}
+            {courseName}
           </MuiLink>
           <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
             Ngân hàng câu hỏi
@@ -235,9 +197,7 @@ export default function MentorCourseQuestionsPage() {
         </Box>
       </Typography>
 
-      {loading ? (
-        <Loading message="Đang tải ngân hàng câu hỏi..." />
-      ) : banks.length === 0 ? (
+      {banks.length === 0 ? (
         <Box
           sx={{
             borderRadius: '20px',
@@ -252,7 +212,7 @@ export default function MentorCourseQuestionsPage() {
             description="Tạo bộ câu hỏi cho từng chương để bắt đầu quản lý."
             actionLabel="Tạo bộ câu hỏi"
             onAction={() =>
-              navigate(`/mentor/question-banks/create?courseId=${courseId}`)
+              navigate(`/mentor/question-banks/manage?courseId=${courseId}`)
             }
           />
         </Box>
@@ -264,13 +224,13 @@ export default function MentorCourseQuestionsPage() {
         </Box>
       )}
 
-      {!loading && banks.length > 0 && (
+      {banks.length > 0 && (
         <Box sx={{ mt: 2.5 }}>
           <AppButton
             variant="outlined"
             startIcon={<MenuBookOutlinedIcon />}
             onClick={() =>
-              navigate(`/mentor/question-banks/create?courseId=${courseId}`)
+              navigate(`/mentor/question-banks/manage?courseId=${courseId}`)
             }
             sx={{ height: 40, borderRadius: '999px', fontWeight: 600 }}
           >

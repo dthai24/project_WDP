@@ -1,10 +1,8 @@
 /**
- * Cấu hình bài kiểm tra cuối khóa — random câu từ bank các chương.
+ * Cấu hình bài kiểm tra cuối khóa — UI only, stats = 0.
  */
-import { useEffect, useState } from 'react';
 import { Box, InputBase, Typography, alpha } from '@mui/material';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
-import { getCourseChapterBankStats } from '@/features/mentor/services/questionBankService';
 import {
   TEST_SKILL_QB_LABELS,
   TEST_SKILL_LISTENING,
@@ -34,33 +32,21 @@ const inputSx = (hasError) => ({
 });
 
 export default function MentorFinalTestConfigEditor({
-  courseId,
   config = {},
   errors = {},
   disabled = false,
   onChange,
 }) {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!courseId) {
-      setStats(null);
-      return;
-    }
-    let mounted = true;
-    setLoading(true);
-    getCourseChapterBankStats(courseId)
-      .then((res) => {
-        if (mounted && res.ok) setStats(res);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [courseId]);
+  const stats = {
+    ok: true,
+    chaptersWithQuestions: 0,
+    questionCountBySkill: {
+      [TEST_SKILL_LISTENING]: 0,
+      [TEST_SKILL_READING]: 0,
+      [TEST_SKILL_WRITING]: 0,
+    },
+  };
+  const loading = false;
 
   const total = getFinalTestConfigTotal(config);
 

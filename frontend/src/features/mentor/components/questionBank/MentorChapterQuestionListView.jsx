@@ -33,11 +33,6 @@ import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import EmptyState from '@/shared/ui/EmptyState';
-import {
-  deleteChapterQuestion,
-  setAllChapterQuestionsPublic,
-  setChapterQuestionPublic,
-} from '@/features/mentor/services/questionBankService';
 import { formatChapterDisplayLabel } from '@/features/mentor/utils/mentorCourseUtils';
 import {
   TEST_SKILL_CHIP_COLORS,
@@ -359,12 +354,8 @@ export default function MentorChapterQuestionListView({
   const runToggle = async (question, isPublic) => {
     setBusyId(question.QuestionId);
     try {
-      const res = await setChapterQuestionPublic(courseId, chapterId, question.QuestionId, isPublic);
-      if (!res.ok) {
-        toast.error(res.message);
-        return;
-      }
-      toast.success(isPublic ? 'Đã chuyển sang public.' : 'Đã chuyển sang private.');
+      toast.info('Logic public/private câu hỏi sẽ được implement lại.');
+      void isPublic;
       onReload?.();
     } finally {
       setBusyId(null);
@@ -375,12 +366,8 @@ export default function MentorChapterQuestionListView({
     setBulkAnchor(null);
     setBulkBusy(true);
     try {
-      const res = await setAllChapterQuestionsPublic(courseId, chapterId, isPublic);
-      if (!res.ok) {
-        toast.error(res.message);
-        return;
-      }
-      toast.success(isPublic ? 'Đã bật public toàn bộ câu hỏi.' : 'Đã chuyển toàn bộ sang private.');
+      toast.info('Logic public/private hàng loạt sẽ được implement lại.');
+      void isPublic;
       onReload?.();
     } finally {
       setBulkBusy(false);
@@ -391,12 +378,7 @@ export default function MentorChapterQuestionListView({
     if (!deleteTarget) return;
     setBusyId(deleteTarget.QuestionId);
     try {
-      const res = await deleteChapterQuestion(courseId, chapterId, deleteTarget.QuestionId);
-      if (!res.ok) {
-        toast.error(res.message);
-        return;
-      }
-      toast.success('Đã xóa câu hỏi.');
+      toast.info('Logic xóa câu hỏi sẽ được implement lại.');
       setDeleteTarget(null);
       onReload?.();
     } finally {
