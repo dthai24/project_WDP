@@ -211,6 +211,11 @@ export default function MyCoursesListPage() {
             level: dbCourse.LevelDisplayName || dbCourse.levelName || "Cơ bản",
             instructor: dbCourse.Instructor || "S.T.A.R Mentor Team",
 
+            rating: dbCourse.Rating,
+            studentCount: dbCourse.StudentCount,
+            reviewCount: dbCourse.ReviewCount,
+            description: dbCourse.Description,
+
             totalLessons: dbCourse.TotalLessons || 0,
             totalNodes: stageCount,
 

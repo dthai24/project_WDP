@@ -29,7 +29,6 @@ import { buildCourseContentPayload, buildFullCreateCoursePayload } from '@/featu
 import { uploadPendingMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
 import { getUser } from '@/features/auth/utils/authUtils';
 import { mapMentorCourseComment } from '@/features/mentor/utils/mentorCourseCommentsUtils';
-import { getInitialComments } from '@/features/courses/data/courseCommentsMock';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -786,12 +785,12 @@ export async function fetchMentorCourseComments(courseId) {
     const rows = Array.isArray(res.data) ? res.data : [];
     return {
       ok: true,
-      comments: rows.length > 0 ? rows.map(mapMentorCourseComment) : getInitialComments(),
+      comments: rows.length > 0 ? rows.map(mapMentorCourseComment) : [],
     };
   } catch (error) {
     return {
       ok: false,
-      comments: getInitialComments(),
+      comments: [],
       message: error.message ?? 'Lỗi kết nối server.',
     };
   }

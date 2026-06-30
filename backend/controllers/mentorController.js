@@ -327,11 +327,12 @@ const replyCourseComment = async (req, res) => {
             return res.status(ownership.status).json({ success: false, message: ownership.message });
         }
 
-        const updated = await courseCommentsModel.replyToCourseComment({
+        const updated = await courseCommentsModel.createCourseComment({
             courseId,
-            commentId,
-            mentorUserId: instructorId,
-            replyContent: String(content).trim(),
+            userId: instructorId,
+            rating: null,
+            content: String(content).trim(),
+            parentCommentId: commentId
         });
 
         if (!updated) {

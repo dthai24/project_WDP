@@ -439,6 +439,22 @@ export default function CourseDetailPage() {
               courseImage = `http://localhost:5000${val.startsWith('/') ? val : '/' + val}`;
             }
           }
+          // 2. Đếm số Học liệu (Material) cơ bản dễ hiểu
+          let totalMat = 0;
+          if (dbData.Paths) {
+            for (let i = 0; i < dbData.Paths.length; i++) {
+              let path = dbData.Paths[i];
+              if (path.Nodes) {
+                for (let j = 0; j < path.Nodes.length; j++) {
+                  let node = path.Nodes[j];
+                  if (node.Materials) {
+                    totalMat += node.Materials.length;
+                  }
+                }
+              }
+            }
+          }
+
           // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
           const mappedCourse = {
             id: dbData.CourseId,
@@ -455,13 +471,13 @@ export default function CourseDetailPage() {
             progress: dbData.progress,
             lessonCount: dbData.TotalLessons || 0,
             stageCount: dbData.Paths ? dbData.Paths.length : 0,
-            materialCount: dbData.TotalMaterials || 0,
+            materialCount: dbData.TotalMaterials ?? dbData.totalMaterials ?? totalMat,
             updatedAt: dbData.UpdatedAt
               ? new Date(dbData.UpdatedAt).toLocaleDateString("vi-VN")
               : "—",
-            rating: 4.8,
-            reviewCount: 154,
-            studentCount: 2000,
+            rating: dbData.Rating ?? dbData.rating ?? null,
+            reviewCount: dbData.ReviewCount ?? dbData.reviewCount ?? 0,
+            studentCount: dbData.StudentCount ?? dbData.studentCount ?? 0,
             isFree: true,
             prerequisites: [],
             modules: (dbData.Paths || []).map((path) => ({
@@ -547,7 +563,7 @@ export default function CourseDetailPage() {
           </Box>
 
           <Box sx={{ mt: 5 }}>
-            <CourseCommentsSection courseId={course.id} isEnrolled={course.isEnrolled} />
+            <CourseCommentsSection courseId={course.id} isEnrolled={course.isEnrolled} progress={course.progress} />
           </Box>
         </Box>
 
