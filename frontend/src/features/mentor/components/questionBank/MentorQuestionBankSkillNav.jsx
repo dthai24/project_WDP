@@ -9,8 +9,6 @@ import { BUILDER_PANEL_SX } from '@/features/mentor/components/course/mentorCour
 import { MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { HEADER_HEIGHT } from '@/shared/layout/MainLayout';
 import {
-  getFilledTestQuestions,
-  getNonEmptyQuestionBankSections,
   getSectionsBySkill,
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_LABELS,
@@ -18,6 +16,7 @@ import {
   TEST_SKILL_READING,
   TEST_SKILL_WRITING,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import { getSectionDisplayQuestionCount } from '@/features/mentor/utils/questionBankApiMappers';
 
 const SKILL_NAV_ITEMS = [
   { skill: TEST_SKILL_LISTENING, label: TEST_SKILL_LABELS[TEST_SKILL_LISTENING], icon: HeadphonesRoundedIcon },
@@ -98,13 +97,13 @@ export default function MentorQuestionBankSkillNav({
   onSkillChange,
 }) {
   const baiCountBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
-    acc[skill] = getNonEmptyQuestionBankSections(getSectionsBySkill(sections, skill)).length;
+    acc[skill] = getSectionsBySkill(sections, skill).length;
     return acc;
   }, {});
 
   const countBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
     acc[skill] = getSectionsBySkill(sections, skill).reduce(
-      (sum, section) => sum + getFilledTestQuestions(section?.Questions).length,
+      (sum, section) => sum + getSectionDisplayQuestionCount(section),
       0,
     );
     return acc;

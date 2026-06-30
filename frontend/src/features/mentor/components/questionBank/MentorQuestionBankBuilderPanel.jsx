@@ -14,6 +14,7 @@ import {
   getQuestionBankSectionTabLabel,
   isQuestionBankWritingSkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import { getSectionDisplayQuestionCount } from '@/features/mentor/utils/questionBankApiMappers';
 
 function BaiTab({ label, selected, disabled, accentColor, hasContent = false, onClick }) {
   const StatusIcon = hasContent ? CheckCircleOutlineRoundedIcon : RadioButtonUncheckedRoundedIcon;
@@ -125,7 +126,10 @@ export default function MentorQuestionBankBuilderPanel({
                     <BaiTab
                       key={section.tempId}
                       label={getQuestionBankSectionTabLabel(section, sections)}
-                      hasContent={getFilledTestQuestions(section?.Questions).length > 0}
+                      hasContent={
+                        getSectionDisplayQuestionCount(section) > 0
+                        || getFilledTestQuestions(section?.Questions).length > 0
+                      }
                       selected={section.tempId === activeSectionId}
                       disabled={disabled}
                       accentColor={accentColor}

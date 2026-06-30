@@ -1,14 +1,14 @@
 /**
- * Local UI state cho editor question bank — không fetch, không draft, không save API.
+ * Local UI state cho editor question bank.
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
   TEST_SKILL_LISTENING,
-  createQuestionBankSection,
   createQuestionBankSkillSections,
   getSectionBaiNumber,
   getSectionsBySkill,
   scrollToQuestionBankItem,
+  createQuestionBankSection,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 export default function useQuestionBankEditorUi({ resetKey } = {}) {
@@ -17,31 +17,12 @@ export default function useQuestionBankEditorUi({ resetKey } = {}) {
   const [activeSkill, setActiveSkill] = useState(TEST_SKILL_LISTENING);
   const [activeSectionId, setActiveSectionId] = useState('');
 
-  const persistOldSection = (sections, chapterId) => {
-    if (!chapterId) return;
-
-    sessionStorage.setItem(
-      `section_${chapterId}`,
-      JSON.stringify(sections)
-    );
-  };
-  //________useEffect run when resetKey (ChapterId) change__________________
   useEffect(() => {
     if (resetKey == null || resetKey === '') return;
 
-    const getOldSection = sessionStorage.getItem("resetKeyChapterId")
-    // console.log(getOldSection)
-    persistOldSection(sections, getOldSection)
-    const a = sessionStorage.getItem(`section_${getOldSection}`)
-    console.table(a)
-    // const oldSection = sessionStorage.getItem(`section_${resetKeyChapterId}`)
-    const nextSections = createQuestionBankSkillSections();
-    setSections(nextSections);
     setSectionErrors({});
     setActiveSkill(TEST_SKILL_LISTENING);
-    setActiveSectionId(
-      getSectionsBySkill(nextSections, TEST_SKILL_LISTENING)[0]?.tempId ?? '',
-    );
+    setActiveSectionId('');
   }, [resetKey]);
 
   const skillSections = useMemo(
@@ -73,7 +54,7 @@ export default function useQuestionBankEditorUi({ resetKey } = {}) {
   const handleSectionChange = (tempId, nextSection) => {
     setSections((prev) => prev.map((s) => (s.tempId === tempId ? nextSection : s)));
     if (sectionErrors[tempId]) {
-      setSectionErrors((prev) => ({ ...prev, [tempId]: {} }));
+      setSectionErrors((prev) => ({ ...prev, [tempId]: undefined }));
     }
   };
 

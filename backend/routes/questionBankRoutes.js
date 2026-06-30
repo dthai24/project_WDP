@@ -3,7 +3,9 @@ const express = require('express');
 const questionBankRoutes = express.Router();
 
 const {
-    getAllBankOfMentor
+    getAllBankOfMentor,
+    getChapterSections,
+    getSectionQuestions,
 } = require('../controllers/questionBankController');
 
 
@@ -21,4 +23,7 @@ const optionalAuth = (req, res, next) => {
 
 
 questionBankRoutes.get('/getAllBankOfMentor', optionalAuth, getAllBankOfMentor);
+questionBankRoutes.get('/courses/:courseId/paths/:pathId/sections', optionalAuth, getChapterSections);
+questionBankRoutes.get('/sections/:sectionId/questions', optionalAuth, getSectionQuestions);
+
 module.exports = questionBankRoutes;

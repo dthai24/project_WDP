@@ -1,5 +1,5 @@
 /**
- * Workspace UI question bank — chỉ layout + local state, không API.
+ * Workspace UI question bank.
  * Route: /mentor/question-banks/manage?courseId=1[&chapterId=2]
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -9,46 +9,71 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
+import Loading from '@/shared/ui/Loading';
 import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questionBank/MentorQuestionBankBuilderPanel';
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
 import MentorQuestionBankOutlinePanel from '@/features/mentor/components/questionBank/MentorQuestionBankOutlinePanel';
 import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBank/MentorQuestionBankSkillNav';
 import useQuestionBankEditorUi from '@/features/mentor/hooks/useQuestionBankEditorUi';
+import useQuestionBankChapterData from '@/features/mentor/hooks/useQuestionBankChapterData';
 import {
-  countActiveQuestionsBySkill,
-  getFilledQuestionCount,
-} from '@/features/mentor/utils/mentorTestContentUtils';
+  countQuestionsBySkillFromSections,
+  getSectionDisplayQuestionCount,
+} from '@/features/mentor/utils/questionBankApiMappers';
 import { PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateStyles';
-import { getMockCourseFromQuestionBank } from '@/features/mentor/data/mentorQuestionBankMock';
-import axios from 'axios';
 
-//_______________________________________________________
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
+
 export default function MentorQuestionBankManagePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [errors, setErrors] = useState({});
+  const [course, setCourse] = useState({});
+  const [courseChapters, setCourseChapters] = useState([]);
+  const [courseLoading, setCourseLoading] = useState(true);
 
   const courseId = searchParams.get('courseId') ?? '';
   const chapterId = searchParams.get('chapterId') ?? '';
-  // const course = getMockCourseFromQuestionBank(courseId);
-  const [course, setCourse] = useState({})
-  // const courseChapters = getMockChaptersForCourse(courseId);
-  const [courseChapters, setCourseChapters] = useState([])
+
   useEffect(() => {
+    if (!courseId) {
+      setCourseLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
     const fetchData = async () => {
+      setCourseLoading(true);
       try {
         const [resChapters, resCourse] = await Promise.all([
-          axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}/chapters`),
-          axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}?tab=course`)
-        ])
-        setCourseChapters(resChapters.data.data.Paths)
-        setCourse(resCourse.data.data[0])
+          fetch(`${API_BASE}/courses/my-courses/${courseId}/chapters`),
+          fetch(`${API_BASE}/courses/my-courses/${courseId}?tab=course`),
+        ]);
+
+        const chaptersPayload = await resChapters.json();
+        const coursePayload = await resCourse.json();
+
+        if (cancelled) return;
+
+        setCourseChapters(chaptersPayload?.data?.Paths ?? []);
+        setCourse(coursePayload?.data?.[0] ?? {});
       } catch (error) {
-        console.error(error.message)
+        if (!cancelled) {
+          console.error(error);
+          toast.error('Không tải được thông tin khóa học.');
+        }
+      } finally {
+        if (!cancelled) setCourseLoading(false);
       }
-    }
-    fetchData()
-  }, [])
+    };
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId]);
 
   const selectedChapter = courseChapters.find(
     (item) => String(item.PathId) === String(chapterId),
@@ -59,12 +84,15 @@ export default function MentorQuestionBankManagePage() {
 
   const {
     sections,
+    setSections,
     sectionErrors,
     activeSkill,
+    setActiveSkill,
     activeSection,
     activeSectionIndex,
     skillSections,
     activeSectionId,
+    setActiveSectionId,
     canDeleteActiveSection,
     handleSectionChange,
     handleDeleteSection,
@@ -74,23 +102,41 @@ export default function MentorQuestionBankManagePage() {
     handleOutlineNavigate,
   } = useQuestionBankEditorUi({ resetKey: chapterId || null });
 
+  const { sectionsLoading, questionsLoading, loadSectionQuestions } = useQuestionBankChapterData({
+    courseId,
+    chapterId,
+    setSections,
+    setActiveSkill,
+    setActiveSectionId,
+  });
+
+  useEffect(() => {
+    if (!activeSectionId || sectionsLoading) return;
+    const section = sections.find((item) => item.tempId === activeSectionId);
+    if (!section?.SectionId || section.questionsLoaded || section.questionsLoading) return;
+    loadSectionQuestions(activeSectionId, sections);
+  }, [activeSectionId, sections, sectionsLoading, loadSectionQuestions]);
+
   const bankTitle = selectedChapter?.PathName?.trim() ?? '';
 
   const courseCategory = useMemo(
     () => [course?.categoryName, course?.levelName].filter(Boolean).join(' · '),
     [course],
   );
-  const questionCount = useMemo(() => getFilledQuestionCount(sections), [sections]);
+
+  const questionCount = useMemo(
+    () => sections.reduce((sum, section) => sum + getSectionDisplayQuestionCount(section), 0),
+    [sections],
+  );
 
   const questionCountBySkill = useMemo(
-    () => countActiveQuestionsBySkill(sections),
+    () => countQuestionsBySkillFromSections(sections),
     [sections],
   );
 
   const handleChapterSelect = (nextChapterId) => {
     if (!courseId) return;
     if (errors.chapterId) setErrors((prev) => ({ ...prev, chapterId: undefined }));
-    sessionStorage.setItem('resetKeyChapterId', Number(chapterId))
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -175,7 +221,7 @@ export default function MentorQuestionBankManagePage() {
         <MentorQuestionBankSkillNav
           sections={sections}
           activeSkill={activeSkill}
-          disabled={!canUseGenerator}
+          disabled={!canUseGenerator || sectionsLoading}
           sectionErrors={sectionErrors}
           onSkillChange={handleSkillSelect}
         />
@@ -191,29 +237,49 @@ export default function MentorQuestionBankManagePage() {
             alignItems: 'start',
           }}
         >
-          <MentorQuestionBankBuilderPanel
-            sections={sections}
-            activeSkill={activeSkill}
-            activeSection={activeSection}
-            activeSectionIndex={activeSectionIndex}
-            activeSectionId={activeSectionId}
-            skillSections={skillSections}
-            sectionErrors={sectionErrors}
-            questionCount={questionCount}
-            disabled={!canUseGenerator}
-            emptyHint={
-              !canUseGenerator
-                ? hasChapters
-                  ? 'Chọn chương từ mục lục khóa học ở cột bên phải để bắt đầu tạo bộ câu hỏi.'
-                  : 'Khóa học chưa có chương để tạo bộ câu hỏi.'
-                : null
-            }
-            canDeleteActiveSection={canDeleteActiveSection}
-            onSectionSelect={handleSectionSelect}
-            onAddBai={handleAddBai}
-            onSectionChange={handleSectionChange}
-            onDeleteSection={handleDeleteSection}
-          />
+          <Box sx={{ position: 'relative', minWidth: 0 }}>
+            {(sectionsLoading || (questionsLoading && activeSection?.questionsLoading)) && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 3,
+                  display: 'grid',
+                  placeItems: 'center',
+                  bgcolor: 'rgba(255,255,255,0.72)',
+                  borderRadius: '20px',
+                }}
+              >
+                <Loading message={sectionsLoading ? 'Đang tải section...' : 'Đang tải câu hỏi...'} />
+              </Box>
+            )}
+
+            <MentorQuestionBankBuilderPanel
+              sections={sections}
+              activeSkill={activeSkill}
+              activeSection={activeSection}
+              activeSectionIndex={activeSectionIndex}
+              activeSectionId={activeSectionId}
+              skillSections={skillSections}
+              sectionErrors={sectionErrors}
+              questionCount={questionCount}
+              disabled={!canUseGenerator || sectionsLoading}
+              emptyHint={
+                !canUseGenerator
+                  ? hasChapters
+                    ? 'Chọn chương từ mục lục khóa học ở cột bên phải để bắt đầu tạo bộ câu hỏi.'
+                    : 'Khóa học chưa có chương để tạo bộ câu hỏi.'
+                  : sectionsLoading
+                    ? 'Đang tải section của chương...'
+                    : null
+              }
+              canDeleteActiveSection={canDeleteActiveSection}
+              onSectionSelect={handleSectionSelect}
+              onAddBai={handleAddBai}
+              onSectionChange={handleSectionChange}
+              onDeleteSection={handleDeleteSection}
+            />
+          </Box>
 
           <MentorQuestionBankOutlinePanel
             sections={sections}
@@ -224,7 +290,7 @@ export default function MentorQuestionBankManagePage() {
             courseCategory={courseCategory}
             chapterTitle={selectedChapter?.PathName}
             courseChapters={courseChapters}
-            chaptersLoading={false}
+            chaptersLoading={courseLoading}
             selectedChapterId={chapterId}
             chapterError={errors.chapterId}
             courseId={courseId}
