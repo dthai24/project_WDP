@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   Avatar,
   Box,
@@ -33,6 +33,7 @@ const MUTED = '#64748B';
 const DIVIDER = 'rgba(8,145,178,0.10)';
 const COMMENT_LIST_MAX_HEIGHT = 480;
 
+// Giao diện (CSS) cho cái nút nhỏ (Chip) hiển thị chữ "Giảng viên"
 const INSTRUCTOR_CHIP_SX = {
   height: 22,
   fontSize: 11,
@@ -43,6 +44,7 @@ const INSTRUCTOR_CHIP_SX = {
   '& .MuiChip-label': { px: 0.85 },
 };
 
+// Component hiển thị Tiêu đề của phần bình luận
 function SectionTitle({ children, sx }) {
   return (
     <Typography sx={{ fontWeight: 700, color: TEXT, fontSize: { xs: 18, sm: 20 }, lineHeight: 1.3, ...sx }}>
@@ -51,6 +53,37 @@ function SectionTitle({ children, sx }) {
   );
 }
 
+// -------------------------------------------------------------------------------------------------
+// HÀM QUAN TRỌNG: ĐÚC CÂY ĐỆ QUY (Cha - Con)
+// Công dụng: Biến 1 danh sách phẳng (phẳng lì từ trên xuống dưới) thành dạng Cây 
+// để lúc in ra màn hình nó sẽ biết được đứa nào là con của đứa nào.
+// -------------------------------------------------------------------------------------------------
+function buildCommentTree(flatComments) {
+  const commentMap = {};
+  const rootComments = [];
+
+  // Vòng lặp 1: Gắn thêm 1 cái túi rỗng tên là 'replies' cho tất cả mọi người
+  flatComments.forEach(comment => {
+    commentMap[comment.id] = { ...comment, replies: [] };
+  });
+
+  // Vòng lặp 2: Nhét các đứa con vào trong cái túi 'replies' của người Cha
+  flatComments.forEach(comment => {
+    if (comment.parentCommentId && commentMap[comment.parentCommentId]) {
+      commentMap[comment.parentCommentId].replies.push(commentMap[comment.id]);
+    } else {
+      // Nếu không có Cha (parentCommentId bị null), thì nó chính là Cụ tổ (Root)
+      rootComments.push(commentMap[comment.id]);
+    }
+  });
+
+  return rootComments;
+}
+
+// -------------------------------------------------------------------------------------------------
+// COMPONENT: FORM NHẬP BÌNH LUẬN MỚI
+// Nằm ở trên cùng, dùng để Mentor đăng 1 thông báo mới toanh 
+// -------------------------------------------------------------------------------------------------
 function MentorCommentComposeForm({ submitting, onSubmit }) {
   const [content, setContent] = useState('');
 
@@ -75,7 +108,7 @@ function MentorCommentComposeForm({ submitting, onSubmit }) {
       }}
     >
       <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1.25 }}>
-        Viết bình luận của bạn
+        Đăng thông báo mới
       </Typography>
       <TextField
         multiline
@@ -118,6 +151,10 @@ function MentorCommentComposeForm({ submitting, onSubmit }) {
   );
 }
 
+// -------------------------------------------------------------------------------------------------
+// COMPONENT: FORM TRẢ LỜI
+// Hiện ra bên dưới mỗi bình luận khi Mentor bấm vào nút "Trả lời" xanh xanh
+// -------------------------------------------------------------------------------------------------
 function MentorCommentReplyForm({ initialValue = '', submitting, onSubmit, onCancel }) {
   const [content, setContent] = useState(initialValue);
 
@@ -140,14 +177,11 @@ function MentorCommentReplyForm({ initialValue = '', submitting, onSubmit, onCan
         bgcolor: alpha(PRIMARY, 0.02),
       }}
     >
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1.25 }}>
-        Phản hồi cho học viên
-      </Typography>
       <TextField
         multiline
-        minRows={3}
+        minRows={2}
         fullWidth
-        placeholder="Viết phản hồi của bạn..."
+        placeholder="Viết câu trả lời..."
         value={content}
         onChange={(event) => setContent(event.target.value.slice(0, REPLY_MAX_LENGTH))}
         inputProps={{ maxLength: REPLY_MAX_LENGTH }}
@@ -182,135 +216,133 @@ function MentorCommentReplyForm({ initialValue = '', submitting, onSubmit, onCan
           disabled={submitting || !content.trim()}
           onClick={handleSubmit}
         >
-          Gửi phản hồi
+          Gửi trả lời
         </AppButton>
       </Box>
     </Box>
   );
 }
 
-function MentorCommentItem({
-  comment,
-  replying,
-  submitting,
-  onStartReply,
-  onCancelReply,
-  onSubmitReply,
-}) {
+// -------------------------------------------------------------------------------------------------
+// COMPONENT: GIAO DIỆN 1 DÒNG BÌNH LUẬN CỦA MENTOR
+//depth (độ sâu thụt lề), onReply (hàm bấm gửi), replyingToId (ID đang bị bấm), setReplyingToId (đổi trạng thái)
+// -------------------------------------------------------------------------------------------------
+function MentorCommentItem({ comment, replying, submitting, onStartReply, onCancelReply, onSubmitReply, depth = 0 }) {
   const avatarSrc = resolveAvatarSrc(comment.avatarUrl);
-  const hasReply = Boolean(comment.reply?.content);
-  const isEditing = replying === comment.id;
-  const canReply = !comment.isInstructor;
+
+  // Biến isReplying dùng để kiểm tra xem bình luận này CÓ ĐANG BỊ Mentor bấm nút "Trả lời" hay không.
+  // Nếu có, thì sẽ giấu nút "Trả lời" đi và bật cái Form nhập chữ lên.
+  const isReplying = replying === comment.id;
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        gap: 1.75,
-        py: 2.25,
-        borderBottom: `1px solid ${DIVIDER}`,
-        '&:last-child': { borderBottom: 'none', pb: 0 },
-      }}
-    >
-      <Avatar
-        src={avatarSrc || undefined}
+    // THỤT LỀ: Nếu là Con/Cháu (depth > 0) thì margin-left (ml) thụt vào 5 đơn vị (40px)
+    <Box sx={{ ml: depth > 0 ? 5 : 0, mt: depth > 0 ? 1.5 : 0 }}>
+
+      {/* UI Búp Bê Nga: Trang trí viền và màu nền cho người con */}
+      <Box
         sx={{
-          width: 42,
-          height: 42,
-          bgcolor: alpha(PRIMARY, 0.12),
-          color: PRIMARY,
-          fontSize: 14,
-          fontWeight: 700,
-          flexShrink: 0,
+          display: 'flex', gap: 1.75, py: 2.25,
+          borderBottom: depth === 0 ? `1px solid ${DIVIDER}` : 'none',
+          bgcolor: depth > 0 ? alpha(PRIMARY, 0.02) : 'transparent',
+          p: depth > 0 ? 2 : 0, borderRadius: depth > 0 ? 2 : 0,
         }}
       >
-        {getCommentInitials(comment.authorName)}
-      </Avatar>
+        {/* HIỂN THỊ AVATAR */}
+        <Avatar
+          src={avatarSrc || undefined}
+          sx={{
+            width: 42,
+            height: 42,
+            bgcolor: alpha(PRIMARY, 0.12),
+            color: PRIMARY,
+            fontSize: 14,
+            fontWeight: 700,
+            flexShrink: 0,
+          }}
+        >
+          {getCommentInitials(comment.authorName)}
+        </Avatar>
 
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.5 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
-            {comment.authorName}
-          </Typography>
-          {comment.isInstructor ? (
-            <Chip size="small" label="Giảng viên" sx={INSTRUCTOR_CHIP_SX} />
-          ) : null}
-          <Typography sx={{ fontSize: 12.5, color: MUTED }}>
-            {formatCommentDate(comment.createdAt)}
-          </Typography>
-        </Box>
-
-        {comment.rating != null && (
-          <Rating
-            value={comment.rating}
-            readOnly
-            size="small"
-            icon={<StarRoundedIcon sx={{ fontSize: 16 }} />}
-            emptyIcon={<StarRoundedIcon sx={{ fontSize: 16, opacity: 0.28 }} />}
-            sx={{ color: '#F59E0B', mb: 0.75, '& .MuiRating-iconEmpty': { color: alpha('#F59E0B', 0.28) } }}
-          />
-        )}
-
-        <Typography sx={{ fontSize: 14, color: TEXT, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
-          {comment.content}
-        </Typography>
-
-        {hasReply && !isEditing ? (
-          <Box
-            sx={{
-              mt: 1.25,
-              p: 1.5,
-              borderRadius: '12px',
-              bgcolor: alpha(PRIMARY, 0.04),
-              border: `1px solid ${alpha(PRIMARY, 0.12)}`,
-            }}
-          >
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: PRIMARY, mb: 0.35 }}>
-              Phản hồi từ giảng viên
-              {comment.reply.repliedAt ? (
-                <Box component="span" sx={{ fontWeight: 500, color: MUTED, ml: 0.75 }}>
-                  · {formatCommentDate(comment.reply.repliedAt)}
-                </Box>
-              ) : null}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* HIỂN THỊ TÊN, NẾU LÀ INSTRUCTOR THÌ HIỆN THÊM CHỮ "Giảng viên" cho uy tín hơn */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 0.5 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
+              {comment.authorName}
             </Typography>
-            <Typography sx={{ fontSize: 13.5, color: TEXT, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {comment.reply.content}
+            {comment.isInstructor && (
+              <Chip size="small" label="Giảng viên" sx={INSTRUCTOR_CHIP_SX} />
+            )}
+            <Typography sx={{ fontSize: 12.5, color: MUTED }}>
+              {formatCommentDate(comment.createdAt)}
             </Typography>
-            {canReply ? (
-              <AppButton
-                variant="text"
-                onClick={() => onStartReply(comment.id)}
-                sx={{ mt: 0.5, px: 0, minWidth: 0, fontSize: 13, fontWeight: 600, color: PRIMARY }}
-              >
-                Sửa phản hồi
-              </AppButton>
-            ) : null}
           </Box>
-        ) : null}
 
-        {canReply && !hasReply && !isEditing ? (
-          <AppButton
-            variant="text"
-            onClick={() => onStartReply(comment.id)}
-            sx={{ mt: 0.75, px: 0, minWidth: 0, fontSize: 13, fontWeight: 600, color: PRIMARY }}
-          >
-            Trả lời
-          </AppButton>
-        ) : null}
+          {/* HIỂN THỊ SỐ SAO (Chỉ sinh viên đánh giá mới có sao) */}
+          {comment.rating != null && (
+            <Rating
+              value={comment.rating}
+              readOnly
+              size="small"
+              icon={<StarRoundedIcon sx={{ fontSize: 16 }} />}
+              emptyIcon={<StarRoundedIcon sx={{ fontSize: 16, opacity: 0.28 }} />}
+              sx={{ color: '#F59E0B', mb: 0.75, '& .MuiRating-iconEmpty': { color: alpha('#F59E0B', 0.28) } }}
+            />
+          )}
 
-        {canReply && isEditing ? (
-          <MentorCommentReplyForm
-            initialValue={comment.reply?.content ?? ''}
-            submitting={submitting}
-            onCancel={onCancelReply}
-            onSubmit={(content) => onSubmitReply(comment.id, content)}
-          />
-        ) : null}
+          {/* NỘI DUNG CHỮ */}
+          <Typography sx={{ fontSize: 14, color: TEXT, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+            {comment.content}
+          </Typography>
+
+          {/* NÚT TRẢ LỜI: Nếu đang không bấm Form nhập thì mới hiện nút này */}
+          {!isReplying && (
+            <AppButton
+              variant="text"
+              onClick={() => onStartReply(comment.id)}
+              sx={{ mt: 0.75, px: 0, minWidth: 0, fontSize: 13, fontWeight: 600, color: PRIMARY }}
+            >
+              Trả lời
+            </AppButton>
+          )}
+
+          {/* BẬT FORM TRẢ LỜI: Nếu Mentor đang bấm trả lời ông này thì bung cái hộp ra */}
+          {isReplying && (
+            <MentorCommentReplyForm
+              submitting={submitting}
+              onCancel={onCancelReply}
+              onSubmit={(content) => onSubmitReply(comment.id, content)}
+            />
+          )}
+
+          {/* --------------------------------------------------------------------------- */}
+          {/* ĐỆ QUY THÔNG QUA BIẾN childComment */}
+          {/* Lấy từng đứa con ra, và lại dùng chính Component <MentorCommentItem> để hiển thị nó */}
+          {/* --------------------------------------------------------------------------- */}
+          {comment.replies && comment.replies.length > 0 && (
+            <Box sx={{ mt: 1 }}>
+              {comment.replies.map((childComment) => (
+                <MentorCommentItem
+                  key={childComment.id}
+                  comment={childComment}
+                  depth={depth + 1}
+                  replying={replying}
+                  submitting={submitting}
+                  onStartReply={onStartReply}
+                  onCancelReply={onCancelReply}
+                  onSubmitReply={onSubmitReply}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
       </Box>
     </Box>
   );
 }
 
+// -------------------------------------------------------------------------------------------------
+// COMPONENT CHÍNH: XUẤT RA TOÀN BỘ TRANG BÌNH LUẬN
+// -------------------------------------------------------------------------------------------------
 export default function MentorCourseCommentsTab({ courseId }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -318,6 +350,7 @@ export default function MentorCourseCommentsTab({ courseId }) {
   const [submittingId, setSubmittingId] = useState(null);
   const [postingComment, setPostingComment] = useState(false);
 
+  // Gọi API lấy toàn bộ danh sách bình luận (ở dạng phẳng)
   const loadComments = useCallback(async () => {
     setLoading(true);
     const result = await fetchMentorCourseComments(courseId);
@@ -332,6 +365,7 @@ export default function MentorCourseCommentsTab({ courseId }) {
     loadComments();
   }, [loadComments]);
 
+  // Hàm xử lý gửi Bình Luận Gốc (Bình luận mới toanh)
   const handleSubmitComment = async (content, resetForm) => {
     setPostingComment(true);
     const result = await createMentorCourseComment(courseId, content);
@@ -342,58 +376,42 @@ export default function MentorCourseCommentsTab({ courseId }) {
       return;
     }
 
-    setComments((prev) => [result.comment, ...prev]);
+    toast.success('Đã đăng thông báo.');
     resetForm();
-    toast.success('Đã gửi bình luận.');
+    loadComments(); // Tải lại toàn bộ cây từ server
   };
 
+  // Hàm xử lý khi gửi Câu Trả Lời cho một người nào đó
   const handleSubmitReply = async (commentId, content) => {
     setSubmittingId(commentId);
     const result = await replyMentorCourseComment(courseId, commentId, content);
     setSubmittingId(null);
 
     if (!result.ok) {
-      const isDemoComment = !/^\d+$/.test(String(commentId));
-      if (isDemoComment) {
-        setComments((prev) =>
-          prev.map((item) =>
-            item.id === commentId
-              ? {
-                  ...item,
-                  reply: {
-                    content,
-                    repliedAt: new Date().toISOString(),
-                    repliedByName: 'Bạn',
-                  },
-                }
-              : item,
-          ),
-        );
-        setReplyingId(null);
-        toast.success('Đã gửi phản hồi (demo).');
-        return;
-      }
-
       toast.error(result.message ?? 'Không thể gửi phản hồi.');
       return;
     }
 
-    setComments((prev) =>
-      prev.map((item) => (item.id === commentId ? result.comment : item)),
-    );
     setReplyingId(null);
     toast.success('Đã gửi phản hồi.');
+    loadComments(); // BẮT BUỘC TẢI LẠI ĐỂ SQL KẾT NỐI PARENT VỚI CHILD
   };
+
+  // ---------------------------------------------------------------------------
+  // KÍCH HOẠT ĐỆ QUY: Biến mảng phẳng thành cây đệ quy
+  // ---------------------------------------------------------------------------
+  const nestedComments = useMemo(() => buildCommentTree(comments), [comments]);
 
   return (
     <Box sx={CREATE_CARD_SX}>
       <Box sx={{ pb: 2, mb: 0.5, borderBottom: `1px solid ${DIVIDER}` }}>
         <SectionTitle sx={{ mb: 0.75 }}>Bình luận</SectionTitle>
         <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
-          {loading ? 'Đang tải...' : `${comments.length} bình luận`}
+          {loading ? 'Đang tải...' : `${comments.length} tương tác`}
         </Typography>
       </Box>
 
+      {/* FORM NHẬP Ở TRÊN CÙNG */}
       <MentorCommentComposeForm submitting={postingComment} onSubmit={handleSubmitComment} />
 
       {loading ? (
@@ -419,7 +437,8 @@ export default function MentorCourseCommentsTab({ courseId }) {
             },
           }}
         >
-          {comments.map((comment) => (
+          {/* ĐỆ QUY comment*/}
+          {nestedComments.map((comment) => (
             <MentorCommentItem
               key={comment.id}
               comment={comment}

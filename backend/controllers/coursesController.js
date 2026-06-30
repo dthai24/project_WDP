@@ -354,7 +354,7 @@ const createCourseComment = async (req, res) => {
   try {
     const { courseId } = req.params;
     const userId = req.headers['x-user-id'];
-    const { content, rating } = req.body;
+    const { content, rating, parentCommentId } = req.body;
 
     if (!courseId) {
       return res.status(400).json({ success: false, message: 'Thiếu courseId' });
@@ -371,7 +371,25 @@ const createCourseComment = async (req, res) => {
 
     const numericRating = rating == null ? null : Number(rating);
     if (numericRating != null && (numericRating < 1 || numericRating > 5)) {
-      return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 5 sao' });
+      return res.status(400).json({ success: false, message: 'Đánh giá không hợp lệ' });
+    }
+    // check tiến độ học
+    const { sql } = require('../config/db');
+    const reqDb = new sql.Request();
+    reqDb.input('checkUserId', sql.Int, Number(userId));
+    reqDb.input('checkCourseId', sql.Int, Number(courseId));
+
+    const progressResult = await reqDb.query(`
+      SELECT ProgressPercentage 
+      FROM User_Courses 
+      WHERE UserId = @checkUserId AND CourseId = @checkCourseId
+    `);
+    const userProgress = progressResult.recordset[0] ? progressResult.recordset[0].ProgressPercentage : 0;
+    if (!userProgress || Number(userProgress) === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn cần học ít nhất 1 bài để được đánh giá khóa học.'
+      });
     }
 
     const comment = await courseCommentsModel.createCourseComment({
@@ -379,8 +397,8 @@ const createCourseComment = async (req, res) => {
       userId,
       rating: numericRating,
       content: String(content).trim(),
+      parentCommentId: parentCommentId ? Number(parentCommentId) : null,
     });
-
     return res.status(201).json({
       success: true,
       message: 'Gửi bình luận thành công',
@@ -391,6 +409,8 @@ const createCourseComment = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi server khi gửi bình luận' });
   }
 };
+
+
 
 //create node
 

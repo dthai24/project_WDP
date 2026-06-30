@@ -1,4 +1,4 @@
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '').replace(/\/$/, '');
 
 export const AVATAR_UPDATED_EVENT = 'avatar-updated';
 
@@ -31,7 +31,7 @@ export function persistUserAvatar(avatarUrl) {
 
 export function getStoredAvatarUrl() {
   const explicit = localStorage.getItem('avatarUrl');
-  if (explicit) return explicit;
+  if (explicit) return explicit.replace(/(https?:\/\/.*?)\/\//, '$1/');
 
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
