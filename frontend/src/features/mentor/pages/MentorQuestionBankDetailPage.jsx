@@ -32,7 +32,7 @@ import {
 function PathChapterCard({ path, index, onOpen }) {
   const theme = useTheme();
   const label = path.displayLabel || path.PathName || `Chương #${path.PathId}`;
-  const chapterNumber = path.chapterOrder ?? index + 1;
+  const chapterNumber = path.Order ?? index + 1;
   const questionCount = Number(path.QuestionCount) || 0;
 
   return (
@@ -116,29 +116,27 @@ export default function MentorQuestionBankDetailPage() {
   const course = getMockCourseFromQuestionBank(courseId);
   const courseChapters = getMockChaptersForCourse(courseId);
   const selectedChapter = courseChapters.find(
-    (item) => String(item.chapterId) === String(chapterId),
+    (item) => String(item.PathId) === String(chapterId),
   );
 
   const bank = useMemo(
     () => ({
       id: questionBankId,
       courseId: Number(courseId) || courseId,
-      courseTitle: course?.courseName ?? `Khóa học #${courseId}`,
+      courseTitle: course?.CourseName ?? `Khóa học #${courseId}`,
       chapterId: chapterId ? Number(chapterId) : null,
-      chapterTitle: selectedChapter?.chapterTitle ?? '',
-      title: selectedChapter?.chapterTitle ?? 'Ngân hàng câu hỏi',
-      updatedAt: course?.questionBankUpdatedAt,
+      PathName: selectedChapter?.PathName ?? '',
+      title: selectedChapter?.PathName ?? 'Ngân hàng câu hỏi',
+      updatedAt: course?.CourseUpdateAt,
     }),
     [questionBankId, courseId, course, chapterId, selectedChapter],
   );
 
   const bankPaths = useMemo(
     () =>
-      courseChapters.map((chapter, index) => ({
-        PathId: chapter.chapterId,
-        PathName: chapter.chapterTitle,
-        chapterOrder: index + 1,
-        displayLabel: `Chương ${index + 1}: ${chapter.chapterTitle}`,
+      courseChapters.map((path, index) => ({
+        ...path,
+        displayLabel: `Chương ${path.Order ?? index + 1}: ${path.PathName}`,
         QuestionCount: 0,
       })),
     [courseChapters],
@@ -164,12 +162,14 @@ export default function MentorQuestionBankDetailPage() {
   } = useQuestionBankEditorUi({ resetKey: chapterId || null });
 
   const questionCount = useMemo(() => getFilledQuestionCount(sections), [sections]);
+
   const questionCountBySkill = useMemo(
     () => countActiveQuestionsBySkill(sections),
     [sections],
   );
+
   const courseCategory = useMemo(
-    () => [course?.categoryName, course?.levelName].filter(Boolean).join(' · '),
+    () => [course?.CategoryDisplayName, course?.LevelDisplayName].filter(Boolean).join(' · '),
     [course],
   );
 
@@ -217,7 +217,7 @@ export default function MentorQuestionBankDetailPage() {
   );
 
   if (isPathListMode) {
-    const title = course?.courseName ?? bank.courseTitle;
+    const title = course?.CourseName ?? bank.courseTitle;
     const totalQuestions = bankPaths.reduce(
       (sum, path) => sum + (Number(path.QuestionCount) || 0),
       0,
@@ -317,7 +317,7 @@ export default function MentorQuestionBankDetailPage() {
         bankTitle={bank.title}
         courseId={bank.courseId}
         courseName={bank.courseTitle}
-        coursePublished={course?.status === 'published'}
+        coursePublished={Boolean(course?.IsPublished)}
         totalQuestionCount={questionCount}
         questionCountBySkill={questionCountBySkill}
         updatedAt={bank.updatedAt}
@@ -375,7 +375,7 @@ export default function MentorQuestionBankDetailPage() {
             onNavigateToItem={handleOutlineNavigate}
             courseName={bank.courseTitle}
             courseCategory={courseCategory}
-            chapterTitle={bank.chapterTitle}
+            selectedPathName={bank.PathName}
             courseChapters={courseChapters}
             selectedChapterId={chapterId}
             courseId={courseId}

@@ -136,6 +136,7 @@ export default function MentorQuestionBankOutlinePanel({
   courseName = '',
   courseCategory = '',
   chapterTitle = '',
+  selectedPathName = '',
   courseChapters = [],
   chaptersLoading = false,
   selectedChapterId = '',
@@ -152,6 +153,8 @@ export default function MentorQuestionBankOutlinePanel({
   const handleNavigate = (target) => {
     onNavigateToItem?.(target);
   };
+
+  const selectedChapterName = selectedPathName || chapterTitle;
 
   return (
     <Box
@@ -294,9 +297,9 @@ export default function MentorQuestionBankOutlinePanel({
               <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
                 {courseName || '—'}
               </Typography>
-              {chapterTitle ? (
+              {selectedChapterName ? (
                 <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, mt: 0.35 }}>
-                  {chapterTitle}
+                  {selectedChapterName}
                 </Typography>
               ) : null}
               {courseCategory ? (
@@ -352,45 +355,41 @@ export default function MentorQuestionBankOutlinePanel({
                 mr: -0.25,
               }}
             >
-              {courseChapters.map((chapter, chapterIndex) => {
-                const chapterId = chapter.chapterId ?? chapter.PathId;
-                const chapterTitleItem =
-                  chapter.chapterTitle ?? chapter.PathName ?? `Chương ${chapterIndex + 1}`;
-                const lessons =
-                  chapter.lessons ??
-                  (chapter.Nodes ?? []).map((node, nodeIndex) => ({
-                    lessonId: node.NodeId ?? node.lessonId,
-                    lessonTitle: node.NodeName ?? node.lessonTitle ?? `Bài ${nodeIndex + 1}`,
-                  }));
-                const isSelected = String(chapterId) === String(selectedChapterId);
+              {courseChapters.map((path, pathIndex) => {
+                const nodes = path.Nodes ?? [];
+                const chapterOrder = path.Order ?? pathIndex + 1;
+                const isSelected = String(path.PathId) === String(selectedChapterId);
 
                 return (
-                  <Box key={chapterId ?? chapterIndex} sx={{ mb: 0.35 }}>
+                  <Box key={path.PathId ?? pathIndex} sx={{ mb: 0.35 }}>
                     <OutlineNavItem
-                      label={`Chương ${chapterIndex + 1}: ${chapterTitleItem}`}
-                      meta={lessons.length > 0 ? `${lessons.length} bài học` : 'Chưa có bài học'}
+                      label={`Chương ${chapterOrder}: ${path.PathName || `Chương ${chapterOrder}`}`}
+                      meta={nodes.length > 0 ? `${nodes.length} bài học` : 'Chưa có bài học'}
                       icon={MenuBookRoundedIcon}
                       iconColor={CHAPTER_THEME.color}
                       selected={isSelected}
-                      onClick={() => onChapterSelect?.(String(chapterId))}
+                      onClick={() => onChapterSelect?.(String(path.PathId))}
                       trailing={
                         onChapterQuizSetup ? (
                           <MentorChapterCardMenu
-                            onQuizSetup={() => onChapterQuizSetup(chapter, chapterIndex)}
+                            onQuizSetup={() => onChapterQuizSetup(path, pathIndex)}
                           />
                         ) : null
                       }
                     />
-                    {lessons.map((lesson, lessonIndex) => (
-                      <OutlineNavItem
-                        key={lesson.lessonId}
-                        label={`Bài ${lessonIndex + 1}: ${lesson.lessonTitle}`}
-                        icon={PlayLessonRoundedIcon}
-                        iconColor={LESSON_THEME.color}
-                        indent={1}
-                        disabled
-                      />
-                    ))}
+                    {nodes.map((node, nodeIndex) => {
+                      const nodeOrder = node.NodeOrder ?? nodeIndex + 1;
+                      return (
+                        <OutlineNavItem
+                          key={node.NodeId ?? nodeIndex}
+                          label={`Bài ${nodeOrder}: ${node.NodeName || `Bài ${nodeOrder}`}`}
+                          icon={PlayLessonRoundedIcon}
+                          iconColor={LESSON_THEME.color}
+                          indent={1}
+                          disabled
+                        />
+                      );
+                    })}
                   </Box>
                 );
               })}

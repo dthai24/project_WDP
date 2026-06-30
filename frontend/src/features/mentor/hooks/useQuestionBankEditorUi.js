@@ -17,8 +17,24 @@ export default function useQuestionBankEditorUi({ resetKey } = {}) {
   const [activeSkill, setActiveSkill] = useState(TEST_SKILL_LISTENING);
   const [activeSectionId, setActiveSectionId] = useState('');
 
+  const persistOldSection = (sections, chapterId) => {
+    if (!chapterId) return;
+
+    sessionStorage.setItem(
+      `section_${chapterId}`,
+      JSON.stringify(sections)
+    );
+  };
+  //________useEffect run when resetKey (ChapterId) change__________________
   useEffect(() => {
     if (resetKey == null || resetKey === '') return;
+
+    const getOldSection = sessionStorage.getItem("resetKeyChapterId")
+    // console.log(getOldSection)
+    persistOldSection(sections, getOldSection)
+    const a = sessionStorage.getItem(`section_${getOldSection}`)
+    console.table(a)
+    // const oldSection = sessionStorage.getItem(`section_${resetKeyChapterId}`)
     const nextSections = createQuestionBankSkillSections();
     setSections(nextSections);
     setSectionErrors({});

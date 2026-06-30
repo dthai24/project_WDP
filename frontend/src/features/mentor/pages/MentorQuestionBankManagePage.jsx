@@ -2,7 +2,7 @@
  * Workspace UI question bank — chỉ layout + local state, không API.
  * Route: /mentor/question-banks/manage?courseId=1[&chapterId=2]
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box } from '@mui/material';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -19,11 +19,10 @@ import {
   getFilledQuestionCount,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateStyles';
-import {
-  getMockChaptersForCourse,
-  getMockCourseFromQuestionBank,
-} from '@/features/mentor/data/mentorQuestionBankMock';
+import { getMockCourseFromQuestionBank } from '@/features/mentor/data/mentorQuestionBankMock';
+import axios from 'axios';
 
+//_______________________________________________________
 export default function MentorQuestionBankManagePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,10 +30,28 @@ export default function MentorQuestionBankManagePage() {
 
   const courseId = searchParams.get('courseId') ?? '';
   const chapterId = searchParams.get('chapterId') ?? '';
-  const course = getMockCourseFromQuestionBank(courseId);
-  const courseChapters = getMockChaptersForCourse(courseId);
+  // const course = getMockCourseFromQuestionBank(courseId);
+  const [course, setCourse] = useState({})
+  // const courseChapters = getMockChaptersForCourse(courseId);
+  const [courseChapters, setCourseChapters] = useState([])
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [resChapters, resCourse] = await Promise.all([
+          axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}/chapters`),
+          axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}?tab=course`)
+        ])
+        setCourseChapters(resChapters.data.data.Paths)
+        setCourse(resCourse.data.data[0])
+      } catch (error) {
+        console.error(error.message)
+      }
+    }
+    fetchData()
+  }, [])
+
   const selectedChapter = courseChapters.find(
-    (item) => String(item.chapterId) === String(chapterId),
+    (item) => String(item.PathId) === String(chapterId),
   );
   const hasChapters = courseChapters.length > 0;
   const canUseGenerator = Boolean(chapterId) && hasChapters;
@@ -57,12 +74,14 @@ export default function MentorQuestionBankManagePage() {
     handleOutlineNavigate,
   } = useQuestionBankEditorUi({ resetKey: chapterId || null });
 
-  const bankTitle = selectedChapter?.chapterTitle?.trim() ?? '';
+  const bankTitle = selectedChapter?.PathName?.trim() ?? '';
+
   const courseCategory = useMemo(
     () => [course?.categoryName, course?.levelName].filter(Boolean).join(' · '),
     [course],
   );
   const questionCount = useMemo(() => getFilledQuestionCount(sections), [sections]);
+
   const questionCountBySkill = useMemo(
     () => countActiveQuestionsBySkill(sections),
     [sections],
@@ -71,6 +90,7 @@ export default function MentorQuestionBankManagePage() {
   const handleChapterSelect = (nextChapterId) => {
     if (!courseId) return;
     if (errors.chapterId) setErrors((prev) => ({ ...prev, chapterId: undefined }));
+    sessionStorage.setItem('resetKeyChapterId', Number(chapterId))
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -135,8 +155,8 @@ export default function MentorQuestionBankManagePage() {
         isCreateMode
         bankTitle={bankTitle}
         courseId={courseId}
-        courseName={course?.courseName}
-        coursePublished={course?.status === 'published'}
+        courseName={course.CourseName}
+        coursePublished={course.IsPublished}
         totalQuestionCount={questionCount}
         questionCountBySkill={questionCountBySkill}
         actions={footerActions}
@@ -200,9 +220,9 @@ export default function MentorQuestionBankManagePage() {
             activeSkill={activeSkill}
             activeSectionId={activeSectionId}
             onNavigateToItem={handleOutlineNavigate}
-            courseName={course?.courseName}
+            courseName={course.CourseName}
             courseCategory={courseCategory}
-            chapterTitle={selectedChapter?.chapterTitle}
+            chapterTitle={selectedChapter?.PathName}
             courseChapters={courseChapters}
             chaptersLoading={false}
             selectedChapterId={chapterId}

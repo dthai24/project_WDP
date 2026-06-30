@@ -5,92 +5,103 @@
 
 export const mentorQuestionBankMock = [
   {
-    courseId: 1,
-    courseName: 'Tiếng Anh Thương Mại & Giao Tiếp Công Sở',
-    description:
+    CourseId: 1,
+    CourseName: 'Tiếng Anh Thương Mại & Giao Tiếp Công Sở',
+    Description:
       'Nắm vững thuật ngữ kinh doanh, cách viết email chuyên nghiệp và văn hóa giao tiếp doanh nghiệp.',
-    status: 'published',
+    IsPublished: 1,
+    CategoryDisplayName: 'Tiếng Anh thương mại',
+    LevelDisplayName: 'Trung cấp',
     totalQuestionCount: 85,
     publishedQuestionCount: 60,
     draftQuestionCount: 25,
     chapterWithQuestionCount: 3,
     quizCount: 4,
-    questionBankUpdatedAt: '2026-03-18T10:30:00.000Z',
+    CourseUpdateAt: '2026-03-18T10:30:00.000Z',
   },
   {
-    courseId: 2,
-    courseName: 'IELTS Band 6.5 – Luyện thi Toàn diện',
-    description:
+    CourseId: 2,
+    CourseName: 'IELTS Band 6.5 – Luyện thi Toàn diện',
+    Description:
       'Chiến lược làm bài 4 kỹ năng Listening, Reading, Writing, Speaking nhắm mục tiêu band 6.5+.',
-    status: 'published',
+    IsPublished: 1,
+    CategoryDisplayName: 'Luyện thi',
+    LevelDisplayName: 'Nâng cao',
     totalQuestionCount: 120,
     publishedQuestionCount: 95,
     draftQuestionCount: 25,
     chapterWithQuestionCount: 5,
     quizCount: 8,
-    questionBankUpdatedAt: '2026-04-02T14:15:00.000Z',
+    CourseUpdateAt: '2026-04-02T14:15:00.000Z',
   },
   {
-    courseId: 3,
-    courseName: 'Tiếng Anh Giao Tiếp Đời Sống Hằng Ngày',
-    description:
+    CourseId: 3,
+    CourseName: 'Tiếng Anh Giao Tiếp Đời Sống Hằng Ngày',
+    Description:
       'Luyện tập các tình huống giao tiếp thường nhật như mua sắm, hỏi đường, nhà hàng, du lịch.',
-    status: 'published',
+    IsPublished: 1,
+    CategoryDisplayName: 'Giao tiếp',
+    LevelDisplayName: 'Cơ bản',
     totalQuestionCount: 64,
     publishedQuestionCount: 64,
     draftQuestionCount: 0,
     chapterWithQuestionCount: 4,
     quizCount: 5,
-    questionBankUpdatedAt: '2026-02-10T09:00:00.000Z',
+    CourseUpdateAt: '2026-02-10T09:00:00.000Z',
   },
 ];
 
 /** Map mock course → item cho MentorQuestionBankList. */
 export function mapQuestionBankMockToListItems(items = mentorQuestionBankMock) {
   return items.map((item) => ({
-    CourseId: item.courseId,
-    CourseName: item.courseName,
-    CourseDescription: item.description,
-    IsPublished: item.status === 'published',
+    CourseId: item.CourseId,
+    CourseName: item.CourseName,
+    CourseDescription: item.Description,
+    IsPublished: Boolean(item.IsPublished),
     TotalQuestion: item.totalQuestionCount ?? 0,
     TotalQuestionIsPublic: item.publishedQuestionCount ?? 0,
     TotalDraftQuestion: item.draftQuestionCount ?? 0,
     ChapterWithQuestionCount: item.chapterWithQuestionCount ?? 0,
     QuizCount: item.quizCount ?? 0,
-    UpdatedAt: item.questionBankUpdatedAt,
+    UpdatedAt: item.CourseUpdateAt,
     Thumbnail: null,
   }));
 }
 
-/** Mục lục chương demo cho editor (cột phải). */
+/** Mục lục chương demo cho editor (cột phải) — cùng shape với GET .../chapters. */
 export const mentorCourseChaptersOutlineMock = {
   1: [
     {
-      chapterId: 1,
-      chapterTitle: 'Khởi động & Làm quen thuật ngữ',
-      lessons: [{ lessonId: 101, lessonTitle: 'Chào hỏi công sở' }],
+      PathId: 1,
+      PathName: 'Khởi động & Làm quen thuật ngữ',
+      Order: 1,
+      Nodes: [{ NodeId: 101, NodeName: 'Chào hỏi công sở', NodeOrder: 1 }],
     },
     {
-      chapterId: 2,
-      chapterTitle: 'Kỹ năng viết Email chuyên nghiệp',
-      lessons: [{ lessonId: 201, lessonTitle: 'Cấu trúc email' }],
+      PathId: 2,
+      PathName: 'Kỹ năng viết Email chuyên nghiệp',
+      Order: 2,
+      Nodes: [{ NodeId: 201, NodeName: 'Cấu trúc email', NodeOrder: 1 }],
     },
   ],
   3: [
     {
-      chapterId: 1,
-      chapterTitle: 'Chào hỏi & Giới thiệu bản thân',
-      lessons: [{ lessonId: 301, lessonTitle: 'Hello & Hi' }],
+      PathId: 1,
+      PathName: 'Chào hỏi & Giới thiệu bản thân',
+      Order: 1,
+      Nodes: [{ NodeId: 301, NodeName: 'Hello & Hi', NodeOrder: 1 }],
     },
     {
-      chapterId: 2,
-      chapterTitle: 'Mua sắm & Hỏi giá',
-      lessons: [{ lessonId: 302, lessonTitle: 'How much is it?' }],
+      PathId: 2,
+      PathName: 'Mua sắm & Hỏi giá',
+      Order: 2,
+      Nodes: [{ NodeId: 302, NodeName: 'How much is it?', NodeOrder: 1 }],
     },
     {
-      chapterId: 3,
-      chapterTitle: 'Nhà hàng & Gọi món',
-      lessons: [{ lessonId: 303, lessonTitle: 'Can I have the menu?' }],
+      PathId: 3,
+      PathName: 'Nhà hàng & Gọi món',
+      Order: 3,
+      Nodes: [{ NodeId: 303, NodeName: 'Can I have the menu?', NodeOrder: 1 }],
     },
   ],
 };
@@ -122,7 +133,7 @@ export function getMockChapterBanksForCourse(courseId) {
 }
 
 export function getMockCourseFromQuestionBank(courseId) {
-  return mentorQuestionBankMock.find((item) => String(item.courseId) === String(courseId)) ?? null;
+  return mentorQuestionBankMock.find((item) => String(item.CourseId) === String(courseId)) ?? null;
 }
 
 export function getMockChaptersForCourse(courseId) {
