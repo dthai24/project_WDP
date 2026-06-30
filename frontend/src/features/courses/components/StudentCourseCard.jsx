@@ -9,6 +9,7 @@ import {
   useTheme,
 } from "@mui/material";
 import AppButton from "@/shared/ui/AppButton";
+import { getEnrollmentStatusChip } from "@/shared/utils/statusChipUtils";
 
 export default function StudentCourseCard({
   course,
@@ -25,6 +26,8 @@ export default function StudentCourseCard({
     progressPercentage,
     isEnrolled,
   } = course;
+
+  const statusChip = getEnrollmentStatusChip(isEnrolled, progressPercentage);
 
   return (
     <Card
@@ -50,11 +53,9 @@ export default function StudentCourseCard({
             {courseName}
           </Typography>
           <Chip
-            label={isEnrolled ? "Đã đăng ký" : "Chưa đăng ký"}
+            label={statusChip.label}
             size="small"
-            color={isEnrolled ? "success" : "default"}
-            variant={isEnrolled ? "filled" : "outlined"}
-            sx={{ fontWeight: 600, flexShrink: 0 }}
+            sx={{ fontWeight: 600, flexShrink: 0, ...statusChip.sx }}
           />
         </Box>
 

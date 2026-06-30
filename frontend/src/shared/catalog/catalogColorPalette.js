@@ -97,22 +97,18 @@ export const LEVEL_SEED_COLOR_BY_ID = {
 
 /** Màu legacy cho tên chưa có trong catalog admin (home, mock cũ). */
 export const LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME = {
-  'giao tiếp': 'blue',
-  ielts: 'violet',
-  toeic: 'cyan',
-  'ngữ pháp': 'slate',
-  'phát âm': 'pink',
-  'business english': 'indigo',
-  'mẹo học tập': 'amber',
-  'kỹ năng nghe': 'cyan',
+  'công nghệ thông tin': 'blue',
+  'đời sống & sở thích': 'pink',
+  'giao tiếp & kỹ năng mềm': 'violet',
+  'kinh doanh & quản lý': 'amber',
+  'tài chính & kế toán': 'emerald',
 };
 
 export const LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME = {
+  'người mới bắt đầu': 'lime',
   'cơ bản': 'sky',
-  'sơ cấp': 'sky',
   'trung cấp': 'amber',
-  'nâng cao': 'orange',
-  'chuyên sâu': 'violet',
+  'cao cấp': 'orange',
 };
 
 export function normalizeCatalogLabel(value = '') {

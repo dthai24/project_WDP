@@ -20,6 +20,7 @@ import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
 import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
+import { getEnrollmentStatusChip, getMyCoursesStatusChip } from "@/shared/utils/statusChipUtils";
 import { sanitizeThumbnail } from "@/shared/utils/thumbnailUtils";
 
 /* ─── HÀM HELPER ─── */
@@ -99,50 +100,6 @@ function normalizeCourse(course = {}) {
   };
 }
 
-function getStatusChipStyle(isEnrolled, progress) {
-  if (!isEnrolled) {
-    return {
-      label: "Chưa đăng ký",
-      sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
-    };
-  }
-  if (progress >= 100) {
-    return {
-      label: "Hoàn thành",
-      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
-    };
-  }
-  if (progress > 0) {
-    return {
-      label: "Đang học",
-      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
-    };
-  }
-  return {
-    label: "Đã đăng ký",
-    sx: { bgcolor: "rgba(22,163,74,0.12)", color: "#16A34A", border: "1px solid rgba(22,163,74,0.20)" },
-  };
-}
-
-function getMyCoursesStatusChip(progress) {
-  if (progress >= 100) {
-    return {
-      label: "Hoàn thành",
-      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
-    };
-  }
-  if (progress > 0) {
-    return {
-      label: "Đang học",
-      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
-    };
-  }
-  return {
-    label: "Chưa bắt đầu",
-    sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
-  };
-}
-
 /* ─── sub-components ─── */
 
 function MetaInline({ icon: Icon, label }) {
@@ -177,7 +134,7 @@ export default function CourseCard({
   const data = normalizeCourse(course);
   const statusChip = isMyCourses
     ? getMyCoursesStatusChip(data.progressPercentage)
-    : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
+    : getEnrollmentStatusChip(data.isEnrolled, data.progressPercentage);
   const levelStyle = resolveLevelChipSx({ displayName: data.level });
   const categoryStyle = resolveCategoryChipSx({ displayName: data.category }, { withBorder: false });
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);

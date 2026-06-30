@@ -112,9 +112,10 @@ function resolveLegacyLevelColor(displayName) {
   if (LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME[key]) {
     return LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME[key];
   }
+  if (key.includes('người mới bắt đầu')) return 'lime';
   if (key.includes('cơ bản') || key.includes('sơ cấp')) return 'sky';
   if (key.includes('trung cấp')) return 'amber';
-  if (key.includes('nâng cao')) return 'orange';
+  if (key.includes('cao cấp') || key.includes('nâng cao')) return 'orange';
   return null;
 }
 
