@@ -100,8 +100,8 @@ export default function MyCoursesListPage() {
     async function fetchLookups() {
       try {
         const [catRes, levRes] = await Promise.all([
-          fetch("http://localhost:5000/api/categories"),
-          fetch("http://localhost:5000/api/levels"),
+          fetch("http://localhost:5050/api/categories"),
+          fetch("http://localhost:5050/api/levels"),
         ]);
         const catData = await catRes.json();
         const levData = await levRes.json();
@@ -132,7 +132,7 @@ export default function MyCoursesListPage() {
           : user.roles || user.roleName || user.RoleName || user.role;
         if (!userId || !roleName) return;
 
-        const res = await fetch("http://localhost:5000/api/courses/my-courses", {
+        const res = await fetch("http://localhost:5050/api/courses/my-courses", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: Number(userId), roleName: String(roleName).toLowerCase() }),

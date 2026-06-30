@@ -8,7 +8,7 @@ export default function StreakBadge({ userId, alwaysActive = false, variant = "p
 
   useEffect(() => {
     if (!userId) return;
-    const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
+    const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5050').replace(/\/+$/, '') + '/api';
     
     const fetchStreak = () => {
       fetch(`${API_BASE}/courses/streak`, {

@@ -2,7 +2,7 @@
  * API client for Admin endpoints.
  * Uses fetch with auth headers from localStorage.
  */
-const API_BASE = 'http://localhost:5000/api/admin';
+const API_BASE = 'http://localhost:5050/api/admin';
 
 function getAuthHeaders() {
   const headers = { 'Content-Type': 'application/json' };

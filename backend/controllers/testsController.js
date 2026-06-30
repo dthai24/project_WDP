@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
-const Test = require('../Models/MongoDB/Test');
-const TestAttempt = require('../Models/MongoDB/TestAttempt');
-const TestQuestion = require('../Models/MongoDB/TestQuestion');
-const TestQuestionChoice = require('../Models/MongoDB/TestQuestionChoice');
-const TestQuestionCollection = require('../Models/MongoDB/TestQuestionCollection');
-const Path = require('../Models/MongoDB/Path');
-const Course = require('../Models/MongoDB/Course');
+const Test = require('../models/MongoDB/Test');
+const TestAttempt = require('../models/MongoDB/TestAttempt');
+const TestQuestion = require('../models/MongoDB/TestQuestion');
+const TestQuestionChoice = require('../models/MongoDB/TestQuestionChoice');
+const TestQuestionCollection = require('../models/MongoDB/TestQuestionCollection');
+const Path = require('../models/MongoDB/Path');
+const Course = require('../models/MongoDB/Course');
 
 // GET /api/courses/:courseId/tests/:scope/meta?chapterId=
 const getTestMeta = async (req, res) => {
