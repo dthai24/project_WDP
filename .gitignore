@@ -12,6 +12,7 @@ build/
 .env
 .env.*
 !.env.example
+backend/.env.example
 
 # Logs
 npm-debug.log*
@@ -42,10 +43,12 @@ tracking_task.md
 .eslintcache
 .DS_Store
 Thumbs.db
+/.agents
+skills-lock.json
+client/skills-lock.json
 
 # Generated real-world dataset folder
 data/new_data/
-
 data/audit_logs.json
 data/categories.json
 data/chat_sessions.json
@@ -82,5 +85,23 @@ data/tags.json
 data/user_preferences.json
 data/user_streaks.json
 data/users.json
-client/skills-lock.json
 issues/bug.txt
+
+src/frontend/public/asset/avatars/courses/course_tmp_1780866266307_693087878.jpg
+src/frontend/public/asset/avatars/courses/course_avt_56.jpg
+src/frontend/public/asset/avatars/courses/course_avt_57.jpg
+src/frontend/public/asset/avatars/courses/course_avt_58.jpg
+src/frontend/public/asset/avatars/courses/course_tmp_1780866657278_115525756.jpg
+src/frontend/public/asset/avatars/courses/course_tmp_1780866921222_837557392.jpg
+src/frontend/public/asset/avatars/courses/course_tmp_1780867039096_133102125.jpg
+backend/public/assets/avatars/courses/course_avt_1.jpg
+backend/public/assets/avatars/courses/course_avt_2.jpg
+backend/public/assets/avatars/courses/course_avt_4.jpg
+backend/public/assets/avatars/courses/course_avt_3.jpg
+backend/scripts/add-material-content-column.js
+backend/scripts/applySchema.js
+/backend/public/assets
+backend/package-lock.json
+frontend/package-lock.json
+package-lock.json
+backend/config/db.js

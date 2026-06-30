@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@tailwindcss/postcss": "^4.3.2",
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.7.3",
+    "motion": "^12.42.0",
+    "multer": "^2.2.0",
+    "picsum-photos": "^3.0.10",
+    "postcss": "^8.5.16",
+    "tailwindcss": "^4.3.2"
+  }
+}
