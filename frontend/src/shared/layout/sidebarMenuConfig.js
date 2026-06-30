@@ -13,7 +13,8 @@ import BookOutlinedIcon from "@mui/icons-material/BookOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
-import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
+import WhatshotOutlinedIcon from "@mui/icons-material/WhatshotOutlined";
+import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import { isStudent } from "@/features/auth/utils/authUtils";
 
 export function isAdminAccountsActive(pathname) {
@@ -82,19 +83,26 @@ export function getStudentMenuItems(user) {
       disabled: !student,
     },
     {
+      id: "streak",
+      label: "Streak học",
+      to: "/home",
+      Icon: WhatshotOutlinedIcon,
+      disabled: !student,
+    },
+    {
+      id: "notifications",
+      label: "Thông báo",
+      to: "/home",
+      Icon: NotificationsOutlinedIcon,
+      disabled: !student,
+    },
+    {
       id: 'news',
       label: 'Tin tức',
       to: '/news',
       Icon: NewspaperOutlinedIcon,
       disabled: !student,
       isActiveMatch: isStudentNewsActive,
-    },
-    {
-      id: "profile",
-      label: "Hồ sơ",
-      to: "/profile",
-      Icon: PersonOutlineOutlinedIcon,
-      disabled: !student,
     },
   ];
 }
