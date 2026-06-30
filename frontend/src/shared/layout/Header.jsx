@@ -13,7 +13,7 @@ import {
   ChartLine,
   Question,
 } from "@phosphor-icons/react";
-import { isAdmin } from "@/features/auth/utils/authUtils";
+import { isAdmin, isStudent } from "@/features/auth/utils/authUtils";
 
 const NAV_ITEMS = [
   { label: "Home", path: "/home", icon: House },
@@ -177,6 +177,16 @@ export default function Header({ logoTo, profilePath }) {
                       <Gear size={16} className="text-slate-400" />
                       Settings
                     </Link>
+                    {isStudent(user) && (
+                      <Link
+                        to="/become-mentor"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors font-semibold"
+                      >
+                        <GraduationCap size={16} className="text-rose-500" />
+                        Become a Mentor
+                      </Link>
+                    )}
                     <div className="border-t border-slate-50 mt-1 pt-1">
                       <button
                         onClick={handleLogout}
