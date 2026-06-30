@@ -11,6 +11,8 @@ import { toast } from '@/shared/ui/Toast';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
 import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questionBank/MentorQuestionBankBuilderPanel';
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
+import MentorQuestionBankOutlinePanel from '@/features/mentor/components/questionBank/MentorQuestionBankOutlinePanel';
+import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBank/MentorQuestionBankSkillNav';
 import useQuestionBankEditorUi from '@/features/mentor/hooks/useQuestionBankEditorUi';
 import {
   countActiveQuestionsBySkill,
@@ -141,42 +143,75 @@ export default function MentorQuestionBankManagePage() {
         onBack={handleBack}
       />
 
-      <Box key={workspaceKey}>
-        <MentorQuestionBankBuilderPanel
+      <Box
+        key={workspaceKey}
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: { xs: 2, lg: 2.5 },
+          alignItems: 'start',
+        }}
+      >
+        <MentorQuestionBankSkillNav
           sections={sections}
           activeSkill={activeSkill}
-          activeSection={activeSection}
-          activeSectionIndex={activeSectionIndex}
-          activeSectionId={activeSectionId}
-          skillSections={skillSections}
-          sectionErrors={sectionErrors}
-          questionCount={questionCount}
           disabled={!canUseGenerator}
-          emptyHint={
-            !canUseGenerator
-              ? hasChapters
-                ? 'Chọn chương từ mục lục khóa học ở cột bên phải để bắt đầu tạo bộ câu hỏi.'
-                : 'Khóa học chưa có chương để tạo bộ câu hỏi.'
-              : null
-          }
-          canDeleteActiveSection={canDeleteActiveSection}
-          onSectionSelect={handleSectionSelect}
-          onAddBai={handleAddBai}
-          onSectionChange={handleSectionChange}
-          onDeleteSection={handleDeleteSection}
+          sectionErrors={sectionErrors}
           onSkillChange={handleSkillSelect}
-          onNavigateToItem={handleOutlineNavigate}
-          courseName={course?.courseName}
-          courseCategory={courseCategory}
-          chapterTitle={selectedChapter?.chapterTitle}
-          courseChapters={courseChapters}
-          chaptersLoading={false}
-          selectedChapterId={chapterId}
-          chapterError={errors.chapterId}
-          courseId={courseId}
-          courseOutlineHint="Chọn chương để tạo hoặc mở ngân hàng câu hỏi tương ứng."
-          onChapterSelect={handleChapterSelect}
         />
+
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            width: '100%',
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 7fr) minmax(280px, 3fr)' },
+            gap: { xs: 2, lg: 2.5 },
+            alignItems: 'start',
+          }}
+        >
+          <MentorQuestionBankBuilderPanel
+            sections={sections}
+            activeSkill={activeSkill}
+            activeSection={activeSection}
+            activeSectionIndex={activeSectionIndex}
+            activeSectionId={activeSectionId}
+            skillSections={skillSections}
+            sectionErrors={sectionErrors}
+            questionCount={questionCount}
+            disabled={!canUseGenerator}
+            emptyHint={
+              !canUseGenerator
+                ? hasChapters
+                  ? 'Chọn chương từ mục lục khóa học ở cột bên phải để bắt đầu tạo bộ câu hỏi.'
+                  : 'Khóa học chưa có chương để tạo bộ câu hỏi.'
+                : null
+            }
+            canDeleteActiveSection={canDeleteActiveSection}
+            onSectionSelect={handleSectionSelect}
+            onAddBai={handleAddBai}
+            onSectionChange={handleSectionChange}
+            onDeleteSection={handleDeleteSection}
+          />
+
+          <MentorQuestionBankOutlinePanel
+            sections={sections}
+            activeSkill={activeSkill}
+            activeSectionId={activeSectionId}
+            onNavigateToItem={handleOutlineNavigate}
+            courseName={course?.courseName}
+            courseCategory={courseCategory}
+            chapterTitle={selectedChapter?.chapterTitle}
+            courseChapters={courseChapters}
+            chaptersLoading={false}
+            selectedChapterId={chapterId}
+            chapterError={errors.chapterId}
+            courseId={courseId}
+            courseOutlineHint="Chọn chương để tạo hoặc mở ngân hàng câu hỏi tương ứng."
+            onChapterSelect={handleChapterSelect}
+          />
+        </Box>
       </Box>
 
       <Box id="qb-mobile-footer-actions" sx={{ display: { xs: 'flex', lg: 'none' }, mt: 2.5, pb: 4 }}>

@@ -15,6 +15,8 @@ import { toast } from '@/shared/ui/Toast';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
 import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questionBank/MentorQuestionBankBuilderPanel';
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
+import MentorQuestionBankOutlinePanel from '@/features/mentor/components/questionBank/MentorQuestionBankOutlinePanel';
+import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBank/MentorQuestionBankSkillNav';
 import useQuestionBankEditorUi from '@/features/mentor/hooks/useQuestionBankEditorUi';
 import { PRIMARY, MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
@@ -323,32 +325,64 @@ export default function MentorQuestionBankDetailPage() {
         onBack={() => navigate(`/mentor/courses/${courseId}/questions`)}
       />
 
-      <Box key={workspaceKey}>
-        <MentorQuestionBankBuilderPanel
+      <Box
+        key={workspaceKey}
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: { xs: 2, lg: 2.5 },
+          alignItems: 'start',
+        }}
+      >
+        <MentorQuestionBankSkillNav
           sections={sections}
           activeSkill={activeSkill}
-          activeSection={activeSection}
-          activeSectionIndex={activeSectionIndex}
-          activeSectionId={activeSectionId}
-          skillSections={skillSections}
           sectionErrors={sectionErrors}
-          questionCount={questionCount}
-          canDeleteActiveSection={canDeleteActiveSection}
-          onSectionSelect={handleSectionSelect}
-          onAddBai={handleAddBai}
-          onSectionChange={handleSectionChange}
-          onDeleteSection={handleDeleteSection}
           onSkillChange={handleSkillSelect}
-          onNavigateToItem={handleOutlineNavigate}
-          courseName={bank.courseTitle}
-          courseCategory={courseCategory}
-          chapterTitle={bank.chapterTitle}
-          courseChapters={courseChapters}
-          selectedChapterId={chapterId}
-          courseId={courseId}
-          courseOutlineHint="Chọn chương khác để mở ngân hàng câu hỏi tương ứng."
-          onChapterSelect={selectChapter}
         />
+
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            width: '100%',
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 7fr) minmax(280px, 3fr)' },
+            gap: { xs: 2, lg: 2.5 },
+            alignItems: 'start',
+          }}
+        >
+          <MentorQuestionBankBuilderPanel
+            sections={sections}
+            activeSkill={activeSkill}
+            activeSection={activeSection}
+            activeSectionIndex={activeSectionIndex}
+            activeSectionId={activeSectionId}
+            skillSections={skillSections}
+            sectionErrors={sectionErrors}
+            questionCount={questionCount}
+            canDeleteActiveSection={canDeleteActiveSection}
+            onSectionSelect={handleSectionSelect}
+            onAddBai={handleAddBai}
+            onSectionChange={handleSectionChange}
+            onDeleteSection={handleDeleteSection}
+          />
+
+          <MentorQuestionBankOutlinePanel
+            sections={sections}
+            activeSkill={activeSkill}
+            activeSectionId={activeSectionId}
+            onNavigateToItem={handleOutlineNavigate}
+            courseName={bank.courseTitle}
+            courseCategory={courseCategory}
+            chapterTitle={bank.chapterTitle}
+            courseChapters={courseChapters}
+            selectedChapterId={chapterId}
+            courseId={courseId}
+            courseOutlineHint="Chọn chương khác để mở ngân hàng câu hỏi tương ứng."
+            onChapterSelect={selectChapter}
+          />
+        </Box>
       </Box>
 
       <ScrollToTopButton avoidSelectors={['#app-site-footer']} />
