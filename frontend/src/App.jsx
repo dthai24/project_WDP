@@ -11,6 +11,7 @@ import CourseDetailPage from '@/features/courses/pages/CourseDetailPage';
 import CourseLearningPage from '@/features/learning/pages/CourseLearningPage';
 import CourseTestPage from '@/features/learning/pages/CourseTestPage';
 import MyCoursesListPage from '@/features/learning/pages/MyCoursesListPage';
+import PlacementTestPage from '@/features/learning/pages/PlacementTestPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 import UnauthorizedPage from '@/features/auth/pages/UnauthorizedPage';
@@ -157,6 +158,17 @@ export default function App() {
               roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
             >
               <CourseTestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="placement-test"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <PlacementTestPage />
             </ProtectedRoute>
           }
         />
