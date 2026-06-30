@@ -1,7 +1,7 @@
 /**
  * mentorCourseService.js  ─  Tất cả API calls của Mentor liên quan đến khóa học
  *
- * Base URL: http://localhost:5000/api
+ * Base URL: http://localhost:5050/api
  *
  * ┌─────────────────────────────────────────────────────────┐
  * │  Mỗi hàm trả về: { ok: boolean, ...payload }           │
@@ -24,7 +24,7 @@ import { getUser } from '@/features/auth/utils/authUtils';
 import { mapMentorCourseComment } from '@/features/mentor/utils/mentorCourseCommentsUtils';
 import { getInitialComments } from '@/features/courses/data/courseCommentsMock';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:5050/api';
 
 function getMentorAuthHeaders() {
   const userId = getUser()?.userId;

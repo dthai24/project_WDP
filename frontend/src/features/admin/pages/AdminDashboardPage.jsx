@@ -28,7 +28,7 @@ export default function AdminDashboardPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/dashboard', {
+      const res = await fetch('http://localhost:5050/api/admin/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-role-name': 'admin'

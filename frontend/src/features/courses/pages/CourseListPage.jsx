@@ -43,7 +43,7 @@ export default function CourseListPage() {
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const res = await fetch("http://localhost:5000/api/lookups/categories");
+        const res = await fetch("http://localhost:5050/api/lookups/categories");
 
 
         const result = await res.json();
@@ -70,7 +70,7 @@ export default function CourseListPage() {
       if (searchTerm) params.set("search", searchTerm);
       if (sortBy) params.set("sort", sortBy);
 
-      const res = await fetch(`http://localhost:5000/api/courses/student?${params.toString()}`, { headers });
+      const res = await fetch(`http://localhost:5050/api/courses/student?${params.toString()}`, { headers });
       const result = await res.json();
 
       if (result.success && Array.isArray(result.data)) {

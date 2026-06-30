@@ -19,6 +19,7 @@ const materialsRoutes = require('./routes/materialsRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const questionBankRoutes = require('./routes/questionBankRoutes');
 const testsRoutes = require('./routes/testsRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -42,6 +43,7 @@ app.use('/api/courses', testsRoutes);
 app.use('/api/mentor', mentorRoutes);
 app.use('/api/materials', materialsRoutes);
 app.use('/api', lookupRoutes);
+app.use('/api', chatRoutes);
 app.use('/api/admin', adminRoutes);
 // _________Question Bank Routes______________
 app.use('/api/question-bank', questionBankRoutes)

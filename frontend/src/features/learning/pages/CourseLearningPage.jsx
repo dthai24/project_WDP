@@ -328,7 +328,7 @@ export default function CourseLearningPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/courses/${courseId}/learning`, {
+        const res = await fetch(`http://localhost:5050/api/courses/${courseId}/learning`, {
           headers: { "x-user-id": currentUserId },
         });
         const result = await res.json();
@@ -417,7 +417,7 @@ export default function CourseLearningPage() {
   const handleToggleComplete = async () => {
     if (!currentLesson) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/courses/${courseId}/progress`, {
+      const res = await fetch(`http://localhost:5050/api/courses/${courseId}/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
         body: JSON.stringify({ nodeId: currentLesson.id }),
