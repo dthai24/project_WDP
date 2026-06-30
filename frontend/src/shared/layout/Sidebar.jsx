@@ -127,8 +127,8 @@ export default function Sidebar({ variant = "student" }) {
         };
 
         const [appsRes, coursesRes] = await Promise.all([
-          fetch("http://localhost:5000/api/admin/applications", { headers }),
-          fetch("http://localhost:5000/api/admin/courses", { headers }),
+          fetch("http://localhost:5050/api/admin/applications", { headers }),
+          fetch("http://localhost:5050/api/admin/courses", { headers }),
         ]);
 
         const appsData = await appsRes.json();

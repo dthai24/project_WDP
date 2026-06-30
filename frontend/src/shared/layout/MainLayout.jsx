@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "@/shared/layout/Header";
 import Footer from "@/shared/layout/Footer";
+import ChatBot from "@/shared/ui/ChatBot/ChatBot";
+import FloatingChatButton from "@/shared/ui/ChatBot/FloatingChatButton";
 
 /** Chiều cao header — dùng cho sticky offset trong mentor builder. */
 export const HEADER_HEIGHT = 68;
@@ -14,6 +17,8 @@ export const pageContentSx = {
 };
 
 export default function MainLayout() {
+  const [chatOpen, setChatOpen] = useState(false);
+
   return (
     <div className="min-h-[100dvh] flex flex-col bg-white text-slate-900 antialiased">
       <Header />
@@ -21,6 +26,8 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <Footer />
+      <FloatingChatButton onClick={() => setChatOpen(true)} />
+      <ChatBot isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }

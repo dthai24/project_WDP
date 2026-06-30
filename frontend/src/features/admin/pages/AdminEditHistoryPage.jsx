@@ -26,7 +26,7 @@ export default function AdminEditHistoryPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/history', {
+      const res = await fetch('http://localhost:5050/api/admin/history', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-role-name': 'admin'
