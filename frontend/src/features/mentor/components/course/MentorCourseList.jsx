@@ -11,6 +11,7 @@ export default function MentorCourseList({
   showReset = false,
   onReset,
   onCreateCourse,
+  onDelete,
 }) {
   if (loading) {
     return <Loading message="Đang tải danh sách khóa học..." />;
@@ -46,7 +47,7 @@ export default function MentorCourseList({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       {courses.map((course) => (
-        <MentorCourseRow key={course.CourseId} course={course} />
+        <MentorCourseRow key={course.CourseId} course={course} onDelete={onDelete} />
       ))}
     </Box>
   );

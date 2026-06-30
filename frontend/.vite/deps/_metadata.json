@@ -1,0 +1,121 @@
+{
+  "hash": "66dfe73f",
+  "configHash": "c1a031c7",
+  "lockfileHash": "ddeec22a",
+  "browserHash": "0906cf75",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "dd6354e4",
+      "needsInterop": true
+    },
+    "@mui/material": {
+      "src": "../../node_modules/@mui/material/index.mjs",
+      "file": "@mui_material.js",
+      "fileHash": "132b13d0",
+      "needsInterop": false
+    },
+    "@mui/icons-material/BadgeOutlined": {
+      "src": "../../node_modules/@mui/icons-material/BadgeOutlined.mjs",
+      "file": "@mui_icons-material_BadgeOutlined.js",
+      "fileHash": "1f609578",
+      "needsInterop": false
+    },
+    "@mui/icons-material/FactCheckOutlined": {
+      "src": "../../node_modules/@mui/icons-material/FactCheckOutlined.mjs",
+      "file": "@mui_icons-material_FactCheckOutlined.js",
+      "fileHash": "91ad2bf5",
+      "needsInterop": false
+    },
+    "@mui/icons-material/CheckRounded": {
+      "src": "../../node_modules/@mui/icons-material/CheckRounded.mjs",
+      "file": "@mui_icons-material_CheckRounded.js",
+      "fileHash": "091710d0",
+      "needsInterop": false
+    },
+    "@mui/icons-material/KeyboardArrowDownRounded": {
+      "src": "../../node_modules/@mui/icons-material/KeyboardArrowDownRounded.mjs",
+      "file": "@mui_icons-material_KeyboardArrowDownRounded.js",
+      "fileHash": "b62c5add",
+      "needsInterop": false
+    },
+    "@mui/icons-material/VisibilityOffOutlined": {
+      "src": "../../node_modules/@mui/icons-material/VisibilityOffOutlined.mjs",
+      "file": "@mui_icons-material_VisibilityOffOutlined.js",
+      "fileHash": "c159a44a",
+      "needsInterop": false
+    },
+    "@mui/icons-material/VisibilityOutlined": {
+      "src": "../../node_modules/@mui/icons-material/VisibilityOutlined.mjs",
+      "file": "@mui_icons-material_VisibilityOutlined.js",
+      "fileHash": "86132f90",
+      "needsInterop": false
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "c98c8455",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "240c06e5",
+      "needsInterop": false
+    },
+    "@mui/icons-material/PeopleAltOutlined": {
+      "src": "../../node_modules/@mui/icons-material/PeopleAltOutlined.mjs",
+      "file": "@mui_icons-material_PeopleAltOutlined.js",
+      "fileHash": "db9c672a",
+      "needsInterop": false
+    },
+    "@mui/icons-material/SearchOffOutlined": {
+      "src": "../../node_modules/@mui/icons-material/SearchOffOutlined.mjs",
+      "file": "@mui_icons-material_SearchOffOutlined.js",
+      "fileHash": "f6533805",
+      "needsInterop": false
+    },
+    "react-toastify": {
+      "src": "../../node_modules/react-toastify/dist/index.mjs",
+      "file": "react-toastify.js",
+      "fileHash": "afb2222e",
+      "needsInterop": false
+    },
+    "@mui/icons-material/EditOutlined": {
+      "src": "../../node_modules/@mui/icons-material/EditOutlined.mjs",
+      "file": "@mui_icons-material_EditOutlined.js",
+      "fileHash": "4f4df6b1",
+      "needsInterop": false
+    },
+    "@mui/material/styles": {
+      "src": "../../node_modules/@mui/material/styles/index.mjs",
+      "file": "@mui_material_styles.js",
+      "fileHash": "64920b35",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-L2Q2RVSC": {
+      "file": "chunk-L2Q2RVSC.js"
+    },
+    "chunk-6FZDEWWR": {
+      "file": "chunk-6FZDEWWR.js"
+    },
+    "chunk-ALKGQJXP": {
+      "file": "chunk-ALKGQJXP.js"
+    },
+    "chunk-DPJDTZIU": {
+      "file": "chunk-DPJDTZIU.js"
+    },
+    "chunk-BAARMGEB": {
+      "file": "chunk-BAARMGEB.js"
+    },
+    "chunk-2KHBIA62": {
+      "file": "chunk-2KHBIA62.js"
+    },
+    "chunk-DDNM7ENY": {
+      "file": "chunk-DDNM7ENY.js"
+    }
+  }
+}

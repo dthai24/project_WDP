@@ -4,7 +4,7 @@ import { getTestDefaultFields } from './mentorTestContentUtils';
 
 export { getTestDefaultFields } from './mentorTestContentUtils';
 
-export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC'];
+export const MATERIAL_TYPES = ['VIDEO', 'TEXT', 'DOC', 'TEST'];
 
 /** Học liệu thực tế trong bài học — không gồm bài kiểm tra (quản lý riêng qua ngân hàng câu hỏi). */
 export const LEARNING_MATERIAL_TYPES = MATERIAL_TYPES;
@@ -442,6 +442,11 @@ export function validateCourseContent(paths, options = {}) {
           if (materialUrl && !isSimpleUrl(materialUrl)) {
             materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
           }
+        } else if (material.MaterialType === 'TEST') {
+          if (!String(material.Title ?? '').trim()) {
+            material.Title = 'Bài kiểm tra';
+          }
+          // TEST materials only need title (auto-set above) — no bank required
         } else {
           if (!String(material.Title ?? '').trim()) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
