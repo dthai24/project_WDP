@@ -112,6 +112,14 @@ export default function CoursePlayer({ course, curriculum: propCurriculum, onNav
     };
   }, [activeTab, essayText, currentUser]);
 
+  // Expose active unsaved work status to window for global header navigation checks
+  useEffect(() => {
+    window.lexioraActiveUnsavedWork = getUnsavedWorkType();
+    return () => {
+      window.lexioraActiveUnsavedWork = null;
+    };
+  }, [essayText, activeLesson, activeTab, currentUser]);
+
   const handleLessonClick = (lesson) => {
     const unsaved = getUnsavedWorkType();
     if (unsaved) {

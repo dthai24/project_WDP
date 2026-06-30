@@ -92,6 +92,16 @@ export default function QuizEngine({
     };
   }, [submitted, showResult]);
 
+  // 4. Expose active quiz unsaved work status to window for global header navigation checks
+  useEffect(() => {
+    const hasUnsavedAnswers = Object.keys(answers).length > 0;
+    const isQuizActive = !submitted && !showResult && hasUnsavedAnswers;
+    window.lexioraActiveUnsavedWork = isQuizActive ? "quiz" : null;
+    return () => {
+      window.lexioraActiveUnsavedWork = null;
+    };
+  }, [answers, submitted, showResult]);
+
   // Timer useEffect
   useEffect(() => {
     if (submitted || !timeLimit) return;
