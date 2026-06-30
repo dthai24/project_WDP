@@ -137,10 +137,33 @@ function buildDemoGradingQuestions(paper) {
   );
 }
 
+const API_BASE = 'http://localhost:5000/api';
+
 /**
  * GET meta — chuẩn bị màn intro.
  */
 export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
+  const user = getUser();
+  const userId = user?.userId;
+
+  try {
+    const url = `${API_BASE}/courses/${courseId}/tests/${scope}/meta?chapterId=${chapterId || ''}&userId=${userId || ''}`;
+    const response = await fetch(url, {
+      headers: {
+        'x-user-id': userId || ''
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.ok) {
+        return data;
+      }
+    }
+  } catch (error) {
+    console.error('getTestMeta API failed, falling back to mock:', error);
+  }
+
   await delay();
 
   const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
@@ -176,6 +199,30 @@ export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
  * POST start — tạo attempt + paper.
  */
 export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
+  const user = getUser();
+  const userId = user?.userId;
+
+  try {
+    const url = `${API_BASE}/courses/${courseId}/tests/${scope}/start?chapterId=${chapterId || ''}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId || ''
+      },
+      body: JSON.stringify({ userId })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.ok) {
+        return data;
+      }
+    }
+  } catch (error) {
+    console.error('startTestAttempt API failed, falling back to mock:', error);
+  }
+
   await delay();
 
   const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
@@ -267,9 +314,42 @@ export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
 }
 
 /**
- * POST submit — chấm điểm mock.
+ * POST submit — chấm điểm.
  */
 export async function submitTestAttempt(attemptId, answers = {}, options = {}) {
+  const user = getUser();
+  const userId = user?.userId;
+
+  // If the attemptId is a mock (starts with "attempt_"), fallback directly to mock logic
+  if (attemptId && String(attemptId).startsWith('attempt_')) {
+    return fallbackSubmitTestAttempt(attemptId, answers, options);
+  }
+
+  try {
+    const url = `${API_BASE}/courses/dummy/tests/attempts/${attemptId}/submit`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId || ''
+      },
+      body: JSON.stringify({ userId, answers, options })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.ok) {
+        return data;
+      }
+    }
+  } catch (error) {
+    console.error('submitTestAttempt API failed, falling back to mock:', error);
+  }
+
+  return fallbackSubmitTestAttempt(attemptId, answers, options);
+}
+
+async function fallbackSubmitTestAttempt(attemptId, answers = {}, options = {}) {
   await delay();
 
   const session = getSession(attemptId);
