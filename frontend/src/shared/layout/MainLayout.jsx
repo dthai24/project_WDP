@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "@/shared/layout/Header";
 import Footer from "@/shared/layout/Footer";
+import Sidebar, { SIDEBAR_WIDTH } from "@/shared/layout/Sidebar";
 import ChatBot from "@/shared/ui/ChatBot/ChatBot";
 import FloatingChatButton from "@/shared/ui/ChatBot/FloatingChatButton";
+import { getUser, isStudent } from "@/features/auth/utils/authUtils";
 
 /** Chiều cao header — dùng cho sticky offset trong mentor builder. */
 export const HEADER_HEIGHT = 68;
@@ -18,11 +20,19 @@ export const pageContentSx = {
 
 export default function MainLayout() {
   const [chatOpen, setChatOpen] = useState(false);
+  const user = getUser();
+  const showSidebar = isStudent(user);
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-white text-slate-900 antialiased">
       <Header />
-      <main className="flex-1 pt-16 sm:pt-[68px]">
+      {showSidebar && <Sidebar variant="student" />}
+      <main 
+        className="flex-1 pt-16 sm:pt-[68px] transition-all duration-200"
+        style={{
+          marginLeft: showSidebar ? `${SIDEBAR_WIDTH}px` : 0,
+        }}
+      >
         <Outlet />
       </main>
       <Footer />
