@@ -61,15 +61,61 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
     if (params.quizConfig) setQuizConfig(params.quizConfig);
   };
 
-  const handleBack = () => {
-    const prev = navStack[navStack.length - 1];
-    if (prev) {
-      setCurrentView(prev.view);
-      setSelectedCourse(prev.course);
-      setSelectedCurriculum(prev.curriculum);
-      setQuizConfig(prev.quizConfig);
-      setNavStack(prev => prev.slice(0, -1));
+  const getUnsavedWorkType = () => {
+    if (!currentUser) return null;
+    
+    // Only block if we are currently inside the course player or quiz page
+    if (currentView !== "course-player" && currentView !== "quiz") return null;
+
+    // 1. Check quiz backup
+    const quizBackup = localStorage.getItem(`lexiora_quiz_backup_${currentUser.email}`);
+    if (quizBackup) {
+      try {
+        const parsed = JSON.parse(quizBackup);
+        if (parsed.quizStarted && !parsed.quizCompleted && Object.keys(parsed.answers || {}).length > 0) {
+          return "quiz";
+        }
+      } catch (e) {}
     }
+
+    // 2. Check essay backup
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`lexiora_course_essay_backup_${currentUser.email}_`)) {
+        const content = localStorage.getItem(key);
+        if (content && content.trim().length > 0) {
+          return "essay";
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const confirmExit = (action) => {
+    const unsaved = getUnsavedWorkType();
+    if (unsaved) {
+      const confirm = window.confirm(
+        unsaved === "essay"
+          ? "Bạn đang viết bài luận dở dang. Nếu rời đi, bài luận sẽ được lưu nháp nhưng chưa được nộp. Bạn có chắc chắn muốn rời đi không?"
+          : "Bạn đang làm bài thi trắc nghiệm dở dang. Nếu rời đi, tiến trình làm bài sẽ được lưu tạm thời nhưng chưa nộp. Bạn có chắc chắn muốn rời đi không?"
+      );
+      if (!confirm) return;
+    }
+    action();
+  };
+
+  const handleBack = () => {
+    confirmExit(() => {
+      const prev = navStack[navStack.length - 1];
+      if (prev) {
+        setCurrentView(prev.view);
+        setSelectedCourse(prev.course);
+        setSelectedCurriculum(prev.curriculum);
+        setQuizConfig(prev.quizConfig);
+        setNavStack(prev => prev.slice(0, -1));
+      }
+    });
   };
 
   const renderDashboard = () => {
@@ -354,8 +400,10 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
             {/* Left: Logo + Categories */}
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-2.5 cursor-pointer shrink-0" onClick={() => {
-                if (currentUser) setCurrentView(currentUser?.role === "Learner" ? "dashboard" : "my-learning");
-                else navigate("/");
+                confirmExit(() => {
+                  if (currentUser) setCurrentView(currentUser?.role === "Learner" ? "dashboard" : "my-learning");
+                  else navigate("/");
+                });
               }}>
                 <img src="/images/logo.png" alt="English Master" className="w-8 h-8 object-contain" />
                 <span className="text-lg font-black text-primary tracking-tight hidden sm:inline">English Master</span>
@@ -401,7 +449,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                   {currentUser.role === "Learner" && (
                     <>
                       <button
-                        onClick={() => setCurrentView("my-learning")}
+                        onClick={() => confirmExit(() => setCurrentView("my-learning"))}
                         className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                           currentView === "my-learning"
                             ? "bg-primary text-white shadow-sm shadow-primary/20"
@@ -413,7 +461,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                       </button>
 
                       <button
-                        onClick={() => setCurrentView("course-list")}
+                        onClick={() => confirmExit(() => setCurrentView("course-list"))}
                         className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                           currentView === "course-list"
                             ? "bg-primary text-white shadow-sm shadow-primary/20"
@@ -454,7 +502,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
                     </button>
                   )}
                   <button
-                    onClick={onLogout}
+                    onClick={() => confirmExit(onLogout)}
                     className="px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 transition-all duration-200 flex items-center gap-1.5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -499,7 +547,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
         currentView === "profile" ? (
           <div className="px-6 py-10 min-h-screen bg-gradient-to-br from-surface-alt via-surface-muted to-purple-50/30">
             <div className="section-container">
-              <Profile onLogout={onLogout} setCurrentPage={(page) => setCurrentView(page === "dashboard" ? "dashboard" : "profile")} currentUser={currentUser} />
+              <Profile onLogout={onLogout} setCurrentPage={(page) => confirmExit(() => setCurrentView(page === "dashboard" ? "dashboard" : "profile"))} currentUser={currentUser} />
             </div>
           </div>
         ) : currentView === "dashboard" ? (
@@ -545,7 +593,7 @@ export default function HomePage({ currentUser, onLoginClick, onLogout }) {
           onLogout={onLogout}
           onClose={() => setShowProfilePopup(false)}
           onNavigate={(view) => {
-            setCurrentView(view);
+            confirmExit(() => setCurrentView(view));
           }}
         />
       )}
