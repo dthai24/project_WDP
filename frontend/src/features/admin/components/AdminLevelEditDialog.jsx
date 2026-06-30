@@ -136,7 +136,7 @@ export default function AdminLevelEditDialog({
   useEffect(() => {
     const fetchCats = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/categories");
+        const res = await fetch("http://localhost:5050/api/categories");
         const data = await res.json();
         if (data.success) {
           setCategories(data.data || []);
