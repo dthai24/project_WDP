@@ -1,0 +1,11 @@
+- [x] Di trú sang mã nguồn dự án mới (Nhánh `manhnthe181327`)
+    - [x] Checkout nhánh `manhnthe181327` và ghi đè toàn bộ code cũ
+    - [x] Tạo tệp cấu hình môi trường `/backend/.env` liên kết tới database `LearningPath_Base`
+    - [x] Cài đặt dependencies cho cả Backend (`/backend`) và Frontend (`/frontend`)
+- [x] Nạp cơ sở dữ liệu mới từ các tệp JSON tải về
+    - [x] Viết kịch bản `/backend/scripts/import-json-db.js` tự động hóa quá trình nạp dữ liệu
+    - [x] Chuyển đổi các định dạng EJSON ($oid, $date, số nguyên...) thành kiểu dữ liệu BSON chuẩn của MongoDB
+    - [x] Nạp thành công toàn bộ dữ liệu vào database `LearningPath_Base` cục bộ
+- [x] Khởi chạy và vận hành hệ thống mới
+    - [x] Chạy server Backend thành công (nodemon) tại `http://localhost:5000`
+    - [x] Chạy client Frontend thành công (Vite) tại `http://localhost:5173`
