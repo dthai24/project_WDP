@@ -22,7 +22,7 @@ const getStudentCourses = async (req, res) => {
       sort: req.query.sort || 'newest'
     };
 
-    let query = { isPublished: true, status: 'active' };
+    let query = { isPublished: true, status: { $ne: 'inactive' } };
 
     // Search by course name
     if (filters.search) {
@@ -743,7 +743,7 @@ const enrollCourse = async (req, res) => {
 
 const getFeaturedCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ isPublished: true, status: 'active' })
+    const courses = await Course.find({ isPublished: true, status: { $ne: 'inactive' } })
       .populate('categoryId', 'displayName')
       .populate('levelId', 'displayName')
       .populate('instructorId', 'fullName')
@@ -767,7 +767,7 @@ const getFeaturedCourses = async (req, res) => {
 
 const getFeaturedPaths = async (req, res) => {
   try {
-    const courses = await Course.find({ isPublished: true, status: 'active' })
+    const courses = await Course.find({ isPublished: true, status: { $ne: 'inactive' } })
       .populate('categoryId', 'displayName')
       .populate('levelId', 'displayName')
       .populate('instructorId', 'fullName')
