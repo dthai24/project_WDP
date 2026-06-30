@@ -122,7 +122,7 @@ export default function MentorCourseBasicInfoForm({
 }) {
   const filteredLevelOptions = levelOptions.filter((opt) => {
     if (!form.CategoryId) return true;
-    return String(opt.categoryId) === String(form.CategoryId);
+    return !opt.categoryId || String(opt.categoryId) === String(form.CategoryId);
   });
 
   useEffect(() => {

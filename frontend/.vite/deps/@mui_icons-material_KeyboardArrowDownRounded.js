@@ -1,0 +1,22 @@
+"use client";
+import "./chunk-ALKGQJXP.js";
+import {
+  createSvgIcon
+} from "./chunk-DPJDTZIU.js";
+import {
+  require_jsx_runtime
+} from "./chunk-BAARMGEB.js";
+import "./chunk-2KHBIA62.js";
+import {
+  __toESM
+} from "./chunk-DDNM7ENY.js";
+
+// node_modules/@mui/icons-material/KeyboardArrowDownRounded.mjs
+var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
+var KeyboardArrowDownRounded_default = createSvgIcon((0, import_jsx_runtime.jsx)("path", {
+  d: "M8.12 9.29 12 13.17l3.88-3.88c.39-.39 1.02-.39 1.41 0s.39 1.02 0 1.41l-4.59 4.59c-.39.39-1.02.39-1.41 0L6.7 10.7a.996.996 0 0 1 0-1.41c.39-.38 1.03-.39 1.42 0"
+}), "KeyboardArrowDownRounded");
+export {
+  KeyboardArrowDownRounded_default as default
+};
+//# sourceMappingURL=@mui_icons-material_KeyboardArrowDownRounded.js.map

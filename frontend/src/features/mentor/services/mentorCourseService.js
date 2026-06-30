@@ -74,7 +74,7 @@ export async function fetchMentorCourses() {
     const response = await fetch(`${API_BASE}/courses/my-courses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: Number(userId), roleName: "mentor" }),
+      body: JSON.stringify({ userId: String(userId), roleName: "mentor" }),
     });
 
     const data = await response.json();
@@ -166,7 +166,14 @@ export async function saveCreateCourseStep1(form, instructorId) {
     const data = await response.json();
     if (!data.success) return { ok: false, message: data.message };
 
-    return { ok: true, courseId: data.courseId ?? data.data?.courseId ?? null, payload };
+    const courseId = data.courseId ?? data.data?.courseId ?? data.data?._id ?? null;
+
+    saveCreateCourseStep1ToStorage({
+      ...form,
+      courseId,
+    }, instructorId);
+
+    return { ok: true, courseId, payload };
   } catch (error) {
     // Fallback: save to session storage
     saveCreateCourseStep1ToStorage(form, instructorId);
@@ -452,6 +459,27 @@ export async function createMentorCourseComment(courseId, content) {
     }
 
     return { ok: true, comment: mapMentorCourseComment(res.data) };
+  } catch (error) {
+    return { ok: false, message: error.message ?? 'Lỗi kết nối server.' };
+  }
+}
+
+/**
+ * DELETE /api/courses/mentor/courses/:courseId
+ */
+export async function deleteMentorCourse(courseId) {
+  try {
+    const response = await fetch(`${API_BASE}/courses/mentor/courses/${courseId}`, {
+      method: 'DELETE',
+      headers: getMentorAuthHeaders(),
+    });
+    const res = await response.json();
+
+    if (!response.ok || !res.success) {
+      return { ok: false, message: res.message ?? 'Không thể xóa khóa học.' };
+    }
+
+    return { ok: true, message: res.message };
   } catch (error) {
     return { ok: false, message: error.message ?? 'Lỗi kết nối server.' };
   }

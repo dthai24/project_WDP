@@ -17,6 +17,7 @@ const {
     getStreak,
     getCourseComments,
     createCourseComment,
+    deleteCourseMentor,
 } = require('../controllers/coursesController');
 
 
@@ -60,6 +61,7 @@ router.get('/my-courses/:courseId', getInformationCourse);
 // Lưu nháp và tạo khóa học (Role Mentor)
 router.post('/mentor/courses/save/draft', saveCourseDraftStepOne);
 router.post('/mentor/courses/createCourse', createFinalCourse);
+router.delete('/mentor/courses/:courseId', deleteCourseMentor);
 
 router.post('/enroll', enrollCourse); 
 

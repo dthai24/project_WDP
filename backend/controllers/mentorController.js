@@ -189,11 +189,17 @@ const updateCourse = async (req, res) => {
             }
         }
 
+        const parseId = (val) => {
+            if (!val) return val;
+            if (typeof val === 'object') return val._id ?? val.id ?? val;
+            return val;
+        };
+
         const courseData = {
             courseName: String(CourseName).trim(),
             description: String(Description).trim(),
-            categoryId: CategoryId,
-            levelId: LevelId,
+            categoryId: parseId(CategoryId),
+            levelId: parseId(LevelId),
             isPublished: Boolean(IsPublished),
             updatedAt: new Date(),
         };
