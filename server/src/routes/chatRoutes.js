@@ -173,9 +173,6 @@ Em có thể hỗ trợ nhanh về các chủ đề:
 Anh/Chị có thể viết rõ từ khóa cần tìm hiểu (ví dụ: "lộ trình TOEIC", "gói Premium",...) để em phản hồi chính xác nhất nhé!`;
   }
 
-  if (dbKnowledge) {
-    baseReply += `\n\n*(Thông tin bổ sung từ dữ liệu lớp học:)*${dbKnowledge}`;
-  }
   return baseReply;
 }
 
@@ -210,10 +207,9 @@ router.post("/chat", async (req, res) => {
 
   const isStream = req.body.stream === true;
 
-  // Fallback to Mock Response if API key is missing/placeholder/invalid format
+  // Fallback to Mock Response if API key is missing or placeholder
   const isInvalidKey = !geminiApiKey || 
-                       geminiApiKey.includes("your_gemini_api_key_here") || 
-                       geminiApiKey.startsWith("AQ."); // "AQ." is Vertex or invalid format for Generative API
+                       geminiApiKey.includes("your_gemini_api_key_here");
 
   if (isInvalidKey) {
     console.warn("⚠️ Using Mock AI Assistant due to missing or invalid Gemini API Key format.");
