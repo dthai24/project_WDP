@@ -62,7 +62,7 @@ export default function CourseCard({ course, onContinueLearning }) {
     const seed = courseId || title.replace(/\s+/g, "-").toLowerCase();
     thumbnail = `https://picsum.photos/seed/${seed}/640/360`;
   } else if (!thumbnail.startsWith("http://") && !thumbnail.startsWith("https://") && !thumbnail.startsWith("data:")) {
-    thumbnail = `http://localhost:5000${thumbnail.startsWith("/") ? thumbnail : "/" + thumbnail}`;
+    thumbnail = `http://localhost:5050${thumbnail.startsWith("/") ? thumbnail : "/" + thumbnail}`;
   }
 
   const statusBadge = getStatusBadge(isEnrolled, progress);

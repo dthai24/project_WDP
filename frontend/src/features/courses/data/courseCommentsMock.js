@@ -90,5 +90,5 @@ export function formatCommentDate(value) {
 export function resolveAvatarSrc(avatarUrl) {
   if (!avatarUrl) return null;
   if (/^https?:\/\//i.test(avatarUrl)) return avatarUrl;
-  return `http://localhost:5000${avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`}`;
+  return `http://localhost:5050${avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`}`;
 }

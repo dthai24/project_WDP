@@ -92,7 +92,7 @@ export default function ChangePasswordDialog({ open, onClose, onSubmit, loading 
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/users/change-password", {
+      const response = await fetch("http://localhost:5050/api/users/change-password", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

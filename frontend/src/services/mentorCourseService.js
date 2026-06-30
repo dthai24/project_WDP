@@ -11,7 +11,7 @@ import { buildCreateCourseStep1Payload } from '../utils/mentorCourseFormUtils';
 import { saveCreateCourseStep1ToStorage, saveCreateCourseContentToStorage } from '../utils/mentorCourseCreateStorage';
 import { buildCourseContentPayload, buildFullCreateCoursePayload } from '../utils/mentorCourseContentUtils';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:5050/api';
 
 /**
  * Fetch courses managed by the current mentor.
@@ -109,7 +109,7 @@ export async function saveCreateCourseStep1(form, instructorId) {
   const payload = buildCreateCourseStep1Payload(form, instructorId);
 
   // TODO: replace with API call when backend is ready
-  // const response = await fetch('http://localhost:5000/api/mentor/courses/draft', {
+  // const response = await fetch('http://localhost:5050/api/mentor/courses/draft', {
   //   method: 'POST',
   //   headers: {
   //     'Content-Type': 'application/json',
@@ -306,7 +306,7 @@ export async function updateCourseContent(courseId, paths) {
  */
 export async function createCourse(payload) {
   // const user = getUser();
-  // const response = await fetch('http://localhost:5000/api/mentor/courses', {
+  // const response = await fetch('http://localhost:5050/api/mentor/courses', {
   //   method: 'POST',
   //   headers: {
   //     'Content-Type': 'application/json',

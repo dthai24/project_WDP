@@ -61,12 +61,12 @@ export default function MentorQuestionBankListPage() {
         console.log(user)
         // Fetch API to get all question bank of mentor
         const [bankRes, courseRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/question-bank/getAllBankOfMentor", {
+          axios.get("http://localhost:5050/api/question-bank/getAllBankOfMentor", {
             params: {
               userId: user.userId
             }
           }),
-          axios.post("http://localhost:5000/api/courses/my-courses", {
+          axios.post("http://localhost:5050/api/courses/my-courses", {
             userId: user.userId,
             roleName: user.roles[0]
           })
