@@ -41,7 +41,8 @@ import MentorCourseList from '@/features/mentor/components/course/MentorCourseLi
 import MentorCourseListPagination, {
   MENTOR_COURSE_LIST_PAGE_SIZE,
 } from '@/features/mentor/components/course/MentorCourseListPagination';
-import { fetchMentorCourses } from '@/features/mentor/services/mentorCourseService';
+import { fetchMentorCourses, deleteMentorCourse } from '@/features/mentor/services/mentorCourseService';
+import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import {
   filterAndSortMentorCourses,
   paginateMentorCourses,
@@ -60,6 +61,35 @@ export default function MentorCoursesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteCourseId, setDeleteCourseId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteClick = (courseId) => {
+    setDeleteCourseId(courseId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteCourseId) return;
+    setDeleting(true);
+    try {
+      const res = await deleteMentorCourse(deleteCourseId);
+      if (!res.ok) {
+        toast.error(res.message || 'Xóa khóa học thất bại. Vui lòng thử lại.');
+        return;
+      }
+      toast.success('Xóa khóa học thành công!');
+      setCourses(prev => prev.filter(c => {
+        const id = c.CourseId ?? c.courseId ?? c._id;
+        return String(id) !== String(deleteCourseId);
+      }));
+    } catch (err) {
+      console.error(err);
+      toast.error('Có lỗi xảy ra khi xóa khóa học.');
+    } finally {
+      setDeleting(false);
+      setDeleteCourseId(null);
+    }
+  };
 
   // URL is the single source of truth for all filter/search/sort/pagination state
   const queryState = useMemo(
@@ -195,6 +225,7 @@ export default function MentorCoursesPage() {
         showReset={showReset}
         onReset={handleResetFilters}
         onCreateCourse={handleCreateCourse}
+        onDelete={handleDeleteClick}
       />
 
       {!loading && pagination.totalPages > 1 && (
@@ -224,16 +255,27 @@ export default function MentorCoursesPage() {
               fontSize: 14,
               fontWeight: 700,
               borderRadius: '999px',
-              bgcolor: '#0891B2',
+              bgcolor: '#059669',
               color: '#fff',
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-              '&:hover': { bgcolor: '#0E7490', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' },
+              '&:hover': { bgcolor: '#047857', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' },
             }}
           >
             Tạo khóa học mới
           </AppButton>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteCourseId)}
+        onClose={() => setDeleteCourseId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Xóa khóa học này?"
+        message="Hành động này sẽ xóa vĩnh viễn khóa học cùng toàn bộ chương, bài học và học liệu đi kèm. Học viên đã đăng ký sẽ không thể truy cập khóa học này nữa."
+        confirmLabel={deleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
+        cancelLabel="Hủy"
+        destructive
+      />
     </div>
   );
 }

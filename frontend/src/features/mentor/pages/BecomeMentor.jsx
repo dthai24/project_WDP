@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Mail, Link2, FileText, Upload, Trash2, CheckCircle, Sparkles, Map, Award } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Envelope,
+  Link as LinkIcon,
+  FileText,
+  Upload,
+  Trash,
+  CheckCircle,
+  Sparkle,
+  MapTrifold,
+  Trophy,
+} from "@phosphor-icons/react";
 
 export default function BecomeMentor() {
   const navigate = useNavigate();
@@ -101,13 +113,13 @@ export default function BecomeMentor() {
           to="/" 
           className="group inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-brand-600 transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-slate-200/60 shadow-sm"
         >
-          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform text-slate-500 group-hover:text-brand-600" />
-          Back to Homepage
+          <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform text-slate-500 group-hover:text-brand-600" />
+          Quay lại Trang chủ
         </Link>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500">Become a Mentor:</span>
+          <span className="text-xs font-bold text-slate-500">Đăng ký Mentor:</span>
           <span className="text-[10px] font-black uppercase tracking-widest text-brand-700 bg-brand-50 border border-brand-100 px-2.5 py-1 rounded-full">
-            Step 1 / 1
+            Bước 1 / 1
           </span>
         </div>
       </header>
@@ -119,38 +131,38 @@ export default function BecomeMentor() {
         <div className="lg:col-span-5 space-y-8 lg:pr-4">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/85 border border-brand-200/60 text-brand-700 font-bold text-xs tracking-wide uppercase shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
-              Join the Network
+              <Sparkle size={14} weight="fill" className="text-brand-500 animate-pulse" />
+              <span className="text-[11px] font-bold text-brand-700">GIA NHẬP MẠNG LƯỚI MENTOR</span>
             </div>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
-              Share Knowledge.<br />
+              Chia sẻ kiến thức.<br />
               <span className="gradient-text font-black">
-                Shape the Future.
+                Kiến tạo tương lai.
               </span>
             </h1>
             <p className="text-sm text-slate-500 leading-relaxed max-w-md">
-              English Master connects top language professionals with eager learners. Build your curriculum, guide motivated students, and contribute to their personal growth.
+              English Master kết nối những chuyên gia ngôn ngữ hàng đầu với các học viên đầy nhiệt huyết. Hãy cùng chúng tôi xây dựng lộ trình học tập hiệu quả và chắp cánh ước mơ của thế hệ trẻ.
             </p>
           </div>
 
           <div className="space-y-5 border-t border-slate-200/60 pt-6">
             <div className="flex gap-4 items-start">
               <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-50 border border-brand-100/40 text-brand-600 flex items-center justify-center">
-                <Map className="w-5 h-5" />
+                <MapTrifold size={20} weight="fill" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-sm">Powerful Learning Path Builder</h4>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">Design comprehensive courses using videos, reading materials, and interactive quizzes with ease.</p>
+                <h4 className="font-bold text-slate-900 text-sm">Công cụ tạo lộ trình mạnh mẽ</h4>
+                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">Thiết kế giáo án học tập linh hoạt tích hợp video giảng dạy, bài đọc chuyên sâu và ngân hàng câu hỏi trắc nghiệm thông minh.</p>
               </div>
             </div>
             
             <div className="flex gap-4 items-start">
               <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-accent-50 border border-accent-100/40 text-accent-600 flex items-center justify-center">
-                <Award className="w-5 h-5" />
+                <Trophy size={20} weight="fill" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-sm">Build Your Personal Brand</h4>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">Showcase your credentials, earn verified badges, and establish your reputation inside our growing community.</p>
+                <h4 className="font-bold text-slate-900 text-sm">Xây dựng uy tín cá nhân</h4>
+                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">Quảng bá năng lực của bạn đến hàng ngàn học viên, nhận các huy hiệu chứng nhận và khẳng định thương hiệu giảng dạy.</p>
               </div>
             </div>
           </div>
@@ -161,8 +173,8 @@ export default function BecomeMentor() {
           {!isSuccess ? (
             <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 p-6 sm:p-10 rounded-[2rem] shadow-card hover:shadow-card-hover transition-all duration-300">
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Mentor Application</h2>
-                <p className="text-xs text-slate-500 mt-1">Please provide the required details below. Our administrative team will review your application within 48 business hours.</p>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Hồ sơ ứng tuyển Mentor</h2>
+                <p className="text-xs text-slate-500 mt-1">Vui lòng hoàn tất thông tin ứng tuyển dưới đây. Ban quản trị sẽ đánh giá hồ sơ của bạn trong vòng 48 giờ làm việc.</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -170,10 +182,10 @@ export default function BecomeMentor() {
                 {/* Họ tên & Email */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Full Name <span className="text-brand-600">*</span></label>
+                    <label className="text-xs font-bold text-slate-700">Họ và tên <span className="text-brand-600">*</span></label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
-                        <User className="w-4 h-4" />
+                        <User size={16} />
                       </span>
                       <input
                         type="text"
@@ -181,17 +193,17 @@ export default function BecomeMentor() {
                         required
                         value={formData.fullName}
                         onChange={handleInputChange}
-                        placeholder="e.g. John Doe"
+                        placeholder="Ví dụ: Nguyễn Văn A"
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white/50 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all text-sm font-medium text-slate-900 placeholder-slate-400"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Email Address <span className="text-brand-600">*</span></label>
+                    <label className="text-xs font-bold text-slate-700">Địa chỉ Email <span className="text-brand-600">*</span></label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
-                        <Mail className="w-4 h-4" />
+                        <Envelope size={16} />
                       </span>
                       <input
                         type="email"
@@ -208,10 +220,10 @@ export default function BecomeMentor() {
 
                 {/* Portfolio URL */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Portfolio / LinkedIn URL</label>
+                  <label className="text-xs font-bold text-slate-700">Link Portfolio / LinkedIn</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
-                      <Link2 className="w-4 h-4" />
+                      <LinkIcon size={16} />
                     </span>
                     <input
                       type="url"
@@ -226,10 +238,10 @@ export default function BecomeMentor() {
 
                 {/* Giới thiệu ngắn */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Biography & Experience <span className="text-brand-600">*</span></label>
+                  <label className="text-xs font-bold text-slate-700">Giới thiệu bản thân & Kinh nghiệm giảng dạy <span className="text-brand-600">*</span></label>
                   <div className="relative">
                     <span className="absolute top-3.5 left-3.5 text-slate-400 pointer-events-none">
-                      <FileText className="w-4 h-4" />
+                      <FileText size={16} />
                     </span>
                     <textarea
                       name="bio"
@@ -237,7 +249,7 @@ export default function BecomeMentor() {
                       required
                       value={formData.bio}
                       onChange={handleInputChange}
-                      placeholder="Tell us about your teaching experience, linguistic background, or professional accomplishments..."
+                      placeholder="Chia sẻ về chuyên môn, lịch sử đứng lớp hoặc các chứng chỉ/thành tựu nổi bật trong sự nghiệp..."
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white/50 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all text-sm font-medium text-slate-900 placeholder-slate-400 resize-none min-h-[100px]"
                     ></textarea>
                   </div>
@@ -245,7 +257,7 @@ export default function BecomeMentor() {
 
                 {/* Upload Chứng Chỉ */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Professional Certificate / Credentials <span className="text-brand-600">*</span></label>
+                  <label className="text-xs font-bold text-slate-700">Chứng chỉ & Bằng cấp chuyên môn <span className="text-brand-600">*</span></label>
                   
                   <div className={`group mt-1 flex justify-center px-6 pt-6 pb-6 border-2 border-dashed rounded-2xl transition-all duration-200 ${previewUrl ? 'border-brand-200 bg-brand-50/20' : 'border-slate-200 hover:border-brand-500 bg-white/40'}`}>
                     <div className="space-y-3 text-center w-full">
@@ -257,33 +269,33 @@ export default function BecomeMentor() {
                             <button 
                               type="button" 
                               onClick={handleRemoveFile}
-                              className="bg-white text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-md hover:bg-red-50 transition-colors flex items-center gap-1.5"
+                              className="bg-white text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-md hover:bg-red-50 transition-colors flex items-center gap-1.5 cursor-pointer"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Remove File
+                              <Trash size={14} />
+                              Xóa tệp đính kèm
                             </button>
                           </div>
                         </div>
                       ) : (
                         <div className="space-y-2">
                           <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-slate-200/80 flex items-center justify-center mx-auto group-hover:scale-105 transition-transform text-brand-600">
-                            <Upload className="w-4 h-4" />
+                            <Upload size={18} />
                           </div>
                           <div className="flex text-xs text-slate-500 justify-center font-medium">
                             <label className="relative cursor-pointer text-brand-600 hover:text-brand-700 font-bold focus-within:outline-none">
-                              <span>Upload a file</span>
+                              <span>Tải tệp lên</span>
                               <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} required={!certificate} />
                             </label>
-                            <p className="pl-1 text-slate-400">or drag and drop</p>
+                            <p className="pl-1 text-slate-400">hoặc kéo thả ảnh vào đây</p>
                           </div>
-                          <p className="text-[10px] text-slate-400">Supported formats: PNG, JPG, or JPEG (Max 10MB)</p>
+                          <p className="text-[10px] text-slate-400">Hỗ trợ định dạng: PNG, JPG, hoặc JPEG (Tối đa 10MB)</p>
                         </div>
                       )}
 
                       {certificate && !previewUrl && (
                         <div className="p-2 bg-brand-50 rounded-lg inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          Attached: {certificate.name}
+                          <CheckCircle size={14} />
+                          Đã đính kèm: {certificate.name}
                         </div>
                       )}
                     </div>
@@ -303,10 +315,10 @@ export default function BecomeMentor() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Sending application...
+                        Đang gửi hồ sơ...
                       </>
                     ) : (
-                      "Submit Application"
+                      "Gửi hồ sơ đăng ký"
                     )}
                   </button>
                 </div>
@@ -316,12 +328,12 @@ export default function BecomeMentor() {
             /* Giao diện khi gửi hồ sơ thành công */
             <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 p-10 text-center max-w-xl mx-auto space-y-6 rounded-[2rem] shadow-card">
               <div className="w-16 h-16 bg-gradient-to-tr from-brand-600 to-accent-500 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-brand-500/20">
-                <CheckCircle className="w-8 h-8" />
+                <CheckCircle size={28} weight="fill" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Application Received!</h3>
+                <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Đã nhận hồ sơ đăng ký!</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">
-                  Thank you for submitting your application to become a Mentor on English Master. Our review board will assess your credentials and contact you directly via <span className="font-semibold text-slate-800">{formData.email}</span> shortly.
+                  Cảm ơn bạn đã nộp đơn đăng ký làm Mentor trên hệ thống English Master. Ban quản trị sẽ đánh giá năng lực và phản hồi trực tiếp qua địa chỉ email <span className="font-semibold text-slate-800">{formData.email}</span> của bạn trong thời gian sớm nhất.
                 </p>
               </div>
               <div className="pt-2">
@@ -329,7 +341,7 @@ export default function BecomeMentor() {
                   onClick={() => navigate("/")}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer"
                 >
-                  Back to Homepage
+                  Quay lại Trang chủ
                 </button>
               </div>
             </div>

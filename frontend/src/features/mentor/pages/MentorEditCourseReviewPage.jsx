@@ -8,6 +8,7 @@ import MentorCourseInfoReview from '@/features/mentor/components/course/MentorCo
 import MentorCourseContentReview from '@/features/mentor/components/course/MentorCourseContentReview';
 import MentorCourseCreateForm from '@/features/mentor/components/course/MentorCourseCreateForm';
 import MentorCardSectionTitle from '@/features/mentor/components/course/MentorCardSectionTitle';
+import MentorCourseCreateStepIndicator from '@/features/mentor/components/course/MentorCourseCreateStepIndicator';
 import { CARD_SECTION_TITLE_SX, CREATE_CARD_SX, MUTED, PAGE_DESCRIPTION_SX, PAGE_TITLE_SX, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
   fetchCourseCategories,
@@ -292,6 +293,8 @@ export default function MentorEditCourseReviewPage() {
           Xem lại thay đổi
         </Typography>
       </Breadcrumbs>
+
+      <MentorCourseCreateStepIndicator currentStep={3} />
 
       <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 0.5 }}>
         Xem lại thay đổi

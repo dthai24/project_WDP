@@ -533,7 +533,7 @@ const deleteCourse = async (req, res) => {
 
 const nodemailer = require('nodemailer');
 
-const sendApplicationResultEmail = async (to, fullName, result, tags = [], comment = '') => {
+const sendApplicationResultEmail = async (to, fullName, result, tags = [], comment = '', randomPassword = null) => {
   const isApproved = result === 'approved';
   const subject = isApproved
     ? '🎉 Chúc mừng! Đơn ứng tuyển Mentor của bạn đã được phê duyệt'
@@ -541,11 +541,25 @@ const sendApplicationResultEmail = async (to, fullName, result, tags = [], comme
 
   let resultHtml = '';
   if (isApproved) {
-    resultHtml = `
-      <p style="color:#c4c3d0;font-size:15px;">Xin chào <strong style="color:#a78bfa;">${fullName}</strong>,</p>
-      <p style="color:#c4c3d0;font-size:15px;">Chúng tôi rất vui mừng thông báo rằng đơn ứng tuyển trở thành Mentor của bạn tại <strong>English Master</strong> đã được phê duyệt!</p>
-      <p style="color:#c4c3d0;font-size:15px;">Tài khoản của bạn đã được nâng cấp lên vai trò Mentor. Bây giờ bạn có thể đăng nhập vào hệ thống để bắt đầu xây dựng khóa học của mình.</p>
-    `;
+    if (randomPassword) {
+      resultHtml = `
+        <p style="color:#c4c3d0;font-size:15px;">Xin chào <strong style="color:#a78bfa;">${fullName}</strong>,</p>
+        <p style="color:#c4c3d0;font-size:15px;">Chúng tôi rất vui mừng thông báo rằng đơn ứng tuyển trở thành Mentor của bạn tại <strong>English Master</strong> đã được phê duyệt!</p>
+        <p style="color:#c4c3d0;font-size:15px;">Dưới đây là thông tin tài khoản đăng nhập của bạn:</p>
+        <ul style="color:#c4c3d0;font-size:15px;line-height:1.6;">
+          <li><strong>Email:</strong> ${to}</li>
+          <li><strong>Mật khẩu đăng nhập:</strong> <span style="color:#10b981;font-weight:bold;">${randomPassword}</span></li>
+        </ul>
+        <p style="color:#c4c3d0;font-size:15px;">Vui lòng đăng nhập và tiến hành đổi mật khẩu mới trong trang cá nhân của bạn để bảo mật thông tin.</p>
+      `;
+    } else {
+      resultHtml = `
+        <p style="color:#c4c3d0;font-size:15px;">Xin chào <strong style="color:#a78bfa;">${fullName}</strong>,</p>
+        <p style="color:#c4c3d0;font-size:15px;">Chúng tôi rất vui mừng thông báo rằng đơn ứng tuyển trở thành Mentor của bạn tại <strong>English Master</strong> đã được phê duyệt!</p>
+        <p style="color:#c4c3d0;font-size:15px;">Tài khoản của bạn đã được nâng cấp lên vai trò Mentor. Mật khẩu và thông tin tài khoản đăng nhập cũ được giữ nguyên không thay đổi.</p>
+        <p style="color:#c4c3d0;font-size:15px;">Bây giờ bạn có thể đăng nhập vào hệ thống để bắt đầu xây dựng khóa học của mình.</p>
+      `;
+    }
   } else {
     const reasonTags = tags.length > 0 ? `<p style="color:#c4c3d0;font-size:15px;">Lý do từ chối: <strong style="color:#ff6b6b;">${tags.join(', ')}</strong></p>` : '';
     const additionalComment = comment.trim() ? `<p style="color:#c4c3d0;font-size:15px;">Góp ý bổ sung: <em>"${comment}"</em></p>` : '';
@@ -647,14 +661,44 @@ const approveApplication = async (req, res) => {
     await app.save();
 
     const mentorRole = await Role.findOne({ roleName: { $regex: /^mentor$/i } });
-    if (mentorRole) {
-      await UserRole.deleteMany({ userId: app.userId });
-      await UserRole.create({ userId: app.userId, roleId: mentorRole._id });
+    if (!mentorRole) {
+      return res.status(500).json({ success: false, message: 'Lỗi: Vai trò Mentor chưa được cấu hình' });
     }
 
-    const user = await User.findById(app.userId);
-    if (user && user.email) {
-      await sendApplicationResultEmail(user.email, user.fullName, 'approved');
+    // 1. Kiểm tra tài khoản bằng email của hồ sơ
+    let user = await User.findOne({ email: app.email.toLowerCase() });
+    let randomPassword = null;
+
+    if (!user) {
+      // 2. GUEST FLOW: Tạo tài khoản mới, cấp mật khẩu ngẫu nhiên 12 ký tự
+      randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4);
+      
+      user = await User.create({
+        fullName: app.fullName || app.name || 'Mentor User',
+        email: app.email.toLowerCase(),
+        password: randomPassword,
+        isActive: true,
+      });
+
+      // Lưu lại userId vừa tạo vào hồ sơ
+      app.userId = user._id;
+      await app.save();
+    }
+
+    // 3. Cập nhật phân quyền UserRole thành Mentor (xóa phân quyền cũ nếu có)
+    await UserRole.deleteMany({ userId: user._id });
+    await UserRole.create({ userId: user._id, roleId: mentorRole._id });
+
+    // 4. Gửi email kết quả phê duyệt
+    if (user.email) {
+      await sendApplicationResultEmail(
+        user.email,
+        user.fullName || app.fullName || app.name,
+        'approved',
+        [],
+        '',
+        randomPassword
+      );
     }
 
     return res.json({ success: true, message: 'Đã phê duyệt đơn ứng tuyển thành Mentor' });

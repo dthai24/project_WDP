@@ -15,10 +15,10 @@ export default function MentorNewsPage() {
           textAlign: 'center',
           borderRadius: 3,
           bgcolor: '#FFFFFF',
-          border: `1px solid ${alpha('#0891B2', 0.12)}`,
+          border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
         }}
       >
-        <ArticleRoundedIcon sx={{ fontSize: 48, color: '#0891B2', opacity: 0.35, mb: 1.5 }} />
+        <ArticleRoundedIcon sx={{ fontSize: 48, color: 'primary.main', opacity: 0.35, mb: 1.5 }} />
         <Typography sx={{ fontSize: 15, color: '#64748B' }}>
           Quản lý tin tức sẽ được bổ sung sau khi có bảng dữ liệu News.
         </Typography>

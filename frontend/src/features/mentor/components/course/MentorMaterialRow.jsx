@@ -10,6 +10,7 @@ import {
   MATERIAL_URL_LABELS,
   MATERIAL_URL_PLACEHOLDERS,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { getTestDefaultFields } from '@/features/mentor/utils/mentorTestContentUtils';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import {
   CONTENT_FIELD_LABEL_SX,
@@ -23,6 +24,7 @@ import MentorMaterialTypeSelect, { MATERIAL_TYPE_SELECT_OPTIONS } from './Mentor
 import MentorTextMaterialEditor from './MentorTextMaterialEditor';
 import MentorDocumentMaterialEditor from './MentorDocumentMaterialEditor';
 import MentorVideoMaterialEditor, { MentorVideoUrlField } from './MentorVideoMaterialEditor';
+import MentorTestMaterialEditor from './MentorTestMaterialEditor';
 
 function getMaterialTypeLabel(type) {
   return MATERIAL_TYPE_SELECT_OPTIONS.find((opt) => opt.value === type)?.label ?? 'Học liệu';
@@ -45,6 +47,8 @@ function buildTypeChangePatch(_currentType, nextType) {
     Object.assign(patch, getDocDefaultFields());
   } else if (nextType === 'VIDEO') {
     Object.assign(patch, getVideoDefaultFields());
+  } else if (nextType === 'TEST') {
+    Object.assign(patch, getTestDefaultFields());
   }
 
   return patch;
@@ -72,7 +76,8 @@ export default function MentorMaterialRow({
   const isText = material.MaterialType === 'TEXT';
   const isDoc = material.MaterialType === 'DOC';
   const isVideo = material.MaterialType === 'VIDEO';
-  const showUrlField = !isText && !isDoc && !isVideo;
+  const isTest = material.MaterialType === 'TEST';
+  const showUrlField = !isText && !isDoc && !isVideo && !isTest;
   const placeholder = MATERIAL_URL_PLACEHOLDERS[material.MaterialType] ?? '';
   const urlLabel = MATERIAL_URL_LABELS[material.MaterialType] ?? 'Link';
   const [pendingTypeChange, setPendingTypeChange] = useState(null);
@@ -300,6 +305,19 @@ export default function MentorMaterialRow({
             onChange={onChange}
             disabled={disabled}
             compact={tabMode}
+          />
+        </Box>
+      )}
+
+      {isTest && (
+        <Box sx={{ mt: tabMode ? 2 : 1.5 }}>
+          <MentorTestMaterialEditor
+            material={material}
+            errors={errors}
+            onChange={onChange}
+            disabled={disabled}
+            courseId={courseId}
+            chapterId={chapterId}
           />
         </Box>
       )}

@@ -52,14 +52,20 @@ export function mapDetailPathsToEditPaths(detailPaths = []) {
  * validateCourseDraft / buildReviewChecklist / MentorCourseInfoReview.
  */
 export function courseDetailToEditCourse(course) {
+  const getRawId = (val) => {
+    if (!val) return null;
+    if (typeof val === 'object') return val._id ?? val.id ?? val;
+    return val;
+  };
+
   return {
     CourseId: course.courseId ?? course.CourseId ?? null,
     CourseName: course.courseName ?? course.CourseName ?? '',
     Description: course.description ?? course.Description ?? '',
     Thumbnail: course.thumbnail ?? course.Thumbnail ?? null,
-    CategoryId: course.categoryId ?? course.CategoryId ?? null,
-    LevelId: course.levelId ?? course.LevelId ?? null,
-    InstructorId: course.instructorId ?? course.InstructorId ?? null,
+    CategoryId: getRawId(course.categoryId ?? course.CategoryId),
+    LevelId: getRawId(course.levelId ?? course.LevelId),
+    InstructorId: getRawId(course.instructorId ?? course.InstructorId),
     IsPublished: course.status === 'published'
       || course.isPublished === true
       || course.IsPublished === true

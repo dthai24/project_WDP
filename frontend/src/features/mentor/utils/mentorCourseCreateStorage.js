@@ -44,6 +44,8 @@ export function loadCreateCourseDraft() {
 
 export function saveCreateCourseStep1ToStorage(form, instructorId) {
   const course = buildCreateCourseStep1Payload(form, instructorId);
+  course.CourseId = form.CourseId ?? form.courseId ?? null;
+  course.courseId = course.CourseId;
   const existing = loadCreateCourseDraft();
   return saveCreateCourseDraft({
     course,

@@ -154,20 +154,10 @@ export function getMaterialReviewDetailSummary(material) {
       return sizeLabel ? `${typeLabel} · ${fileName} · ${sizeLabel}` : `${typeLabel} · ${fileName}`;
     }
     case 'TEST': {
-      if (normalized.QuestionBankTitle) {
-        const summary = computeMaterialTestSummary(normalized.Sections ?? []);
-        const scoringLabel =
-          getEffectiveScoringMode(normalized) === SCORING_MODE_MANUAL
-            ? 'Chấm tay'
-            : 'Tự động';
-        return `Ngân hàng: ${normalized.QuestionBankTitle} · ${summary.questionCount} câu · ${scoringLabel}`;
-      }
-      const summary = computeMaterialTestSummary(normalized.Sections ?? []);
-      const scoringLabel =
-        getEffectiveScoringMode(normalized) === SCORING_MODE_MANUAL
-          ? 'Nhập điểm thủ công'
-          : 'Tự chia đều';
-      return `${summary.sectionCount} phần · ${summary.questionCount} câu hỏi · ${DEFAULT_TEST_TOTAL_SCORE} điểm · ${scoringLabel}`;
+      const timeLimitMinutes = Number(normalized.TimeLimitMinutes) || 30;
+      const totalScore = Number(normalized.TotalScore) || 100;
+      const passScore = Number(normalized.PassScore) || 70;
+      return `${timeLimitMinutes} phút · Tổng ${totalScore} điểm · Đạt ${passScore} điểm`;
     }
     default:
       return '';
@@ -187,7 +177,7 @@ export function countMaterials(paths = []) {
 }
 
 export function countMaterialsByType(paths = []) {
-  const counts = { VIDEO: 0, TEXT: 0, DOC: 0 };
+  const counts = { VIDEO: 0, TEXT: 0, DOC: 0, TEST: 0 };
 
   (paths ?? []).forEach((path) => {
     getPathNodes(path).forEach((node) => {

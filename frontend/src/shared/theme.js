@@ -29,10 +29,10 @@ export const ios18 = {
   transition: "cubic-bezier(0.25, 0.1, 0.25, 1)",
 };
 
-const OCEAN = "#0891B2";
-const OCEAN_DARK = "#0E7490";
-const OCEAN_LIGHT = "#22D3EE";
-const SKY = "#38BDF8";
+const OCEAN = "#059669";
+const OCEAN_DARK = "#047857";
+const OCEAN_LIGHT = "#34d399";
+const SKY = "#0ea5e9";
 
 const theme = createTheme({
   palette: {

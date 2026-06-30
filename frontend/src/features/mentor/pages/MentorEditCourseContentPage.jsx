@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseContentBuilder from '@/features/mentor/components/course/MentorCourseContentBuilder';
 import MentorContentOverview from '@/features/mentor/components/course/MentorContentOverview';
+import MentorCourseCreateStepIndicator from '@/features/mentor/components/course/MentorCourseCreateStepIndicator';
 import MentorCourseContentFooterActions, {
   COURSE_CONTENT_MOBILE_FOOTER_ID,
 } from '@/features/mentor/components/course/MentorCourseContentFooterActions';
@@ -441,8 +444,8 @@ export default function MentorEditCourseContentPage() {
       onBack={() => navigate(`/mentor/courses/${courseId}/edit`)}
       onSaveDraft={handleSaveDraftClick}
       onPrimary={handleSaveContent}
-      primaryLabel="Lưu nội dung"
-      primaryEndIcon={!submitting ? <SaveRoundedIcon sx={{ fontSize: 16 }} /> : undefined}
+      primaryLabel="Tiếp theo"
+      primaryEndIcon={!submitting ? <ArrowForwardRoundedIcon sx={{ fontSize: 16 }} /> : undefined}
       backDisabled={busy}
       saveDraftDisabled={submitting || saving}
       primaryDisabled={savingDraft || saving}
@@ -455,12 +458,14 @@ export default function MentorEditCourseContentPage() {
     <div className="w-full max-w-7xl mx-auto">
       <div className="mb-4">
         <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: '#0F172A' }}>
-          Chỉnh sửa nội dung khóa học
+          Chỉnh sửa khóa học
         </h1>
         <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: '#64748B' }}>
-          Cập nhật chương, bài học và tài liệu cho khóa học.
+          Thêm, sửa chương, bài học và tài liệu cho khóa học.
         </p>
       </div>
+
+      <MentorCourseCreateStepIndicator currentStep={2} />
 
       <Box
         sx={{
@@ -472,7 +477,7 @@ export default function MentorEditCourseContentPage() {
       >
         <MentorCourseContentBuilder
           paths={paths}
-          courseId={Number(courseId)}
+          courseId={courseId}
           courseTitle={courseName}
           errors={validationErrors}
           expandedPaths={expandedPaths}

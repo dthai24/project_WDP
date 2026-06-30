@@ -4,11 +4,12 @@ import {
   CircularProgress,
   Typography,
 } from '@mui/material';
-import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseCreateForm from '@/features/mentor/components/course/MentorCourseCreateForm';
+import MentorCourseCreateStepIndicator from '@/features/mentor/components/course/MentorCourseCreateStepIndicator';
 import { MUTED, PAGE_DESCRIPTION_SX, PAGE_TITLE_SX, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
   fetchCourseCategories,
@@ -117,7 +118,7 @@ export default function MentorEditCoursePage() {
     }
   };
 
-  const handleSave = async (event) => {
+  const handleNext = async (event) => {
     event.preventDefault();
 
     const fieldErrors = validateMentorCourseForm(form, validationOptions);
@@ -137,7 +138,7 @@ export default function MentorEditCoursePage() {
       const nextCourse = {
         ...coursePascal,
         ...payload,
-        CourseId: Number(courseId),
+        CourseId: courseId,
       };
 
       if (hasStudents) {
@@ -146,11 +147,12 @@ export default function MentorEditCoursePage() {
         nextCourse.Thumbnail = coursePascal?.Thumbnail ?? nextCourse.Thumbnail;
       }
 
-      navigate(`/mentor/courses/${courseId}/review`, {
+      // Bước 1 → Bước 2: chuyển sang trang sửa nội dung
+      navigate(`/mentor/courses/${courseId}/content/edit`, {
         state: {
           editDraft: {
             course: nextCourse,
-            meta: { profileOnly: true },
+            meta: { profileOnly: false },
           },
         },
       });
@@ -178,15 +180,15 @@ export default function MentorEditCoursePage() {
         Hủy
       </AppButton>
       <AppButton
-        onClick={handleSave}
+        onClick={handleNext}
         loading={submitting}
-        endIcon={!submitting ? <SaveRoundedIcon /> : undefined}
+        endIcon={!submitting ? <ArrowForwardRoundedIcon /> : undefined}
         sx={{
           minWidth: 148, height: 44, borderRadius: '999px', fontWeight: 700,
-          bgcolor: PRIMARY, '&:hover': { bgcolor: '#0E7490' },
+          bgcolor: PRIMARY, '&:hover': { bgcolor: '#047857' },
         }}
       >
-        Lưu thay đổi
+        Tiếp theo
       </AppButton>
     </Box>
   );
@@ -195,12 +197,14 @@ export default function MentorEditCoursePage() {
     <div className="w-full max-w-7xl mx-auto">
       <div className="mb-4">
         <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: '#0F172A' }}>
-          Chỉnh sửa thông tin khóa học
+          Chỉnh sửa khóa học
         </h1>
         <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: '#64748B' }}>
-          Cập nhật tên, mô tả và thông tin cơ bản của khóa học. Để chỉnh sửa nội dung bài học, hãy vào mục nội dung khóa học.
+          Cập nhật thông tin cơ bản của khóa học, sau đó chỉnh sửa nội dung và xem lại trước khi lưu.
         </p>
       </div>
+
+      <MentorCourseCreateStepIndicator currentStep={1} />
 
       <Box sx={{ maxWidth: 1080 }}>
         <MentorCourseCreateForm

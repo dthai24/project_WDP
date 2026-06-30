@@ -165,13 +165,13 @@ function ActiveFilterChip({ label, onDelete }) {
         fontSize: 11.5,
         fontWeight: 600,
         borderRadius: '99px',
-        bgcolor: 'rgba(8,145,178,0.08)',
-        color: '#0891B2',
-        border: '1px solid rgba(8,145,178,0.16)',
+        bgcolor: 'rgba(5,150,105,0.08)',
+        color: '#059669',
+        border: '1px solid rgba(5,150,105,0.16)',
         '& .MuiChip-deleteIcon': {
           fontSize: 15,
           color: '#94A3B8',
-          '&:hover': { color: '#0891B2' },
+          '&:hover': { color: '#059669' },
         },
       }}
     />
@@ -359,7 +359,7 @@ export default function MentorCoursesToolbar({
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.5 }}>
-            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: '#0891B2' }} />
+            <MenuBookOutlinedIcon sx={{ fontSize: 14, color: '#059669' }} />
             <Typography
               variant="caption"
               sx={{ color: MUTED, fontWeight: 500, whiteSpace: 'nowrap', fontSize: 12 }}

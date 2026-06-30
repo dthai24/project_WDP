@@ -9,7 +9,7 @@ import { AdminLayoutGuard } from "@/shared/routing/RoleShellRedirects";
 export default function AdminLayout() {
   return (
     <AdminLayoutGuard>
-      <div className="min-h-[100dvh] flex flex-col bg-slate-50 dark:bg-slate-950 antialiased">
+      <div className="min-h-[100dvh] flex flex-col bg-gradient-to-br from-brand-50/30 via-white to-accent-50/20 antialiased">
         <Header
           logoTo="/admin/accounts"
           profilePath="/admin/profile"

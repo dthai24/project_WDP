@@ -35,7 +35,10 @@ import PeopleOutlineRoundedIcon from '@mui/icons-material/PeopleOutlineRounded';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
-import { Link } from 'react-router-dom';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import { Link, useNavigate } from 'react-router-dom';
+import AppButton from '@/shared/ui/AppButton';
 import {
   countCourseLessons,
   countCourseMaterials,
@@ -46,15 +49,15 @@ import {
 
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
-const PRIMARY = '#0891B2';
+const PRIMARY = '#059669';
 
 const METRIC_COLORS = {
-  students: '#2563EB',
+  students: '#0284c7',
   rating: '#D97706',
   chapters: '#7C3AED',
-  lessons: '#0891B2',
+  lessons: '#059669',
   materials: '#475569',
-  updated: '#7C3AED',
+  updated: '#0284c7',
 };
 
 const PILL_CHIP_SX = {
@@ -105,8 +108,9 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
   );
 }
 
-export default function MentorCourseRow({ course }) {
+export default function MentorCourseRow({ course, onDelete }) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const statusChip = getStatusChip(course.IsPublished);
   const detailPath = `/mentor/courses/${course.CourseId}?tab=course`;
   const totalChapters = (course.Paths ?? course.paths ?? []).length;
@@ -237,18 +241,99 @@ export default function MentorCourseRow({ course }) {
 
       <Box
         sx={{
+          display: 'flex',
+          flexDirection: { xs: 'row', md: 'column' },
+          alignItems: { xs: 'center', md: 'flex-end' },
+          gap: 1.5,
+          flexShrink: 0,
           position: { xs: 'absolute', md: 'static' },
           top: { xs: 16, md: 'auto' },
           right: { xs: 16, md: 'auto' },
-          flexShrink: 0,
-          alignSelf: { md: 'flex-start' },
+          alignSelf: { md: 'center' },
         }}
       >
         <Chip
           size="small"
           label={statusChip.label}
-          sx={{ ...PILL_CHIP_SX, ...statusChip.sx }}
+          sx={{ ...PILL_CHIP_SX, ...statusChip.sx, order: { xs: 2, md: 1 } }}
         />
+
+        <Box sx={{ display: 'flex', gap: 0.75, order: { xs: 1, md: 2 } }}>
+          <AppButton
+            variant="outlined"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate(`/mentor/courses/${course.CourseId}/edit`);
+            }}
+            sx={{
+              minWidth: 0,
+              width: 32,
+              height: 32,
+              borderRadius: '8px',
+              p: 0,
+              color: PRIMARY,
+              borderColor: 'rgba(5,150,105,0.2)',
+              '&:hover': {
+                borderColor: PRIMARY,
+                bgcolor: 'rgba(5,150,105,0.04)',
+              },
+            }}
+            title="Chỉnh sửa thông tin"
+          >
+            <EditOutlinedIcon sx={{ fontSize: 16 }} />
+          </AppButton>
+
+          <AppButton
+            variant="outlined"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate(`/mentor/courses/${course.CourseId}/content/edit`);
+            }}
+            sx={{
+              minWidth: 0,
+              width: 32,
+              height: 32,
+              borderRadius: '8px',
+              p: 0,
+              color: '#0ea5e9',
+              borderColor: 'rgba(14,165,233,0.2)',
+              '&:hover': {
+                borderColor: '#0ea5e9',
+                bgcolor: 'rgba(14,165,233,0.04)',
+              },
+            }}
+            title="Sửa nội dung học liệu"
+          >
+            <MenuBookRoundedIcon sx={{ fontSize: 16 }} />
+          </AppButton>
+
+          <AppButton
+            variant="outlined"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete?.(course.CourseId);
+            }}
+            sx={{
+              minWidth: 0,
+              width: 32,
+              height: 32,
+              borderRadius: '8px',
+              p: 0,
+              color: '#DC2626',
+              borderColor: 'rgba(220,38,38,0.2)',
+              '&:hover': {
+                borderColor: '#DC2626',
+                bgcolor: 'rgba(220,38,38,0.04)',
+              },
+            }}
+            title="Xóa khóa học"
+          >
+            <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+          </AppButton>
+        </Box>
       </Box>
     </Box>
   );

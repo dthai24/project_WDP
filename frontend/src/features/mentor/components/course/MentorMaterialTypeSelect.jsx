@@ -3,17 +3,18 @@ import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownR
 import PlayCircleRoundedIcon from '@mui/icons-material/PlayCircleRounded';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
+import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { contentInputSx } from './mentorCourseContentStyles';
 
-const PRIMARY = '#0891B2';
-const PRIMARY_SELECTED = '#0E7490';
+const PRIMARY = '#059669';
+const PRIMARY_SELECTED = '#047857';
 
-// TODO: update backend/DB MaterialType to support TEXT
 export const MATERIAL_TYPE_SELECT_OPTIONS = [
   { value: 'VIDEO', label: 'Video', icon: PlayCircleRoundedIcon, color: '#E11D48', soft: 'rgba(225,29,72,0.10)' },
-  { value: 'TEXT', label: 'Văn bản', icon: ArticleRoundedIcon, color: '#0891B2', soft: 'rgba(8,145,178,0.10)' },
+  { value: 'TEXT', label: 'Văn bản', icon: ArticleRoundedIcon, color: '#059669', soft: 'rgba(5,150,105,0.10)' },
   { value: 'DOC', label: 'Tài liệu', icon: DescriptionRoundedIcon, color: '#2563EB', soft: 'rgba(37,99,235,0.10)' },
+  { value: 'TEST', label: 'Kiểm tra (Quiz/Exam)', icon: QuizRoundedIcon, color: '#7C3AED', soft: 'rgba(124,58,237,0.10)' },
 ];
 
 function getOption(value) {
@@ -87,10 +88,10 @@ export default function MentorMaterialTypeSelect({
         bgcolor: 'transparent',
         '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
         '&:before': {
-          borderBottom: `1px solid ${error ? '#DC2626' : 'rgba(8,145,178,0.18)'}`,
+          borderBottom: `1px solid ${error ? '#DC2626' : 'rgba(5,150,105,0.18)'}`,
         },
         '&:hover:not(.Mui-disabled):before': {
-          borderBottom: `1px solid ${error ? '#DC2626' : 'rgba(8,145,178,0.28)'}`,
+          borderBottom: `1px solid ${error ? '#DC2626' : 'rgba(5,150,105,0.28)'}`,
         },
         '&.Mui-focused:after': {
           borderBottom: `2px solid ${error ? '#DC2626' : PRIMARY}`,
@@ -128,11 +129,11 @@ export default function MentorMaterialTypeSelect({
               mb: 0.25,
               gap: 1,
               '&:last-of-type': { mb: 0 },
-              '&:hover': { bgcolor: 'rgba(8,145,178,0.08)' },
+              '&:hover': { bgcolor: 'rgba(5,150,105,0.08)' },
               '&.Mui-selected': {
-                bgcolor: 'rgba(8,145,178,0.10)',
+                bgcolor: 'rgba(5,150,105,0.10)',
                 color: PRIMARY_SELECTED,
-                '&:hover': { bgcolor: 'rgba(8,145,178,0.12)' },
+                '&:hover': { bgcolor: 'rgba(5,150,105,0.12)' },
               },
               '&.Mui-selected .MuiMenuItem-icon': {
                 display: 'none',

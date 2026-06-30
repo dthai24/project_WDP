@@ -92,8 +92,8 @@ export function buildCreateCourseStep1Payload(form, instructorId) {
     CourseName: String(form.CourseName ?? '').trim(),
     Description: description || null,
     Thumbnail: thumbnail || null,
-    CategoryId: form.CategoryId ? Number(form.CategoryId) : null,
-    LevelId: form.LevelId ? Number(form.LevelId) : null,
+    CategoryId: form.CategoryId ? String(form.CategoryId) : null,
+    LevelId: form.LevelId ? String(form.LevelId) : null,
     InstructorId: instructorId,
     IsPublished: Boolean(form.IsPublished),
   };

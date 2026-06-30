@@ -10,7 +10,7 @@ const User = require('../models/MongoDB/User');
 const Category = require('../models/MongoDB/Category');
 const Level = require('../models/MongoDB/Level');
 const streakService = require("../services/streakService");
-const { validateCourseThumbnailDataUrl } = require('../middlewares/courseThumbnailMiddleware');
+const { validateCourseThumbnailDataUrl, saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
 const getStudentCourses = async (req, res) => {
   try {
@@ -124,6 +124,13 @@ const getMyCourses = async (req, res) => {
         .populate('categoryId', 'displayName')
         .populate('levelId', 'displayName')
         .lean();
+      courses = courses.map(c => ({
+        ...c,
+        courseId: c._id.toString(),
+        CourseId: c._id.toString(),
+        CategoryDisplayName: c.categoryId?.displayName ?? '',
+        LevelDisplayName: c.levelId?.displayName ?? '',
+      }));
     }
 
     return res.status(200).json({
@@ -379,7 +386,7 @@ const saveCourseDraftStepOne = async (req, res) => {
     const courseData = {
       courseName: String(CourseName).trim(),
       description: String(Description).trim(),
-      thumbnail: Thumbnail || null,
+      thumbnail: null,
       categoryId: CategoryId,
       levelId: LevelId,
       instructorId: InstructorId,
@@ -388,11 +395,19 @@ const saveCourseDraftStepOne = async (req, res) => {
       totalLessons: 0,
     };
 
-    if (courseData.thumbnail) {
-      validateCourseThumbnailDataUrl(courseData.thumbnail);
+    if (Thumbnail) {
+      validateCourseThumbnailDataUrl(Thumbnail);
     }
 
     const newCourse = await Course.create(courseData);
+
+    if (Thumbnail) {
+      const thumbnailPath = saveCourseThumbnailFromDataUrl(Thumbnail, newCourse._id);
+      if (thumbnailPath) {
+        newCourse.thumbnail = thumbnailPath;
+        await newCourse.save();
+      }
+    }
 
     return res.status(201).json({
       success: true,
@@ -633,7 +648,7 @@ const createFinalCourse = async (req, res) => {
     const courseData = {
       courseName: String(newCourse.CourseName).trim(),
       description: String(newCourse.Description).trim(),
-      thumbnail: newCourse.Thumbnail || null,
+      thumbnail: null,
       categoryId: newCourse.CategoryId,
       levelId: newCourse.LevelId,
       instructorId: newCourse.InstructorId,
@@ -643,6 +658,15 @@ const createFinalCourse = async (req, res) => {
     };
 
     const course = await Course.create(courseData);
+
+    if (newCourse?.Thumbnail) {
+      const thumbnailPath = saveCourseThumbnailFromDataUrl(newCourse.Thumbnail, course._id);
+      if (thumbnailPath) {
+        course.thumbnail = thumbnailPath;
+        await course.save();
+      }
+    }
+
     let totalLessons = 0;
 
     // Create paths with nodes
@@ -858,6 +882,43 @@ const getContinueCourse = async (req, res) => {
   }
 };
 
+const deleteCourseMentor = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.headers['x-user-id'] || req.body.userId;
+
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'Thiếu courseId' });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học' });
+    }
+
+    // Verify ownership
+    if (userId && course.instructorId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa khóa học này' });
+    }
+
+    // Comprehensive cleanup: paths, pathNodes, materials
+    const paths = await Path.find({ courseId });
+    const pathIds = paths.map(p => p._id);
+    const nodes = await PathNode.find({ pathId: { $in: pathIds } });
+    const nodeIds = nodes.map(n => n._id);
+
+    await NodeMaterial.deleteMany({ nodeId: { $in: nodeIds } });
+    await PathNode.deleteMany({ pathId: { $in: pathIds } });
+    await Path.deleteMany({ courseId });
+    await Course.findByIdAndDelete(courseId);
+
+    return res.json({ success: true, message: 'Xóa khóa học thành công' });
+  } catch (error) {
+    console.error('deleteCourseMentor error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi xóa khóa học' });
+  }
+};
+
 module.exports = {
   getMyCourses,
   getInformationCourse,
@@ -874,4 +935,5 @@ module.exports = {
   getStreak,
   getCourseComments,
   createCourseComment,
+  deleteCourseMentor,
 };
