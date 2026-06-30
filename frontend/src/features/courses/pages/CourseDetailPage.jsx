@@ -425,7 +425,7 @@ function RelatedCoursesSection({ course }) {
         const user = JSON.parse(localStorage.getItem("user") || "{}");
         const headers = user.userId ? { "x-user-id": user.userId } : {};
 
-        const res = await fetch("http://localhost:5000/api/courses/student", { headers });
+        const res = await fetch("http://localhost:5050/api/courses/student", { headers });
         const data = await res.json();
 
         if (data.success) {
@@ -502,8 +502,8 @@ export default function CourseDetailPage() {
 
         // Fetch course info
         const [courseRes, contentRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=course`, { headers }),
-          fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=content`, { headers }),
+          fetch(`http://localhost:5050/api/courses/my-courses/${id}?tab=course`, { headers }),
+          fetch(`http://localhost:5050/api/courses/my-courses/${id}?tab=content`, { headers }),
         ]);
 
         const courseResult = await courseRes.json();
@@ -531,7 +531,7 @@ export default function CourseDetailPage() {
             ) {
               courseImage = val;
             } else {
-              courseImage = `http://localhost:5000${val.startsWith("/") ? val : "/" + val}`;
+              courseImage = `http://localhost:5050${val.startsWith("/") ? val : "/" + val}`;
             }
           }
 
