@@ -20,6 +20,7 @@ import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
 import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
+import { getEnrollmentStatusChip, getMyCoursesStatusChip } from "@/shared/utils/statusChipUtils";
 import { sanitizeThumbnail } from "@/shared/utils/thumbnailUtils";
 
 /* ─── HÀM HELPER ─── */
@@ -88,58 +89,15 @@ function normalizeCourse(course = {}) {
     category: course.CategoryDisplayName || course.CategoryName || course.Category || "",
     level: course.LevelDisplayName || course.LevelName || course.Level || "",
     instructor: course.Instructor || "S.T.A.R Mentor Team",
-    rating: course.Rating || null,
-    reviewCount: course.ReviewCount || 0,
-    studentCount: course.StudentCount || 0,
+    rating: course.Rating ?? course.rating ?? null,
+    reviewCount: course.ReviewCount ?? course.reviewCount ?? 0,
+    studentCount: course.StudentCount ?? course.studentCount ?? 0,
     totalLessons: lessonCount,
     totalNodes: stageCount,
     totalMaterials: materialCount,
     progressPercentage: currentProgress,
     isEnrolled: checkEnrolled,
-  };
-}
-
-function getStatusChipStyle(isEnrolled, progress) {
-  if (!isEnrolled) {
-    return {
-      label: "Chưa đăng ký",
-      sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
-    };
-  }
-  if (progress >= 100) {
-    return {
-      label: "Hoàn thành",
-      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
-    };
-  }
-  if (progress > 0) {
-    return {
-      label: "Đang học",
-      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
-    };
-  }
-  return {
-    label: "Đã đăng ký",
-    sx: { bgcolor: "rgba(22,163,74,0.12)", color: "#16A34A", border: "1px solid rgba(22,163,74,0.20)" },
-  };
-}
-
-function getMyCoursesStatusChip(progress) {
-  if (progress >= 100) {
-    return {
-      label: "Hoàn thành",
-      sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" },
-    };
-  }
-  if (progress > 0) {
-    return {
-      label: "Đang học",
-      sx: { bgcolor: "rgba(8,145,178,0.12)", color: "#0891B2", border: "1px solid rgba(8,145,178,0.20)" },
-    };
-  }
-  return {
-    label: "Chưa bắt đầu",
-    sx: { bgcolor: "rgba(100,116,139,0.10)", color: "#64748B", border: "1px solid rgba(100,116,139,0.18)" },
+    description: course.Description || course.description || "",
   };
 }
 
@@ -177,7 +135,7 @@ export default function CourseCard({
   const data = normalizeCourse(course);
   const statusChip = isMyCourses
     ? getMyCoursesStatusChip(data.progressPercentage)
-    : getStatusChipStyle(data.isEnrolled, data.progressPercentage);
+    : getEnrollmentStatusChip(data.isEnrolled, data.progressPercentage);
   const levelStyle = resolveLevelChipSx({ displayName: data.level });
   const categoryStyle = resolveCategoryChipSx({ displayName: data.category }, { withBorder: false });
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
@@ -257,42 +215,51 @@ export default function CourseCard({
             cursor: "pointer",
             transition: `color 0.18s ${theme.ios18?.transition}`,
             display: "-webkit-box",
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 1,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
-            minHeight: "2.7em",
+            textOverflow: "ellipsis",
             "&:hover": { color: "primary.main" },
           }}
         >
           {data.courseName}
         </Typography>
 
+        {/* Mô tả ngắn */}
+        <Typography
+          sx={{
+            fontSize: 12.5,
+            color: MUTED,
+            lineHeight: 1.4,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            minHeight: "2.8em",
+            mt: -0.5,
+          }}
+        >
+          {data.description || "Chưa có mô tả ngắn."}
+        </Typography>
+
         {/* Đánh giá & Học viên */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.25, minHeight: 20 }}>
-          {data.rating != null && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                <StarRoundedIcon sx={{ fontSize: 15, color: "#F59E0B" }} />
-                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1 }}>
-                  {Number(data.rating).toFixed(1)}
-                </Typography>
-                {data.reviewCount > 0 && (
-                  <Typography sx={{ fontSize: 11.5, color: MUTED, lineHeight: 1 }}>
-                    ({data.reviewCount.toLocaleString("vi-VN")})
-                  </Typography>
-                )}
-              </Box>
-            )}
-            {data.rating != null && data.studentCount > 0 && (
-              <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "#CBD5E1", flexShrink: 0 }} />
-            )}
-            {data.studentCount > 0 && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
-                <PeopleOutlineRoundedIcon sx={{ fontSize: 15, color: "#94A3B8" }} />
-                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1 }}>
-                  {formatStudentCount(data.studentCount)} học viên
-                </Typography>
-              </Box>
-            )}
+        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.25 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+            <StarRoundedIcon sx={{ fontSize: 15, color: "#F59E0B" }} />
+            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1 }}>
+              {Number(data.rating || 0).toFixed(1)}
+            </Typography>
+          </Box>
+          
+          <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "#CBD5E1", flexShrink: 0 }} />
+          
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+            <PeopleOutlineRoundedIcon sx={{ fontSize: 15, color: "#94A3B8" }} />
+            <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1 }}>
+              {formatStudentCount(data.studentCount || 0)} học viên
+            </Typography>
+          </Box>
         </Box>
 
         {/* Trình độ & Danh mục */}

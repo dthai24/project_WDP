@@ -36,6 +36,7 @@ import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import PeopleOutlineRoundedIcon from "@mui/icons-material/PeopleOutlineRounded";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import ArrowForwardIosSharpIcon from "@mui/icons-material/ArrowForwardIosSharp";
 import AppButton from "@/shared/ui/AppButton";
 import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
@@ -44,6 +45,8 @@ import CourseCommentsSection from "@/features/courses/components/CourseCommentsS
 import { buildCourseDetailPath, buildCourseListPath } from "@/features/courses/utils/courseListParams";
 import { enrollCourseApi } from '@/features/auth/services/authService';
 import { toast } from "@/shared/ui/Toast";
+import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
+import { getEnrollmentStatusChip } from "@/shared/utils/statusChipUtils";
 
 const PRIMARY = "#0891B2";
 const PRIMARY_DARK = "#0E7490";
@@ -56,32 +59,14 @@ const STICKY_TOP = 76;
 
 
 
-/* ─── Helpers (Giữ nguyên 100%) ─── */
-
-function getStatusChip(isEnrolled, progress) {
-  if (!isEnrolled) return { label: "Chưa đăng ký", sx: { bgcolor: "rgba(100,116,139,0.10)", color: MUTED, border: "1px solid rgba(100,116,139,0.18)" } };
-  if (progress >= 100) return { label: "Hoàn thành", sx: { bgcolor: "rgba(4,120,87,0.12)", color: "#047857", border: "1px solid rgba(4,120,87,0.24)" } };
-  if (progress > 0) return { label: "Đang học", sx: { bgcolor: "rgba(8,145,178,0.12)", color: PRIMARY, border: "1px solid rgba(8,145,178,0.20)" } };
-  return { label: "Đã đăng ký", sx: { bgcolor: "rgba(22,163,74,0.12)", color: "#16A34A", border: "1px solid rgba(22,163,74,0.20)" } };
-}
-
+/* ─── Helpers (Đã chuyển getStatusChip vào statusChipUtils) ─── */
+//Thẻ Trình độ
 function getLevelChipSx(level = "") {
-  const l = level.toLowerCase();
-  if (l.includes("cơ bản")) return { bgcolor: "rgba(56,189,248,0.12)", color: "#0284C7", border: "1px solid rgba(56,189,248,0.22)" };
-  if (l.includes("trung cấp")) return { bgcolor: "rgba(245,158,11,0.12)", color: "#D97706", border: "1px solid rgba(245,158,11,0.22)" };
-  if (l.includes("nâng cao")) return { bgcolor: "rgba(234,88,12,0.12)", color: ACCENT, border: "1px solid rgba(234,88,12,0.22)" };
-  return { bgcolor: "#F1F5F9", color: MUTED };
+  return resolveLevelChipSx({ displayName: level });
 }
-
+//thẻ cate
 function getCategoryChipSx(category = "") {
-  const map = {
-    "Giao tiếp": { bgcolor: "rgba(37,99,235,0.10)", color: "#2563EB" },
-    IELTS: { bgcolor: "rgba(124,58,237,0.10)", color: "#7C3AED" },
-    TOEIC: { bgcolor: "rgba(14,116,144,0.10)", color: PRIMARY_DARK },
-    "Ngữ pháp": { bgcolor: "rgba(15,23,42,0.08)", color: "#334155" },
-    "Phát âm": { bgcolor: "rgba(236,72,153,0.10)", color: "#DB2777" },
-  };
-  return map[category] ?? { bgcolor: "#F1F5F9", color: MUTED };
+  return resolveCategoryChipSx({ displayName: category });
 }
 
 function formatStudentCount(count) {
@@ -162,7 +147,7 @@ function CourseProgressBlock({ progress, sx }) {
 function CourseIntro({ course, isEnrolled }) {
   const [searchParams] = useSearchParams();
   const coursesListPath = buildCourseListPath(searchParams);
-  const statusChip = getStatusChip(isEnrolled, course.progress);
+  const statusChip = getEnrollmentStatusChip(isEnrolled, course.progress);
 
   return (
     <Box>
@@ -432,6 +417,8 @@ export default function CourseDetailPage() {
 
   // 2. Tự động gọi API lấy data từ Database khi mở trang
   useEffect(() => {
+    // Luôn cuộn lên đầu trang khi mới vào trang chi tiết
+    window.scrollTo(0, 0);
     const fetchCourseData = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -454,6 +441,22 @@ export default function CourseDetailPage() {
               courseImage = `http://localhost:5000${val.startsWith('/') ? val : '/' + val}`;
             }
           }
+          // 2. Đếm số Học liệu (Material) cơ bản dễ hiểu
+          let totalMat = 0;
+          if (dbData.Paths) {
+            for (let i = 0; i < dbData.Paths.length; i++) {
+              let path = dbData.Paths[i];
+              if (path.Nodes) {
+                for (let j = 0; j < path.Nodes.length; j++) {
+                  let node = path.Nodes[j];
+                  if (node.Materials) {
+                    totalMat += node.Materials.length;
+                  }
+                }
+              }
+            }
+          }
+
           // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
           const mappedCourse = {
             id: dbData.CourseId,
@@ -470,13 +473,13 @@ export default function CourseDetailPage() {
             progress: dbData.progress,
             lessonCount: dbData.TotalLessons || 0,
             stageCount: dbData.Paths ? dbData.Paths.length : 0,
-            materialCount: dbData.TotalMaterials || 0,
+            materialCount: dbData.TotalMaterials ?? dbData.totalMaterials ?? totalMat,
             updatedAt: dbData.UpdatedAt
               ? new Date(dbData.UpdatedAt).toLocaleDateString("vi-VN")
               : "—",
-            rating: 4.8,
-            reviewCount: 154,
-            studentCount: 2000,
+            rating: dbData.Rating ?? dbData.rating ?? null,
+            reviewCount: dbData.ReviewCount ?? dbData.reviewCount ?? 0,
+            studentCount: dbData.StudentCount ?? dbData.studentCount ?? 0,
             isFree: true,
             prerequisites: [],
             modules: (dbData.Paths || []).map((path) => ({
@@ -562,7 +565,7 @@ export default function CourseDetailPage() {
           </Box>
 
           <Box sx={{ mt: 5 }}>
-            <CourseCommentsSection courseId={course.id} isEnrolled={course.isEnrolled} />
+            <CourseCommentsSection courseId={course.id} isEnrolled={course.isEnrolled} progress={course.progress} />
           </Box>
         </Box>
 

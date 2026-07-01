@@ -7,40 +7,105 @@ const getCourseComments = async (courseId) => {
         SELECT cc.CommentId,
                cc.CourseId,
                cc.UserId,
-               cc.Rating,
+               COALESCE(cc.Rating, (SELECT TOP 1 Rating FROM Course_Comments sub WHERE sub.UserId = cc.UserId AND sub.CourseId = cc.CourseId AND sub.Rating IS NOT NULL ORDER BY CreatedAt DESC)) AS Rating,
                cc.Content,
                cc.CreatedAt,
-               cc.ReplyContent,
-               cc.ReplyAt,
-               cc.ReplyByUserId,
+               cc.ParentCommentId,
+               cc.EditCount,
                u.FullName,
                u.AvatarUrl,
-               ru.FullName AS ReplyByName,
                CASE WHEN cc.UserId = c.InstructorId THEN 1 ELSE 0 END AS IsInstructor
         FROM Course_Comments cc
         INNER JOIN Users u ON u.UserId = cc.UserId
         INNER JOIN Courses c ON c.CourseId = cc.CourseId
-        LEFT JOIN Users ru ON ru.UserId = cc.ReplyByUserId
         WHERE cc.CourseId = @courseId
         ORDER BY cc.CreatedAt DESC
     `);
     return result.recordset;
 };
 
-const createCourseComment = async ({ courseId, userId, rating, content }) => {
-    const request = new sql.Request();
-    request.input('courseId', sql.Int, Number(courseId));
-    request.input('userId', sql.Int, Number(userId));
-    request.input('rating', sql.TinyInt, rating ?? null);
-    request.input('content', sql.NVarChar(sql.MAX), String(content).trim());
+const createCourseComment = async ({ courseId, userId, rating, content, parentCommentId = null }) => {
+    let insertedId;
 
-    const result = await request.query(`
-        INSERT INTO Course_Comments (CourseId, UserId, Rating, Content, CreatedAt)
-        OUTPUT INSERTED.CommentId, INSERTED.CourseId, INSERTED.UserId, INSERTED.Rating, INSERTED.Content, INSERTED.CreatedAt
-        VALUES (@courseId, @userId, @rating, @content, GETDATE())
+    if (parentCommentId === null) {
+        // KIỂM TRA ĐÁNH GIÁ 1 LẦN: Nếu là bình luận gốc CÓ ĐÁNH GIÁ SAO
+        // thì kiểm tra xem học viên đã từng đánh giá (có sao) khóa này chưa.
+        const checkReq = new sql.Request();
+        checkReq.input('courseId', sql.Int, Number(courseId));
+        checkReq.input('userId', sql.Int, Number(userId));
+
+        const checkResult = await checkReq.query(`
+            SELECT CommentId, EditCount FROM Course_Comments 
+WHERE CourseId = @courseId AND UserId = @userId AND ParentCommentId IS NULL
+        `);
+
+        if (checkResult.recordset.length > 0) {
+            // NẾU ĐÃ CÓ: Kiểm tra số lần sửa
+            if (checkResult.recordset[0].EditCount >= 1) {
+                throw new Error('Bạn chỉ được sửa đánh giá 1 lần duy nhất!');
+            }
+
+            // Nếu chưa sửa thì tiến hành CẬP NHẬT lại nội dung, số sao, và cộng EditCount
+            insertedId = checkResult.recordset[0].CommentId;
+            const updateReq = new sql.Request();
+            updateReq.input('commentId', sql.Int, insertedId);
+            updateReq.input('rating', sql.TinyInt, rating ?? null);
+            updateReq.input('content', sql.NVarChar(sql.MAX), String(content).trim());
+
+            await updateReq.query(`
+                UPDATE Course_Comments
+                SET Rating = @rating, Content = @content, CreatedAt = GETUTCDATE(), EditCount = EditCount + 1
+                WHERE CommentId = @commentId
+            `);
+        }
+    }
+
+    if (!insertedId) {
+        // THÊM MỚI: Dành cho Câu Trả Lời (hoặc Đánh giá gốc nếu chưa từng đánh giá)
+        const request = new sql.Request();
+        request.input('courseId', sql.Int, Number(courseId));
+        request.input('userId', sql.Int, Number(userId));
+        request.input('rating', sql.TinyInt, rating ?? null);
+        request.input('content', sql.NVarChar(sql.MAX), String(content).trim());
+        request.input('parentCommentId', sql.Int, parentCommentId);
+
+        // SỬA UTC: Dùng GETUTCDATE() thay vì GETDATE()
+        const result = await request.query(`
+            INSERT INTO Course_Comments (CourseId, UserId, Rating, Content, CreatedAt, ParentCommentId)
+            OUTPUT INSERTED.CommentId
+            VALUES (@courseId, @userId, @rating, @content, GETUTCDATE(), @parentCommentId)
+        `);
+        insertedId = result.recordset[0].CommentId;
+    }
+
+    // Lấy lại dòng dữ liệu vừa Thêm/Sửa để gởi trả về cho Frontend
+    const fetchReq = new sql.Request();
+    fetchReq.input('commentId', sql.Int, insertedId);
+
+    const fetchResult = await fetchReq.query(`
+        SELECT cc.CommentId, cc.CourseId, cc.UserId, 
+               COALESCE(cc.Rating, (SELECT TOP 1 Rating FROM Course_Comments sub WHERE sub.UserId = cc.UserId AND sub.CourseId = cc.CourseId AND sub.Rating IS NOT NULL ORDER BY CreatedAt DESC)) AS Rating, 
+               cc.Content, cc.CreatedAt, cc.ParentCommentId, cc.EditCount
+        FROM Course_Comments cc
+        WHERE cc.CommentId = @commentId
     `);
 
-    const row = result.recordset[0];
+    // TÍNH TOÁN LẠI ĐIỂM TRUNG BÌNH CỦA KHÓA HỌC
+    const avgReq = new sql.Request();
+    avgReq.input('courseId', sql.Int, Number(courseId));
+    await avgReq.query(`
+        UPDATE Courses
+        SET Rating = (
+            SELECT ISNULL(ROUND(AVG(CAST(Rating AS FLOAT)), 1), 0)
+            FROM Course_Comments
+            WHERE CourseId = @courseId AND ParentCommentId IS NULL AND Rating IS NOT NULL
+        )
+        WHERE CourseId = @courseId
+    `);
+
+    const row = fetchResult.recordset[0];
+
+    // Lấy thêm thông tin User (Tên, Avatar)
     const userReq = new sql.Request();
     userReq.input('userId', sql.Int, Number(userId));
     userReq.input('courseId', sql.Int, Number(courseId));
@@ -51,62 +116,10 @@ const createCourseComment = async ({ courseId, userId, rating, content }) => {
         INNER JOIN Courses c ON c.CourseId = @courseId
         WHERE u.UserId = @userId
     `);
-
     return {
         ...row,
         FullName: userResult.recordset[0]?.FullName ?? 'Học viên',
         AvatarUrl: userResult.recordset[0]?.AvatarUrl ?? null,
-        IsInstructor: userResult.recordset[0]?.IsInstructor ?? 0,
-    };
-};
-
-const replyToCourseComment = async ({ courseId, commentId, mentorUserId, replyContent }) => {
-    const request = new sql.Request();
-    request.input('courseId', sql.Int, Number(courseId));
-    request.input('commentId', sql.Int, Number(commentId));
-    request.input('mentorUserId', sql.Int, Number(mentorUserId));
-    request.input('replyContent', sql.NVarChar(sql.MAX), String(replyContent).trim());
-
-    const result = await request.query(`
-        UPDATE cc
-        SET ReplyContent = @replyContent,
-            ReplyAt = GETDATE(),
-            ReplyByUserId = @mentorUserId
-        OUTPUT INSERTED.CommentId,
-               INSERTED.CourseId,
-               INSERTED.UserId,
-               INSERTED.Rating,
-               INSERTED.Content,
-               INSERTED.CreatedAt,
-               INSERTED.ReplyContent,
-               INSERTED.ReplyAt,
-               INSERTED.ReplyByUserId
-        FROM Course_Comments cc
-        WHERE cc.CommentId = @commentId
-          AND cc.CourseId = @courseId
-    `);
-
-    const row = result.recordset[0];
-    if (!row) return null;
-
-    const userReq = new sql.Request();
-    userReq.input('userId', sql.Int, Number(row.UserId));
-    userReq.input('mentorUserId', sql.Int, Number(mentorUserId));
-    userReq.input('courseId', sql.Int, Number(courseId));
-    const userResult = await userReq.query(`
-        SELECT u.FullName, u.AvatarUrl, m.FullName AS ReplyByName,
-               CASE WHEN u.UserId = c.InstructorId THEN 1 ELSE 0 END AS IsInstructor
-        FROM Users u
-        CROSS JOIN Users m
-        INNER JOIN Courses c ON c.CourseId = @courseId
-        WHERE u.UserId = @userId AND m.UserId = @mentorUserId
-    `);
-
-    return {
-        ...row,
-        FullName: userResult.recordset[0]?.FullName ?? 'Học viên',
-        AvatarUrl: userResult.recordset[0]?.AvatarUrl ?? null,
-        ReplyByName: userResult.recordset[0]?.ReplyByName ?? 'Mentor',
         IsInstructor: userResult.recordset[0]?.IsInstructor ?? 0,
     };
 };
@@ -114,5 +127,4 @@ const replyToCourseComment = async ({ courseId, commentId, mentorUserId, replyCo
 module.exports = {
     getCourseComments,
     createCourseComment,
-    replyToCourseComment,
 };

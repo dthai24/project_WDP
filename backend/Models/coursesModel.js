@@ -42,7 +42,7 @@ const getFeaturedCourses = async () => {
       c.CourseId, c.CourseName, c.Description,
       c.Thumbnail, c.Rating, c.TotalLessons,
       cat.DisplayName, lv.DisplayName, u.FullName
-    ORDER BY TotalStudents DESC
+      ORDER BY TotalStudents DESC, c.Rating DESC, c.CourseName ASC
   `);
   return result.recordset;
 };
@@ -129,6 +129,8 @@ const getStudentCoursesList = async (filters, userId) => {
   // Truy vấn dữ liệu chi tiết
   let selectQuery = `
         SELECT crs.CourseId, crs.CourseName, crs.Description, crs.CategoryId, crs.LevelId,
+               crs.Rating, 
+               (SELECT COUNT(*) FROM User_Courses uc2 WHERE uc2.CourseId = crs.CourseId) AS StudentCount,
                lv.LevelName as levelName, lv.DisplayName as LevelDisplayName,
                crs.Thumbnail, crs.CreatedAt, crs.UpdatedAt,
                cate.DisplayName as CategoryDisplayName, cate.CategoryName as CategoryName,
@@ -251,11 +253,17 @@ Users.FullName as InStructorName,
                crs.CourseName, 
                crs.Description,
                crs.Rating,
+               (SELECT COUNT(DISTINCT cc.UserId) FROM Course_Comments cc WHERE cc.CourseId = crs.CourseId AND cc.Rating IS NOT NULL) AS ReviewCount,
                (SELECT COUNT(*) FROM User_Courses uc WHERE uc.CourseId = crs.CourseId) AS StudentCount,
                crs.CreatedAt as CourseCreateAt,
-			   crs.UpdatedAt as CourseUpdateAt,
+			        crs.UpdatedAt,
                crs.Thumbnail,
                crs.TotalLessons,
+                (SELECT COUNT(nm.MaterialId) 
+                FROM Paths p 
+                JOIN Path_Nodes pn ON p.PathId = pn.PathId 
+                JOIN Node_Materials nm ON pn.NodeId = nm.NodeId 
+                WHERE p.CourseId = crs.CourseId) AS TotalMaterials, 
                Users.FullName,
                Levels.LevelId,
                Levels.LevelName,
@@ -288,8 +296,8 @@ const getContinueCourse = async (userId) => {
       FROM User_Courses uc
       INNER JOIN Courses c
           ON c.CourseId = uc.CourseId
-      WHERE uc.UserId = @UserId
-      ORDER BY uc.ProgressPercentage DESC`);
+        WHERE uc.UserId = @UserId AND uc.ProgressPercentage < 100
+        ORDER BY uc.EnrollmentDate DESC`);
   return await buildCourse(result.recordset);
 };
 
@@ -299,7 +307,11 @@ const getMentorCourses = async (userId) => {
 
   const result = await request.query(`
         Select crs.CourseId, crs.CourseName, crs.TotalLessons as TotalLessons, crs.Description, crs.CategoryId, crs.LevelId,
-               crs.Rating,
+               -- 1. Tính điểm Đánh giá Trung bình (Rating)
+              (SELECT ISNULL(ROUND(AVG(CAST(cc.Rating AS FLOAT)), 1), 0) FROM Course_Comments cc WHERE cc.CourseId = crs.CourseId AND cc.Rating IS NOT NULL) AS Rating,
+               -- 2. Đếm tổng số lượt đánh giá (ReviewCount) theo số người
+              (SELECT COUNT(DISTINCT cc.UserId) FROM Course_Comments cc WHERE cc.CourseId = crs.CourseId AND cc.Rating IS NOT NULL) AS ReviewCount,
+               -- 3. Đếm số Học viên đang học (StudentCount)
                (SELECT COUNT(*) FROM User_Courses uc WHERE uc.CourseId = crs.CourseId) AS StudentCount,
                Levels.LevelName as levelName, Levels.Displayname as LevelDisplayName, Levels.SortOrder as LevelSortOrder,
                crs.Thumbnail, crs.IsPublished, crs.CreatedAt, crs.UpdatedAt,
@@ -322,6 +334,8 @@ const getStudentCourses = async (userId, filterStatus = "all") => {
 
   let query = `
         SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail,
+               crs.Rating, (SELECT COUNT(*) FROM User_Courses uc2 WHERE uc2.CourseId = crs.CourseId) AS StudentCount,
+               crs.TotalLessons,
                uc.ProgressPercentage, uc.EnrollmentDate
         FROM User_Courses uc
         JOIN Courses crs ON uc.CourseId = crs.CourseId
@@ -349,6 +363,8 @@ const getMyEnrolledCourses = async (userId, filterStatus = "all") => {
 
   let query = `
       SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail, 
+       crs.Rating, (SELECT COUNT(*) FROM User_Courses uc2 WHERE uc2.CourseId = crs.CourseId) AS StudentCount,
+       crs.TotalLessons,
        uc.ProgressPercentage as progress, uc.EnrollmentDate,
        cate.CategoryName, cate.DisplayName as CategoryDisplayName,
        lv.LevelName as levelName, lv.DisplayName as LevelDisplayName

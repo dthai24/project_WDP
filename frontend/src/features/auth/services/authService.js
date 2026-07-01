@@ -12,12 +12,19 @@ const apiAuthFetch = async (endpoint, body) => {
     body: JSON.stringify(body),
   });
   const data = await response.json();
-  return { ok: data.success, status: data.status, data: data.user || data };
+  return { ok: data.success, status: data.status, data: data.user || data, token: data.token };
+};
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
 // Dùng cho API lấy dữ liệu thông thường (GET)
 const apiGet = async (endpoint) => {
-  const response = await fetch(`${API_BASE}${endpoint}`);
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    headers: { ...getAuthHeaders() }
+  });
   const data = await response.json();
   return { ok: response.ok, status: response.status, data };
 };
@@ -26,7 +33,7 @@ const apiGet = async (endpoint) => {
 const apiPost = async (endpoint, body) => {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(body),
   });
   const data = await response.json();
@@ -38,7 +45,7 @@ const apiPost = async (endpoint, body) => {
 // ==========================================
 
 export const getCoursesApi = (userId) => {
-  const headers = userId ? { 'x-user-id': String(userId) } : {};
+  const headers = userId ? { 'x-user-id': String(userId), ...getAuthHeaders() } : { ...getAuthHeaders() };
   return fetch(`${API_BASE}/courses`, { headers })
     .then((res) => res.json())
     .then((data) => ({ ok: true, data }))
