@@ -32,9 +32,31 @@ export default function Header({ logoTo, profilePath }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: "📝 AI đã chấm bài viết luận của bạn!", desc: "Bài viết Node 2 thuộc lộ trình \"Ôn thi TOEIC 2026\" đạt 85/100 điểm.", time: "5 phút trước", read: false },
+    { id: 2, text: "🔥 Đạt chuỗi học tập (Streak)!", desc: "Chúc mừng bạn đã duy trì học liên tiếp 5 ngày.", time: "2 giờ trước", read: false },
+    { id: 3, text: "📚 Khóa học có chương mới", desc: "Khóa học \"TOEIC Nâng Cao\" vừa cập nhật Chương 3.", time: "1 ngày trước", read: false }
+  ]);
+  const [notiTab, setNotiTab] = useState("all");
   const [scrolled, setScrolled] = useState(false);
   const profileRef = useRef(null);
   const notiRef = useRef(null);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleNotiClick = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const filteredNotis = notifications.filter(n => {
+    if (notiTab === "unread") return !n.read;
+    if (notiTab === "read") return n.read;
+    return true;
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -133,7 +155,7 @@ export default function Header({ logoTo, profilePath }) {
             {user && isStudent(user) && (
               <StreakBadge userId={user.userId || user.id || user.UserId} />
             )}
-            {user && (
+             {user && (
               <div className="relative mr-1" ref={notiRef}>
                 <button
                   type="button"
@@ -141,33 +163,82 @@ export default function Header({ logoTo, profilePath }) {
                   className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-50 relative transition-colors text-slate-500 hover:text-slate-800"
                 >
                   <Bell size={20} weight="regular" />
-                  <span className="absolute top-[4px] right-[4px] min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-extrabold flex items-center justify-center px-[3px]">
-                    3
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-[4px] right-[4px] min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-extrabold flex items-center justify-center px-[3px]">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
 
                 {notiOpen && (
                   <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-100 shadow-elevated py-2.5 z-50 font-sans">
-                    <div className="px-4 py-1.5 border-b border-slate-50 mb-2 flex justify-between items-center">
-                      <span className="text-[13px] font-extrabold text-slate-800">Thông báo mới</span>
-                      <span className="text-[10px] text-cyan-600 font-bold cursor-pointer hover:underline">Đánh dấu đã đọc</span>
+                    <div className="px-4 py-1.5 border-b border-slate-50 mb-1 flex justify-between items-center">
+                      <span className="text-[13px] font-extrabold text-slate-800">Thông báo</span>
+                      <button
+                        type="button"
+                        onClick={handleMarkAllAsRead}
+                        className="text-[10px] text-cyan-600 font-bold hover:underline cursor-pointer bg-transparent border-0"
+                      >
+                        Đọc tất cả
+                      </button>
                     </div>
+
+                    {/* Tabs */}
+                    <div className="flex gap-4 px-4 py-1.5 border-b border-slate-50 text-[11px] font-bold text-slate-500">
+                      <button
+                        type="button"
+                        onClick={() => setNotiTab("all")}
+                        className={`pb-1 border-b-2 transition-all ${
+                          notiTab === "all" ? "text-cyan-600 border-cyan-600" : "border-transparent text-slate-400"
+                        }`}
+                      >
+                        Tất cả
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNotiTab("unread")}
+                        className={`pb-1 border-b-2 transition-all ${
+                          notiTab === "unread" ? "text-cyan-600 border-cyan-600" : "border-transparent text-slate-400"
+                        }`}
+                      >
+                        Chưa đọc ({notifications.filter(n => !n.read).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNotiTab("read")}
+                        className={`pb-1 border-b-2 transition-all ${
+                          notiTab === "read" ? "text-cyan-600 border-cyan-600" : "border-transparent text-slate-400"
+                        }`}
+                      >
+                        Đã đọc
+                      </button>
+                    </div>
+
                     <div className="max-h-64 overflow-y-auto divide-y divide-slate-50">
-                      <div className="px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer">
-                        <p className="text-[11.5px] font-bold text-slate-800 leading-snug">📝 AI đã chấm bài viết luận của bạn!</p>
-                        <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">Bài viết Node 2 thuộc lộ trình "Ôn thi TOEIC 2026" đạt 85/100 điểm.</p>
-                        <span className="text-[9px] text-slate-400 block mt-1">5 phút trước</span>
-                      </div>
-                      <div className="px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer">
-                        <p className="text-[11.5px] font-bold text-slate-800 leading-snug">🔥 Đạt chuỗi học tập (Streak)!</p>
-                        <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">Chúc mừng bạn đã duy trì học liên tiếp 5 ngày.</p>
-                        <span className="text-[9px] text-slate-400 block mt-1">2 giờ trước</span>
-                      </div>
-                      <div className="px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer">
-                        <p className="text-[11.5px] font-bold text-slate-800 leading-snug">📚 Khóa học có chương mới</p>
-                        <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">Khóa học "TOEIC Nâng Cao" vừa cập nhật Chương 3.</p>
-                        <span className="text-[9px] text-slate-400 block mt-1">1 ngày trước</span>
-                      </div>
+                      {filteredNotis.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-xs text-slate-400">
+                          Không có thông báo nào.
+                        </div>
+                      ) : (
+                        filteredNotis.map((n) => (
+                          <div
+                            key={n.id}
+                            onClick={() => handleNotiClick(n.id)}
+                            className={`px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer relative ${
+                              !n.read ? "bg-cyan-50/10" : ""
+                            }`}
+                          >
+                            {!n.read && (
+                              <span className="absolute left-2 top-4 w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                            )}
+                            <p className={`text-[11.5px] leading-snug ${!n.read ? "font-bold text-slate-800" : "text-slate-500"}`}>
+                              {n.text}
+                            </p>
+                            <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">{n.desc}</p>
+                            <span className="text-[9px] text-slate-400 block mt-1">{n.time}</span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
