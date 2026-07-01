@@ -103,7 +103,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const { ok, data } = await loginApi(form.email.trim(), form.password);
+      const { ok, data, token } = await loginApi(form.email.trim(), form.password);
       if (ok) {
         if (remember) {
           localStorage.setItem(REMEMBER_KEY, form.email.trim());
@@ -111,7 +111,7 @@ export default function LoginPage() {
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
-        login(data);
+        login(data, token);
         toast.success('Đăng nhập thành công!');
         navigate(getPostLoginPath(data, { isFirstLogin: data.isFirstLogin }));
       } else {
