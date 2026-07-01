@@ -250,9 +250,6 @@ export default function CourseCard({
             <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1 }}>
               {Number(data.rating || 0).toFixed(1)}
             </Typography>
-            <Typography sx={{ fontSize: 11.5, color: MUTED, lineHeight: 1 }}>
-              ({(data.reviewCount || 0).toLocaleString("vi-VN")})
-            </Typography>
           </Box>
           
           <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "#CBD5E1", flexShrink: 0 }} />

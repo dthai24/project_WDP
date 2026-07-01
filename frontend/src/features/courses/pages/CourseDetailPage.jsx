@@ -417,6 +417,8 @@ export default function CourseDetailPage() {
 
   // 2. Tự động gọi API lấy data từ Database khi mở trang
   useEffect(() => {
+    // Luôn cuộn lên đầu trang khi mới vào trang chi tiết
+    window.scrollTo(0, 0);
     const fetchCourseData = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');

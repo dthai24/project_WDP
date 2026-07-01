@@ -27,7 +27,7 @@ const getCourseComments = async (courseId) => {
 const createCourseComment = async ({ courseId, userId, rating, content, parentCommentId = null }) => {
     let insertedId;
 
-    if (parentCommentId === null && rating !== null) {
+    if (parentCommentId === null) {
         // KIỂM TRA ĐÁNH GIÁ 1 LẦN: Nếu là bình luận gốc CÓ ĐÁNH GIÁ SAO
         // thì kiểm tra xem học viên đã từng đánh giá (có sao) khóa này chưa.
         const checkReq = new sql.Request();
@@ -36,7 +36,7 @@ const createCourseComment = async ({ courseId, userId, rating, content, parentCo
 
         const checkResult = await checkReq.query(`
             SELECT CommentId, EditCount FROM Course_Comments 
-            WHERE CourseId = @courseId AND UserId = @userId AND ParentCommentId IS NULL AND Rating IS NOT NULL
+WHERE CourseId = @courseId AND UserId = @userId AND ParentCommentId IS NULL
         `);
 
         if (checkResult.recordset.length > 0) {
@@ -51,7 +51,7 @@ const createCourseComment = async ({ courseId, userId, rating, content, parentCo
             updateReq.input('commentId', sql.Int, insertedId);
             updateReq.input('rating', sql.TinyInt, rating ?? null);
             updateReq.input('content', sql.NVarChar(sql.MAX), String(content).trim());
-            
+
             await updateReq.query(`
                 UPDATE Course_Comments
                 SET Rating = @rating, Content = @content, CreatedAt = GETUTCDATE(), EditCount = EditCount + 1
