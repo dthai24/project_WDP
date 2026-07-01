@@ -1,5 +1,6 @@
 const { sql } = require('../config/db');
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 
 const ROLE_STUDENT = 'Student';
 
@@ -146,16 +147,25 @@ const login = async (req, res) => {
       roles = [ROLE_STUDENT];
     }
 
+    // Tạo JWT Token
+    const jwtSecret = process.env.JWT_SECRET || 'star_learning_secret';
+    const token = jwt.sign(
+      { userId: user.UserId, email: user.Email, roles },
+      jwtSecret,
+      { expiresIn: '7d' }
+    );
+
     return res.json({
       success: true,
       message: 'Đăng nhập thành công!',
+      token,
       user: {
         userId: user.UserId,
         fullName: user.FullName,
         email: user.Email,
         phone: user.Phone,
         isFirstLogin: user.IsFirstLogin === true || user.IsFirstLogin === 1,
-        roles,  // [] nếu Student chưa được gán role, hoặc ['Admin'] / ['Mentor']
+        roles,
       },
     });
   } catch (err) {

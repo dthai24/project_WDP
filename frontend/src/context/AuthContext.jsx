@@ -22,15 +22,19 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Hàm Đăng nhập: Cất vào bộ nhớ React + Cất vào két sắt
-  const login = (userData) => {
+  const login = (userData, token) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    if (token) {
+      localStorage.setItem('token', token);
+    }
   };
 
   // Hàm Đăng xuất: Quét sạch sành sanh
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   return (
