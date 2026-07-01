@@ -42,7 +42,7 @@ const getFeaturedCourses = async () => {
       c.CourseId, c.CourseName, c.Description,
       c.Thumbnail, c.Rating, c.TotalLessons,
       cat.DisplayName, lv.DisplayName, u.FullName
-    ORDER BY TotalStudents DESC
+      ORDER BY TotalStudents DESC, c.Rating DESC, c.CourseName ASC
   `);
   return result.recordset;
 };
@@ -296,8 +296,8 @@ const getContinueCourse = async (userId) => {
       FROM User_Courses uc
       INNER JOIN Courses c
           ON c.CourseId = uc.CourseId
-      WHERE uc.UserId = @UserId
-      ORDER BY uc.ProgressPercentage DESC`);
+        WHERE uc.UserId = @UserId AND uc.ProgressPercentage < 100
+        ORDER BY uc.EnrollmentDate DESC`);
   return await buildCourse(result.recordset);
 };
 

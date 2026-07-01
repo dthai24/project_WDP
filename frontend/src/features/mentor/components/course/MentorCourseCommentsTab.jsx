@@ -405,14 +405,11 @@ export default function MentorCourseCommentsTab({ courseId }) {
   return (
     <Box sx={CREATE_CARD_SX}>
       <Box sx={{ pb: 2, mb: 0.5, borderBottom: `1px solid ${DIVIDER}` }}>
-        <SectionTitle sx={{ mb: 0.75 }}>Bình luận</SectionTitle>
+        <SectionTitle sx={{ mb: 0.75 }}>Đánh giá</SectionTitle>
         <Typography sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
           {loading ? 'Đang tải...' : `${comments.length} tương tác`}
         </Typography>
       </Box>
-
-      {/* FORM NHẬP Ở TRÊN CÙNG */}
-      <MentorCommentComposeForm submitting={postingComment} onSubmit={handleSubmitComment} />
 
       {loading ? (
         <Typography sx={{ py: 3, fontSize: 14, color: MUTED, textAlign: 'center' }}>
