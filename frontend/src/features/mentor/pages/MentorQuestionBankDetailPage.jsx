@@ -29,6 +29,7 @@ import {
   getMockCourseFromQuestionBank,
 } from '@/features/mentor/data/mentorQuestionBankMock';
 
+//________ChapTer Card__________
 function PathChapterCard({ path, index, onOpen }) {
   const theme = useTheme();
   const label = path.displayLabel || path.PathName || `Chương #${path.PathId}`;
@@ -103,7 +104,8 @@ function PathChapterCard({ path, index, onOpen }) {
     </Box>
   );
 }
-
+//________________________________________________________
+//________________________________________________________
 export default function MentorQuestionBankDetailPage() {
   const navigate = useNavigate();
   const { questionBankId } = useParams();
@@ -216,176 +218,81 @@ export default function MentorQuestionBankDetailPage() {
     </AppButton>
   );
 
-  if (isPathListMode) {
-    const title = course?.CourseName ?? bank.courseTitle;
-    const totalQuestions = bankPaths.reduce(
-      (sum, path) => sum + (Number(path.QuestionCount) || 0),
-      0,
-    );
-
-    return (
-      <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
-        <Box sx={{ mb: 2 }}>
-          <AppButton
-            variant="text"
-            startIcon={<ArrowBackRoundedIcon />}
-            onClick={() => navigate('/mentor/question-banks')}
-            sx={{
-              height: 36,
-              px: 0.5,
-              color: MUTED,
-              fontWeight: 600,
-              fontSize: 13,
-              '&:hover': { bgcolor: 'transparent', color: PRIMARY },
-            }}
-          >
-            Quay lại danh sách
-          </AppButton>
-        </Box>
-
-        <Box
+  return (
+    <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
+      <Box sx={{ mb: 2 }}>
+        <AppButton
+          variant="text"
+          startIcon={<ArrowBackRoundedIcon />}
+          onClick={() => navigate('/mentor/question-banks')}
           sx={{
-            mb: 2.5,
-            p: { xs: 2, sm: 2.5 },
-            borderRadius: '22px',
-            background: `linear-gradient(135deg, ${alpha(PRIMARY, 0.09)} 0%, #fff 70%)`,
-            border: `1px solid ${alpha(PRIMARY, 0.14)}`,
+            height: 36,
+            px: 0.5,
+            color: MUTED,
+            fontWeight: 600,
+            fontSize: 13,
+            '&:hover': { bgcolor: 'transparent', color: PRIMARY },
           }}
         >
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: PRIMARY, mb: 0.75 }}>
-            NGÂN HÀNG CÂU HỎI
-          </Typography>
-          <Typography sx={{ fontSize: { xs: 22, sm: 26 }, fontWeight: 800, color: TEXT, mb: 0.5 }}>
-            {title}
-          </Typography>
-          <Typography sx={{ fontSize: 14, color: MUTED }}>
-            {courseCategory ? `${courseCategory} · ` : ''}
-            {bankPaths.length} chương · {totalQuestions} câu hỏi
-            {bank.updatedAt ? ` · Cập nhật ${formatMentorCourseDate(bank.updatedAt)}` : ''}
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: MUTED, mt: 1 }}>
-            Chọn chương để quản lý câu hỏi
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <AppButton
-            onClick={() => navigate(`/mentor/question-banks/manage?courseId=${courseId}`)}
-            sx={{ height: 40, borderRadius: '999px', bgcolor: PRIMARY, boxShadow: 'none' }}
-          >
-            Thêm chương
-          </AppButton>
-        </Box>
-
-        {bankPaths.length === 0 ? (
-          <EmptyState
-            icon={MenuBookOutlinedIcon}
-            title="Chưa có chương nào trong ngân hàng"
-            description="Tạo ngân hàng câu hỏi cho một chương để bắt đầu."
-            actionLabel="Thêm chương"
-            onAction={() => navigate(`/mentor/question-banks/manage?courseId=${courseId}`)}
-          />
-        ) : (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-              gap: 1.5,
-            }}
-          >
-            {bankPaths.map((path, index) => (
-              <PathChapterCard key={path.PathId} path={path} index={index} onOpen={openPath} />
-            ))}
-          </Box>
-        )}
+          Quay lại danh sách
+        </AppButton>
       </Box>
-    );
-  }
-
-  if (!isEditorMode && chapterId) {
-    return (
-      <Navigate
-        to={`/mentor/question-banks/${questionBankId}?courseId=${courseId}&chapterId=${chapterId}&mode=editor`}
-        replace
-      />
-    );
-  }
-
-  return (
-    <Box sx={{ width: '100%', maxWidth: { xs: '100%', lg: 1520 }, mx: 'auto' }}>
-      <MentorQuestionBankDetailHeader
-        bankTitle={bank.title}
-        courseId={bank.courseId}
-        courseName={bank.courseTitle}
-        coursePublished={Boolean(course?.IsPublished)}
-        totalQuestionCount={questionCount}
-        questionCountBySkill={questionCountBySkill}
-        updatedAt={bank.updatedAt}
-        actions={footerActions}
-        onBack={() => navigate(`/mentor/courses/${courseId}/questions`)}
-      />
 
       <Box
-        key={workspaceKey}
         sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', lg: 'row' },
-          gap: { xs: 2, lg: 2.5 },
-          alignItems: 'start',
+          mb: 2.5,
+          p: { xs: 2, sm: 2.5 },
+          borderRadius: '22px',
+          background: `linear-gradient(135deg, ${alpha(PRIMARY, 0.09)} 0%, #fff 70%)`,
+          border: `1px solid ${alpha(PRIMARY, 0.14)}`,
         }}
       >
-        <MentorQuestionBankSkillNav
-          sections={sections}
-          activeSkill={activeSkill}
-          sectionErrors={sectionErrors}
-          onSkillChange={handleSkillSelect}
-        />
-
-        <Box
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            width: '100%',
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 7fr) minmax(280px, 3fr)' },
-            gap: { xs: 2, lg: 2.5 },
-            alignItems: 'start',
-          }}
-        >
-          <MentorQuestionBankBuilderPanel
-            sections={sections}
-            activeSkill={activeSkill}
-            activeSection={activeSection}
-            activeSectionIndex={activeSectionIndex}
-            activeSectionId={activeSectionId}
-            skillSections={skillSections}
-            sectionErrors={sectionErrors}
-            questionCount={questionCount}
-            canDeleteActiveSection={canDeleteActiveSection}
-            onSectionSelect={handleSectionSelect}
-            onAddBai={handleAddBai}
-            onSectionChange={handleSectionChange}
-            onDeleteSection={handleDeleteSection}
-          />
-
-          <MentorQuestionBankOutlinePanel
-            sections={sections}
-            activeSkill={activeSkill}
-            activeSectionId={activeSectionId}
-            onNavigateToItem={handleOutlineNavigate}
-            courseName={bank.courseTitle}
-            courseCategory={courseCategory}
-            selectedPathName={bank.PathName}
-            courseChapters={courseChapters}
-            selectedChapterId={chapterId}
-            courseId={courseId}
-            courseOutlineHint="Chọn chương khác để mở ngân hàng câu hỏi tương ứng."
-            onChapterSelect={selectChapter}
-          />
-        </Box>
+        <Typography sx={{ fontSize: 12, fontWeight: 700, color: PRIMARY, mb: 0.75 }}>
+          NGÂN HÀNG CÂU HỎI
+        </Typography>
+        <Typography sx={{ fontSize: { xs: 22, sm: 26 }, fontWeight: 800, color: TEXT, mb: 0.5 }}>
+          {/* {title} */}
+        </Typography>
+        <Typography sx={{ fontSize: 14, color: MUTED }}>
+          {/* {courseCategory ? `${courseCategory} · ` : ''}
+          {bankPaths.length} chương · {totalQuestions} câu hỏi
+          {bank.updatedAt ? ` · Cập nhật ${formatMentorCourseDate(bank.updatedAt)}` : ''} */}
+        </Typography>
+        <Typography sx={{ fontSize: 13, color: MUTED, mt: 1 }}>
+          Chọn chương để quản lý câu hỏi
+        </Typography>
       </Box>
 
-      <ScrollToTopButton avoidSelectors={['#app-site-footer']} />
+      {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <AppButton
+          onClick={() => navigate(`/mentor/question-banks/manage?courseId=${courseId}`)}
+          sx={{ height: 40, borderRadius: '999px', bgcolor: PRIMARY, boxShadow: 'none' }}
+        >
+          Thêm chương
+        </AppButton>
+      </Box> */}
+
+      {bankPaths.length === 0 ? (
+        <EmptyState
+          icon={MenuBookOutlinedIcon}
+          title="Chưa có chương nào trong ngân hàng"
+          description="Tạo ngân hàng câu hỏi cho một chương để bắt đầu."
+          actionLabel="Thêm chương"
+          onAction={() => navigate(`/mentor/question-banks/manage?courseId=${courseId}`)}
+        />
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+            gap: 1.5,
+          }}
+        >
+          {bankPaths.map((path, index) => (
+            <PathChapterCard key={path.PathId} path={path} index={index} onOpen={openPath} />
+          ))}
+        </Box>
+      )}
     </Box>
   );
 }

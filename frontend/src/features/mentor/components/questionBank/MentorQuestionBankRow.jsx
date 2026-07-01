@@ -114,11 +114,11 @@ export default function MentorQuestionBankRow({ bankItem }) {
   const navigate = useNavigate();
   const statusChip = getStatusChip(bankItem.IsPublished);
   const handleManageQuestions = () => {
-    if (!bankItem.CourseId) {
-      toast.info('Không xác định được khóa học.');
+    if (!bankItem.BankId || !bankItem.CourseId) {
+      toast.info('Không xác định được Question Bank hoặc Khóa học.');
       return;
     }
-    navigate(`/mentor/question-banks/manage?courseId=${bankItem.CourseId}`);
+    navigate(`/mentor/question-banks/${bankItem.BankId}&courseId=${bankItem.CourseId}}`);
   };
   return (
     <Box
