@@ -13,6 +13,9 @@ export const MENTOR_COURSE_FORM_INITIAL = {
   LevelId: '',
   Thumbnail: '',
   IsPublished: false,
+  IsPaid: false,
+  Price: '',
+  DiscountPercentage: 0,
 };
 
 export function isMentorCourseFormDirty(form) {
@@ -81,6 +84,17 @@ export function validateMentorCourseForm(form, options = {}) {
     }
   }
 
+  if (form.IsPaid) {
+    const price = Number(form.Price);
+    if (!price || price <= 0) {
+      errors.Price = 'Vui lòng nhập giá khóa học (VNĐ)';
+    }
+    const discount = Number(form.DiscountPercentage);
+    if (Number.isNaN(discount) || discount < 0 || discount > 100) {
+      errors.DiscountPercentage = 'Giảm giá phải từ 0 đến 100%';
+    }
+  }
+
   return errors;
 }
 
@@ -96,6 +110,9 @@ export function buildCreateCourseStep1Payload(form, instructorId) {
     LevelId: form.LevelId ? String(form.LevelId) : null,
     InstructorId: instructorId,
     IsPublished: Boolean(form.IsPublished),
+    IsPaid: Boolean(form.IsPaid),
+    Price: form.IsPaid ? Number(form.Price) || 0 : 0,
+    DiscountPercentage: form.IsPaid ? Number(form.DiscountPercentage) || 0 : 0,
   };
 }
 

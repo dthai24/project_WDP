@@ -1,0 +1,417 @@
+.payment-page {
+  min-height: calc(100vh - 100px);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-page .container {
+  max-width: 600px;
+  width: 100%;
+}
+
+.payment-container {
+  width: 100%;
+}
+
+.course-summary {
+  width: 100%;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  padding: 40px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.summary-card h2 {
+  margin: 0 0 25px 0;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Pricing Info */
+.pricing-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+  position: relative;
+}
+
+.discount-badge {
+  position: absolute;
+  top: -12px;
+  right: 20px;
+  background: #e74c3c;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.original-price {
+  color: #999;
+  text-decoration: line-through;
+  font-size: 16px;
+  margin: 0;
+}
+
+.final-price {
+  color: #667eea;
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.save-amount {
+  color: #27ae60;
+  font-size: 13px;
+  margin: 10px 0 0 0;
+}
+
+/* Payment Type Selector */
+.payment-type-selector {
+  margin: 25px 0;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.payment-type-selector label {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.payment-type-selector label:hover {
+  color: #667eea;
+}
+
+.payment-type-selector input[type="radio"] {
+  margin-right: 12px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.payment-type-selector span {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Subscription Options */
+.subscription-options {
+  background: #f0f4ff;
+  border-left: 4px solid #667eea;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.subscription-options label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #333;
+}
+
+.subscription-options select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.subscription-options select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Payment Method Info */
+.payment-method-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px 0;
+}
+
+.payment-method-info h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.vnpay-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.vnpay-logo {
+  height: 40px;
+  object-fit: contain;
+}
+
+.vnpay-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
+
+/* Order Summary */
+.order-summary {
+  background: #f0f4ff;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 25px 0;
+  border: 1px solid #e0e8ff;
+}
+
+.order-summary h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item.discount {
+  color: #27ae60;
+}
+
+.summary-item.total {
+  padding: 12px 0;
+  border-bottom: none;
+  border-top: 2px solid #667eea;
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+}
+
+.total-amount {
+  color: #667eea;
+  font-size: 18px;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin: 30px 0 20px 0;
+}
+
+.btn-pay {
+  flex: 1;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-pay:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.btn-pay:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  flex: 1;
+  padding: 14px 20px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #f0f4ff;
+  transform: translateY(-2px);
+}
+
+.btn-outline:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Security Notice */
+.security-notice {
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  padding: 12px;
+  text-align: center;
+}
+
+.security-notice p {
+  margin: 0;
+  color: #2e7d32;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Loading State */
+.loading {
+  background: white;
+  border-radius: 12px;
+  padding: 60px 40px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+}
+
+.loading p {
+  color: #667eea;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Error Box */
+.error-box {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+}
+
+.error-box h2 {
+  color: #e74c3c;
+  margin: 0 0 15px 0;
+}
+
+.error-box p {
+  color: #666;
+  margin: 0 0 25px 0;
+  font-size: 14px;
+}
+
+.error-box .btn {
+  padding: 12px 30px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.error-box .btn:hover {
+  background: #764ba2;
+  transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .summary-card {
+    padding: 25px;
+  }
+
+  .payment-page {
+    padding: 20px 10px;
+  }
+
+  .final-price {
+    font-size: 28px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .vnpay-info {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .vnpay-logo {
+    height: 35px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-card {
+    padding: 20px;
+  }
+
+  .summary-card h2 {
+    font-size: 20px;
+  }
+
+  .final-price {
+    font-size: 24px;
+  }
+
+  .order-summary {
+    padding: 15px;
+  }
+
+  .btn-pay,
+  .btn-outline {
+    font-size: 14px;
+    padding: 12px 16px;
+  }
+}

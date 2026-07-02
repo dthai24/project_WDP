@@ -350,13 +350,22 @@ export default function CourseLearningPage() {
     const fetchData = async () => {
       try {
         const res = await fetch(`http://localhost:5050/api/courses/${courseId}/learning`, {
-          headers: { "x-user-id": currentUserId },
+          headers: {
+            "x-user-id": currentUserId,
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          },
         });
         const result = await res.json();
 
-        if (result.success) {
-          setCourseInfo({ courseTitle: result.courseTitle, instructor: result.instructor });
-          const mapped = result.data.map((mod, ci) => ({
+        if (!result.success) {
+          if (res.status === 403) {
+            navigate(`/courses/${courseId}`);
+          }
+          return;
+        }
+
+        setCourseInfo({ courseTitle: result.courseTitle, instructor: result.instructor });
+        const mapped = result.data.map((mod, ci) => ({
             id: mod._id || mod.PathId,
             index: ci + 1,
             title: mod.pathName || mod.PathName,
@@ -398,13 +407,12 @@ export default function CourseLearningPage() {
           if (mapped.length > 0 && mapped[0].lessons.length > 0) {
             setCurrentLessonId(mapped[0].lessons[0].id);
           }
-        }
       } catch (err) {
         console.error("Fetch learning error:", err);
       }
     };
     fetchData();
-  }, [courseId]);
+  }, [courseId, currentUserId, navigate]);
 
   // Fetch quiz configs
   useEffect(() => {

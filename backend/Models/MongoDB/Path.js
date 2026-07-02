@@ -7,4 +7,4 @@ const pathSchema = new mongoose.Schema({
   order: Number,
 }, { timestamps: true });
 
-module.exports = mongoose.model('Path', pathSchema);
+module.exports = mongoose.models.Path || mongoose.model('Path', pathSchema);
