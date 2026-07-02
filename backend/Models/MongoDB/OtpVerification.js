@@ -10,4 +10,4 @@ const otpVerificationSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true },
 }, { timestamps: true });
 
-module.exports = mongoose.model('OtpVerification', otpVerificationSchema);
+module.exports = mongoose.models.OtpVerification || mongoose.model('OtpVerification', otpVerificationSchema);

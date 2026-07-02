@@ -9,4 +9,4 @@ const userNodeSchema = new mongoose.Schema({
 
 userNodeSchema.index({ userId: 1, nodeId: 1 }, { unique: true });
 
-module.exports = mongoose.model('UserNode', userNodeSchema);
+module.exports = mongoose.models.UserNode || mongoose.model('UserNode', userNodeSchema);

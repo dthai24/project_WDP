@@ -21,6 +21,8 @@ const {
 } = require('../controllers/coursesController');
 
 
+const { protect } = require('../middlewares/authMiddleware');
+
 const optionalAuth = (req, res, next) => {
     const userId = req.headers['x-user-id'] || req.query.userId;
 
@@ -63,17 +65,17 @@ router.post('/mentor/courses/save/draft', saveCourseDraftStepOne);
 router.post('/mentor/courses/createCourse', createFinalCourse);
 router.delete('/mentor/courses/:courseId', deleteCourseMentor);
 
-router.post('/enroll', enrollCourse); 
+router.post('/enroll', protect, enrollCourse);
 
 // Bình luận khóa học (trang detail)
 router.get('/:courseId/comments', optionalAuth, getCourseComments);
 router.post('/:courseId/comments', optionalAuth, createCourseComment);
 
 // Lấy lộ trình học và trạng thái hoàn thành (Trang Course Learning)
-router.get('/:id/learning', getLearningPath);
+router.get('/:id/learning', protect, getLearningPath);
 
 // Lưu tiến độ học và đánh dấu bài học hoàn thành
-router.post('/:id/progress', updateProgress);
+router.post('/:id/progress', protect, updateProgress);
 // lay treak
 router.get("/streak", getStreak);
 module.exports = router;

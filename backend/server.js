@@ -21,6 +21,7 @@ const questionBankRoutes = require('./routes/questionBankRoutes');
 const testsRoutes = require('./routes/testsRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const studentRoutes = require('./routes/studentRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -47,6 +48,7 @@ app.use('/api', lookupRoutes);
 app.use('/api', chatRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentRoutes);
 // _________Question Bank Routes______________
 app.use('/api/question-bank', questionBankRoutes)
 // Link URL Courses's Avatar

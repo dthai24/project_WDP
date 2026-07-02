@@ -6,4 +6,4 @@ const testSchema = new mongoose.Schema({
   instructorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 });
 
-module.exports = mongoose.model('Test', testSchema);
+module.exports = mongoose.models.Test || mongoose.model('Test', testSchema);

@@ -7,4 +7,4 @@ const questionChoiceSchema = new mongoose.Schema({
   isTrue: { type: Boolean, required: true },
 });
 
-module.exports = mongoose.model('QuestionChoice', questionChoiceSchema);
+module.exports = mongoose.models.QuestionChoice || mongoose.model('QuestionChoice', questionChoiceSchema);

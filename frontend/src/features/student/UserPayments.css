@@ -1,0 +1,296 @@
+.user-payments {
+  min-height: calc(100vh - 100px);
+  background: #f8f9fa;
+  padding: 40px 20px;
+}
+
+.user-payments .container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.user-payments h1 {
+  margin: 0 0 30px 0;
+  color: #333;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+/* Error Message */
+.error-message {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 25px;
+  color: #c62828;
+}
+
+.error-message p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Filter Tabs */
+.filter-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #e0e0e0;
+  flex-wrap: wrap;
+}
+
+.filter-tabs .tab {
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  position: relative;
+}
+
+.filter-tabs .tab:hover {
+  color: #333;
+}
+
+.filter-tabs .tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+/* Payments Table */
+.payments-table-wrapper {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  padding: 0;
+}
+
+.payments-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.payments-table th {
+  padding: 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.payments-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.2s ease;
+}
+
+.payments-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.payments-table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #333;
+}
+
+.payments-table .course-name {
+  font-weight: 500;
+}
+
+.payments-table .course-name small {
+  display: block;
+  color: #999;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.payments-table .amount {
+  color: #27ae60;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.pending {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-badge.processing {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.status-badge.failed {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.status-badge.cancelled {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+/* Actions */
+.payments-table .actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+.btn-link.retry {
+  color: #f39c12;
+}
+
+.btn-link.retry:hover {
+  color: #e67e22;
+}
+
+/* Loading State */
+.loading {
+  background: white;
+  border-radius: 8px;
+  padding: 60px 40px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #667eea;
+  font-size: 16px;
+}
+
+/* Empty State */
+.empty-state {
+  background: white;
+  border-radius: 8px;
+  padding: 60px 40px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state p {
+  margin: 0;
+  color: #999;
+  font-size: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .user-payments {
+    padding: 20px 10px;
+  }
+
+  .user-payments h1 {
+    font-size: 24px;
+  }
+
+  .filter-tabs {
+    gap: 0;
+    margin-bottom: 20px;
+  }
+
+  .filter-tabs .tab {
+    flex: 1;
+    text-align: center;
+    border-radius: 4px 4px 0 0;
+    margin-bottom: 0;
+    border-bottom: none;
+  }
+
+  .filter-tabs .tab.active {
+    border: none;
+    background: #667eea;
+    color: white;
+  }
+
+  .payments-table-wrapper {
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+
+  .payments-table th,
+  .payments-table td {
+    padding: 12px 10px;
+    font-size: 13px;
+  }
+
+  .payments-table .actions {
+    gap: 8px;
+  }
+
+  .btn-link {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-payments h1 {
+    font-size: 20px;
+  }
+
+  .payments-table {
+    font-size: 12px;
+  }
+
+  .payments-table th,
+  .payments-table td {
+    padding: 10px 8px;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .payments-table .course-name {
+    max-width: 150px;
+  }
+
+  .payments-table .course-name small {
+    font-size: 10px;
+  }
+}

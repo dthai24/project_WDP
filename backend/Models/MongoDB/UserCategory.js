@@ -7,4 +7,4 @@ const userCategorySchema = new mongoose.Schema({
 
 userCategorySchema.index({ userId: 1, categoryId: 1 }, { unique: true });
 
-module.exports = mongoose.model('UserCategory', userCategorySchema);
+module.exports = mongoose.models.UserCategory || mongoose.model('UserCategory', userCategorySchema);

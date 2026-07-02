@@ -5,12 +5,44 @@ const PathNode = require('../models/MongoDB/PathNode');
 const NodeMaterial = require('../models/MongoDB/NodeMaterial');
 const UserCourse = require('../models/MongoDB/UserCourse');
 const UserNode = require('../models/MongoDB/UserNode');
+const Payment = require('../models/MongoDB/Payment');
 const CourseComment = require('../models/MongoDB/CourseComment');
 const User = require('../models/MongoDB/User');
 const Category = require('../models/MongoDB/Category');
 const Level = require('../models/MongoDB/Level');
 const streakService = require("../services/streakService");
 const { validateCourseThumbnailDataUrl, saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
+
+async function userHasCourseAccess(userId, courseId) {
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return false;
+  }
+
+  const course = await Course.findById(courseId).lean();
+  if (!course) {
+    return false;
+  }
+
+  const enrollment = await UserCourse.findOne({ userId, courseId });
+  if (enrollment) {
+    return true;
+  }
+
+  if (!course.isPaid || course.price === 0) {
+    return false;
+  }
+
+  const payment = await Payment.findOne({ userId, courseId, status: 'success' });
+  if (!payment) {
+    return false;
+  }
+
+  if (payment.paymentType === 'subscription' && payment.subscriptionEndDate) {
+    return new Date() <= payment.subscriptionEndDate;
+  }
+
+  return true;
+}
 
 const getStudentCourses = async (req, res) => {
   try {
@@ -341,6 +373,9 @@ const saveCourseDraftStepOne = async (req, res) => {
       LevelId,
       InstructorId,
       IsPublished,
+      IsPaid,
+      Price,
+      DiscountPercentage,
     } = body;
 
     // Validate CourseName
@@ -383,6 +418,19 @@ const saveCourseDraftStepOne = async (req, res) => {
       });
     }
 
+    const isPaid = Boolean(IsPaid);
+    const price = isPaid ? Math.max(0, Number(Price) || 0) : 0;
+    const discountPercentage = isPaid
+      ? Math.min(100, Math.max(0, Number(DiscountPercentage) || 0))
+      : 0;
+
+    if (isPaid && price <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Step 1: Khóa trả phí cần có giá lớn hơn 0.',
+      });
+    }
+
     const courseData = {
       courseName: String(CourseName).trim(),
       description: String(Description).trim(),
@@ -391,6 +439,9 @@ const saveCourseDraftStepOne = async (req, res) => {
       levelId: LevelId,
       instructorId: InstructorId,
       isPublished: Boolean(IsPublished),
+      isPaid,
+      price,
+      discountPercentage,
       rating: 0,
       totalLessons: 0,
     };
@@ -430,10 +481,19 @@ const saveCourseDraftStepOne = async (req, res) => {
 const getLearningPath = async (req, res) => {
   try {
     const courseId = req.params.id;
-    const userId = req.headers['x-user-id'];
+    const userId = req.user?.userId || req.user?._id?.toString() || req.headers['x-user-id'];
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+    }
+
+    const hasAccess = await userHasCourseAccess(userId, courseId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn cần đăng ký hoặc thanh toán khóa học này trước khi học.',
+        code: 'COURSE_ACCESS_DENIED',
+      });
     }
 
     // Get course info
@@ -499,7 +559,7 @@ const getLearningPath = async (req, res) => {
 const updateProgress = async (req, res) => {
   try {
     const courseId = req.params.id;
-    const userId = req.headers['x-user-id'];
+    const userId = req.user?.userId || req.user?._id?.toString() || req.headers['x-user-id'];
     const { nodeId } = req.body;
 
     if (!userId || !nodeId) {
@@ -508,6 +568,15 @@ const updateProgress = async (req, res) => {
 
     if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(nodeId)) {
       return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
+    }
+
+    const hasAccess = await userHasCourseAccess(userId, courseId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn cần đăng ký hoặc thanh toán khóa học này trước khi cập nhật tiến độ.',
+        code: 'COURSE_ACCESS_DENIED',
+      });
     }
 
     // Mark node as completed
@@ -644,6 +713,19 @@ const createFinalCourse = async (req, res) => {
       validateCourseThumbnailDataUrl(newCourse.Thumbnail);
     }
 
+    const isPaid = Boolean(newCourse.IsPaid);
+    const price = isPaid ? Math.max(0, Number(newCourse.Price) || 0) : 0;
+    const discountPercentage = isPaid
+      ? Math.min(100, Math.max(0, Number(newCourse.DiscountPercentage) || 0))
+      : 0;
+
+    if (isPaid && price <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Khóa trả phí cần có giá lớn hơn 0.',
+      });
+    }
+
     // Create course
     const courseData = {
       courseName: String(newCourse.CourseName).trim(),
@@ -653,6 +735,9 @@ const createFinalCourse = async (req, res) => {
       levelId: newCourse.LevelId,
       instructorId: newCourse.InstructorId,
       isPublished: Boolean(newCourse.IsPublished),
+      isPaid,
+      price,
+      discountPercentage,
       rating: 0,
       totalLessons: 0,
     };
@@ -736,24 +821,32 @@ const createFinalCourse = async (req, res) => {
 
 const enrollCourse = async (req, res) => {
   try {
-    let { userId, courseId } = req.body;
+    const userId = req.user?.userId || req.user?._id?.toString();
+    const { courseId } = req.body;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     if (!courseId) {
       return res.status(400).json({ success: false, message: 'Thiếu courseId' });
     }
 
-    // Fallback if userId is invalid/mock/stale
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      const User = require('../models/MongoDB/User');
-      const student = await User.findOne({ email: 'student@gmail.com' }) || await User.findOne({});
-      if (student) {
-        userId = student._id;
-      } else {
-        return res.status(400).json({ success: false, message: 'ID người dùng không hợp lệ' });
-      }
-    }
-
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+    }
+
+    const course = await Course.findById(courseId).lean();
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học' });
+    }
+
+    if (course.isPaid && course.price > 0) {
+      return res.status(402).json({
+        success: false,
+        message: 'Khóa học trả phí. Vui lòng thanh toán trước khi đăng ký.',
+        code: 'PAYMENT_REQUIRED',
+      });
     }
 
     // Check if already enrolled

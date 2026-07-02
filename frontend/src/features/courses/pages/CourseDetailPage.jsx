@@ -203,13 +203,30 @@ function CTAInfoRow({ icon: Icon, label, children, showDivider }) {
   );
 }
 
-function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = true }) {
+function formatPriceLabel(course) {
+  if (!course.isPaid || !course.price) {
+    return { label: "Free", originalPrice: null };
+  }
+
+  const finalPrice = course.finalPrice ?? course.price;
+  const hasDiscount = course.discountPercentage > 0 && finalPrice < course.price;
+
+  return {
+    label: `${finalPrice.toLocaleString("vi-VN")} ₫`,
+    originalPrice: hasDiscount ? `${course.price.toLocaleString("vi-VN")} ₫` : null,
+  };
+}
+
+function CourseStickyCTA({ course, isEnrolled, onEnroll, onBuy, onContinue, sticky = true }) {
   const [searchParams] = useSearchParams();
   const prerequisites = course.prerequisites ?? [];
+  const pricing = formatPriceLabel(course);
+  const isPaidCourse = Boolean(course.isPaid && course.price > 0);
 
   const getButtonProps = () => {
     if (course.progress >= 100) return { label: "Review Again", variant: "primary", onClick: onContinue };
     if (isEnrolled) return { label: "Continue Learning", variant: "primary", onClick: onContinue };
+    if (isPaidCourse) return { label: "Mua ngay", variant: "accent", onClick: onBuy };
     return { label: "Enroll Now", variant: "accent", onClick: onEnroll };
   };
 
@@ -242,9 +259,21 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
         </div>
 
         <div className="p-5">
-          <p className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">
-            {course.isFree !== false ? "Free" : "Contact Us"}
-          </p>
+          <div className="mb-3">
+            {pricing.originalPrice ? (
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <p className="text-2xl font-extrabold text-slate-900 tracking-tight">{pricing.label}</p>
+                <p className="text-sm text-slate-400 line-through">{pricing.originalPrice}</p>
+              </div>
+            ) : (
+              <p className="text-2xl font-extrabold text-slate-900 tracking-tight">{pricing.label}</p>
+            )}
+            {isPaidCourse && course.discountPercentage > 0 && (
+              <p className="text-xs font-semibold text-emerald-600 mt-1">
+                Giảm {course.discountPercentage}%
+              </p>
+            )}
+          </div>
 
           <button
             onClick={btn.onClick}
@@ -567,7 +596,13 @@ export default function CourseDetailPage() {
             rating: 4.8,
             reviewCount: 154,
             studentCount: dbData.studentCount || dbData.StudentCount || 2000,
-            isFree: true,
+            isPaid: Boolean(dbData.isPaid),
+            price: Number(dbData.price || 0),
+            discountPercentage: Number(dbData.discountPercentage || 0),
+            finalPrice: dbData.discountPercentage
+              ? Math.round(Number(dbData.price || 0) * (1 - Number(dbData.discountPercentage) / 100))
+              : Number(dbData.price || 0),
+            isFree: !dbData.isPaid || !dbData.price,
             prerequisites: [],
             modules: paths.map((path) => {
               const nodes = path.Nodes || path.nodes || [];
@@ -576,11 +611,11 @@ export default function CourseDetailPage() {
                 title: path.pathName || path.PathName,
                 description: (path.description || path.Description) ?? "",
                 lessonCount: nodes.length,
-                lessons: nodes.map((node, index) => ({
+                lessons: nodes.map((node) => ({
                   id: node._id || node.nodeId || node.NodeId,
                   title: node.nodeName || node.NodeName,
                   type: "video",
-                  isPreview: index === 0,
+                  isPreview: Boolean(node.isFree ?? node.IsFree),
                   isCompleted: node.IsCompleted || false,
                 })),
               };
@@ -607,9 +642,13 @@ export default function CourseDetailPage() {
       return;
     }
 
+    if (course.isPaid && course.price > 0) {
+      navigate(`/payment/${course.id}`);
+      return;
+    }
+
     try {
       const res = await enrollCourseApi({
-        userId: Number(user.userId),
         courseId: String(course.id),
       });
 
@@ -623,6 +662,15 @@ export default function CourseDetailPage() {
       console.error("Enrollment error:", error);
       toast.error("System error while processing enrollment.");
     }
+  };
+
+  const handleBuy = () => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!user.userId) {
+      toast.error("Please log in to purchase this course.");
+      return;
+    }
+    navigate(`/payment/${course.id}`);
   };
 
   const handleContinue = () => {
@@ -680,6 +728,7 @@ export default function CourseDetailPage() {
               course={course}
               isEnrolled={course.isEnrolled}
               onEnroll={handleEnroll}
+              onBuy={handleBuy}
               onContinue={handleContinue}
               sticky={false}
             />
@@ -706,6 +755,7 @@ export default function CourseDetailPage() {
             course={course}
             isEnrolled={course.isEnrolled}
             onEnroll={handleEnroll}
+            onBuy={handleBuy}
             onContinue={handleContinue}
             sticky
           />

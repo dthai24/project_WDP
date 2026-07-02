@@ -9,4 +9,4 @@ const questionBankSchema = new mongoose.Schema({
   isPublished: { type: Boolean, default: false },
 }, { timestamps: true });
 
-module.exports = mongoose.model('QuestionBank', questionBankSchema);
+module.exports = mongoose.models.QuestionBank || mongoose.model('QuestionBank', questionBankSchema);

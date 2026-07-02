@@ -86,5 +86,8 @@ export function formFromStep1Payload(payload) {
     LevelId: course.LevelId ?? '',
     Thumbnail: course.Thumbnail ?? '',
     IsPublished: Boolean(course.IsPublished),
+    IsPaid: Boolean(course.IsPaid),
+    Price: course.Price ?? '',
+    DiscountPercentage: course.DiscountPercentage ?? 0,
   };
 }

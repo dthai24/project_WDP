@@ -38,6 +38,21 @@ function getStatusBadge(isEnrolled, progress) {
   return { label: "Enrolled", className: "bg-green-50 text-green-700 border-green-200" };
 }
 
+function formatCoursePrice(course) {
+  const isPaid = Boolean(course.isPaid && Number(course.price) > 0);
+  if (!isPaid) return { label: "Free", isPaid: false };
+
+  const price = Number(course.price || 0);
+  const discount = Number(course.discountPercentage || 0);
+  const finalPrice = discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
+
+  return {
+    isPaid: true,
+    label: `${finalPrice.toLocaleString("vi-VN")} ₫`,
+    originalPrice: discount > 0 ? `${price.toLocaleString("vi-VN")} ₫` : null,
+  };
+}
+
 export default function CourseCard({ course, onContinueLearning }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -66,6 +81,7 @@ export default function CourseCard({ course, onContinueLearning }) {
   }
 
   const statusBadge = getStatusBadge(isEnrolled, progress);
+  const pricing = formatCoursePrice(course);
 
   const handleClick = () => {
     if (isEnrolled && onContinueLearning) {
@@ -98,6 +114,17 @@ export default function CourseCard({ course, onContinueLearning }) {
         )}
 
         {/* Status Badge Overlay */}
+        {/* Price / Status Badge Overlay */}
+        <span
+          className={`absolute top-3 right-3 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-sm backdrop-blur-sm ${
+            pricing.isPaid
+              ? "bg-amber-50 text-amber-700 border-amber-200"
+              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+          }`}
+        >
+          {pricing.label}
+        </span>
+
         {statusBadge && (
           <span
             className={`absolute top-3 left-3 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-sm backdrop-blur-sm ${statusBadge.className}`}
@@ -140,7 +167,10 @@ export default function CourseCard({ course, onContinueLearning }) {
 
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-2.5 border-t border-slate-50">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {pricing.isPaid && pricing.originalPrice && (
+              <span className="text-[11px] text-slate-400 line-through">{pricing.originalPrice}</span>
+            )}
             {rating > 0 && (
               <div className="flex items-center gap-1">
                 <Star size={12} weight="fill" className="text-amber-400" />

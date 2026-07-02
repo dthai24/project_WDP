@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert, Box, InputBase, Typography } from '@mui/material';
+import { Alert, Box, InputBase, Typography, Switch, FormControlLabel } from '@mui/material';
 import { MENTOR_COURSE_DESCRIPTION_MAX, MENTOR_COURSE_NAME_MAX } from '@/features/mentor/utils/mentorCourseFormUtils';
 import { contentFieldSx, contentInputInnerSx } from './mentorCourseContentStyles';
 import { MUTED, SECTION_TITLE_SX, TEXT } from './mentorCourseCreateStyles';
@@ -81,7 +81,7 @@ function FormField({
             disabled={disabled}
             placeholder={placeholder}
             fullWidth
-            inputProps={maxLength ? { maxLength } : undefined}
+            inputProps={{ ...(maxLength ? { maxLength } : {}), ...(type && type !== 'select' ? { type } : {}) }}
             sx={contentInputInnerSx}
           />
         </Box>
@@ -200,6 +200,64 @@ export default function MentorCourseBasicInfoForm({
         showCharCount
         placeholder="Mô tả ngắn gọn nội dung, mục tiêu và đối tượng phù hợp của khóa học."
       />
+
+      <Box sx={{ mt: 1, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Typography sx={{ ...SECTION_TITLE_SX, fontSize: 14, fontWeight: 600, mb: 1.5 }}>
+          Giá khóa học
+        </Typography>
+
+        <FormControlLabel
+          control={
+            <Switch
+              checked={Boolean(form.IsPaid)}
+              onChange={(e) =>
+                onChange?.({
+                  target: {
+                    name: 'IsPaid',
+                    value: e.target.checked,
+                    type: 'checkbox',
+                    checked: e.target.checked,
+                  },
+                })
+              }
+              disabled={disabled}
+            />
+          }
+          label={form.IsPaid ? 'Khóa học trả phí' : 'Khóa học miễn phí'}
+          sx={{ mb: 1.5, ml: 0 }}
+        />
+
+        {form.IsPaid && (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: { xs: 0, sm: 2 },
+            }}
+          >
+            <FormField
+              label="Giá (VNĐ)"
+              name="Price"
+              value={form.Price}
+              error={errors.Price}
+              onChange={onChange}
+              disabled={disabled}
+              type="number"
+              placeholder="499000"
+            />
+            <FormField
+              label="Giảm giá (%)"
+              name="DiscountPercentage"
+              value={form.DiscountPercentage}
+              error={errors.DiscountPercentage}
+              onChange={onChange}
+              disabled={disabled}
+              type="number"
+              placeholder="0"
+            />
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }

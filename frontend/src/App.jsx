@@ -44,6 +44,10 @@ import AdminNewsEditContentPage from '@/features/admin/pages/AdminNewsEditConten
 import NewsListPage from '@/features/news/pages/NewsListPage';
 import NewsDetailPage from '@/features/news/pages/NewsDetailPage';
 import BecomeMentor from '@/features/mentor/pages/BecomeMentor';
+import PaymentPage from '@/features/courses/PaymentPage';
+import PaymentSuccessPage from '@/features/courses/PaymentSuccessPage';
+import PaymentFailedPage from '@/features/courses/PaymentFailedPage';
+import UserPayments from '@/features/student/UserPayments';
 
 import MainLayout from '@/shared/layout/MainLayout';
 import MentorLayout from '@/shared/layout/MentorLayout';
@@ -205,6 +209,50 @@ export default function App() {
               }}
             >
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payment/:courseId"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <PaymentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payment/success"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <PaymentSuccessPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payment/failed"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <PaymentFailedPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="student/payments"
+          element={
+            <ProtectedRoute
+              allowedRoles={['Student']}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
+            >
+              <UserPayments />
             </ProtectedRoute>
           }
         />

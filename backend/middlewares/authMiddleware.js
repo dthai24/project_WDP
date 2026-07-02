@@ -5,18 +5,25 @@ const protect = async (req, res, next) => {
   try {
     let userId;
 
-    // 1. Check for JWT Token in Authorization header
+    // 1. JWT trong Authorization header (nếu có và hợp lệ)
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       const token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'star_learning_secret');
-      userId = decoded.userId;
-    } 
-    // 2. Fallback check for session-based custom header or body/query payload 
-    else if (req.headers['x-user-id']) {
+      if (token && token !== 'null' && token !== 'undefined') {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'star_learning_secret');
+          userId = decoded.userId;
+        } catch (jwtErr) {
+          // Token hết hạn/không hợp lệ — thử fallback x-user-id bên dưới
+        }
+      }
+    }
+
+    // 2. Fallback: header x-user-id (cách app đang dùng khi login)
+    if (!userId && req.headers['x-user-id']) {
       userId = req.headers['x-user-id'];
-    } else if (req.body && req.body.userId) {
+    } else if (!userId && req.body && req.body.userId) {
       userId = req.body.userId;
-    } else if (req.query && req.query.userId) {
+    } else if (!userId && req.query && req.query.userId) {
       userId = req.query.userId;
     }
 

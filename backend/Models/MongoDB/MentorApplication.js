@@ -40,4 +40,4 @@ const mentorApplicationSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('MentorApplication', mentorApplicationSchema);
+module.exports = mongoose.models.MentorApplication || mongoose.model('MentorApplication', mentorApplicationSchema);

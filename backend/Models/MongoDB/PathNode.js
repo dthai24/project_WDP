@@ -8,4 +8,4 @@ const pathNodeSchema = new mongoose.Schema({
   isFree: { type: Boolean, default: false },
 });
 
-module.exports = mongoose.model('PathNode', pathNodeSchema);
+module.exports = mongoose.models.PathNode || mongoose.model('PathNode', pathNodeSchema);

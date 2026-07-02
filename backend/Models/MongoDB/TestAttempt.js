@@ -6,4 +6,4 @@ const testAttemptSchema = new mongoose.Schema({
   point: Number,
 });
 
-module.exports = mongoose.model('TestAttempt', testAttemptSchema);
+module.exports = mongoose.models.TestAttempt || mongoose.model('TestAttempt', testAttemptSchema);

@@ -19,6 +19,10 @@ const courseSchema = new mongoose.Schema({
   rejectionComment: { type: String },
   hasPendingUpdates: { type: Boolean, default: false },
   tempContent: { type: mongoose.Schema.Types.Mixed, default: null },
+  // Payment fields
+  price: { type: Number, default: 0 }, // Giá khóa học (VNĐ)
+  isPaid: { type: Boolean, default: false }, // true = khóa học trả phí, false = miễn phí
+  discountPercentage: { type: Number, default: 0 }, // % giảm giá (0-100)
 }, { timestamps: true });
 
-module.exports = mongoose.model('Course', courseSchema);
+module.exports = mongoose.models.Course || mongoose.model('Course', courseSchema);

@@ -7,4 +7,4 @@ const testQuestionSchema = new mongoose.Schema({
   url: String,
 });
 
-module.exports = mongoose.model('TestQuestion', testQuestionSchema);
+module.exports = mongoose.models.TestQuestion || mongoose.model('TestQuestion', testQuestionSchema);
