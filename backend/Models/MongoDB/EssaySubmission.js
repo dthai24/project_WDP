@@ -12,4 +12,4 @@ const essaySubmissionSchema = new mongoose.Schema({
   feedback: String,
 }, { timestamps: true });
 
-module.exports = mongoose.model('EssaySubmission', essaySubmissionSchema);
+module.exports = mongoose.models.EssaySubmission || mongoose.model('EssaySubmission', essaySubmissionSchema);

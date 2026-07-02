@@ -10,4 +10,4 @@ const courseCommentSchema = new mongoose.Schema({
   replyByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
-module.exports = mongoose.model('CourseComment', courseCommentSchema);
+module.exports = mongoose.models.CourseComment || mongoose.model('CourseComment', courseCommentSchema);
