@@ -6,4 +6,4 @@ const categorySchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
-module.exports = mongoose.model('Category', categorySchema);
+module.exports = mongoose.models.Category || mongoose.model('Category', categorySchema);

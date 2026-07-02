@@ -48,7 +48,22 @@ export const getCoursesApi = (userId) => {
 export const getTopCoursesApi = (limit = 4) => apiGet(`/courses/top?limit=${limit}`);
 
 // 🔥 ĐÃ FIX: Nhận thẳng 1 cục Object (data) từ Frontend truyền sang
-export const enrollCourseApi = (data) => apiPost('/courses/enroll', data);
+export const enrollCourseApi = async (data) => {
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const headers = { 'Content-Type': 'application/json' };
+
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (user.userId) headers['x-user-id'] = String(user.userId);
+
+  const response = await fetch(`${API_BASE}/courses/enroll`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ courseId: data.courseId }),
+  });
+  const result = await response.json();
+  return { ok: response.ok, success: result.success, message: result.message, data: result.data };
+};
 
 export const getMyCoursesApi = (userId) => apiGet(`/courses/my?userId=${userId}`);
 

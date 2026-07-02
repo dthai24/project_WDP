@@ -13,4 +13,4 @@ const nodeMaterialSchema = new mongoose.Schema({
   content: { type: String }, // HTML content for TEXT materials
 });
 
-module.exports = mongoose.model('NodeMaterial', nodeMaterialSchema);
+module.exports = mongoose.models.NodeMaterial || mongoose.model('NodeMaterial', nodeMaterialSchema);

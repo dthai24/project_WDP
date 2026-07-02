@@ -8,4 +8,4 @@ const levelSchema = new mongoose.Schema({
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
 }, { timestamps: true });
 
-module.exports = mongoose.model('Level', levelSchema);
+module.exports = mongoose.models.Level || mongoose.model('Level', levelSchema);
