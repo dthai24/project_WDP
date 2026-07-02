@@ -5,4 +5,4 @@ const roleSchema = new mongoose.Schema({
   description: { type: String, maxlength: 255 },
 });
 
-module.exports = mongoose.model('Role', roleSchema);
+module.exports = mongoose.models.Role || mongoose.model('Role', roleSchema);

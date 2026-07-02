@@ -5,4 +5,4 @@ const questionsPathSchema = new mongoose.Schema({
   pathId: { type: mongoose.Schema.Types.ObjectId, ref: 'Path', required: true },
 });
 
-module.exports = mongoose.model('QuestionsPath', questionsPathSchema);
+module.exports = mongoose.models.QuestionsPath || mongoose.model('QuestionsPath', questionsPathSchema);

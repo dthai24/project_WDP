@@ -127,11 +127,19 @@ export default function MentorCreateCoursePage() {
 
   //console.log(levelOptions);
   const handleChange = (event) => {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
+    let nextValue = value;
+
+    if (type === 'checkbox') {
+      nextValue = checked;
+    } else if (name === 'IsPublished' || name === 'IsPaid') {
+      nextValue = Boolean(checked ?? value);
+    }
 
     setForm((prev) => ({
       ...prev,
-      [name]: name === 'IsPublished' ? Boolean(value) : value,
+      [name]: nextValue,
+      ...(name === 'IsPaid' && !nextValue ? { Price: '', DiscountPercentage: 0 } : {}),
     }));
 
     if (errors[name]) {
