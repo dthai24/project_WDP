@@ -1,5 +1,10 @@
 const multer = require('multer');
-const { AUDIO_EXTENSIONS, DOC_EXTENSIONS, MATERIAL_MAX_BYTES } = require('../services/cloudinaryService');
+const {
+  AUDIO_EXTENSIONS,
+  DOC_EXTENSIONS,
+  MATERIAL_MAX_BYTES,
+  MATERIAL_MAX_SIZE_MESSAGE,
+} = require('../services/cloudinaryService');
 
 const materialUpload = multer({
   storage: multer.memoryStorage(),

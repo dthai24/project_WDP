@@ -226,6 +226,7 @@ export default function MentorTextMaterialEditor({
   material,
   errors = {},
   onChange,
+  onRegisterFlush,
   disabled = false,
   compact = false,
 }) {
@@ -383,10 +384,19 @@ export default function MentorTextMaterialEditor({
   );
 
   useEffect(() => {
+    if (!onRegisterFlush) return undefined;
+    return onRegisterFlush(flushSyncFromDom);
+  }, [onRegisterFlush, flushSyncFromDom]);
+
+  useEffect(() => {
     return () => {
-      if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+      if (syncTimerRef.current) {
+        window.clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+      flushSyncFromDom();
     };
-  }, []);
+  }, [flushSyncFromDom]);
 
   useEffect(() => {
     let cancelled = false;

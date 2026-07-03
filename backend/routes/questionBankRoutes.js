@@ -6,7 +6,8 @@ const {
     getAllBankOfMentor,
     getChapterSections,
     getSectionQuestions,
-    getQuestionBankByIdController
+    getQuestionBankByIdController,
+    getQuestionBankPathsByBankIdController
 } = require('../controllers/questionBankController');
 
 
@@ -21,6 +22,7 @@ const optionalAuth = (req, res, next) => {
 
     next();
 };
+questionBankRoutes.get('/getBankPaths/:bankId', optionalAuth, getQuestionBankPathsByBankIdController)
 questionBankRoutes.get('/getBankById/:bankId', optionalAuth, getQuestionBankByIdController);
 questionBankRoutes.get('/getAllBankOfMentor', optionalAuth, getAllBankOfMentor);
 questionBankRoutes.get('/courses/:courseId/paths/:pathId/sections', optionalAuth, getChapterSections);

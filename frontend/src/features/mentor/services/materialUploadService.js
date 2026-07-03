@@ -21,6 +21,18 @@ export async function uploadTextMaterial({ html, title }) {
   return parseUploadResponse(response);
 }
 
+export async function uploadReadingDocMaterial(file) {
+  const formData = new FormData();
+  formData.append('type', 'READING_DOC');
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/materials/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  return parseUploadResponse(response);
+}
+
 export async function uploadDocMaterial(file) {
   const formData = new FormData();
   formData.append('type', 'DOC');

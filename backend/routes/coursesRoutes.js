@@ -22,13 +22,11 @@ const {
 
 const optionalAuth = (req, res, next) => {
     const userId = req.headers['x-user-id'] || req.query.userId;
-
     if (userId) {
         req.user = {
             userId: Number(userId),
         };
     }
-
     next();
 };
 
@@ -61,7 +59,7 @@ router.get('/my-courses/:courseId', getInformationCourse);
 router.post('/mentor/courses/save/draft', saveCourseDraftStepOne);
 router.post('/mentor/courses/createCourse', createFinalCourse);
 
-router.post('/enroll', enrollCourse); 
+router.post('/enroll', enrollCourse);
 
 // Bình luận khóa học (trang detail)
 router.get('/:courseId/comments', optionalAuth, getCourseComments);

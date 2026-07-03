@@ -118,7 +118,7 @@ export default function MentorQuestionBankRow({ bankItem }) {
       toast.info('Không xác định được Question Bank hoặc Khóa học.');
       return;
     }
-    navigate(`/mentor/question-banks/${bankItem.BankId}&courseId=${bankItem.CourseId}}`);
+    navigate(`/mentor/question-banks/${bankItem.CourseId}`);
   };
   return (
     <Box

@@ -155,11 +155,29 @@ Where BankId = @bankId
     return result.recordset
 }
 
+// get question bank paths by bank's id
+const getQuestionBankPathsByBankIdModel = async (bankId) => {
+    const request = new sql.Request();
+    request.input('bankId', sql.Int, Number(bankId));
+    const result = await request.query(
+        `
+  SELECT [Question_Path_Id]
+      ,[BankId]
+      ,[PathId]
+  FROM [LearningPath_Base].[dbo].[Questions_Path]
+  Where BankId = @bankId
+        `
+    )
+
+    return result.recordset
+}
+
 module.exports = {
     getAllListQuestionBankByMentorId,
     getSectionsByPath,
     getQuestionsBySection,
     sectionBelongsToCoursePath,
-    getQuestionBankByIdModel
+    getQuestionBankByIdModel,
+    getQuestionBankPathsByBankIdModel
 };
 

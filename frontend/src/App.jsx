@@ -226,8 +226,8 @@ export default function App() {
         <Route path="courses/:courseId" element={<MentorCourseDetailPage />} />
         <Route path="courses" element={<MentorCoursesPage />} />
         <Route path="question-banks/create" element={<MentorQuestionBankCreatePage />} />
-        <Route path="question-banks/manage" element={<MentorQuestionBankManagePage />} />
-        <Route path="question-banks/:questionBankId" element={<MentorQuestionBankDetailPage />} />
+        <Route path="question-banks/:courseId/:pathId" element={<MentorQuestionBankManagePage />} />
+        <Route path="question-banks/:courseId" element={<MentorQuestionBankDetailPage />} />
         <Route path="question-banks" element={<MentorQuestionBankListPage />} />
         <Route path="news" element={<MentorNewsPage />} />
         <Route path="student-progress" element={<MentorStudentProgressPage />} />

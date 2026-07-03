@@ -267,7 +267,7 @@ export default function MentorQuestionBankListPage() {
         onClose={() => setSelectDialogOpen(false)}
         courses={coursesWithoutQB}
         onSelect={(course) =>
-          navigate(`/mentor/question-banks/create?courseId=${course.CourseId}`)
+          navigate(`/mentor/question-banks/${course.CourseId}`)
         }
       />
     </Box>

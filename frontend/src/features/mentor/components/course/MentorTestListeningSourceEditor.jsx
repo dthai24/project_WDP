@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Divider, IconButton, InputBase, Typography } from '@mui/material';
+import { Box, CircularProgress, Divider, IconButton, InputBase, Typography } from '@mui/material';
 import AudiotrackRoundedIcon from '@mui/icons-material/AudiotrackRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
@@ -15,9 +15,63 @@ import {
   LISTENING_SOURCE_UPLOAD,
   getListeningAudioMaxSizeLabel,
   validateListeningAudioFile,
+  validateListeningAudioUrl,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import { uploadAudioMaterial } from '@/features/mentor/services/materialUploadService';
+import {
+  LISTENING_PREVIEW_HEIGHT,
+  resolveListeningPreview,
+} from '@/shared/utils/mediaPreviewUtils';
 
 const FORMAT_HINT = AUDIO_ALLOWED_EXTENSION_NAMES.map((ext) => ext.toUpperCase()).join(', ');
+
+function ListeningPreview({ sourceUrl, fileName }) {
+  const preview = useMemo(
+    () => resolveListeningPreview(sourceUrl, fileName),
+    [sourceUrl, fileName],
+  );
+
+  if (!preview.mode || !preview.embedUrl) return null;
+
+  if (preview.mode === 'audio') {
+    return (
+      <Box
+        component="audio"
+        controls
+        src={preview.embedUrl}
+        title={`Nghe ${fileName || 'audio'}`}
+        sx={{ display: 'block', width: '100%', mt: 1 }}
+      />
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        mt: 1,
+        borderRadius: '10px',
+        overflow: 'hidden',
+        border: '1px solid rgba(15,23,42,0.08)',
+        bgcolor: '#F8FAFC',
+      }}
+    >
+      <Box
+        component="iframe"
+        src={preview.embedUrl}
+        title={`Xem trước ${fileName || 'media nghe'}`}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        sx={{
+          display: 'block',
+          width: '100%',
+          height: LISTENING_PREVIEW_HEIGHT,
+          border: 'none',
+          bgcolor: '#000',
+        }}
+      />
+    </Box>
+  );
+}
 
 export default function MentorTestListeningSourceEditor({
   section,
@@ -25,35 +79,49 @@ export default function MentorTestListeningSourceEditor({
   accentColor,
   disabled = false,
   onChange,
+  onRegisterControls,
 }) {
   const fileInputRef = useRef(null);
+  const uploadSeqRef = useRef(0);
+  const uploadingRef = useRef(false);
   const [dragOver, setDragOver] = useState(false);
   const [fileTypeError, setFileTypeError] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
-  const hasFile = Boolean(section.File || section.FileName);
-  const audioUrl = String(section.AudioUrl ?? '');
-  const hasLink = Boolean(audioUrl.trim());
-
-  const previewUrl = useMemo(() => {
-    if (!section.File) return null;
-    return URL.createObjectURL(section.File);
-  }, [section.File]);
+  const audioUrl = String(section.AudioUrl ?? '').trim();
+  const hasUploadedMedia = Boolean(section.FileName || audioUrl);
+  const hasLocalFile = Boolean(section.File);
+  const hasFile = hasUploadedMedia || hasLocalFile;
+  const hasLink = Boolean(audioUrl) && section.AudioSourceType === LISTENING_SOURCE_LINK;
+  const displayFileName = section.File?.name ?? section.FileName ?? '';
+  const displayFileSize = section.File?.size ?? section.FileSize;
+  const previewSourceUrl = audioUrl;
+  const isBusy = disabled || uploading;
+  uploadingRef.current = uploading;
 
   useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+    if (!onRegisterControls) return undefined;
+    onRegisterControls({
+      flush: () => {},
+      isBusy: () => uploadingRef.current,
+    });
+    return () => onRegisterControls(null);
+  }, [onRegisterControls]);
 
   const applyFile = useCallback(
-    (file) => {
-      if (!file) return;
+    async (file) => {
+      if (!file || uploading) return;
       const fileCheck = validateListeningAudioFile(file);
       if (!fileCheck.ok) {
         setFileTypeError(fileCheck.message);
         return;
       }
+
+      const seq = ++uploadSeqRef.current;
       setFileTypeError('');
+      setUploadError('');
+      setUploading(true);
       onChange({
         AudioSourceType: LISTENING_SOURCE_UPLOAD,
         File: file,
@@ -61,8 +129,34 @@ export default function MentorTestListeningSourceEditor({
         FileSize: file.size,
         AudioUrl: '',
       });
+
+      try {
+        const uploaded = await uploadAudioMaterial(file);
+        if (seq !== uploadSeqRef.current) return;
+
+        onChange({
+          AudioSourceType: LISTENING_SOURCE_UPLOAD,
+          File: null,
+          FileName: uploaded.fileName ?? file.name,
+          FileSize: uploaded.fileSize ?? file.size,
+          AudioUrl: uploaded.deliveryUrl ?? uploaded.url ?? '',
+        });
+      } catch (error) {
+        if (seq !== uploadSeqRef.current) return;
+        setUploadError(error?.message || 'Không thể tải file lên.');
+        onChange({
+          File: null,
+          FileName: null,
+          FileSize: null,
+          AudioUrl: '',
+        });
+      } finally {
+        if (seq === uploadSeqRef.current) {
+          setUploading(false);
+        }
+      }
     },
-    [onChange],
+    [onChange, uploading],
   );
 
   const handleFileInputChange = (event) => {
@@ -74,24 +168,34 @@ export default function MentorTestListeningSourceEditor({
   const handleDrop = (event) => {
     event.preventDefault();
     setDragOver(false);
-    if (disabled) return;
+    if (isBusy) return;
     const file = event.dataTransfer.files?.[0];
     if (file) applyFile(file);
   };
 
   const handleRemoveFile = () => {
+    uploadSeqRef.current += 1;
     setFileTypeError('');
+    setUploadError('');
+    setUploading(false);
     onChange({
       File: null,
       FileName: null,
       FileSize: null,
-      AudioSourceType: audioUrl.trim() ? LISTENING_SOURCE_LINK : LISTENING_SOURCE_UPLOAD,
+      AudioUrl: hasLink ? audioUrl : '',
+      AudioSourceType: hasLink ? LISTENING_SOURCE_LINK : LISTENING_SOURCE_UPLOAD,
     });
   };
 
   const handleLinkChange = (event) => {
     const nextUrl = event.target.value;
     if (nextUrl.trim()) {
+      const linkCheck = validateListeningAudioUrl(nextUrl);
+      if (!linkCheck.ok) {
+        setFileTypeError(linkCheck.message);
+      } else {
+        setFileTypeError('');
+      }
       onChange({
         AudioUrl: nextUrl,
         AudioSourceType: LISTENING_SOURCE_LINK,
@@ -99,21 +203,21 @@ export default function MentorTestListeningSourceEditor({
         FileName: null,
         FileSize: null,
       });
-      setFileTypeError('');
+      setUploadError('');
       return;
     }
+    setFileTypeError('');
     onChange({
       AudioUrl: '',
       AudioSourceType: LISTENING_SOURCE_UPLOAD,
     });
   };
 
-  const fileError = fileTypeError || errors.File;
+  const fileError = fileTypeError || uploadError || errors.File;
   const linkError = errors.AudioUrl;
   const contextError = errors._audio;
   const hasError = Boolean(fileError || linkError || contextError);
-  const displayFileName = section.File?.name ?? section.FileName ?? '';
-  const displayFileSize = section.File?.size ?? section.FileSize;
+  const showPreview = !uploading && previewSourceUrl;
 
   return (
     <Box sx={{ mb: 1.5 }}>
@@ -124,11 +228,11 @@ export default function MentorTestListeningSourceEditor({
       <Box
         onDragEnter={(event) => {
           event.preventDefault();
-          if (!disabled && !hasFile) setDragOver(true);
+          if (!isBusy && !hasFile) setDragOver(true);
         }}
         onDragOver={(event) => {
           event.preventDefault();
-          if (!disabled && !hasFile) setDragOver(true);
+          if (!isBusy && !hasFile) setDragOver(true);
         }}
         onDragLeave={(event) => {
           event.preventDefault();
@@ -145,7 +249,7 @@ export default function MentorTestListeningSourceEditor({
           transition: 'border-color 0.15s, background-color 0.15s',
         }}
       >
-        {hasFile ? (
+        {hasFile && !hasLink ? (
           <>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box
@@ -159,7 +263,11 @@ export default function MentorTestListeningSourceEditor({
                   flexShrink: 0,
                 }}
               >
-                <AudiotrackRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
+                {uploading ? (
+                  <CircularProgress size={16} sx={{ color: accentColor }} />
+                ) : (
+                  <AudiotrackRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
+                )}
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
@@ -172,53 +280,33 @@ export default function MentorTestListeningSourceEditor({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {displayFileName}
+                  {displayFileName || 'Đang tải file...'}
                 </Typography>
-                {displayFileSize != null ? (
-                  <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.1 }}>
-                    {formatFileSize(displayFileSize)}
-                  </Typography>
-                ) : null}
+                <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.1 }}>
+                  {uploading
+                    ? 'Đang tải lên Cloudinary...'
+                    : displayFileSize != null
+                      ? formatFileSize(displayFileSize)
+                      : ''}
+                </Typography>
               </Box>
               <IconButton
                 size="small"
                 onClick={handleRemoveFile}
-                disabled={disabled}
+                disabled={isBusy}
                 aria-label="Xóa file audio"
                 sx={{ color: MUTED, '&:hover': { color: '#DC2626' } }}
               >
                 <CloseRoundedIcon sx={{ fontSize: 17 }} />
               </IconButton>
             </Box>
-            {previewUrl ? (
-              /\.mp4$/i.test(displayFileName) ? (
-                <Box
-                  component="video"
-                  controls
-                  src={previewUrl}
-                  sx={{ display: 'block', width: '100%', mt: 0.85 }}
-                />
-              ) : (
-                <Box
-                  component="audio"
-                  controls
-                  src={previewUrl}
-                  sx={{ display: 'block', width: '100%', mt: 0.85 }}
-                />
-              )
+            {showPreview ? (
+              <ListeningPreview sourceUrl={previewSourceUrl} fileName={displayFileName} />
             ) : null}
           </>
         ) : (
           <>
-            {/* Upload row */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                flexWrap: 'wrap',
-              }}
-            >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Box
                 sx={{
                   width: 32,
@@ -243,7 +331,7 @@ export default function MentorTestListeningSourceEditor({
               <Box
                 component="button"
                 type="button"
-                disabled={disabled}
+                disabled={isBusy}
                 onClick={() => fileInputRef.current?.click()}
                 sx={{
                   display: 'inline-flex',
@@ -258,10 +346,10 @@ export default function MentorTestListeningSourceEditor({
                   fontSize: 12,
                   fontWeight: 600,
                   fontFamily: 'inherit',
-                  cursor: disabled ? 'default' : 'pointer',
-                  opacity: disabled ? 0.6 : 1,
+                  cursor: isBusy ? 'default' : 'pointer',
+                  opacity: isBusy ? 0.6 : 1,
                   flexShrink: 0,
-                  '&:hover': disabled ? undefined : { bgcolor: 'rgba(15,23,42,0.04)' },
+                  '&:hover': isBusy ? undefined : { bgcolor: 'rgba(15,23,42,0.04)' },
                 }}
               >
                 Chọn file
@@ -275,7 +363,6 @@ export default function MentorTestListeningSourceEditor({
               />
             </Box>
 
-            {/* Divider */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 0.85 }}>
               <Divider sx={{ flex: 1, borderColor: 'rgba(15,23,42,0.08)' }} />
               <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, flexShrink: 0 }}>
@@ -284,7 +371,6 @@ export default function MentorTestListeningSourceEditor({
               <Divider sx={{ flex: 1, borderColor: 'rgba(15,23,42,0.08)' }} />
             </Box>
 
-            {/* Link input row */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
               <LinkRoundedIcon
                 sx={{ fontSize: 16, color: hasLink ? accentColor : MUTED, flexShrink: 0 }}
@@ -298,6 +384,10 @@ export default function MentorTestListeningSourceEditor({
                 sx={contentInputSx(Boolean(linkError), { color: accentColor })}
               />
             </Box>
+
+            {hasLink && showPreview ? (
+              <ListeningPreview sourceUrl={previewSourceUrl} fileName={displayFileName} />
+            ) : null}
           </>
         )}
 

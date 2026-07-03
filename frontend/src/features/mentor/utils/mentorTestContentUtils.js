@@ -1,5 +1,47 @@
 // TODO: backend should support TEST material details: Sections, SkillType, Questions, Options, Pairs, Answers
 
+import {
+  AUDIO_EXTENSION_NAMES as AUDIO_ALLOWED_EXTENSION_NAMES,
+  getFileExtension as getListeningAudioExtension,
+  getMaterialMaxFileSizeLabel as getListeningAudioMaxSizeLabel,
+  isAllowedListeningAudioExtension,
+  isAllowedListeningAudioFile,
+  isAllowedReadingDocExtension,
+  isSimpleHttpUrl as isSimpleUrl,
+  LISTENING_AUDIO_FILE_ACCEPT,
+  LISTENING_AUDIO_INVALID_TYPE_MESSAGE,
+  LISTENING_LINK_INVALID_MESSAGE,
+  MATERIAL_UPLOAD_MAX_BYTES,
+  MATERIAL_UPLOAD_MAX_SIZE_MESSAGE,
+  READING_DOC_EXTENSIONS,
+  READING_DOC_EXTENSION_NAMES,
+  READING_DOC_FILE_ACCEPT,
+  READING_DOC_INVALID_TYPE_MESSAGE,
+  validateListeningAudioFile,
+  validateListeningAudioUrl,
+  validateReadingDocFile,
+} from '@/shared/utils/materialUploadValidation';
+
+export {
+  MATERIAL_UPLOAD_MAX_BYTES,
+  MATERIAL_UPLOAD_MAX_SIZE_MESSAGE,
+  READING_DOC_EXTENSIONS,
+  READING_DOC_EXTENSION_NAMES,
+  READING_DOC_FILE_ACCEPT,
+  READING_DOC_INVALID_TYPE_MESSAGE,
+  LISTENING_AUDIO_FILE_ACCEPT,
+  LISTENING_AUDIO_INVALID_TYPE_MESSAGE,
+  LISTENING_LINK_INVALID_MESSAGE,
+  AUDIO_EXTENSION_NAMES as AUDIO_ALLOWED_EXTENSION_NAMES,
+  validateReadingDocFile,
+  validateListeningAudioFile,
+  validateListeningAudioUrl,
+} from '@/shared/utils/materialUploadValidation';
+
+export { getListeningAudioExtension, getListeningAudioMaxSizeLabel };
+
+export { getCloudinaryDeliveryUrl } from '@/shared/utils/cloudinaryDeliveryUtils';
+
 let testTempIdCounter = 0;
 
 function createTestTempId(prefix = 'tmp') {
@@ -34,71 +76,17 @@ export const LISTENING_SOURCE_LINK = 'LINK';
 
 export const AUDIO_ALLOWED_EXTENSIONS = ['.mp3', '.mp4'];
 
-/** Đuôi file không dấu chấm — dùng khi so khớp tên file. */
-export const AUDIO_ALLOWED_EXTENSION_NAMES = ['mp3', 'mp4'];
-
-const AUDIO_ALLOWED_MIME_TYPES = new Set([
-  'audio/mpeg',
-  'audio/mp3',
-  'audio/mp4',
-  'video/mp4',
-]);
-
-/** Dùng cho input[type=file] — hỗ trợ cả MIME và đuôi .mp3 / .mp4. */
-export const LISTENING_AUDIO_FILE_ACCEPT =
-  'audio/mpeg,audio/mp3,audio/mp4,video/mp4,.mp3,.mp4';
-
 /** Khớp giới hạn Cloudinary free tier — 10 MB. */
-export const AUDIO_MAX_BYTES = 10 * 1024 * 1024;
+export const AUDIO_MAX_BYTES = MATERIAL_UPLOAD_MAX_BYTES;
 
-export const LISTENING_AUDIO_INVALID_TYPE_MESSAGE =
-  'Chỉ hỗ trợ file đuôi .mp3 hoặc .mp4.';
-
-export const LISTENING_AUDIO_MAX_SIZE_MESSAGE =
-  'File quá lớn. Dung lượng tối đa là 10 MB.';
-
-export function getListeningAudioMaxSizeLabel() {
-  return '10 MB';
-}
-
-/** Lấy đuôi file (mp3, mp4…) — không phân biệt hoa thường. */
-export function getListeningAudioExtension(fileName) {
-  const match = String(fileName ?? '')
-    .trim()
-    .toLowerCase()
-    .match(/\.([a-z0-9]+)$/);
-  return match?.[1] ?? null;
-}
-
-export function isAllowedListeningAudioExtension(ext) {
-  if (!ext) return false;
-  return AUDIO_ALLOWED_EXTENSION_NAMES.includes(String(ext).trim().toLowerCase());
-}
-
-export function isAllowedAudioFile(file) {
-  if (!file) return false;
-  const ext = getListeningAudioExtension(file.name);
-  if (isAllowedListeningAudioExtension(ext)) return true;
-  const mime = String(file.type ?? '').trim().toLowerCase();
-  return AUDIO_ALLOWED_MIME_TYPES.has(mime);
-}
+export const LISTENING_AUDIO_MAX_SIZE_MESSAGE = MATERIAL_UPLOAD_MAX_SIZE_MESSAGE;
 
 export function isAllowedListeningAudioFileName(fileName) {
   return isAllowedListeningAudioExtension(getListeningAudioExtension(fileName));
 }
 
-/** Kiểm tra định dạng + dung lượng file audio bài nghe. */
-export function validateListeningAudioFile(file) {
-  if (!file) {
-    return { ok: false, message: 'Vui lòng chọn file .mp3 hoặc .mp4.' };
-  }
-  if (!isAllowedAudioFile(file)) {
-    return { ok: false, message: LISTENING_AUDIO_INVALID_TYPE_MESSAGE };
-  }
-  if (Number(file.size) > AUDIO_MAX_BYTES) {
-    return { ok: false, message: LISTENING_AUDIO_MAX_SIZE_MESSAGE };
-  }
-  return { ok: true };
+export function isAllowedAudioFile(file) {
+  return isAllowedListeningAudioFile(file);
 }
 
 export function getListeningSectionFields() {
@@ -111,13 +99,22 @@ export function getListeningSectionFields() {
   };
 }
 
-function isBrowserFile(value) {
-  return typeof File !== 'undefined' && value instanceof File;
+export const READING_SOURCE_UPLOAD = 'UPLOAD';
+export const READING_SOURCE_COMPOSE = 'COMPOSE';
+
+export function getReadingSectionFields() {
+  return {
+    ReadingSourceType: READING_SOURCE_COMPOSE,
+    File: null,
+    FileName: null,
+    FileSize: null,
+    MaterialUrl: '',
+    Description: '',
+  };
 }
 
-function isSimpleUrl(value) {
-  const trimmed = String(value ?? '').trim();
-  return /^https?:\/\/.+/i.test(trimmed);
+function isBrowserFile(value) {
+  return typeof File !== 'undefined' && value instanceof File;
 }
 
 export const QUESTION_TYPE_MULTIPLE_CHOICE = 'MULTIPLE_CHOICE';
@@ -506,6 +503,7 @@ export function createEmptyTestSection(skillType = TEST_SKILL_READING) {
     Description: '',
     Questions: [],
     ...(skillType === TEST_SKILL_LISTENING ? getListeningSectionFields() : {}),
+    ...(skillType === TEST_SKILL_READING ? getReadingSectionFields() : {}),
   };
 }
 
@@ -779,26 +777,62 @@ export function validateTestMaterial(material, options = {}) {
       sErrors._questions = 'Vui lòng thêm câu hỏi cho phần này';
     }
 
-    if (
-      section.SkillType === TEST_SKILL_LISTENING
-    ) {
+    if (section.SkillType === TEST_SKILL_LISTENING) {
       const hasFile = Boolean(section.File || section.FileName);
       const audioUrl = String(section.AudioUrl ?? '').trim();
       const hasLink = Boolean(audioUrl);
+      const isLinkSource = section.AudioSourceType === LISTENING_SOURCE_LINK;
 
       if (!hasFile && !hasLink) {
         sErrors._audio = 'Vui lòng tải file audio hoặc nhập link nghe';
-      } else if (hasLink && !isSimpleUrl(audioUrl)) {
-        sErrors.AudioUrl = 'Vui lòng nhập link audio hoặc video nghe hợp lệ';
       } else if (isBrowserFile(section.File)) {
         const fileCheck = validateListeningAudioFile(section.File);
         if (!fileCheck.ok) {
           sErrors.File = fileCheck.message;
         }
-      } else if (hasFile && section.FileName && !isAllowedListeningAudioFileName(section.FileName)) {
-        sErrors.File = LISTENING_AUDIO_INVALID_TYPE_MESSAGE;
-      } else if (hasFile && Number(section.FileSize) > AUDIO_MAX_BYTES) {
-        sErrors.File = LISTENING_AUDIO_MAX_SIZE_MESSAGE;
+      } else if (isLinkSource || (!section.FileName && hasLink)) {
+        const linkCheck = validateListeningAudioUrl(audioUrl);
+        if (!linkCheck.ok) {
+          sErrors.AudioUrl = linkCheck.message;
+        }
+      } else if (hasFile) {
+        if (section.FileName && !isAllowedListeningAudioFileName(section.FileName)) {
+          sErrors.File = LISTENING_AUDIO_INVALID_TYPE_MESSAGE;
+        } else if (Number(section.FileSize) > AUDIO_MAX_BYTES) {
+          sErrors.File = LISTENING_AUDIO_MAX_SIZE_MESSAGE;
+        }
+      }
+    }
+
+    if (section.SkillType === TEST_SKILL_READING) {
+      const sourceType =
+        section.ReadingSourceType === READING_SOURCE_UPLOAD
+          ? READING_SOURCE_UPLOAD
+          : READING_SOURCE_COMPOSE;
+
+      if (sourceType === READING_SOURCE_UPLOAD) {
+        const materialUrl = String(section.MaterialUrl ?? '').trim();
+        const hasUploaded = Boolean(materialUrl);
+        const hasPendingFile = isBrowserFile(section.File);
+        const hasFileMeta = Boolean(section.FileName);
+
+        if (!hasUploaded && !hasPendingFile && !hasFileMeta) {
+          sErrors.File = 'Vui lòng tải file PDF, DOC hoặc DOCX.';
+        } else if (hasPendingFile) {
+          const fileCheck = validateReadingDocFile(section.File);
+          if (!fileCheck.ok) {
+            sErrors.File = fileCheck.message;
+          }
+        } else if (hasFileMeta) {
+          const ext = getListeningAudioExtension(section.FileName);
+          if (!isAllowedReadingDocExtension(ext)) {
+            sErrors.File = READING_DOC_INVALID_TYPE_MESSAGE;
+          } else if (Number(section.FileSize) > MATERIAL_UPLOAD_MAX_BYTES) {
+            sErrors.File = MATERIAL_UPLOAD_MAX_SIZE_MESSAGE;
+          }
+        }
+      } else if (!String(section.Description ?? '').trim()) {
+        sErrors.Description = 'Vui lòng soạn nội dung bài đọc.';
       }
     }
 
@@ -837,6 +871,106 @@ export function validateTestMaterial(material, options = {}) {
   }
 
   return materialErrors;
+}
+
+/** Validate một section question bank (dùng trước khi cập nhật từng section). */
+export function validateQuestionBankSection(
+  section,
+  { validateScore = false, requireQuestions = false } = {},
+) {
+  const sErrors = {};
+
+  if (!section?.tempId) {
+    return { _section: 'Section không hợp lệ' };
+  }
+
+  if (!TEST_SKILLS.includes(section.SkillType)) {
+    sErrors.SkillType = 'Vui lòng chọn kỹ năng cho phần kiểm tra';
+  }
+
+  const questions = section.Questions ?? [];
+  if (requireQuestions && questions.length === 0) {
+    sErrors._questions = 'Vui lòng thêm câu hỏi cho phần này';
+  }
+
+  if (section.SkillType === TEST_SKILL_LISTENING) {
+    const hasFile = Boolean(section.File || section.FileName);
+    const audioUrl = String(section.AudioUrl ?? '').trim();
+    const hasLink = Boolean(audioUrl);
+    const isLinkSource = section.AudioSourceType === LISTENING_SOURCE_LINK;
+    const hasMediaInput = hasFile || hasLink;
+
+    if (hasMediaInput) {
+      if (!hasFile && !hasLink) {
+        sErrors._audio = 'Vui lòng tải file audio hoặc nhập link nghe';
+      } else if (isBrowserFile(section.File)) {
+        const fileCheck = validateListeningAudioFile(section.File);
+        if (!fileCheck.ok) {
+          sErrors.File = fileCheck.message;
+        }
+      } else if (isLinkSource || (!section.FileName && hasLink)) {
+        const linkCheck = validateListeningAudioUrl(audioUrl);
+        if (!linkCheck.ok) {
+          sErrors.AudioUrl = linkCheck.message;
+        }
+      } else if (hasFile) {
+        if (section.FileName && !isAllowedListeningAudioFileName(section.FileName)) {
+          sErrors.File = LISTENING_AUDIO_INVALID_TYPE_MESSAGE;
+        } else if (Number(section.FileSize) > AUDIO_MAX_BYTES) {
+          sErrors.File = LISTENING_AUDIO_MAX_SIZE_MESSAGE;
+        }
+      }
+    }
+  }
+
+  if (section.SkillType === TEST_SKILL_READING) {
+    const sourceType =
+      section.ReadingSourceType === READING_SOURCE_UPLOAD
+        ? READING_SOURCE_UPLOAD
+        : READING_SOURCE_COMPOSE;
+
+    if (sourceType === READING_SOURCE_UPLOAD) {
+      const materialUrl = String(section.MaterialUrl ?? '').trim();
+      const hasUploaded = Boolean(materialUrl);
+      const hasPendingFile = isBrowserFile(section.File);
+      const hasFileMeta = Boolean(section.FileName);
+
+      if (hasPendingFile || hasUploaded || hasFileMeta) {
+        if (!hasUploaded && !hasPendingFile && !hasFileMeta) {
+          sErrors.File = 'Vui lòng tải file PDF, DOC hoặc DOCX.';
+        } else if (hasPendingFile) {
+          const fileCheck = validateReadingDocFile(section.File);
+          if (!fileCheck.ok) {
+            sErrors.File = fileCheck.message;
+          }
+        } else if (hasFileMeta) {
+          const ext = getListeningAudioExtension(section.FileName);
+          if (!isAllowedReadingDocExtension(ext)) {
+            sErrors.File = READING_DOC_INVALID_TYPE_MESSAGE;
+          } else if (Number(section.FileSize) > MATERIAL_UPLOAD_MAX_BYTES) {
+            sErrors.File = MATERIAL_UPLOAD_MAX_SIZE_MESSAGE;
+          }
+        }
+      }
+    } else if (String(section.Description ?? '').trim()) {
+      /* compose có nội dung — hợp lệ */
+    }
+  }
+
+  const questionErrors = {};
+  questions.forEach((question) => {
+    if (!isFilledTestQuestion(question)) return;
+    const qErrors = validateTestQuestion(question, { validateScore });
+    if (Object.keys(qErrors).length > 0) {
+      questionErrors[question.tempId] = qErrors;
+    }
+  });
+
+  if (Object.keys(questionErrors).length > 0) {
+    sErrors.Questions = questionErrors;
+  }
+
+  return sErrors;
 }
 
 export function buildTestQuestionPayload(question) {

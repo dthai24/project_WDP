@@ -1,5 +1,10 @@
 // TODO: update backend/DB MaterialType to support TEXT
 import { resolveVideoEmbed } from '@/shared/utils/videoEmbedUtils';
+import {
+  getFileExtension,
+  MATERIAL_UPLOAD_MAX_BYTES,
+  MATERIAL_UPLOAD_MAX_SIZE_MESSAGE,
+} from '@/shared/utils/materialUploadValidation';
 import { getTestDefaultFields } from './mentorTestContentUtils';
 
 export { getTestDefaultFields } from './mentorTestContentUtils';
@@ -158,17 +163,17 @@ export function getVideoDefaultFields() {
 export const DOC_ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
 
 /** Khớp giới hạn Cloudinary free tier. */
-export const DOC_MAX_BYTES = 10 * 1024 * 1024;
-export const TEXT_MAX_BYTES = DOC_MAX_BYTES;
+export const DOC_MAX_BYTES = MATERIAL_UPLOAD_MAX_BYTES;
+export const TEXT_MAX_BYTES = MATERIAL_UPLOAD_MAX_BYTES;
 
 export function getMaterialMaxFileSizeLabel() {
-  return '10 MB';
+  return '10MB';
 }
 
 export function isAllowedDocFile(file) {
   if (!file?.name) return false;
-  const lower = file.name.toLowerCase();
-  return DOC_ALLOWED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+  const ext = getFileExtension(file.name);
+  return ['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(ext ?? '');
 }
 
 export function validateDocFile(file) {
@@ -181,7 +186,7 @@ export function validateDocFile(file) {
   if (file.size > DOC_MAX_BYTES) {
     return {
       ok: false,
-      message: `File quá lớn. Dung lượng tối đa là ${getMaterialMaxFileSizeLabel()}.`,
+      message: MATERIAL_UPLOAD_MAX_SIZE_MESSAGE,
     };
   }
   return { ok: true };
@@ -205,6 +210,21 @@ export function getDocFileTypeLabel(fileName) {
   if (lower.endsWith('.ppt')) return 'PPT';
   if (lower.endsWith('.pptx')) return 'PPTX';
   return 'Tài liệu';
+}
+
+function getDocExtension(fileNameOrUrl = '') {
+  return getFileExtension(fileNameOrUrl);
+}
+
+/** URL nhúng iframe xem trước tài liệu (PDF trực tiếp, Office qua Google Docs viewer). */
+export function getDocumentPreviewEmbedUrl(materialUrl, fileName = '') {
+  const url = String(materialUrl ?? '').trim();
+  if (!url) return null;
+
+  const ext = getDocExtension(fileName) || getDocExtension(url);
+  if (ext === 'pdf') return url;
+
+  return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
 }
 
 export function formatFileSize(bytes) {

@@ -2,26 +2,24 @@
  * Question bank service — API client.
  */
 
+import axios from 'axios';
+import {
+  buildTestSectionPayload,
+  normalizeQuestionBankSectionForSave,
+  TEST_SKILL_READING,
+} from '@/features/mentor/utils/mentorTestContentUtils';
+
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
 
 const TODO = 'Question bank API chưa được implement.';
 
-async function parseJsonResponse(response) {
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
-}
-
 export async function fetchChapterSections(courseId, pathId) {
   try {
-    const response = await fetch(
+    const { data: payload } = await axios.get(
       `${API_BASE}/question-bank/courses/${encodeURIComponent(courseId)}/paths/${encodeURIComponent(pathId)}/sections`,
     );
-    const payload = await parseJsonResponse(response);
 
-    if (!response.ok || payload.success === false) {
+    if (payload.success === false) {
       return {
         ok: false,
         message: payload.message ?? 'Không tải được danh sách section.',
@@ -36,23 +34,26 @@ export async function fetchChapterSections(courseId, pathId) {
     };
   } catch (error) {
     console.error('fetchChapterSections error:', error);
-    return { ok: false, message: 'Lỗi kết nối khi tải section.', sections: [] };
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải section.',
+      sections: [],
+    };
   }
 }
 
 export async function fetchSectionQuestions(sectionId, { courseId, pathId } = {}) {
   try {
-    const params = new URLSearchParams();
-    if (courseId) params.set('courseId', String(courseId));
-    if (pathId) params.set('pathId', String(pathId));
-    const query = params.toString();
+    const params = {};
+    if (courseId) params.courseId = String(courseId);
+    if (pathId) params.pathId = String(pathId);
 
-    const response = await fetch(
-      `${API_BASE}/question-bank/sections/${encodeURIComponent(sectionId)}/questions${query ? `?${query}` : ''}`,
+    const { data: payload } = await axios.get(
+      `${API_BASE}/question-bank/sections/${encodeURIComponent(sectionId)}/questions`,
+      { params },
     );
-    const payload = await parseJsonResponse(response);
 
-    if (!response.ok || payload.success === false) {
+    if (payload.success === false) {
       return {
         ok: false,
         message: payload.message ?? 'Không tải được câu hỏi.',
@@ -66,7 +67,11 @@ export async function fetchSectionQuestions(sectionId, { courseId, pathId } = {}
     };
   } catch (error) {
     console.error('fetchSectionQuestions error:', error);
-    return { ok: false, message: 'Lỗi kết nối khi tải câu hỏi.', questions: [] };
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải câu hỏi.',
+      questions: [],
+    };
   }
 }
 
@@ -171,6 +176,77 @@ export async function createQuestionBank() {
 
 export async function updatePathQuestions() {
   return { ok: false, message: TODO };
+}
+
+export async function saveQuestionBankSection({
+  courseId,
+  pathId,
+  questionPathId,
+  section,
+  sectionOrder,
+}) {
+  try {
+    const normalized = normalizeQuestionBankSectionForSave(section);
+    let sectionPayload = buildTestSectionPayload(normalized, sectionOrder);
+
+    if (normalized.SkillType === TEST_SKILL_READING) {
+      sectionPayload = {
+        ...sectionPayload,
+        ReadingSourceType: normalized.ReadingSourceType ?? null,
+        MaterialUrl: String(normalized.MaterialUrl ?? '').trim() || null,
+        FileName: normalized.FileName ?? null,
+        FileSize: normalized.FileSize ?? null,
+      };
+    }
+
+    const payload = {
+      courseId: Number(courseId),
+      pathId: Number(pathId),
+      questionPathId: questionPathId ?? null,
+      sectionOrder: Number(sectionOrder) || 1,
+      section: {
+        ...sectionPayload,
+        SectionId: normalized.SectionId ?? null,
+      },
+    };
+
+    const sectionId = section.SectionId;
+    const url = sectionId
+      ? `${API_BASE}/question-bank/sections/${encodeURIComponent(sectionId)}`
+      : `${API_BASE}/question-bank/courses/${encodeURIComponent(courseId)}/paths/${encodeURIComponent(pathId)}/sections`;
+
+    const { data } = sectionId
+      ? await axios.put(url, payload)
+      : await axios.post(url, payload);
+
+    if (data?.success === false) {
+      return {
+        ok: false,
+        message: data.message ?? 'Không thể cập nhật section.',
+      };
+    }
+
+    return {
+      ok: true,
+      sectionId: data?.data?.sectionId ?? sectionId ?? null,
+      message: data?.message ?? 'Đã cập nhật section.',
+    };
+  } catch (error) {
+    if (error.response?.status === 404 || error.response?.status === 501) {
+      return {
+        ok: true,
+        localOnly: true,
+        sectionId: section.SectionId ?? null,
+        message: 'Đã lưu thay đổi section (chờ API backend).',
+      };
+    }
+
+    console.error('saveQuestionBankSection error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Không thể cập nhật section.',
+    };
+  }
 }
 
 export async function updateQuestionBank() {

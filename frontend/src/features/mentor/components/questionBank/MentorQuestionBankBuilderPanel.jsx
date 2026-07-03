@@ -5,6 +5,8 @@ import { Box, Typography, alpha } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
+import AppButton from '@/shared/ui/AppButton';
 import MentorTestSectionCard from '@/features/mentor/components/course/MentorTestSectionCard';
 import { CREATE_CARD_SX, MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
@@ -14,9 +16,12 @@ import {
   getQuestionBankSectionTabLabel,
   isQuestionBankWritingSkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
-import { getSectionDisplayQuestionCount } from '@/features/mentor/utils/questionBankApiMappers';
+import {
+  getSectionDisplayQuestionCount,
+  isSectionEditorDirty,
+} from '@/features/mentor/utils/questionBankApiMappers';
 
-function BaiTab({ label, selected, disabled, accentColor, hasContent = false, onClick }) {
+function BaiTab({ label, selected, disabled, accentColor, hasContent = false, isDirty = false, onClick }) {
   const StatusIcon = hasContent ? CheckCircleOutlineRoundedIcon : RadioButtonUncheckedRoundedIcon;
   const statusColor = hasContent ? '#047857' : alpha(MUTED, 0.85);
 
@@ -26,7 +31,13 @@ function BaiTab({ label, selected, disabled, accentColor, hasContent = false, on
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={hasContent ? 'Đã có câu hỏi' : 'Chưa có câu hỏi'}
+      title={
+        isDirty
+          ? 'Có thay đổi chưa cập nhật'
+          : hasContent
+            ? 'Đã có câu hỏi'
+            : 'Chưa có câu hỏi'
+      }
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -34,9 +45,13 @@ function BaiTab({ label, selected, disabled, accentColor, hasContent = false, on
         px: 1.25,
         py: 0.55,
         borderRadius: '999px',
-        border: selected ? `1px solid ${alpha(accentColor, 0.4)}` : '1px solid rgba(15,23,42,0.1)',
-        bgcolor: selected ? alpha(accentColor, 0.1) : '#fff',
-        color: selected ? accentColor : TEXT,
+        border: selected
+          ? `1px solid ${alpha(accentColor, 0.4)}`
+          : isDirty
+            ? '1px solid rgba(245,158,11,0.45)'
+            : '1px solid rgba(15,23,42,0.1)',
+        bgcolor: selected ? alpha(accentColor, 0.1) : isDirty ? 'rgba(245,158,11,0.08)' : '#fff',
+        color: selected ? accentColor : isDirty ? '#B45309' : TEXT,
         fontSize: 12,
         fontWeight: selected ? 700 : 600,
         fontFamily: 'inherit',
@@ -52,6 +67,18 @@ function BaiTab({ label, selected, disabled, accentColor, hasContent = false, on
       <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
         {label}
       </Box>
+      {isDirty ? (
+        <Box
+          component="span"
+          sx={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            bgcolor: '#F59E0B',
+            flexShrink: 0,
+          }}
+        />
+      ) : null}
     </Box>
   );
 }
@@ -64,6 +91,9 @@ export default function MentorQuestionBankBuilderPanel({
   activeSectionId = '',
   skillSections = [],
   sectionErrors = {},
+  sectionBaselines = {},
+  activeSectionDirty = false,
+  updatingSection = false,
   questionCount = 0,
   disabled = false,
   emptyHint = null,
@@ -75,6 +105,8 @@ export default function MentorQuestionBankBuilderPanel({
   onAddBai,
   onSectionChange,
   onDeleteSection,
+  onUpdateSection,
+  onRegisterSectionControls,
 }) {
   const accentColor = TEST_SKILL_CHIP_COLORS[activeSkill]?.color ?? PRIMARY;
   const isWritingSkill = isQuestionBankWritingSkill(activeSkill);
@@ -130,6 +162,7 @@ export default function MentorQuestionBankBuilderPanel({
                         getSectionDisplayQuestionCount(section) > 0
                         || getFilledTestQuestions(section?.Questions).length > 0
                       }
+                      isDirty={isSectionEditorDirty(section, sectionBaselines)}
                       selected={section.tempId === activeSectionId}
                       disabled={disabled}
                       accentColor={accentColor}
@@ -169,6 +202,47 @@ export default function MentorQuestionBankBuilderPanel({
                   )}
                 </Box>
 
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                    mb: 1.5,
+                    p: 1.25,
+                    borderRadius: '12px',
+                    bgcolor: activeSectionDirty ? 'rgba(245,158,11,0.08)' : 'rgba(15,23,42,0.03)',
+                    border: `1px solid ${activeSectionDirty ? 'rgba(245,158,11,0.22)' : 'rgba(15,23,42,0.06)'}`,
+                  }}
+                >
+                  <Typography sx={{ fontSize: 12, color: activeSectionDirty ? '#92400E' : MUTED, lineHeight: 1.5 }}>
+                    {activeSectionDirty
+                      ? 'Section này có thay đổi chưa lưu. Cập nhật trước khi chuyển sang bài/kỹ năng khác.'
+                      : 'Section đã đồng bộ. Bạn có thể chuyển sang phần khác.'}
+                  </Typography>
+                  <AppButton
+                    startIcon={<SaveOutlinedIcon />}
+                    onClick={onUpdateSection}
+                    disabled={disabled || updatingSection || !activeSectionDirty}
+                    sx={{
+                      height: 36,
+                      px: 2,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      borderRadius: '999px',
+                      bgcolor: PRIMARY,
+                      color: '#fff',
+                      boxShadow: 'none',
+                      flexShrink: 0,
+                      '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+                      '&.Mui-disabled': { bgcolor: 'rgba(15,23,42,0.12)', color: MUTED },
+                    }}
+                  >
+                    {updatingSection ? 'Đang cập nhật...' : 'Cập nhật section'}
+                  </AppButton>
+                </Box>
+
                 <Box id={`qb-section-${activeSection.tempId}`} sx={{ scrollMarginTop: 24, minWidth: 0 }}>
                   <MentorTestSectionCard
                     section={activeSection}
@@ -189,6 +263,7 @@ export default function MentorQuestionBankBuilderPanel({
                     defaultExpanded
                     onChange={(nextSection) => onSectionChange(activeSection.tempId, nextSection)}
                     onDelete={() => onDeleteSection(activeSection.tempId)}
+                    onRegisterSectionControls={onRegisterSectionControls}
                   />
                 </Box>
               </>

@@ -4,6 +4,7 @@ const router = express.Router();
 
 const { uploadMaterial, fetchTextMaterialContent } = require('../controllers/materialUploadController');
 const { materialUploadMiddleware } = require('../middlewares/materialUploadMiddleware');
+const { MATERIAL_MAX_SIZE_MESSAGE } = require('../services/cloudinaryService');
 
 router.get('/text-content', fetchTextMaterialContent);
 
@@ -19,7 +20,7 @@ router.post('/upload', (req, res, next) => {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
           success: false,
-          message: 'File quá lớn. Dung lượng tối đa là 10 MB.',
+          message: MATERIAL_MAX_SIZE_MESSAGE,
         });
       }
 

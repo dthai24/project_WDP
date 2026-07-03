@@ -1,7 +1,7 @@
 /**
  * MentorQuestionBankDetailPage — UI shell (paths list + editor), không fetch API.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
@@ -28,6 +28,7 @@ import {
   getMockChaptersForCourse,
   getMockCourseFromQuestionBank,
 } from '@/features/mentor/data/mentorQuestionBankMock';
+import axios from 'axios';
 
 //________ChapTer Card__________
 function PathChapterCard({ path, index, onOpen }) {
@@ -77,7 +78,7 @@ function PathChapterCard({ path, index, onOpen }) {
           fontWeight: 800,
         }}
       >
-        {chapterNumber}
+        {path.Order}
       </Box>
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -92,7 +93,7 @@ function PathChapterCard({ path, index, onOpen }) {
             whiteSpace: 'nowrap',
           }}
         >
-          {label}
+          {path.PathName}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           <QuizOutlinedIcon sx={{ fontSize: 15, color: MUTED }} />
@@ -108,31 +109,56 @@ function PathChapterCard({ path, index, onOpen }) {
 //________________________________________________________
 export default function MentorQuestionBankDetailPage() {
   const navigate = useNavigate();
-  const { questionBankId } = useParams();
+  const { courseId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const courseId = searchParams.get('courseId') ?? '3';
+  // const courseId = searchParams.get('courseId') ?? '3';
   const chapterId = searchParams.get('chapterId') ?? '';
-  const isEditorMode = searchParams.get('mode') === 'editor';
-  const isPathListMode = !chapterId;
+  // const isEditorMode = searchParams.get('mode') === 'editor';
+  // const isPathListMode = !chapterId;
 
-  const course = getMockCourseFromQuestionBank(courseId);
+  // const course = getMockCourseFromQuestionBank(courseId);
+  const [course, setCourse] = useState();
+  // const [questionBankPaths, setQuestionBankPaths] = useState([])
+  const [coursePaths, setCoursePaths] = useState([])
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+
+        const [resCourse, resCoursePaths] = await Promise.all(
+          [
+            axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}?tab=course`),
+            // axios.get(`http://localhost:5000/api/question-bank/getBankPaths/${questionBankId}`),
+            axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}/chapters`)
+          ]
+        )
+
+        setCourse(resCourse.data.data[0])
+        // setQuestionBankPaths(resQuestionBankPaths.data.data)
+        setCoursePaths(resCoursePaths.data.data.Paths)
+      } catch (error) {
+        console.error(error.message)
+      }
+    }
+    fetchData();
+
+  }, [courseId])
   const courseChapters = getMockChaptersForCourse(courseId);
   const selectedChapter = courseChapters.find(
     (item) => String(item.PathId) === String(chapterId),
   );
 
-  const bank = useMemo(
-    () => ({
-      id: questionBankId,
-      courseId: Number(courseId) || courseId,
-      courseTitle: course?.CourseName ?? `Khóa học #${courseId}`,
-      chapterId: chapterId ? Number(chapterId) : null,
-      PathName: selectedChapter?.PathName ?? '',
-      title: selectedChapter?.PathName ?? 'Ngân hàng câu hỏi',
-      updatedAt: course?.CourseUpdateAt,
-    }),
-    [questionBankId, courseId, course, chapterId, selectedChapter],
-  );
+  // const bank = useMemo(
+  //   () => ({
+  //     id: questionBankId,
+  //     courseId: Number(courseId) || courseId,
+  //     courseTitle: course?.CourseName ?? `Khóa học #${courseId}`,
+  //     chapterId: chapterId ? Number(chapterId) : null,
+  //     PathName: selectedChapter?.PathName ?? '',
+  //     title: selectedChapter?.PathName ?? 'Ngân hàng câu hỏi',
+  //     updatedAt: course?.CourseUpdateAt,
+  //   }),
+  //   [questionBankId, courseId, course, chapterId, selectedChapter],
+  // );
 
   const bankPaths = useMemo(
     () =>
@@ -176,9 +202,16 @@ export default function MentorQuestionBankDetailPage() {
   );
 
   const openPath = (path) => {
-    navigate(
-      `/mentor/question-banks/${questionBankId}?courseId=${courseId}&chapterId=${path.PathId}&mode=editor`,
-    );
+    navigate(`/mentor/question-banks/${courseId}/${path.PathId}`, {
+      state: {
+        courseName: course?.CourseName,
+        pathName: path.PathName,
+        pathOrder: path.Order,
+        coursePublished: course?.IsPublished,
+        categoryName: course?.CategoryDisplayName ?? course?.categoryName,
+        levelName: course?.LevelDisplayName ?? course?.levelName,
+      },
+    });
   };
 
   const selectChapter = (nextChapterId) => {
@@ -251,7 +284,7 @@ export default function MentorQuestionBankDetailPage() {
           NGÂN HÀNG CÂU HỎI
         </Typography>
         <Typography sx={{ fontSize: { xs: 22, sm: 26 }, fontWeight: 800, color: TEXT, mb: 0.5 }}>
-          {/* {title} */}
+          {course?.CourseName ?? 'Đang tải khóa học...'}
         </Typography>
         <Typography sx={{ fontSize: 14, color: MUTED }}>
           {/* {courseCategory ? `${courseCategory} · ` : ''}
@@ -272,7 +305,7 @@ export default function MentorQuestionBankDetailPage() {
         </AppButton>
       </Box> */}
 
-      {bankPaths.length === 0 ? (
+      {/* {bankPaths.length === 0 ? (
         <EmptyState
           icon={MenuBookOutlinedIcon}
           title="Chưa có chương nào trong ngân hàng"
@@ -280,19 +313,25 @@ export default function MentorQuestionBankDetailPage() {
           actionLabel="Thêm chương"
           onAction={() => navigate(`/mentor/question-banks/manage?courseId=${courseId}`)}
         />
-      ) : (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-            gap: 1.5,
-          }}
-        >
-          {bankPaths.map((path, index) => (
-            <PathChapterCard key={path.PathId} path={path} index={index} onOpen={openPath} />
-          ))}
-        </Box>
-      )}
+      ) : ( */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+          gap: 1.5,
+        }}
+      >
+        {coursePaths.map((path, index) => (
+          <PathChapterCard
+            key={path.PathId}
+            path={path}
+            index={index}
+            onOpen={openPath}
+          />
+        ))}
+      </Box>
+      {/* )} */}
     </Box>
   );
+
 }

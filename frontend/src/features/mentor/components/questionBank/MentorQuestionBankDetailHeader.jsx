@@ -47,6 +47,8 @@ export default function MentorQuestionBankDetailHeader({
   updatedAt = null,
   actions = null,
   isCreateMode = false,
+  showBreadcrumbs = true,
+  breadcrumbMode = 'default',
   onBack,
   onQuizSetup,
 }) {
@@ -81,72 +83,76 @@ export default function MentorQuestionBankDetailHeader({
           mb: 1.25,
         }}
       >
-        <Breadcrumbs
-          separator="/"
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            flexWrap: 'wrap',
-            rowGap: 0.5,
-            '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 },
-            '& .MuiBreadcrumbs-li': { maxWidth: '100%' },
-          }}
-        >
-          <MuiLink
-            component={Link}
-            to="/home"
-            underline="hover"
-            sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+        {showBreadcrumbs ? (
+          <Breadcrumbs
+            separator="/"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              flexWrap: 'wrap',
+              rowGap: 0.5,
+              '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 },
+              '& .MuiBreadcrumbs-li': { maxWidth: '100%' },
+            }}
           >
-            Trang chủ
-          </MuiLink>
-          {courseId ? (
             <MuiLink
               component={Link}
-              to="/mentor/courses"
+              to="/home"
               underline="hover"
               sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
             >
-              Khóa học của tôi
+              Trang chủ
             </MuiLink>
-          ) : (
-            <MuiLink
-              component={Link}
-              to="/mentor/question-banks"
-              underline="hover"
-              sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
-            >
-              Ngân hàng câu hỏi
-            </MuiLink>
-          )}
-          {courseId ? (
-            <MuiLink
-              component={Link}
-              to={`/mentor/courses/${courseId}`}
-              underline="hover"
-              sx={{ fontSize: 13, color: MUTED, fontWeight: 500, maxWidth: 220 }}
+            {courseId ? (
+              <MuiLink
+                component={Link}
+                to="/mentor/courses"
+                underline="hover"
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+              >
+                Khóa học của tôi
+              </MuiLink>
+            ) : (
+              <MuiLink
+                component={Link}
+                to="/mentor/question-banks"
+                underline="hover"
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+              >
+                Ngân hàng câu hỏi
+              </MuiLink>
+            )}
+            {courseId ? (
+              <MuiLink
+                component={Link}
+                to={`/mentor/courses/${courseId}`}
+                underline="hover"
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500, maxWidth: 220 }}
+                noWrap
+              >
+                {courseName || `Khóa học #${courseId}`}
+              </MuiLink>
+            ) : null}
+            {courseId && breadcrumbMode === 'default' ? (
+              <MuiLink
+                component={Link}
+                to={backPath}
+                underline="hover"
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+              >
+                Ngân hàng câu hỏi
+              </MuiLink>
+            ) : null}
+            <Typography
+              sx={{ fontSize: 13, color: TEXT, fontWeight: 600, maxWidth: 280 }}
               noWrap
             >
-              {courseName || `Khóa học #${courseId}`}
-            </MuiLink>
-          ) : null}
-          {courseId ? (
-            <MuiLink
-              component={Link}
-              to={backPath}
-              underline="hover"
-              sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
-            >
-              Ngân hàng câu hỏi
-            </MuiLink>
-          ) : null}
-          <Typography
-            sx={{ fontSize: 13, color: TEXT, fontWeight: 600, maxWidth: 280 }}
-            noWrap
-          >
-            {breadcrumbLabel}
-          </Typography>
-        </Breadcrumbs>
+              {breadcrumbLabel}
+            </Typography>
+          </Breadcrumbs>
+        ) : (
+          <Box sx={{ flex: 1 }} />
+        )}
         <AppButton
           variant="outlined"
           startIcon={<ArrowBackRoundedIcon sx={{ fontSize: 18 }} />}

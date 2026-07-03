@@ -286,11 +286,56 @@ const getQuestionBankByIdController = async (req, res) => {
     }
 }
 
+// Route getQuestionBankPathsByBankId
+const getQuestionBankPathsByBankIdController = async (req, res) => {
+    try {
+        const bankId = Number(req.params.bankId)
+        if (!bankId) {
+            return res.status(400).json(
+                {
+                    success: false,
+                    message: 'Server không nhận được bankId',
+                    data: {}
+                }
+            )
+        }
+
+        const result = await questionBankModel.getQuestionBankPathsByBankIdModel(Number(bankId))
+        if (result.length === 0) {
+            return res.status(404).json(
+                {
+                    success: false,
+                    message: `Không tìm thấy BankId = ${bankId} trong Database`,
+                    data: {}
+                }
+            )
+        }
+        //==========SUCCESS=============
+        return res.status(200).json(
+            {
+                success: true,
+                message: 'Lấy thông tin Question Bank by Id thành công',
+                data: result[0]
+            }
+        )
+    } catch (error) {
+        console.error(error.message);
+        return res.status(500).json(
+            {
+                success: false,
+                message: `Lỗi server khi lấy thông tin của Question Bank Id=${bankId}`,
+                data: {}
+            }
+        )
+    }
+}
+
 
 module.exports = {
     getAllBankOfMentor,
     getChapterSections,
     getSectionQuestions,
-    getQuestionBankByIdController
+    getQuestionBankByIdController,
+    getQuestionBankPathsByBankIdController
 };
 

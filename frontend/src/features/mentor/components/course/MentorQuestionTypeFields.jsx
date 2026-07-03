@@ -1,6 +1,8 @@
-import { Box, Checkbox, IconButton, InputBase, Radio, Typography } from '@mui/material';
+import { Box, Checkbox, Collapse, IconButton, InputBase, Radio, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
+import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { createTestTempId } from '@/features/mentor/utils/mentorTestContentUtils';
 
@@ -16,6 +18,10 @@ export default function MentorQuestionTypeFields({
   accentColor,
   disabled = false,
   onChange,
+  collapsibleChoices = false,
+  choicesExpanded = false,
+  onChoicesExpandedChange,
+  questionIndex = 0,
 }) {
   const handleFieldChange = (patch) => onChange({ ...question, ...patch });
 
@@ -60,39 +66,91 @@ export default function MentorQuestionTypeFields({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.35 }}>
       {/* Question text */}
-      <Box>
-        <InputBase
-          value={question.QuestionText ?? ''}
-          onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
-          disabled={disabled}
-          placeholder="Nhập nội dung câu hỏi..."
-          fullWidth
-          multiline
-          minRows={2}
-          sx={{
-            fontSize: 13.5,
-            color: TEXT,
-            lineHeight: 1.6,
-            alignItems: 'flex-start',
-            px: 0.25,
-            py: 0.25,
-            width: '100%',
-            borderBottom: `1.5px solid ${errors.QuestionText ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
-            borderRadius: 0,
-            '&:focus-within': {
-              borderBottomColor: errors.QuestionText ? '#DC2626' : accentColor,
-            },
-          }}
-        />
-        {errors.QuestionText ? (
-          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.3 }}>
-            {errors.QuestionText}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.35, minWidth: 0 }}>
+        {collapsibleChoices ? (
+          <Typography
+            component="span"
+            sx={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: MUTED,
+              flexShrink: 0,
+              lineHeight: 1.5,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Câu {questionIndex + 1} :
           </Typography>
+        ) : null}
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <InputBase
+            value={question.QuestionText ?? ''}
+            onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
+            disabled={disabled}
+            placeholder={collapsibleChoices ? 'Nhập nội dung câu hỏi...' : 'Nhập nội dung câu hỏi...'}
+            fullWidth
+            multiline={!collapsibleChoices}
+            minRows={collapsibleChoices ? undefined : 2}
+            sx={{
+              fontSize: collapsibleChoices ? 15 : 13.5,
+              fontWeight: collapsibleChoices ? 700 : 400,
+              color: TEXT,
+              lineHeight: 1.5,
+              alignItems: collapsibleChoices ? 'center' : 'flex-start',
+              px: 0.25,
+              py: collapsibleChoices ? 0 : 0.25,
+              width: '100%',
+              borderBottom: collapsibleChoices
+                ? 'none'
+                : `1.5px solid ${errors.QuestionText ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
+              borderRadius: 0,
+              '& .MuiInputBase-input': collapsibleChoices
+                ? {
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }
+                : undefined,
+              '&:focus-within': collapsibleChoices
+                ? undefined
+                : {
+                    borderBottomColor: errors.QuestionText ? '#DC2626' : accentColor,
+                  },
+            }}
+          />
+          {errors.QuestionText ? (
+            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.3 }}>
+              {errors.QuestionText}
+            </Typography>
+          ) : null}
+        </Box>
+
+        {collapsibleChoices ? (
+          <IconButton
+            size="small"
+            onClick={() => onChoicesExpandedChange?.(!choicesExpanded)}
+            disabled={disabled}
+            aria-label={choicesExpanded ? 'Thu gọn đáp án' : 'Mở đáp án'}
+            aria-expanded={choicesExpanded}
+            sx={{
+              flexShrink: 0,
+              color: 'rgba(15,23,42,0.45)',
+              '&:hover': { color: accentColor, bgcolor: 'rgba(15,23,42,0.06)' },
+            }}
+          >
+            {choicesExpanded ? (
+              <KeyboardArrowUpRoundedIcon sx={{ fontSize: 22 }} />
+            ) : (
+              <KeyboardArrowDownRoundedIcon sx={{ fontSize: 22 }} />
+            )}
+          </IconButton>
         ) : null}
       </Box>
 
       {/* Answer options */}
-      <Box>
+      <Collapse in={!collapsibleChoices || choicesExpanded} timeout="auto" unmountOnExit={false}>
+        <Box>
         <Typography
           sx={{
             fontSize: 10.5,
@@ -228,7 +286,8 @@ export default function MentorQuestionTypeFields({
           <AddRoundedIcon sx={{ fontSize: 14 }} />
           Thêm đáp án
         </Box>
-      </Box>
+        </Box>
+      </Collapse>
     </Box>
   );
 }

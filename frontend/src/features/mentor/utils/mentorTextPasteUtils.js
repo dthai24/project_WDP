@@ -36,13 +36,51 @@ function parseFontSizePx(style) {
   return snapFontSize(value);
 }
 
+function readTextColor(style) {
+  const match = String(style ?? '').match(/\bcolor:\s*(#[0-9a-f]{3,8}|rgb\([^)]+\)|rgba\([^)]+\))/i);
+  if (!match) return null;
+  const color = match[1].toLowerCase().replace(/\s/g, '');
+  if (color === '#000' || color === '#000000' || color === 'rgb(0,0,0)' || color === 'rgba(0,0,0,1)') {
+    return null;
+  }
+  return match[1].trim();
+}
+
 function readInlineFormats(style) {
   const normalized = String(style ?? '').toLowerCase();
-  const bold = /\bfont-weight:\s*(bold|[6-9]00)\b/.test(normalized);
-  const italic = /\bfont-style:\s*italic\b/.test(normalized);
+  const bold =
+    /\bfont-weight:\s*(bold|[6-9]00)\b/.test(normalized)
+    || /\bmso-bidi-font-weight:\s*bold\b/.test(normalized)
+    || /\bmso-ansi-font-weight:\s*bold\b/.test(normalized);
+  const italic =
+    /\bfont-style:\s*italic\b/.test(normalized)
+    || /\bmso-ansi-font-style:\s*italic\b/.test(normalized);
   const underline = /\btext-decoration:[^;]*underline\b/.test(normalized);
   const fontSize = parseFontSizePx(normalized);
-  return { bold, italic, underline, fontSize };
+  const color = readTextColor(normalized);
+  return { bold, italic, underline, fontSize, color };
+}
+
+function isNormalFontWeight(style) {
+  return /\bfont-weight:\s*(normal|[1-4]00)\b/i.test(String(style ?? ''));
+}
+
+function isNormalFontStyle(style) {
+  return /\bfont-style:\s*normal\b/i.test(String(style ?? ''));
+}
+
+function isNoUnderline(style) {
+  return /\btext-decoration:\s*none\b/i.test(String(style ?? ''));
+}
+
+function hasVisualInlineFormat(formats) {
+  return Boolean(
+    formats.bold
+    || formats.italic
+    || formats.underline
+    || formats.color
+    || (formats.fontSize && formats.fontSize !== DEFAULT_FONT_SIZE),
+  );
 }
 
 function readBlockAlign(style) {
@@ -109,12 +147,21 @@ function applyInlineFormats(doc, node, formats) {
     current.appendChild(el);
     current = el;
   }
+
+  const styleParts = [];
   if (formats.fontSize && formats.fontSize !== DEFAULT_FONT_SIZE) {
+    styleParts.push(`font-size: ${formats.fontSize}px`);
+  }
+  if (formats.color) {
+    styleParts.push(`color: ${formats.color}`);
+  }
+  if (styleParts.length) {
     const el = doc.createElement('span');
-    el.style.fontSize = `${formats.fontSize}px`;
+    el.setAttribute('style', styleParts.join('; '));
     current.appendChild(el);
     current = el;
   }
+
   return current;
 }
 
@@ -164,9 +211,10 @@ function normalizeElement(element, doc) {
     return;
   }
 
-  const inlineFormats = readInlineFormats(element.getAttribute('style'));
+  const styleAttr = element.getAttribute('style');
+  const inlineFormats = readInlineFormats(styleAttr);
   const blockAlign = (tag === 'p' || tag === 'div' || tag === 'li')
-    ? readBlockAlign(element.getAttribute('style'))
+    ? readBlockAlign(styleAttr)
     : null;
 
   element.removeAttribute('class');
@@ -178,9 +226,7 @@ function normalizeElement(element, doc) {
   });
 
   if (tag === 'span') {
-    const hasInlineFormat = inlineFormats.bold || inlineFormats.italic || inlineFormats.underline
-      || (inlineFormats.fontSize && inlineFormats.fontSize !== DEFAULT_FONT_SIZE);
-    if (!hasInlineFormat) {
+    if (!hasVisualInlineFormat(inlineFormats)) {
       unwrapElement(element);
       return;
     }
@@ -192,7 +238,29 @@ function normalizeElement(element, doc) {
     return;
   }
 
-  if (tag === 'b' || tag === 'strong' || tag === 'i' || tag === 'em' || tag === 'u') {
+  if (tag === 'b' || tag === 'strong') {
+    if (isNormalFontWeight(styleAttr)) {
+      unwrapElement(element);
+      return;
+    }
+    element.removeAttribute('style');
+    return;
+  }
+
+  if (tag === 'i' || tag === 'em') {
+    if (isNormalFontStyle(styleAttr)) {
+      unwrapElement(element);
+      return;
+    }
+    element.removeAttribute('style');
+    return;
+  }
+
+  if (tag === 'u') {
+    if (isNoUnderline(styleAttr)) {
+      unwrapElement(element);
+      return;
+    }
     element.removeAttribute('style');
     return;
   }
@@ -202,8 +270,7 @@ function normalizeElement(element, doc) {
     if (blockAlign && blockAlign !== 'left') {
       element.style.textAlign = blockAlign;
     }
-    if (inlineFormats.bold || inlineFormats.italic || inlineFormats.underline
-      || (inlineFormats.fontSize && inlineFormats.fontSize !== DEFAULT_FONT_SIZE)) {
+    if (hasVisualInlineFormat(inlineFormats)) {
       const children = [...element.childNodes];
       const target = applyInlineFormats(doc, element, inlineFormats);
       children.forEach((child) => target.appendChild(child));
@@ -244,8 +311,8 @@ function stripDocumentBoilerplate(doc) {
 }
 
 /**
- * Giữ định dạng paste được hỗ trợ bởi editor văn bản mentor:
- * đậm, nghiêng, gạch chân, cỡ chữ, danh sách, căn lề, xuống dòng.
+ * Giữ định dạng paste từ Word / Google Docs:
+ * đậm, nghiêng, gạch chân, cỡ chữ, màu chữ, danh sách, căn lề, xuống dòng.
  */
 export function sanitizePastedHtml(rawHtml) {
   const html = String(rawHtml ?? '').trim();

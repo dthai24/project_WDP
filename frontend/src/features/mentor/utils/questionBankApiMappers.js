@@ -1,9 +1,14 @@
 import {
   QUESTION_TYPE_MULTIPLE_CHOICE,
+  READING_SOURCE_COMPOSE,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
   TEST_SKILL_WRITING,
+  buildQuestionContentSnapshot,
+  getFilledTestQuestions,
   getListeningSectionFields,
+  getReadingSectionFields,
+  normalizeQuestionBankSectionForSave,
   normalizeTestQuestion,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
@@ -31,6 +36,7 @@ export function mapApiSectionToEditorSection(apiSection) {
     questionCount: Number(apiSection.questionCount) || 0,
     sectionOrder: Number(apiSection.order) || 0,
     ...(skillType === TEST_SKILL_LISTENING ? getListeningSectionFields() : {}),
+    ...(skillType === TEST_SKILL_READING ? getReadingSectionFields() : {}),
   };
 }
 
@@ -80,6 +86,62 @@ export function getSectionDisplayQuestionCount(section) {
   ).length;
   if (loadedCount > 0) return loadedCount;
   return Number(section?.questionCount) || 0;
+}
+
+/** Snapshot so sánh section đã lưu vs đang chỉnh (không gồm File blob). */
+export function buildSectionEditorSnapshot(section) {
+  const normalized = normalizeQuestionBankSectionForSave(section ?? {});
+  const payload = {
+    SectionTitle: normalized.SectionTitle,
+    DisplayName: normalized.DisplayName,
+    Description: normalized.Description,
+    SkillType: normalized.SkillType,
+    MaterialUrl: String(normalized.MaterialUrl ?? '').trim(),
+    FileName: normalized.FileName ?? null,
+    FileSize: normalized.FileSize ?? null,
+    AudioUrl: String(normalized.AudioUrl ?? '').trim(),
+    AudioSourceType: normalized.AudioSourceType ?? null,
+    ReadingSourceType: normalized.ReadingSourceType ?? null,
+    Questions: getFilledTestQuestions(normalized.Questions).map((question) =>
+      buildQuestionContentSnapshot(question),
+    ),
+  };
+
+  if (normalized.SkillType === TEST_SKILL_LISTENING) {
+    const title = String(normalized.SectionTitle ?? '').trim();
+    const desc = String(normalized.Description ?? '').trim();
+    payload.ListeningPrompt = title && desc ? `${title}\n\n${desc}` : title || desc;
+  }
+
+  if (normalized.SkillType === TEST_SKILL_READING) {
+    payload.ReadingSourceType =
+      normalized.ReadingSourceType === READING_SOURCE_COMPOSE
+        ? READING_SOURCE_COMPOSE
+        : normalized.ReadingSourceType;
+  }
+
+  return JSON.stringify(payload);
+}
+
+export function buildSectionBaselinesMap(sections = []) {
+  return Object.fromEntries(
+    (sections ?? [])
+      .filter((section) => section?.tempId)
+      .map((section) => [section.tempId, buildSectionEditorSnapshot(section)]),
+  );
+}
+
+export function isSectionEditorDirty(section, baselines = {}) {
+  if (!section?.tempId) return false;
+  const baseline = baselines[section.tempId];
+  if (baseline == null) return true;
+  return buildSectionEditorSnapshot(section) !== baseline;
+}
+
+export function getDirtySectionTempIds(sections = [], baselines = {}) {
+  return (sections ?? [])
+    .filter((section) => isSectionEditorDirty(section, baselines))
+    .map((section) => section.tempId);
 }
 
 export function countQuestionsBySkillFromSections(sections = []) {

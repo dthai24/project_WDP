@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Collapse, IconButton, InputBase, Tooltip, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
@@ -14,6 +14,7 @@ import { contentInputSx, contentMultilineInputSx } from './mentorCourseContentSt
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import MentorTestQuestionCard from './MentorTestQuestionCard';
 import MentorTestListeningSourceEditor from './MentorTestListeningSourceEditor';
+import MentorTestReadingSourceEditor from './MentorTestReadingSourceEditor';
 import {
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_LABELS,
@@ -22,6 +23,7 @@ import {
   TEST_SKILL_WRITING,
   createEmptyTestQuestion,
   getListeningSectionFields,
+  getReadingSectionFields,
   getQuestionBankSectionNamePlaceholder,
   canShuffleTestQuestionOptions,
   shuffleTestQuestionOptions,
@@ -176,9 +178,24 @@ export default function MentorTestSectionCard({
   persistedQuestionIds = null,
   onChange,
   onDelete,
+  onRegisterSectionControls,
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const childControlsRef = useRef(null);
+
+  const handleRegisterChildControls = useCallback((controls) => {
+    childControlsRef.current = controls;
+  }, []);
+
+  useEffect(() => {
+    if (!onRegisterSectionControls) return undefined;
+    onRegisterSectionControls({
+      flush: () => childControlsRef.current?.flush?.(),
+      isBusy: () => Boolean(childControlsRef.current?.isBusy?.()),
+    });
+    return () => onRegisterSectionControls(null);
+  }, [onRegisterSectionControls]);
   const questions = section.Questions ?? [];
   const sectionScoreLabel = getSectionScoreLabel(section, scoringMode, totalScore, questionCountAll);
   const skillType = section.SkillType ?? TEST_SKILL_READING;
@@ -301,11 +318,15 @@ export default function MentorTestSectionCard({
 
     if (nextSkill === TEST_SKILL_LISTENING) {
       Object.assign(patch, getListeningSectionFields());
+    } else if (nextSkill === TEST_SKILL_READING) {
+      Object.assign(patch, getReadingSectionFields());
     } else {
       patch.AudioSourceType = undefined;
+      patch.ReadingSourceType = undefined;
       patch.File = null;
       patch.FileName = null;
       patch.FileSize = null;
+      patch.MaterialUrl = undefined;
       patch.AudioUrl = undefined;
     }
 
@@ -487,22 +508,29 @@ export default function MentorTestSectionCard({
                 sx={contentMultilineInputSx(false, skillTheme(skillAccent))}
               />
             </Box>
-          ) : isWritingQuestionBank ? (
-            <Box sx={{ mb: 1.5 }}>
-              <ContentFieldLabel sx={fieldLabelSx}>Đề bài</ContentFieldLabel>
-              <InputBase
-                value={section.SectionTitle ?? ''}
-                onChange={(event) => updateSection({ SectionTitle: event.target.value })}
+          ) : isReadingQuestionBank ? (
+            <>
+              <Box sx={{ mb: 1.25 }}>
+                <ContentFieldLabel sx={fieldLabelSx}>Đề bài</ContentFieldLabel>
+                <InputBase
+                  value={section.SectionTitle ?? ''}
+                  onChange={(event) => updateSection({ SectionTitle: event.target.value })}
+                  disabled={disabled}
+                  placeholder={sectionTitlePlaceholder}
+                  fullWidth
+                  sx={contentInputSx(false, skillTheme(skillAccent))}
+                />
+              </Box>
+              <MentorTestReadingSourceEditor
+                section={section}
+                errors={errors}
+                accentColor={skillAccent}
                 disabled={disabled}
-                placeholder="Ví dụ: Chọn dạng đúng của động từ trong ngoặc"
-                fullWidth
-                multiline
-                minRows={2}
-                maxRows={6}
-                sx={contentMultilineInputSx(false, skillTheme(skillAccent))}
+                onChange={(patch) => updateSection(patch)}
+                onRegisterControls={handleRegisterChildControls}
               />
-            </Box>
-          ) : (
+            </>
+          ) : !isWritingQuestionBank ? (
             <>
               <Box sx={{ mb: 1.25 }}>
                 <ContentFieldLabel sx={fieldLabelSx}>{sectionTitleLabel}</ContentFieldLabel>
@@ -564,7 +592,7 @@ export default function MentorTestSectionCard({
                 </Box>
               ) : null}
             </>
-          )}
+          ) : null}
 
           {/* ── Audio source (Listening) ── */}
           {showListeningSource ? (
@@ -574,6 +602,7 @@ export default function MentorTestSectionCard({
               accentColor={skillAccent}
               disabled={disabled}
               onChange={(patch) => updateSection(patch)}
+              onRegisterControls={handleRegisterChildControls}
             />
           ) : null}
 
@@ -652,8 +681,9 @@ export default function MentorTestSectionCard({
                   accentColor={skillAccent}
                   disabled={disabled}
                   contentLocked={contentLocked}
-                  showActiveToggle={coursePublished && contentLocked}
+                  showActiveToggle={questionBankMode || (coursePublished && contentLocked)}
                   showScoreField={showScoreField}
+                  collapsibleChoices={questionBankMode}
                   onChange={(nextQuestion) => handleQuestionChange(question.tempId, nextQuestion)}
                   onDelete={() =>
                     setDeleteConfirm({

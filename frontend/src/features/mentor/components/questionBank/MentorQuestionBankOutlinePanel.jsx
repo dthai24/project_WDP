@@ -1,9 +1,12 @@
 /**
  * Mục lục nội dung + mục lục khóa học — cột phải workspace question bank.
  */
-import { Box, Typography, alpha } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Box, Collapse, Typography, alpha } from '@mui/material';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
+import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import ListAltRoundedIcon from '@mui/icons-material/ListAltRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
@@ -24,8 +27,10 @@ import {
   getFilledTestQuestions,
   getNonEmptyQuestionBankSections,
   getQuestionBankSectionTabLabel,
+  getSectionBaiNumber,
   getSectionsBySkill,
   isQuestionActive,
+  isQuestionBankWritingSkill,
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_LABELS,
   TEST_SKILL_LISTENING,
@@ -128,6 +133,238 @@ function truncateQuestionLabel(text, max = 48) {
   return `${trimmed.slice(0, max - 1)}…`;
 }
 
+function getOutlineSectionLabel(section, sections) {
+  const order = getSectionBaiNumber(section, sections);
+  const customName = String(section?.DisplayName ?? section?.SectionTitle ?? '').trim();
+  const fallback = getQuestionBankSectionTabLabel(section, sections);
+
+  if (isQuestionBankWritingSkill(section?.SkillType)) {
+    if (customName) return `Section ${order}: ${customName}`;
+    return fallback.startsWith('Nhóm') ? fallback.replace(/^Nhóm/, 'Section') : `Section ${order}`;
+  }
+
+  if (customName) return `Bài ${order}: ${customName}`;
+  return fallback.startsWith('Bài') ? fallback : `Bài ${order}: ${fallback}`;
+}
+
+function SkillOutlineCard({
+  label,
+  meta,
+  icon: Icon,
+  theme,
+  expanded,
+  active,
+  onToggle,
+  children,
+}) {
+  const accent = theme?.color ?? PRIMARY;
+  const accentBg = theme?.bg ?? alpha(PRIMARY, 0.1);
+
+  return (
+    <Box
+      sx={{
+        borderRadius: '14px',
+        border: `1px solid ${active ? alpha(accent, 0.35) : 'rgba(15,23,42,0.08)'}`,
+        bgcolor: '#fff',
+        overflow: 'hidden',
+        boxShadow: active ? `0 4px 14px ${alpha(accent, 0.08)}` : 'none',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      }}
+    >
+      <Box
+        component="button"
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          width: '100%',
+          p: 1.25,
+          border: 'none',
+          textAlign: 'left',
+          cursor: 'pointer',
+          font: 'inherit',
+          bgcolor: active ? alpha(accent, 0.06) : 'transparent',
+          transition: 'background-color 0.15s',
+          '&:hover': { bgcolor: alpha(accent, 0.08) },
+        }}
+      >
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: '10px',
+            bgcolor: accentBg,
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Icon sx={{ fontSize: 18, color: accent }} />
+        </Box>
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>
+            {label}
+          </Typography>
+          {meta ? (
+            <Typography sx={{ fontSize: 11.5, color: MUTED, mt: 0.2, lineHeight: 1.35 }}>{meta}</Typography>
+          ) : null}
+        </Box>
+
+        {expanded ? (
+          <KeyboardArrowUpRoundedIcon sx={{ fontSize: 22, color: MUTED, flexShrink: 0 }} />
+        ) : (
+          <KeyboardArrowDownRoundedIcon sx={{ fontSize: 22, color: MUTED, flexShrink: 0 }} />
+        )}
+      </Box>
+
+      <Collapse in={expanded} timeout="auto" unmountOnExit>
+        <Box
+          sx={{
+            px: 1.25,
+            pb: 1.15,
+            pt: 0.15,
+            borderTop: '1px solid rgba(15,23,42,0.06)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.65,
+          }}
+        >
+          {children}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+function SectionOutlineCard({
+  label,
+  meta,
+  accent,
+  expanded,
+  active,
+  onToggle,
+  children,
+}) {
+  return (
+    <Box
+      sx={{
+        borderRadius: '10px',
+        border: `1px solid ${active ? alpha(accent, 0.28) : 'rgba(15,23,42,0.07)'}`,
+        bgcolor: active ? alpha(accent, 0.04) : 'rgba(15,23,42,0.02)',
+        overflow: 'hidden',
+      }}
+    >
+      <Box
+        component="button"
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.65,
+          width: '100%',
+          px: 0.85,
+          py: 0.75,
+          border: 'none',
+          textAlign: 'left',
+          cursor: 'pointer',
+          font: 'inherit',
+          bgcolor: 'transparent',
+          '&:hover': { bgcolor: alpha(accent, 0.06) },
+        }}
+      >
+        <MenuBookRoundedIcon sx={{ fontSize: 15, color: accent, flexShrink: 0 }} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
+            {label}
+          </Typography>
+          {meta ? (
+            <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.1, lineHeight: 1.35 }}>{meta}</Typography>
+          ) : null}
+        </Box>
+        {expanded ? (
+          <KeyboardArrowUpRoundedIcon sx={{ fontSize: 20, color: MUTED, flexShrink: 0 }} />
+        ) : (
+          <KeyboardArrowDownRoundedIcon sx={{ fontSize: 20, color: MUTED, flexShrink: 0 }} />
+        )}
+      </Box>
+
+      <Collapse in={expanded} timeout="auto" unmountOnExit>
+        <Box
+          sx={{
+            px: 0.65,
+            pb: 0.65,
+            pt: 0.1,
+            borderTop: '1px solid rgba(15,23,42,0.06)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.2,
+          }}
+        >
+          {children}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+function QuestionOutlineItem({ label, meta, selected, muted, onClick }) {
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={onClick}
+      sx={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 0.65,
+        width: '100%',
+        textAlign: 'left',
+        border: selected ? `1px solid ${alpha(PRIMARY, 0.35)}` : '1px solid transparent',
+        background: 'none',
+        cursor: 'pointer',
+        font: 'inherit',
+        px: 0.85,
+        py: 0.65,
+        borderRadius: '10px',
+        bgcolor: selected ? alpha(PRIMARY, 0.08) : 'transparent',
+        opacity: muted ? 0.55 : 1,
+        transition: 'background-color 0.15s, border-color 0.15s',
+        '&:hover': { bgcolor: selected ? alpha(PRIMARY, 0.12) : 'rgba(8,145,178,0.06)' },
+      }}
+    >
+      <Box sx={{ width: 6, height: 6, borderRadius: '999px', bgcolor: MUTED, mt: 0.55, flexShrink: 0 }} />
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography
+          sx={{
+            fontSize: 12.5,
+            fontWeight: selected ? 700 : 600,
+            color: selected ? PRIMARY : TEXT,
+            lineHeight: 1.45,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {label}
+        </Typography>
+        {meta ? (
+          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.15, lineHeight: 1.35 }}>{meta}</Typography>
+        ) : null}
+      </Box>
+      {selected ? (
+        <CheckCircleRoundedIcon sx={{ fontSize: 16, color: PRIMARY, mt: 0.1, flexShrink: 0 }} />
+      ) : null}
+    </Box>
+  );
+}
+
 export default function MentorQuestionBankOutlinePanel({
   sections = [],
   activeSkill,
@@ -147,11 +384,53 @@ export default function MentorQuestionBankOutlinePanel({
   onChapterQuizSetup,
   onCourseQuizSetup,
 }) {
+  const [expandedSkills, setExpandedSkills] = useState(() => new Set());
+  const [expandedSections, setExpandedSections] = useState(() => new Set());
+  const [selectedQuestionId, setSelectedQuestionId] = useState('');
+
   const filledSections = getNonEmptyQuestionBankSections(sections);
   const hasContentOutline = filledSections.length > 0;
 
+  useEffect(() => {
+    if (!activeSkill) return;
+    setExpandedSkills(new Set([activeSkill]));
+    setExpandedSections(new Set());
+    setSelectedQuestionId('');
+  }, [activeSkill]);
+
+  useEffect(() => {
+    if (!activeSectionId) return;
+    const section = sections.find((item) => String(item.tempId) === String(activeSectionId));
+    if (!section) return;
+    setExpandedSkills(new Set([section.SkillType]));
+  }, [activeSectionId, sections]);
+
   const handleNavigate = (target) => {
     onNavigateToItem?.(target);
+  };
+
+  const toggleSkillExpanded = (skill) => {
+    setExpandedSkills((prev) => {
+      const next = new Set(prev);
+      if (next.has(skill)) {
+        next.delete(skill);
+      } else {
+        next.add(skill);
+      }
+      return next;
+    });
+  };
+
+  const toggleSectionExpanded = (sectionTempId) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionTempId)) {
+        next.delete(sectionTempId);
+      } else {
+        next.add(sectionTempId);
+      }
+      return next;
+    });
   };
 
   const selectedChapterName = selectedPathName || chapterTitle;
@@ -193,7 +472,7 @@ export default function MentorQuestionBankOutlinePanel({
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              gap: 0.25,
+              gap: 1,
               maxHeight: { lg: 'calc(100vh - 280px)' },
               minHeight: 120,
               overflowY: 'auto',
@@ -210,67 +489,71 @@ export default function MentorQuestionBankOutlinePanel({
                 (sum, section) => sum + getFilledTestQuestions(section?.Questions).length,
                 0,
               );
+              const sectionUnit = skill === TEST_SKILL_WRITING ? 'section' : 'bài';
+              const isExpanded = expandedSkills.has(skill);
+              const isSkillActive = activeSkill === skill;
 
               return (
-                <Box key={skill} sx={{ mb: 0.35 }}>
-                  <OutlineNavItem
-                    label={TEST_SKILL_LABELS[skill]}
-                    meta={`${skillSectionsOutline.length} bài · ${skillQuestionCount} câu`}
-                    icon={Icon}
-                    iconColor={theme?.color ?? PRIMARY}
-                    selected={activeSkill === skill}
-                    onClick={() => handleNavigate({ type: 'skill', skill })}
-                  />
-
+                <SkillOutlineCard
+                  key={skill}
+                  label={TEST_SKILL_LABELS[skill]}
+                  meta={`${skillSectionsOutline.length} ${sectionUnit} · ${skillQuestionCount} câu hỏi`}
+                  icon={Icon}
+                  theme={theme}
+                  expanded={isExpanded}
+                  active={isSkillActive}
+                  onToggle={() => toggleSkillExpanded(skill)}
+                >
                   {skillSectionsOutline.map((section) => {
                     const questions = getFilledTestQuestions(section?.Questions ?? []);
-                    const sectionLabel = getQuestionBankSectionTabLabel(section, sections);
-                    const isSectionActive =
-                      activeSkill === skill && String(activeSectionId) === String(section.tempId);
+                    const sectionLabel = getOutlineSectionLabel(section, sections);
+                    const isSectionExpanded = expandedSections.has(section.tempId);
+                    const isSectionActive = String(activeSectionId) === String(section.tempId);
 
                     return (
-                      <Box key={section.tempId}>
-                        <OutlineNavItem
-                          label={sectionLabel}
-                          meta={`${questions.length} câu hỏi`}
-                          icon={MenuBookRoundedIcon}
-                          iconColor={theme?.color ?? PRIMARY}
-                          indent={1}
-                          selected={isSectionActive}
-                          onClick={() =>
-                            handleNavigate({ type: 'section', skill, sectionTempId: section.tempId })
-                          }
-                        />
+                      <SectionOutlineCard
+                        key={section.tempId}
+                        label={sectionLabel}
+                        meta={`${questions.length} câu hỏi`}
+                        accent={theme?.color ?? PRIMARY}
+                        expanded={isSectionExpanded}
+                        active={isSectionActive}
+                        onToggle={() => toggleSectionExpanded(section.tempId)}
+                      >
+                        {questions.map((question, questionIndex) => {
+                          const questionTitle = truncateQuestionLabel(question.QuestionText, 64);
+                          const isQuestionSelected = selectedQuestionId === question.tempId;
 
-                        {questions.map((question, questionIndex) => (
-                          <OutlineNavItem
-                            key={question.tempId}
-                            label={`Câu ${questionIndex + 1}: ${truncateQuestionLabel(question.QuestionText)}`}
-                            meta={!isQuestionActive(question) ? 'Ẩn khỏi quiz mới' : undefined}
-                            icon={null}
-                            iconColor={theme?.color ?? PRIMARY}
-                            indent={2}
-                            muted={!isQuestionActive(question)}
-                            onClick={() =>
-                              handleNavigate({
-                                type: 'question',
-                                skill,
-                                sectionTempId: section.tempId,
-                                questionTempId: question.tempId,
-                              })
-                            }
-                          />
-                        ))}
-                      </Box>
+                          return (
+                            <QuestionOutlineItem
+                              key={question.tempId}
+                              label={`Câu ${questionIndex + 1}: ${questionTitle}`}
+                              meta={!isQuestionActive(question) ? 'Ẩn khỏi quiz mới' : undefined}
+                              selected={isQuestionSelected}
+                              muted={!isQuestionActive(question)}
+                              onClick={() => {
+                                setSelectedQuestionId(question.tempId);
+                                handleNavigate({
+                                  type: 'question',
+                                  skill,
+                                  sectionTempId: section.tempId,
+                                  questionTempId: question.tempId,
+                                });
+                              }}
+                            />
+                          );
+                        })}
+                      </SectionOutlineCard>
                     );
                   })}
-                </Box>
+                </SkillOutlineCard>
               );
             })}
           </Box>
         )}
       </Box>
 
+      {/* Mục lục khóa học — tạm ẩn
       <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.75, mb: 1.25 }}>
           <Typography sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Mục lục khóa học</Typography>
@@ -397,6 +680,7 @@ export default function MentorQuestionBankOutlinePanel({
           </>
         )}
       </Box>
+      */}
     </Box>
   );
 }

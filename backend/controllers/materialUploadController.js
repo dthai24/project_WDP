@@ -1,11 +1,17 @@
-const { uploadAudioFile, uploadDocumentFile, uploadTextHtml } = require('../services/cloudinaryService');
+const {
+  MATERIAL_MAX_SIZE_MESSAGE,
+  uploadAudioFile,
+  uploadDocumentFile,
+  uploadReadingDocumentFile,
+  uploadTextHtml,
+} = require('../services/cloudinaryService');
 
 function mapUploadErrorMessage(error) {
   if (error?.statusCode === 400) return error.message;
 
   const message = String(error?.message ?? '');
   if (message.includes('File size too large')) {
-    return 'File quá lớn. Dung lượng tối đa là 10 MB.';
+    return MATERIAL_MAX_SIZE_MESSAGE;
   }
 
   return 'Lỗi khi tải học liệu lên.';
@@ -27,6 +33,22 @@ async function uploadMaterial(req, res) {  try {
         success: true,
         message: 'Tải tài liệu lên thành công.',
         data: { ...data, materialType: 'DOC' },
+      });
+    }
+
+    if (type === 'READING_DOC') {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không nhận được file bài đọc.',
+        });
+      }
+
+      const data = await uploadReadingDocumentFile(req.file);
+      return res.status(200).json({
+        success: true,
+        message: 'Tải bài đọc lên thành công.',
+        data: { ...data, materialType: 'READING_DOC' },
       });
     }
 
@@ -52,7 +74,7 @@ async function uploadMaterial(req, res) {  try {
 
     return res.status(400).json({
       success: false,
-      message: 'type phải là TEXT, DOC hoặc AUDIO.',
+      message: 'type phải là TEXT, DOC, READING_DOC hoặc AUDIO.',
     });
   } catch (error) {
     console.error('[uploadMaterial]', error.message);
