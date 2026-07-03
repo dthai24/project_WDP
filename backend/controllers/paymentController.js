@@ -155,7 +155,8 @@ exports.paymentCallback = async (req, res) => {
       }
 
       // Redirect to success page
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success?orderId=${orderId}&paymentId=${payment._id}`);
+       // Redirect to success page
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success?orderId=${orderId}&paymentId=${payment._id}`);
     } else {
       payment.status = 'failed';
       payment.failedAt = new Date();
