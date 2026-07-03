@@ -88,12 +88,10 @@ class VNPayService {
   verifyPaymentResponse(queryParams) {
     try {
       const vnp_SecureHash = queryParams['vnp_SecureHash'];
-      const inputChecksum = queryParams['vnp_SecureHashType'];
 
       // Copy params, loại bỏ secure hash
       const vnp_Params = { ...queryParams };
       delete vnp_Params['vnp_SecureHash'];
-      delete vnp_Params['vnp_SecureHashType'];
 
       // Sort và build sign data
       const sortedParams = this.sortObject(vnp_Params);
