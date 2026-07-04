@@ -1,8 +1,9 @@
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Box, Stack, Typography, Tooltip, useTheme } from "@mui/material";
 import { getUser } from "@/features/auth/utils/authUtils";
 import { getMentorMenuItems, getStudentMenuItems, getAdminMenuItems } from "./sidebarMenuConfig";
 import { HEADER_HEIGHT } from "./MainLayout";
+import { useNavigationGuard } from "@/context/NavigationGuardContext";
 
 export const SIDEBAR_WIDTH = 76;
 
@@ -61,7 +62,15 @@ function SidebarItemContent({ label, Icon, active, disabled }) {
 
 function SidebarItem({ item }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { requestGuardedNavigation } = useNavigationGuard() ?? {};
   const { label, to, Icon, disabled, end = false, isActiveMatch } = item;
+
+  const handleNavigate = (event) => {
+    if (!requestGuardedNavigation) return;
+    event.preventDefault();
+    requestGuardedNavigation(() => navigate(to));
+  };
 
   if (disabled) {
     return (
@@ -76,14 +85,14 @@ function SidebarItem({ item }) {
   if (isActiveMatch) {
     const active = isActiveMatch(location.pathname);
     return (
-      <Link to={to} style={{ textDecoration: "none", width: "100%" }}>
+      <Link to={to} onClick={handleNavigate} style={{ textDecoration: "none", width: "100%" }}>
         <SidebarItemContent label={label} Icon={Icon} active={active} disabled={false} />
       </Link>
     );
   }
 
   return (
-    <NavLink to={to} end={end} style={{ textDecoration: "none", width: "100%" }}>
+    <NavLink to={to} end={end} onClick={handleNavigate} style={{ textDecoration: "none", width: "100%" }}>
       {({ isActive }) => (
         <SidebarItemContent label={label} Icon={Icon} active={isActive} disabled={false} />
       )}

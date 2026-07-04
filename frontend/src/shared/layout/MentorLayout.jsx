@@ -5,36 +5,39 @@ import Footer from './Footer';
 import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
 import { pageContentSx } from './MainLayout';
 import { MentorLayoutGuard } from '@/shared/routing/RoleShellRedirects';
+import { NavigationGuardProvider } from '@/context/NavigationGuardContext';
 
 export default function MentorLayout() {
   return (
     <MentorLayoutGuard>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: '#FFFFFF',
-        }}
-      >
-        <Header logoTo="/mentor/courses" profilePath="/mentor/courses" showMyCoursesButton={false} />
-        <Sidebar variant="mentor" />
-
+      <NavigationGuardProvider>
         <Box
-          component="main"
           sx={{
-            ml: `${SIDEBAR_WIDTH}px`,
-            flex: 1,
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
             bgcolor: '#FFFFFF',
           }}
         >
-          <Box sx={pageContentSx}>
-            <Outlet />
+          <Header logoTo="/mentor/courses" profilePath="/mentor/courses" showMyCoursesButton={false} />
+          <Sidebar variant="mentor" />
+
+          <Box
+            component="main"
+            sx={{
+              ml: `${SIDEBAR_WIDTH}px`,
+              flex: 1,
+              bgcolor: '#FFFFFF',
+            }}
+          >
+            <Box sx={pageContentSx}>
+              <Outlet />
+            </Box>
           </Box>
         </Box>
-      </Box>
 
-      <Footer />
+        <Footer />
+      </NavigationGuardProvider>
     </MentorLayoutGuard>
   );
 }

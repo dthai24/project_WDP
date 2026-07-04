@@ -1,6 +1,7 @@
 /**
  * Editor câu hỏi — cột giữa workspace question bank.
  */
+import { useEffect, useState } from 'react';
 import { Box, Typography, alpha } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
@@ -8,17 +9,20 @@ import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUnch
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import MentorTestSectionCard from '@/features/mentor/components/course/MentorTestSectionCard';
+import MentorQuestionBankDeletedQuestionsDialog from '@/features/mentor/components/questionBank/MentorQuestionBankDeletedQuestionsDialog';
 import { CREATE_CARD_SX, MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
   SCORING_MODE_AUTO,
   TEST_SKILL_CHIP_COLORS,
   getFilledTestQuestions,
   getQuestionBankSectionTabLabel,
+  getSectionDeletedQuestions,
   isQuestionBankWritingSkill,
+  restoreDeletedQuestionToSection,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
   getSectionDisplayQuestionCount,
-  isSectionEditorDirty,
+  hasSectionUnsavedChanges,
 } from '@/features/mentor/utils/questionBankApiMappers';
 
 function BaiTab({ label, selected, disabled, accentColor, hasContent = false, isDirty = false, onClick }) {
@@ -92,7 +96,9 @@ export default function MentorQuestionBankBuilderPanel({
   skillSections = [],
   sectionErrors = {},
   sectionBaselines = {},
+  sectionSourceBaselines = {},
   activeSectionDirty = false,
+  hasPendingSectionDeletes = false,
   updatingSection = false,
   questionCount = 0,
   disabled = false,
@@ -104,14 +110,40 @@ export default function MentorQuestionBankBuilderPanel({
   onSectionSelect,
   onAddBai,
   onSectionChange,
+  onQuestionsFullyRestored,
   onDeleteSection,
   onUpdateSection,
   onRegisterSectionControls,
 }) {
+  const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
   const accentColor = TEST_SKILL_CHIP_COLORS[activeSkill]?.color ?? PRIMARY;
   const isWritingSkill = isQuestionBankWritingSkill(activeSkill);
   const addLabel = isWritingSkill ? 'Thêm nhóm câu hỏi' : 'Thêm bài';
   const countLabel = isWritingSkill ? 'nhóm' : 'bài';
+  const deletedQuestions = getSectionDeletedQuestions(activeSection);
+  const deletedSectionLabel = activeSection
+    ? getQuestionBankSectionTabLabel(activeSection, sections)
+    : '';
+
+  const handleRestoreDeletedQuestion = (question) => {
+    if (!activeSection || !question) return;
+    const prevDeletedCount = deletedQuestions.length;
+    const nextSection = restoreDeletedQuestionToSection(activeSection, question);
+    const nextDeletedCount = getSectionDeletedQuestions(nextSection).length;
+
+    if (prevDeletedCount > 0 && nextDeletedCount === 0) {
+      onQuestionsFullyRestored?.(activeSection.tempId, nextSection);
+      return;
+    }
+
+    onSectionChange?.(activeSection.tempId, nextSection);
+  };
+
+  useEffect(() => {
+    if (deletedDialogOpen && deletedQuestions.length === 0) {
+      setDeletedDialogOpen(false);
+    }
+  }, [deletedDialogOpen, deletedQuestions.length]);
 
   return (
     <Box id="question-bank-builder-root" sx={{ minWidth: 0, width: '100%' }}>
@@ -162,7 +194,7 @@ export default function MentorQuestionBankBuilderPanel({
                         getSectionDisplayQuestionCount(section) > 0
                         || getFilledTestQuestions(section?.Questions).length > 0
                       }
-                      isDirty={isSectionEditorDirty(section, sectionBaselines)}
+                      isDirty={hasSectionUnsavedChanges(section, sectionBaselines, sectionSourceBaselines)}
                       selected={section.tempId === activeSectionId}
                       disabled={disabled}
                       accentColor={accentColor}
@@ -217,31 +249,63 @@ export default function MentorQuestionBankBuilderPanel({
                   }}
                 >
                   <Typography sx={{ fontSize: 12, color: activeSectionDirty ? '#92400E' : MUTED, lineHeight: 1.5 }}>
-                    {activeSectionDirty
-                      ? 'Section này có thay đổi chưa lưu. Cập nhật trước khi chuyển sang bài/kỹ năng khác.'
-                      : 'Section đã đồng bộ. Bạn có thể chuyển sang phần khác.'}
+                    {hasPendingSectionDeletes && !activeSectionDirty
+                      ? 'Có section đã đánh dấu xóa. Lưu thay đổi để xóa trên server.'
+                      : activeSectionDirty
+                        ? hasPendingSectionDeletes
+                          ? 'Section có thay đổi chưa lưu và có section chờ xóa. Lưu để đồng bộ.'
+                          : 'Section này có thay đổi chưa lưu. Cập nhật trước khi chuyển sang bài/kỹ năng khác.'
+                        : 'Section đã đồng bộ. Bạn có thể chuyển sang phần khác.'}
                   </Typography>
-                  <AppButton
-                    startIcon={<SaveOutlinedIcon />}
-                    onClick={onUpdateSection}
-                    disabled={disabled || updatingSection || !activeSectionDirty}
-                    sx={{
-                      height: 36,
-                      px: 2,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      borderRadius: '999px',
-                      bgcolor: PRIMARY,
-                      color: '#fff',
-                      boxShadow: 'none',
-                      flexShrink: 0,
-                      '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-                      '&.Mui-disabled': { bgcolor: 'rgba(15,23,42,0.12)', color: MUTED },
-                    }}
-                  >
-                    {updatingSection ? 'Đang cập nhật...' : 'Cập nhật section'}
-                  </AppButton>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, flexShrink: 0 }}>
+                    {deletedQuestions.length > 0 ? (
+                      <AppButton
+                        onClick={() => setDeletedDialogOpen(true)}
+                        sx={{
+                          height: 36,
+                          px: 2,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          borderRadius: '999px',
+                          bgcolor: '#F59E0B',
+                          color: '#fff',
+                          boxShadow: 'none',
+                          '&:hover': { bgcolor: '#D97706', boxShadow: 'none' },
+                        }}
+                      >
+                        Những câu hỏi đã xóa
+                      </AppButton>
+                    ) : null}
+                    <AppButton
+                      startIcon={<SaveOutlinedIcon />}
+                      onClick={onUpdateSection}
+                      disabled={disabled || updatingSection || !activeSectionDirty}
+                      sx={{
+                        height: 36,
+                        px: 2,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        borderRadius: '999px',
+                        bgcolor: PRIMARY,
+                        color: '#fff',
+                        boxShadow: 'none',
+                        flexShrink: 0,
+                        '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+                        '&.Mui-disabled': { bgcolor: 'rgba(15,23,42,0.12)', color: MUTED },
+                      }}
+                    >
+                      {updatingSection ? 'Đang cập nhật...' : 'Cập nhật section'}
+                    </AppButton>
+                  </Box>
                 </Box>
+
+                <MentorQuestionBankDeletedQuestionsDialog
+                  open={deletedDialogOpen}
+                  onClose={() => setDeletedDialogOpen(false)}
+                  deletedQuestions={deletedQuestions}
+                  sectionLabel={deletedSectionLabel}
+                  onRestoreQuestion={handleRestoreDeletedQuestion}
+                />
 
                 <Box id={`qb-section-${activeSection.tempId}`} sx={{ scrollMarginTop: 24, minWidth: 0 }}>
                   <MentorTestSectionCard

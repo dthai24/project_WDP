@@ -1,4 +1,5 @@
 const questionBankModel = require('../Models/questionBankModel');
+const questionBankSaveService = require('../services/questionBankSaveService');
 
 
 
@@ -51,6 +52,10 @@ function groupQuestionsWithChoices(rows = []) {
                 order: row.QuestionOrder,
 
                 isActive: Boolean(row.IsActive),
+
+                score: Number(row.Score) || 1,
+
+                allowMultipleAnswers: Boolean(row.AllowMultipleAnswers),
 
                 choices: [],
 
@@ -150,6 +155,8 @@ const getChapterSections = async (req, res) => {
 
             sectionName: row.SectionName,
 
+            displayName: row.Title ?? row.SectionName,
+
             typeId: row.TypeId,
 
             skillType: normalizeSkillType(row.SkillType),
@@ -157,6 +164,8 @@ const getChapterSections = async (req, res) => {
             order: row.SectionOrder,
 
             questionCount: Number(row.QuestionCount) || 0,
+
+            sourceUrl: row.SourceUrl ?? null,
 
         }));
 
@@ -331,11 +340,171 @@ const getQuestionBankPathsByBankIdController = async (req, res) => {
 }
 
 
+const createSectionSave = async (req, res) => {
+    try {
+        const courseId = Number(req.params.courseId);
+        const pathId = Number(req.params.pathId);
+        const payload = req.body ?? {};
+
+        if (!Number.isInteger(courseId) || courseId <= 0) {
+            return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+        }
+        if (!Number.isInteger(pathId) || pathId <= 0) {
+            return res.status(400).json({ success: false, message: 'pathId không hợp lệ' });
+        }
+
+        payload.context = {
+            ...(payload.context ?? {}),
+            courseId,
+            pathId,
+            sectionId: null,
+        };
+
+        const result = await questionBankSaveService.saveQuestionBankSectionPayload(payload, {
+            requireExistingSection: false,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'Đã tạo section thành công',
+            data: {
+                sectionId: result.sectionId,
+                questionPathId: result.questionPathId,
+                questionIdMap: result.questionIdMap,
+                sourceUrl: result.sourceUrl ?? null,
+            },
+        });
+    } catch (error) {
+        console.error('createSectionSave error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi tạo section',
+        });
+    }
+};
+
+const updateSectionSave = async (req, res) => {
+    try {
+        const sectionId = Number(req.params.sectionId);
+        const payload = req.body ?? {};
+
+        if (!Number.isInteger(sectionId) || sectionId <= 0) {
+            return res.status(400).json({ success: false, message: 'sectionId không hợp lệ' });
+        }
+
+        payload.context = {
+            ...(payload.context ?? {}),
+            sectionId,
+        };
+
+        const result = await questionBankSaveService.saveQuestionBankSectionPayload(payload, {
+            requireExistingSection: true,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đã cập nhật section thành công',
+            data: {
+                sectionId: result.sectionId,
+                questionPathId: result.questionPathId,
+                questionIdMap: result.questionIdMap,
+                sourceUrl: result.sourceUrl ?? null,
+            },
+        });
+    } catch (error) {
+        console.error('updateSectionSave error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi cập nhật section',
+        });
+    }
+};
+
+const patchSectionSourceUrl = async (req, res) => {
+    try {
+        const sectionId = Number(req.params.sectionId);
+        const courseId = Number(req.body?.courseId ?? req.query.courseId);
+        const pathId = Number(req.body?.pathId ?? req.query.pathId);
+        const sourceUrl = req.body?.sourceUrl ?? null;
+
+        if (!Number.isInteger(sectionId) || sectionId <= 0) {
+            return res.status(400).json({ success: false, message: 'sectionId không hợp lệ' });
+        }
+        if (!Number.isInteger(courseId) || courseId <= 0) {
+            return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+        }
+        if (!Number.isInteger(pathId) || pathId <= 0) {
+            return res.status(400).json({ success: false, message: 'pathId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.updateSectionSourceUrl(sectionId, sourceUrl, {
+            courseId,
+            pathId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đã cập nhật URL đề bài',
+            data: {
+                sectionId: result.sectionId,
+                sourceUrl: result.sourceUrl,
+            },
+        });
+    } catch (error) {
+        console.error('patchSectionSourceUrl error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi cập nhật URL section',
+        });
+    }
+};
+
+const deleteSection = async (req, res) => {
+    try {
+        const sectionId = Number(req.params.sectionId);
+        const courseId = Number(req.query.courseId);
+        const pathId = Number(req.query.pathId);
+
+        if (!Number.isInteger(sectionId) || sectionId <= 0) {
+            return res.status(400).json({ success: false, message: 'sectionId không hợp lệ' });
+        }
+        if (!Number.isInteger(courseId) || courseId <= 0) {
+            return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+        }
+        if (!Number.isInteger(pathId) || pathId <= 0) {
+            return res.status(400).json({ success: false, message: 'pathId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.deleteQuestionBankSection(sectionId, {
+            courseId,
+            pathId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đã xóa section thành công',
+            data: {
+                sectionId: result.sectionId,
+            },
+        });
+    } catch (error) {
+        console.error('deleteSection error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi xóa section',
+        });
+    }
+};
+
 module.exports = {
     getAllBankOfMentor,
     getChapterSections,
     getSectionQuestions,
     getQuestionBankByIdController,
-    getQuestionBankPathsByBankIdController
+    getQuestionBankPathsByBankIdController,
+    createSectionSave,
+    updateSectionSave,
+    deleteSection,
+    patchSectionSourceUrl,
 };
 

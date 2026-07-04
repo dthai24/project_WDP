@@ -1,5 +1,6 @@
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import logoImg from "../../asset/image/logo.png";
+import { useNavigationGuard } from "@/context/NavigationGuardContext";
 
 export const LOGO_SRC = logoImg;
 
@@ -10,6 +11,15 @@ export default function Logo({
   className = "",
   alt = "S.T.A.R Learning Path",
 }) {
+  const navigate = useNavigate();
+  const { requestGuardedNavigation } = useNavigationGuard() ?? {};
+
+  const handleClick = (event) => {
+    if (!requestGuardedNavigation) return;
+    event.preventDefault();
+    requestGuardedNavigation(() => navigate(to));
+  };
+
   const image = (
     <img
       src={logoImg}
@@ -29,6 +39,7 @@ export default function Logo({
     return (
       <RouterLink
         to={to}
+        onClick={handleClick}
         aria-label={alt}
         style={{ display: "inline-flex", lineHeight: 0, flexShrink: 0 }}
       >

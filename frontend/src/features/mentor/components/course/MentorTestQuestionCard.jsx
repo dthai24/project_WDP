@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, Chip, InputBase, Switch, Typography } from '@mui/material';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import AppButton from '@/shared/ui/AppButton';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import MentorQuestionTypeFields from './MentorQuestionTypeFields';
 import {
@@ -19,6 +20,8 @@ export default function MentorTestQuestionCard({
   showActiveToggle = false,
   showScoreField = true,
   collapsibleChoices = false,
+  contentChanged = false,
+  onViewContentChanges,
   onChange,
   onDelete,
 }) {
@@ -34,6 +37,7 @@ export default function MentorTestQuestionCard({
   };
 
   const isInactive = showActiveToggle && !isActive;
+  const hasCorrectAnswerError = Boolean(errors._correctOption);
 
   const handleScoreChange = (event) =>
     handleChange({ ...normalizedQuestion, Score: event.target.value });
@@ -43,8 +47,18 @@ export default function MentorTestQuestionCard({
       id={normalizedQuestion.tempId ? `qb-question-${normalizedQuestion.tempId}` : undefined}
       sx={{
         borderRadius: '10px',
-        border: isInactive ? '1px solid #DC2626' : '1px solid rgba(15,23,42,0.08)',
-        bgcolor: '#fff',
+        border: hasCorrectAnswerError
+          ? '1px solid rgba(220,38,38,0.55)'
+          : contentChanged
+            ? '1px solid rgba(245,158,11,0.45)'
+            : isInactive
+              ? '1px solid #DC2626'
+              : '1px solid rgba(15,23,42,0.08)',
+        bgcolor: hasCorrectAnswerError
+          ? 'rgba(220,38,38,0.04)'
+          : contentChanged
+            ? '#FFFBEB'
+            : '#fff',
         overflow: 'hidden',
         scrollMarginTop: 24,
       }}
@@ -121,6 +135,27 @@ export default function MentorTestQuestionCard({
               {collapsibleChoices ? 'Dùng trong bài kiểm tra' : 'Dùng cho quiz'}
             </Typography>
           </Box>
+        ) : null}
+
+        {contentChanged ? (
+          <AppButton
+            onClick={onViewContentChanges}
+            sx={{
+              height: 28,
+              px: 1.25,
+              fontSize: 11,
+              fontWeight: 700,
+              borderRadius: '999px',
+              bgcolor: '#F59E0B',
+              color: '#fff',
+              boxShadow: 'none',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              '&:hover': { bgcolor: '#D97706', boxShadow: 'none' },
+            }}
+          >
+            Câu hỏi đã được thay đổi
+          </AppButton>
         ) : null}
 
         <Box sx={{ flex: 1 }} />

@@ -7,33 +7,51 @@ import { Box } from '@mui/material';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '@/shared/ui/Loading';
+import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import { toast } from '@/shared/ui/Toast';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
 import MentorQuestionBankBuilderPanel from '@/features/mentor/components/questionBank/MentorQuestionBankBuilderPanel';
+import MentorQuestionBankSectionSavePreviewDialog from '@/features/mentor/components/questionBank/MentorQuestionBankSectionSavePreviewDialog';
 import MentorQuestionBankDetailHeader from '@/features/mentor/components/questionBank/MentorQuestionBankDetailHeader';
 import MentorQuestionBankOutlinePanel from '@/features/mentor/components/questionBank/MentorQuestionBankOutlinePanel';
 import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBank/MentorQuestionBankSkillNav';
 import {
   TEST_SKILL_LISTENING,
+  TEST_SKILL_READING,
   countActiveQuestionsBySkill,
   createQuestionBankSection,
   createQuestionBankSkillSections,
   getFilledQuestionCount,
   getSectionBaiNumber,
   getSectionsBySkill,
+  getVisibleSectionsBySkill,
+  attachInitialQuestionsToSection,
+  finalizeSectionAfterFullQuestionRestore,
   normalizeQuestionBankSectionForSave,
   scrollToQuestionBankItem,
   validateQuestionBankSection,
+  isQuestionBankSectionValid,
+  findQuestionBankSectionSaveIssue,
+  buildQuestionBankSectionSaveErrors,
+  hasPendingPersistedQuestionDeletes,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
   buildSectionBaselinesMap,
   buildSectionEditorSnapshot,
-  isSectionEditorDirty,
+  buildSectionSourceBaselinesMap,
+  buildSectionSourceSnapshot,
+  buildQuestionBankWorkspaceSavePayload,
+  hasQuestionBankWorkspaceChanges,
+  hasSectionUnsavedChanges,
+  isQuestionBankDeleteOnlyPayload,
+  applyInitialQuestionsBaseline,
+  revertSectionToSavedBaseline,
   mapApiSectionToEditorSection,
   mergeQuestionsIntoSection,
 } from '@/features/mentor/utils/questionBankApiMappers';
 import useQuestionBankSectionCommit from '@/features/mentor/hooks/useQuestionBankSectionCommit';
-import { saveQuestionBankSection } from '@/features/mentor/services/questionBankService';
+import { saveQuestionBankSection, deleteQuestionBankSection } from '@/features/mentor/services/questionBankService';
+import { useNavigationGuard } from '@/context/NavigationGuardContext';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
@@ -48,6 +66,18 @@ export default function MentorQuestionBankManagePage() {
   const [sections, setSections] = useState(() => createQuestionBankSkillSections());
   const sectionsRef = useRef(sections);
   const [sectionBaselines, setSectionBaselines] = useState({});
+  const sectionBaselinesRef = useRef(sectionBaselines);
+  const [initialSectionBaselines, setInitialSectionBaselines] = useState({});
+  const initialSectionBaselinesRef = useRef(initialSectionBaselines);
+  const [sectionSourceBaselines, setSectionSourceBaselines] = useState({});
+  const sectionSourceBaselinesRef = useRef(sectionSourceBaselines);
+  const [unsavedNavDialogOpen, setUnsavedNavDialogOpen] = useState(false);
+  const [savePreviewOpen, setSavePreviewOpen] = useState(false);
+  const [savePreviewPayload, setSavePreviewPayload] = useState(null);
+  const savePayloadRef = useRef(null);
+  const pendingNavigationRef = useRef(null);
+  const requestNavigationRef = useRef(null);
+  const { registerNavigationGuard } = useNavigationGuard() ?? {};
   const [questionPathId, setQuestionPathId] = useState(null);
   const [sectionErrors, setSectionErrors] = useState({});
   const [updatingSectionId, setUpdatingSectionId] = useState('');
@@ -63,6 +93,18 @@ export default function MentorQuestionBankManagePage() {
   useEffect(() => {
     sectionsRef.current = sections;
   }, [sections]);
+
+  useEffect(() => {
+    sectionBaselinesRef.current = sectionBaselines;
+  }, [sectionBaselines]);
+
+  useEffect(() => {
+    initialSectionBaselinesRef.current = initialSectionBaselines;
+  }, [initialSectionBaselines]);
+
+  useEffect(() => {
+    sectionSourceBaselinesRef.current = sectionSourceBaselines;
+  }, [sectionSourceBaselines]);
 
   useEffect(() => {
     if (!courseId || !pathId) return undefined;
@@ -90,29 +132,37 @@ export default function MentorQuestionBankManagePage() {
           return;
         }
 
-        let mappedSections = (sectionPayload?.data?.sections ?? []).map(mapApiSectionToEditorSection);
+        let mappedSections = (sectionPayload?.data?.sections ?? [])
+          .slice()
+          .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+          .map(mapApiSectionToEditorSection);
         if (mappedSections.length === 0) {
           mappedSections = createQuestionBankSkillSections();
         }
 
-        const sectionsWithQuestions = await Promise.all(
-          mappedSections.map(async (section) => {
-            if (!section.SectionId) return section;
-            const { data } = await axios.get(
-              `${API_BASE}/api/question-bank/sections/${section.SectionId}/questions`,
-              { params: { courseId, pathId } },
-            );
-            if (data?.success === false) return section;
-            return mergeQuestionsIntoSection(section, data?.data?.questions ?? []);
-          }),
-        );
+        const sectionsWithQuestions = (
+          await Promise.all(
+            mappedSections.map(async (section) => {
+              if (!section.SectionId) return section;
+              const { data } = await axios.get(
+                `${API_BASE}/api/question-bank/sections/${section.SectionId}/questions`,
+                { params: { courseId, pathId } },
+              );
+              if (data?.success === false) return section;
+              return mergeQuestionsIntoSection(section, data?.data?.questions ?? []);
+            }),
+          )
+        ).map(attachInitialQuestionsToSection);
 
         if (cancelled) return;
 
         setQuestionPathId(sectionPayload?.data?.questionPathId ?? null);
+        const baselines = buildSectionBaselinesMap(sectionsWithQuestions);
         setSections(sectionsWithQuestions);
         sectionsRef.current = sectionsWithQuestions;
-        setSectionBaselines(buildSectionBaselinesMap(sectionsWithQuestions));
+        setSectionBaselines(baselines);
+        setInitialSectionBaselines(baselines);
+        setSectionSourceBaselines(buildSectionSourceBaselinesMap(sectionsWithQuestions));
         setSectionErrors({});
 
         const firstSection =
@@ -139,28 +189,42 @@ export default function MentorQuestionBankManagePage() {
   }, [courseId, pathId]);
 
   const skillSections = useMemo(
-    () => getSectionsBySkill(sections, activeSkill),
+    () => getVisibleSectionsBySkill(sections, activeSkill),
     [sections, activeSkill],
   );
 
+  const visibleSections = useMemo(
+    () => sections.filter((section) => !section.pendingDelete),
+    [sections],
+  );
+
+  const hasPendingSectionDeletes = sections.some((section) => section.pendingDelete);
+
   const activeSection = useMemo(() => {
-    const picked = sections.find((s) => s.tempId === activeSectionId);
+    const picked = sections.find((s) => s.tempId === activeSectionId && !s.pendingDelete);
     if (picked?.SkillType === activeSkill) return picked;
     return skillSections[0] ?? null;
   }, [sections, activeSkill, activeSectionId, skillSections]);
 
   const activeSectionIndex = activeSection
-    ? getSectionBaiNumber(activeSection, sections) - 1
+    ? getSectionBaiNumber(activeSection, visibleSections) - 1
     : 0;
 
   const selectedPath = coursePaths.find((item) => String(item.PathId) === String(pathId));
   const bankTitle = selectedPath?.PathName?.trim() ?? `Path #${pathId}`;
   const courseCategory = [course?.CategoryDisplayName, course?.LevelDisplayName].filter(Boolean).join(' · ');
-  const questionCount = getFilledQuestionCount(sections);
-  const questionCountBySkill = countActiveQuestionsBySkill(sections);
-  const activeSectionDirty = activeSection
-    ? isSectionEditorDirty(activeSection, sectionBaselines)
+  const questionCount = getFilledQuestionCount(visibleSections);
+  const questionCountBySkill = countActiveQuestionsBySkill(visibleSections);
+  const activeSectionUnsaved = activeSection
+    ? hasSectionUnsavedChanges(activeSection, sectionBaselines, sectionSourceBaselines)
     : false;
+  const hasPendingQuestionDeletes = activeSection
+    ? hasPendingPersistedQuestionDeletes(activeSection)
+    : false;
+  const canSaveSection = hasPendingSectionDeletes
+    || hasPendingQuestionDeletes
+    || (activeSectionUnsaved && Boolean(activeSection) && isQuestionBankSectionValid(activeSection));
+  const activeSectionDirty = canSaveSection;
 
   const handleSectionChange = (tempId, nextSection) => {
     const next = sectionsRef.current.map((s) => (s.tempId === tempId ? nextSection : s));
@@ -171,19 +235,143 @@ export default function MentorQuestionBankManagePage() {
     }
   };
 
+  const handleQuestionsFullyRestored = (tempId, nextSection) => {
+    const finalized = finalizeSectionAfterFullQuestionRestore(nextSection);
+    handleSectionChange(tempId, finalized);
+    setSectionBaselines((prev) =>
+      applyInitialQuestionsBaseline(finalized, prev, initialSectionBaselinesRef.current),
+    );
+  };
+
   const appendSectionBaselines = (nextSections) => {
-    setSectionBaselines((prev) => ({
+    const missing = nextSections.filter((s) => s?.tempId);
+    setSectionBaselines((prev) => {
+      const additions = buildSectionBaselinesMap(missing.filter((s) => prev[s.tempId] == null));
+      if (Object.keys(additions).length > 0) {
+        setInitialSectionBaselines((initialPrev) => ({ ...initialPrev, ...additions }));
+      }
+      return { ...prev, ...additions };
+    });
+    setSectionSourceBaselines((prev) => ({
       ...prev,
-      ...buildSectionBaselinesMap(nextSections.filter((s) => prev[s.tempId] == null)),
+      ...buildSectionSourceBaselinesMap(missing.filter((s) => prev[s.tempId] == null)),
     }));
   };
 
-  const withSavedSection = (navigateFn) => {
+  const clearPendingSectionDeletes = () => {
+    const next = sectionsRef.current.map((section) =>
+      section.pendingDelete ? { ...section, pendingDelete: false } : section,
+    );
+    sectionsRef.current = next;
+    setSections(next);
+  };
+
+  const removePendingDeletedSections = () => {
+    const removedTempIds = sectionsRef.current
+      .filter((section) => section.pendingDelete)
+      .map((section) => section.tempId);
+
+    const next = sectionsRef.current.filter((section) => !section.pendingDelete);
+    sectionsRef.current = next;
+    setSections(next);
+
+    setSectionBaselines((prev) => {
+      const nextBaselines = { ...prev };
+      removedTempIds.forEach((tempId) => {
+        delete nextBaselines[tempId];
+      });
+      return nextBaselines;
+    });
+    setInitialSectionBaselines((prev) => {
+      const nextBaselines = { ...prev };
+      removedTempIds.forEach((tempId) => {
+        delete nextBaselines[tempId];
+      });
+      return nextBaselines;
+    });
+    setSectionSourceBaselines((prev) => {
+      const nextBaselines = { ...prev };
+      removedTempIds.forEach((tempId) => {
+        delete nextBaselines[tempId];
+      });
+      return nextBaselines;
+    });
+    setSectionErrors((prev) => {
+      const nextErrors = { ...prev };
+      removedTempIds.forEach((tempId) => {
+        delete nextErrors[tempId];
+      });
+      return nextErrors;
+    });
+
+    if (removedTempIds.includes(activeSectionId)) {
+      const fallback = getVisibleSectionsBySkill(next, activeSkill)[0] ?? next.find((item) => !item.pendingDelete);
+      setActiveSectionId(fallback?.tempId ?? '');
+      if (fallback?.SkillType) setActiveSkill(fallback.SkillType);
+    }
+  };
+
+  const revertActiveSectionChanges = () => {
+    const section = sectionsRef.current.find((s) => s.tempId === activeSectionId);
+    if (!section) return;
+
+    const reverted = revertSectionToSavedBaseline(
+      section,
+      sectionBaselinesRef.current,
+      sectionSourceBaselinesRef.current,
+    );
+    const next = sectionsRef.current.map((s) => (s.tempId === section.tempId ? reverted : s));
+    sectionsRef.current = next;
+    setSections(next);
+    setSectionErrors((prev) => ({ ...prev, [section.tempId]: undefined }));
+    clearPendingSectionDeletes();
+  };
+
+  const requestNavigation = (navigateFn) => {
     const section = sectionsRef.current.find((s) => s.tempId === activeSectionId) ?? activeSection;
-    const isDirty = section ? isSectionEditorDirty(section, sectionBaselines) : false;
-    if (!prepareSectionNavigation(section, isDirty)) return;
+    if (!prepareSectionNavigation(section)) return;
+
+    const isDirty = hasQuestionBankWorkspaceChanges(
+      sectionsRef.current,
+      section,
+      sectionBaselinesRef.current,
+      sectionSourceBaselinesRef.current,
+    );
+
+    if (isDirty) {
+      pendingNavigationRef.current = navigateFn;
+      setUnsavedNavDialogOpen(true);
+      return;
+    }
+
     navigateFn();
   };
+
+  const handleUnsavedNavCancel = () => {
+    pendingNavigationRef.current = null;
+    setUnsavedNavDialogOpen(false);
+  };
+
+  const handleUnsavedNavContinue = () => {
+    const navigateFn = pendingNavigationRef.current;
+    pendingNavigationRef.current = null;
+    setUnsavedNavDialogOpen(false);
+    revertActiveSectionChanges();
+    navigateFn?.();
+  };
+
+  const withSavedSection = (navigateFn) => {
+    requestNavigation(navigateFn);
+  };
+
+  requestNavigationRef.current = requestNavigation;
+
+  useEffect(() => {
+    if (!registerNavigationGuard) return undefined;
+    return registerNavigationGuard((navigateFn) => {
+      requestNavigationRef.current?.(navigateFn);
+    });
+  }, [registerNavigationGuard]);
 
   const handleUpdateSection = async () => {
     if (!activeSection) return;
@@ -197,26 +385,132 @@ export default function MentorQuestionBankManagePage() {
     }
 
     const normalized = normalizeQuestionBankSectionForSave(section);
-    const errors = validateQuestionBankSection(normalized);
-    if (Object.keys(errors).length > 0) {
-      setSectionErrors((prev) => ({ ...prev, [section.tempId]: errors }));
-      toast.error('Vui lòng kiểm tra lại thông tin section.');
+    const hasActiveChanges = hasSectionUnsavedChanges(
+      section,
+      sectionBaselinesRef.current,
+      sectionSourceBaselinesRef.current,
+    );
+    const pendingDeletes = sectionsRef.current.filter((item) => item.pendingDelete);
+
+    if (!hasActiveChanges && pendingDeletes.length === 0) {
+      toast.info('Không có thay đổi để lưu.');
       return;
     }
 
-    setUpdatingSectionId(section.tempId);
-    try {
-      const sectionOrder = getSectionBaiNumber(section, sectionsRef.current);
-      const result = await saveQuestionBankSection({
+    const sectionOrder = getSectionBaiNumber(section, visibleSections);
+    const previewPayload = buildQuestionBankWorkspaceSavePayload(
+      section,
+      {
         courseId,
         pathId,
         questionPathId,
-        section: normalized,
         sectionOrder,
-      });
+      },
+      sectionBaselinesRef.current,
+      sectionSourceBaselinesRef.current,
+      sectionsRef.current,
+    );
+    const deleteQuestionsOnly = isQuestionBankDeleteOnlyPayload(previewPayload);
 
-      if (!result.ok) {
-        toast.error(result.message ?? 'Không thể cập nhật section.');
+    if (hasActiveChanges && !deleteQuestionsOnly) {
+      const saveIssue = findQuestionBankSectionSaveIssue(section);
+      if (saveIssue) {
+        setSectionErrors((prev) => ({
+          ...prev,
+          [section.tempId]: buildQuestionBankSectionSaveErrors(section, saveIssue),
+        }));
+        toast.warning(saveIssue.message);
+        return;
+      }
+
+      const errors = validateQuestionBankSection(normalized);
+      if (Object.keys(errors).length > 0) {
+        setSectionErrors((prev) => ({ ...prev, [section.tempId]: errors }));
+        toast.error('Vui lòng kiểm tra lại thông tin section.');
+        return;
+      }
+    }
+
+    savePayloadRef.current = previewPayload;
+    setSavePreviewPayload(previewPayload);
+    setSavePreviewOpen(true);
+  };
+
+  const handleSavePreviewClose = () => {
+    if (updatingSectionId) return;
+    setSavePreviewOpen(false);
+  };
+
+  const handleConfirmSaveSection = async () => {
+    const section = sectionsRef.current.find((s) => s.tempId === activeSectionId) ?? activeSection;
+    if (!section) return;
+
+    flushActiveSection();
+
+    const sectionOrder = getSectionBaiNumber(
+      section,
+      sectionsRef.current.filter((item) => !item.pendingDelete),
+    );
+    const savePayload = buildQuestionBankWorkspaceSavePayload(
+      section,
+      {
+        courseId,
+        pathId,
+        questionPathId,
+        sectionOrder,
+      },
+      sectionBaselinesRef.current,
+      sectionSourceBaselinesRef.current,
+      sectionsRef.current,
+    );
+    savePayloadRef.current = savePayload;
+
+    const normalized = normalizeQuestionBankSectionForSave(section);
+    const sectionsToDelete = savePayload.sectionsDelete ?? [];
+    const hasSectionSaveOps =
+      savePayload.sectionInsert
+      || savePayload.sectionUpdate
+      || savePayload.sectionSourceUpdate
+      || (savePayload.questionsInsert?.length ?? 0) > 0
+      || (savePayload.questionsUpdate?.length ?? 0) > 0
+      || (savePayload.questionsDelete?.length ?? 0) > 0;
+
+    setUpdatingSectionId(section.tempId);
+    try {
+      for (const item of sectionsToDelete) {
+        if (!item.sectionId) continue;
+        const deleteResult = await deleteQuestionBankSection(item.sectionId, {
+          courseId: Number(courseId),
+          pathId: Number(pathId),
+        });
+        if (!deleteResult.ok) {
+          toast.error(deleteResult.message ?? 'Không thể xóa section.');
+          return;
+        }
+      }
+
+      let result = {
+        ok: true,
+        sectionId: section.SectionId ?? null,
+        questionIdMap: [],
+        message: sectionsToDelete.length > 0 ? 'Đã xóa section.' : 'Đã lưu thay đổi.',
+      };
+
+      if (hasSectionSaveOps) {
+        result = await saveQuestionBankSection(savePayload);
+        if (!result.ok) {
+          toast.error(result.message ?? 'Không thể cập nhật section.');
+          return;
+        }
+      }
+
+      if (sectionsToDelete.length > 0) {
+        removePendingDeletedSections();
+      }
+
+      if (!hasSectionSaveOps) {
+        setSavePreviewOpen(false);
+        toast.success(result.message ?? 'Đã lưu thay đổi.');
         return;
       }
 
@@ -228,11 +522,63 @@ export default function MentorQuestionBankManagePage() {
         setSections(next);
       }
 
+      const questionIdByRef = Object.fromEntries(
+        (result.questionIdMap ?? []).map((item) => [item.clientRef, item.questionId]),
+      );
+      const questionsWithIds = (normalized.Questions ?? []).map((question) =>
+        question.QuestionId
+          ? question
+          : { ...question, QuestionId: questionIdByRef[question.tempId] ?? null },
+      );
+
+      const clearedDeleted = sectionsRef.current.map((s) => {
+        if (s.tempId !== section.tempId) return s;
+        const withQuestions = attachInitialQuestionsToSection({
+          ...s,
+          Questions: questionsWithIds,
+          DeletedQuestions: [],
+        });
+        if (result.sourceUrl == null) return withQuestions;
+        if (withQuestions.SkillType === TEST_SKILL_LISTENING) {
+          return { ...withQuestions, AudioUrl: result.sourceUrl };
+        }
+        if (withQuestions.SkillType === TEST_SKILL_READING) {
+          return { ...withQuestions, MaterialUrl: result.sourceUrl };
+        }
+        return withQuestions;
+      });
+      sectionsRef.current = clearedDeleted;
+      setSections(clearedDeleted);
+
+      const sectionForBaseline = {
+        ...normalized,
+        SectionId: result.sectionId ?? normalized.SectionId ?? null,
+        Questions: questionsWithIds,
+        ...(result.sourceUrl != null && normalized.SkillType === TEST_SKILL_LISTENING
+          ? { AudioUrl: result.sourceUrl }
+          : {}),
+        ...(result.sourceUrl != null && normalized.SkillType === TEST_SKILL_READING
+          ? { MaterialUrl: result.sourceUrl }
+          : {}),
+      };
+      const snapshot = buildSectionEditorSnapshot(sectionForBaseline);
       setSectionBaselines((prev) => ({
         ...prev,
-        [section.tempId]: buildSectionEditorSnapshot(normalized),
+        [section.tempId]: snapshot,
       }));
+      setInitialSectionBaselines((prev) => ({
+        ...prev,
+        [section.tempId]: snapshot,
+      }));
+      const sourceSnapshot = buildSectionSourceSnapshot(sectionForBaseline);
+      if (sourceSnapshot != null) {
+        setSectionSourceBaselines((prev) => ({
+          ...prev,
+          [section.tempId]: sourceSnapshot,
+        }));
+      }
       setSectionErrors((prev) => ({ ...prev, [section.tempId]: undefined }));
+      setSavePreviewOpen(false);
       toast.success(result.message ?? 'Đã cập nhật section.');
     } finally {
       setUpdatingSectionId('');
@@ -240,31 +586,33 @@ export default function MentorQuestionBankManagePage() {
   };
 
   const handleDeleteSection = (tempId) => {
-    const section = sectionsRef.current.find((item) => item.tempId === tempId);
+    const performMarkDelete = () => {
+      const section = sectionsRef.current.find((item) => item.tempId === tempId);
+      if (!section) return;
+
+      const visibleInSkill = getVisibleSectionsBySkill(sectionsRef.current, section.SkillType);
+      if (visibleInSkill.length <= 1) return;
+
+      const nextSections = sectionsRef.current.map((item) =>
+        item.tempId === tempId ? { ...item, pendingDelete: true } : item,
+      );
+      sectionsRef.current = nextSections;
+      setSections(nextSections);
+
+      if (activeSectionId === tempId) {
+        const nextActive = getVisibleSectionsBySkill(nextSections, section.SkillType)[0];
+        setActiveSectionId(nextActive?.tempId ?? '');
+      }
+
+      toast.info('Section sẽ được xóa khi bạn lưu thay đổi.');
+    };
+
     if (tempId === activeSectionId) {
-      const isDirty = section ? isSectionEditorDirty(section, sectionBaselines) : false;
-      if (!prepareSectionNavigation(section, isDirty)) return;
+      requestNavigation(performMarkDelete);
+      return;
     }
 
-    if (!section || getSectionsBySkill(sectionsRef.current, section.SkillType).length <= 1) return;
-
-    const nextSections = sectionsRef.current.filter((item) => item.tempId !== tempId);
-    sectionsRef.current = nextSections;
-    setSections(nextSections);
-    setSectionBaselines((prev) => {
-      const next = { ...prev };
-      delete next[tempId];
-      return next;
-    });
-    setSectionErrors((prev) => {
-      const next = { ...prev };
-      delete next[tempId];
-      return next;
-    });
-
-    if (activeSectionId === tempId) {
-      setActiveSectionId(getSectionsBySkill(nextSections, section.SkillType)[0]?.tempId ?? '');
-    }
+    performMarkDelete();
   };
 
   const handleSkillSelect = (skill) => {
@@ -276,7 +624,7 @@ export default function MentorQuestionBankManagePage() {
         setActiveSectionId(existing.tempId);
         return;
       }
-      const newSection = createQuestionBankSection(skill);
+      const newSection = attachInitialQuestionsToSection(createQuestionBankSection(skill));
       const nextSections = [...sectionsRef.current, newSection];
       sectionsRef.current = nextSections;
       setSections(nextSections);
@@ -297,7 +645,7 @@ export default function MentorQuestionBankManagePage() {
 
   const handleAddBai = () => {
     withSavedSection(() => {
-      const newSection = createQuestionBankSection(activeSkill);
+      const newSection = attachInitialQuestionsToSection(createQuestionBankSection(activeSkill));
       const nextSections = [...sectionsRef.current, newSection];
       sectionsRef.current = nextSections;
       setSections(nextSections);
@@ -323,7 +671,7 @@ export default function MentorQuestionBankManagePage() {
         if (existing) {
           setActiveSectionId(existing.tempId);
         } else {
-          const newSection = createQuestionBankSection(target.skill);
+          const newSection = attachInitialQuestionsToSection(createQuestionBankSection(target.skill));
           const nextSections = [...sectionsRef.current, newSection];
           sectionsRef.current = nextSections;
           setSections(nextSections);
@@ -376,6 +724,7 @@ export default function MentorQuestionBankManagePage() {
         totalQuestionCount={questionCount}
         questionCountBySkill={questionCountBySkill}
         onBack={handleBack}
+        onNavigateRequest={requestNavigation}
       />
 
       <Box
@@ -387,7 +736,7 @@ export default function MentorQuestionBankManagePage() {
         }}
       >
         <MentorQuestionBankSkillNav
-          sections={sections}
+          sections={visibleSections}
           activeSkill={activeSkill}
           sectionErrors={sectionErrors}
           onSkillChange={handleSkillSelect}
@@ -413,7 +762,9 @@ export default function MentorQuestionBankManagePage() {
             skillSections={skillSections}
             sectionErrors={sectionErrors}
             sectionBaselines={sectionBaselines}
+            sectionSourceBaselines={sectionSourceBaselines}
             activeSectionDirty={activeSectionDirty}
+            hasPendingSectionDeletes={hasPendingSectionDeletes}
             updatingSection={updatingSectionId === activeSectionId}
             questionCount={questionCount}
             canDeleteActiveSection={skillSections.length > 1}
@@ -421,13 +772,14 @@ export default function MentorQuestionBankManagePage() {
             onSectionSelect={handleSectionSelect}
             onAddBai={handleAddBai}
             onSectionChange={handleSectionChange}
+            onQuestionsFullyRestored={handleQuestionsFullyRestored}
             onDeleteSection={handleDeleteSection}
             onUpdateSection={handleUpdateSection}
             onRegisterSectionControls={bindSectionControls}
           />
 
           <MentorQuestionBankOutlinePanel
-            sections={sections}
+            sections={visibleSections}
             activeSkill={activeSkill}
             activeSectionId={activeSectionId}
             onNavigateToItem={handleOutlineNavigate}
@@ -444,6 +796,24 @@ export default function MentorQuestionBankManagePage() {
       </Box>
 
       <ScrollToTopButton avoidSelectors={['#app-site-footer']} />
+
+      <ConfirmDialog
+        open={unsavedNavDialogOpen}
+        onClose={handleUnsavedNavCancel}
+        onConfirm={handleUnsavedNavContinue}
+        title="Thay đổi chưa được lưu"
+        message="Nếu bạn chuyển sang mục khác, các sự thay đổi sẽ không được lưu. Bạn có muốn tiếp tục?"
+        confirmLabel="Tiếp tục"
+        cancelLabel="Hủy"
+      />
+
+      <MentorQuestionBankSectionSavePreviewDialog
+        open={savePreviewOpen}
+        payload={savePreviewPayload}
+        loading={Boolean(updatingSectionId)}
+        onClose={handleSavePreviewClose}
+        onConfirm={handleConfirmSaveSection}
+      />
     </Box>
   );
 }

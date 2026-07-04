@@ -7,7 +7,11 @@ const {
     getChapterSections,
     getSectionQuestions,
     getQuestionBankByIdController,
-    getQuestionBankPathsByBankIdController
+    getQuestionBankPathsByBankIdController,
+    createSectionSave,
+    updateSectionSave,
+    deleteSection,
+    patchSectionSourceUrl,
 } = require('../controllers/questionBankController');
 
 
@@ -26,6 +30,10 @@ questionBankRoutes.get('/getBankPaths/:bankId', optionalAuth, getQuestionBankPat
 questionBankRoutes.get('/getBankById/:bankId', optionalAuth, getQuestionBankByIdController);
 questionBankRoutes.get('/getAllBankOfMentor', optionalAuth, getAllBankOfMentor);
 questionBankRoutes.get('/courses/:courseId/paths/:pathId/sections', optionalAuth, getChapterSections);
+questionBankRoutes.post('/courses/:courseId/paths/:pathId/sections', optionalAuth, createSectionSave);
 questionBankRoutes.get('/sections/:sectionId/questions', optionalAuth, getSectionQuestions);
+questionBankRoutes.put('/sections/:sectionId', optionalAuth, updateSectionSave);
+questionBankRoutes.patch('/sections/:sectionId/source-url', optionalAuth, patchSectionSourceUrl);
+questionBankRoutes.delete('/sections/:sectionId', optionalAuth, deleteSection);
 
 module.exports = questionBankRoutes;

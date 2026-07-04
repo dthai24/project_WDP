@@ -49,6 +49,17 @@ app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 // ---- Health-check ----
 app.use('/api/ping', (_req, res) => res.json({ status: 'ok', message: 'S.T.A.R Backend is running' }));
 
+// JSON body parse errors (malformed / truncated request body)
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      success: false,
+      message: 'Request body không phải JSON hợp lệ. Kiểm tra Content-Type: application/json và định dạng payload.',
+    });
+  }
+  return next(err);
+});
+
 // ---- Start ----
 const server = app.listen(PORT, () => {
   console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);

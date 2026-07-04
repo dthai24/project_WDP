@@ -1,15 +1,17 @@
-import { Box, Checkbox, Collapse, IconButton, InputBase, Radio, Typography } from '@mui/material';
+import { Box, Checkbox, Collapse, IconButton, InputBase, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
-import { createTestTempId } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  createTestTempId,
+  TEST_QUESTION_OPTION_TEXT_MAX,
+  TEST_QUESTION_TEXT_MAX,
+} from '@/features/mentor/utils/mentorTestContentUtils';
 
-function normalizeSingleCorrectOption(options) {
-  const firstCorrectIndex = options.findIndex((option) => option.IsCorrect);
-  const keepIndex = firstCorrectIndex >= 0 ? firstCorrectIndex : 0;
-  return options.map((option, index) => ({ ...option, IsCorrect: index === keepIndex }));
+function countCorrectOptions(options = []) {
+  return options.filter((option) => option.IsCorrect).length;
 }
 
 export default function MentorQuestionTypeFields({
@@ -26,23 +28,25 @@ export default function MentorQuestionTypeFields({
   const handleFieldChange = (patch) => onChange({ ...question, ...patch });
 
   const options = question.Options ?? [];
-  const allowMultiple = Boolean(question.AllowMultipleAnswers);
 
-  const updateOptions = (nextOptions) => handleFieldChange({ Options: nextOptions });
+  const updateOptions = (nextOptions) => {
+    handleFieldChange({
+      Options: nextOptions,
+      AllowMultipleAnswers: countCorrectOptions(nextOptions) > 1,
+    });
+  };
 
   const handleOptionTextChange = (optionTempId, value) => {
     updateOptions(
       options.map((option) =>
-        option.tempId === optionTempId ? { ...option, OptionText: value } : option,
+        option.tempId === optionTempId
+          ? { ...option, OptionText: value.slice(0, TEST_QUESTION_OPTION_TEXT_MAX) }
+          : option,
       ),
     );
   };
 
-  const handleSingleCorrectChange = (optionTempId) => {
-    updateOptions(options.map((option) => ({ ...option, IsCorrect: option.tempId === optionTempId })));
-  };
-
-  const handleMultipleCorrectToggle = (optionTempId) => {
+  const handleCorrectToggle = (optionTempId) => {
     updateOptions(
       options.map((option) =>
         option.tempId === optionTempId ? { ...option, IsCorrect: !option.IsCorrect } : option,
@@ -59,14 +63,17 @@ export default function MentorQuestionTypeFields({
 
   const handleRemoveOption = (optionTempId) => {
     if (options.length <= 2) return;
-    const next = options.filter((option) => option.tempId !== optionTempId);
-    updateOptions(allowMultiple ? next : normalizeSingleCorrectOption(next));
+    updateOptions(options.filter((option) => option.tempId !== optionTempId));
   };
+
+  const questionTextLength = String(question.QuestionText ?? '').length;
+  const isQuestionTextAtMax = questionTextLength >= TEST_QUESTION_TEXT_MAX;
+  const questionTextBorderError = Boolean(errors.QuestionText) || isQuestionTextAtMax;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.35 }}>
       {/* Question text */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.35, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.35, minWidth: 0 }}>
         {collapsibleChoices ? (
           <Typography
             component="span"
@@ -77,6 +84,7 @@ export default function MentorQuestionTypeFields({
               flexShrink: 0,
               lineHeight: 1.5,
               whiteSpace: 'nowrap',
+              pt: 0.35,
             }}
           >
             Câu {questionIndex + 1} :
@@ -86,40 +94,57 @@ export default function MentorQuestionTypeFields({
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <InputBase
             value={question.QuestionText ?? ''}
-            onChange={(event) => handleFieldChange({ QuestionText: event.target.value })}
+            onChange={(event) =>
+              handleFieldChange({
+                QuestionText: event.target.value.slice(0, TEST_QUESTION_TEXT_MAX),
+              })
+            }
             disabled={disabled}
-            placeholder={collapsibleChoices ? 'Nhập nội dung câu hỏi...' : 'Nhập nội dung câu hỏi...'}
+            placeholder="Nhập nội dung câu hỏi..."
             fullWidth
-            multiline={!collapsibleChoices}
-            minRows={collapsibleChoices ? undefined : 2}
+            multiline
+            minRows={2}
+            maxRows={8}
+            inputProps={{ maxLength: TEST_QUESTION_TEXT_MAX }}
             sx={{
-              fontSize: collapsibleChoices ? 15 : 13.5,
-              fontWeight: collapsibleChoices ? 700 : 400,
+              fontSize: collapsibleChoices ? 14 : 13.5,
+              fontWeight: collapsibleChoices ? 600 : 400,
               color: TEXT,
-              lineHeight: 1.5,
-              alignItems: collapsibleChoices ? 'center' : 'flex-start',
-              px: 0.25,
-              py: collapsibleChoices ? 0 : 0.25,
+              lineHeight: 1.55,
+              alignItems: 'flex-start',
+              px: collapsibleChoices ? 0.85 : 0.25,
+              py: collapsibleChoices ? 0.75 : 0.25,
               width: '100%',
+              borderRadius: collapsibleChoices ? '10px' : 0,
+              border: collapsibleChoices
+                ? `1px solid ${questionTextBorderError ? '#DC2626' : 'rgba(15,23,42,0.1)'}`
+                : 'none',
               borderBottom: collapsibleChoices
-                ? 'none'
-                : `1.5px solid ${errors.QuestionText ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
-              borderRadius: 0,
-              '& .MuiInputBase-input': collapsibleChoices
-                ? {
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }
-                : undefined,
-              '&:focus-within': collapsibleChoices
                 ? undefined
-                : {
-                    borderBottomColor: errors.QuestionText ? '#DC2626' : accentColor,
-                  },
+                : `1.5px solid ${questionTextBorderError ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
+              bgcolor: isQuestionTextAtMax
+                ? 'rgba(220,38,38,0.04)'
+                : collapsibleChoices
+                  ? '#fff'
+                  : 'transparent',
+              '& .MuiInputBase-input': {
+                resize: 'vertical',
+              },
+              '&:focus-within': {
+                borderColor: questionTextBorderError ? '#DC2626' : accentColor,
+                ...(collapsibleChoices
+                  ? {
+                    boxShadow: `0 0 0 2px ${questionTextBorderError ? 'rgba(220,38,38,0.12)' : 'rgba(8,145,178,0.12)'}`,
+                  }
+                  : { borderBottomColor: questionTextBorderError ? '#DC2626' : accentColor }),
+              },
             }}
           />
-          {errors.QuestionText ? (
+          {isQuestionTextAtMax ? (
+            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.3 }}>
+              Chỉ cho phép 250 ký tự
+            </Typography>
+          ) : errors.QuestionText ? (
             <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.3 }}>
               {errors.QuestionText}
             </Typography>
@@ -135,6 +160,7 @@ export default function MentorQuestionTypeFields({
             aria-expanded={choicesExpanded}
             sx={{
               flexShrink: 0,
+              mt: 0.15,
               color: 'rgba(15,23,42,0.45)',
               '&:hover': { color: accentColor, bgcolor: 'rgba(15,23,42,0.06)' },
             }}
@@ -147,6 +173,12 @@ export default function MentorQuestionTypeFields({
           </IconButton>
         ) : null}
       </Box>
+
+      {errors._correctOption ? (
+        <Typography sx={{ fontSize: 11, color: '#DC2626', mt: -0.5, mb: 0.25 }}>
+          {errors._correctOption}
+        </Typography>
+      ) : null}
 
       {/* Answer options */}
       <Collapse in={!collapsibleChoices || choicesExpanded} timeout="auto" unmountOnExit={false}>
@@ -168,15 +200,17 @@ export default function MentorQuestionTypeFields({
           {options.map((option, index) => {
             const optionErrors = errors.Options?.[option.tempId] ?? {};
             const isCorrect = Boolean(option.IsCorrect);
-            const CorrectControl = allowMultiple ? Checkbox : Radio;
             const letter = String.fromCharCode(65 + index);
+            const optionTextLength = String(option.OptionText ?? '').length;
+            const isOptionTextAtMax = optionTextLength >= TEST_QUESTION_OPTION_TEXT_MAX;
+            const optionTextBorderError = Boolean(optionErrors.OptionText) || isOptionTextAtMax;
 
             return (
               <Box
                 key={option.tempId}
                 sx={{
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   gap: 0.4,
                   px: 0.35,
                   py: 0.15,
@@ -185,48 +219,60 @@ export default function MentorQuestionTypeFields({
                   transition: 'background-color 0.12s',
                 }}
               >
-                <CorrectControl
+                <Checkbox
                   checked={isCorrect}
-                  onChange={() =>
-                    allowMultiple
-                      ? handleMultipleCorrectToggle(option.tempId)
-                      : handleSingleCorrectChange(option.tempId)
-                  }
+                  onChange={() => handleCorrectToggle(option.tempId)}
                   disabled={disabled}
                   size="small"
                   sx={{
                     p: 0.35,
                     flexShrink: 0,
+                    mt: 0.1,
                     color: 'rgba(15,23,42,0.2)',
                     '&.Mui-checked': { color: accentColor },
                   }}
-                  inputProps={{ 'aria-label': `Đáp án ${letter}` }}
+                  inputProps={{ 'aria-label': `Đáp án đúng ${letter}` }}
                 />
-                <InputBase
-                  value={option.OptionText ?? ''}
-                  onChange={(event) => handleOptionTextChange(option.tempId, event.target.value)}
-                  disabled={disabled}
-                  placeholder={`Đáp án ${letter}`}
-                  fullWidth
-                  sx={{
-                    fontSize: 13,
-                    color: TEXT,
-                    flex: 1,
-                    px: 0.25,
-                    py: 0.3,
-                    borderBottom: `1px solid ${
-                      optionErrors.OptionText
-                        ? '#DC2626'
-                        : isCorrect
-                          ? 'rgba(22,163,74,0.35)'
-                          : 'rgba(15,23,42,0.08)'
-                    }`,
-                    borderRadius: 0,
-                    '&:focus-within': {
-                      borderBottomColor: optionErrors.OptionText ? '#DC2626' : accentColor,
-                    },
-                  }}
-                />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <InputBase
+                    value={option.OptionText ?? ''}
+                    onChange={(event) => handleOptionTextChange(option.tempId, event.target.value)}
+                    disabled={disabled}
+                    placeholder={`Đáp án ${letter}`}
+                    fullWidth
+                    inputProps={{ maxLength: TEST_QUESTION_OPTION_TEXT_MAX }}
+                    sx={{
+                      fontSize: 13,
+                      color: TEXT,
+                      px: 0.5,
+                      py: 0.35,
+                      borderRadius: '8px',
+                      border: `1px solid ${
+                        optionTextBorderError
+                          ? '#DC2626'
+                          : isCorrect
+                            ? 'rgba(22,163,74,0.35)'
+                            : 'rgba(15,23,42,0.08)'
+                      }`,
+                      bgcolor: isOptionTextAtMax ? 'rgba(220,38,38,0.04)' : 'transparent',
+                      '&:focus-within': {
+                        borderColor: optionTextBorderError ? '#DC2626' : accentColor,
+                        boxShadow: optionTextBorderError
+                          ? '0 0 0 2px rgba(220,38,38,0.12)'
+                          : `0 0 0 2px rgba(8,145,178,0.12)`,
+                      },
+                    }}
+                  />
+                  {isOptionTextAtMax ? (
+                    <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.3 }}>
+                      Chỉ cho phép 250 ký tự
+                    </Typography>
+                  ) : optionErrors.OptionText ? (
+                    <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.3 }}>
+                      {optionErrors.OptionText}
+                    </Typography>
+                  ) : null}
+                </Box>
                 {options.length > 2 ? (
                   <IconButton
                     size="small"
@@ -236,6 +282,7 @@ export default function MentorQuestionTypeFields({
                     sx={{
                       p: 0.3,
                       flexShrink: 0,
+                      mt: 0.1,
                       color: 'rgba(15,23,42,0.2)',
                       '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
                     }}
@@ -252,11 +299,6 @@ export default function MentorQuestionTypeFields({
 
         {errors._options ? (
           <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.4 }}>{errors._options}</Typography>
-        ) : null}
-        {errors._correctOption ? (
-          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.4 }}>
-            {errors._correctOption}
-          </Typography>
         ) : null}
 
         <Box

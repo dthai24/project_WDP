@@ -51,6 +51,7 @@ export default function MentorQuestionBankDetailHeader({
   breadcrumbMode = 'default',
   onBack,
   onQuizSetup,
+  onNavigateRequest,
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -60,6 +61,19 @@ export default function MentorQuestionBankDetailHeader({
   const backLabel = courseId
     ? (isCreateMode ? 'Quay lại' : 'Quay lại khóa học')
     : 'Quay lại danh sách';
+  const guardedNavigate = (to) => {
+    const go = () => navigate(to);
+    if (onNavigateRequest) {
+      onNavigateRequest(go);
+      return;
+    }
+    go();
+  };
+  const handleBreadcrumbClick = (event, to) => {
+    if (!onNavigateRequest) return;
+    event.preventDefault();
+    guardedNavigate(to);
+  };
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -96,38 +110,42 @@ export default function MentorQuestionBankDetailHeader({
             }}
           >
             <MuiLink
-              component={Link}
-              to="/home"
+              component={onNavigateRequest ? 'button' : Link}
+              {...(onNavigateRequest ? { type: 'button' } : { to: '/home' })}
+              onClick={onNavigateRequest ? (event) => handleBreadcrumbClick(event, '/home') : undefined}
               underline="hover"
-              sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+              sx={{ fontSize: 13, color: MUTED, fontWeight: 500, ...(onNavigateRequest ? { border: 0, bgcolor: 'transparent', cursor: 'pointer', p: 0 } : {}) }}
             >
               Trang chủ
             </MuiLink>
             {courseId ? (
               <MuiLink
-                component={Link}
-                to="/mentor/courses"
+                component={onNavigateRequest ? 'button' : Link}
+                {...(onNavigateRequest ? { type: 'button' } : { to: '/mentor/courses' })}
+                onClick={onNavigateRequest ? (event) => handleBreadcrumbClick(event, '/mentor/courses') : undefined}
                 underline="hover"
-                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500, ...(onNavigateRequest ? { border: 0, bgcolor: 'transparent', cursor: 'pointer', p: 0 } : {}) }}
               >
                 Khóa học của tôi
               </MuiLink>
             ) : (
               <MuiLink
-                component={Link}
-                to="/mentor/question-banks"
+                component={onNavigateRequest ? 'button' : Link}
+                {...(onNavigateRequest ? { type: 'button' } : { to: '/mentor/question-banks' })}
+                onClick={onNavigateRequest ? (event) => handleBreadcrumbClick(event, '/mentor/question-banks') : undefined}
                 underline="hover"
-                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500, ...(onNavigateRequest ? { border: 0, bgcolor: 'transparent', cursor: 'pointer', p: 0 } : {}) }}
               >
                 Ngân hàng câu hỏi
               </MuiLink>
             )}
             {courseId ? (
               <MuiLink
-                component={Link}
-                to={`/mentor/courses/${courseId}`}
+                component={onNavigateRequest ? 'button' : Link}
+                {...(onNavigateRequest ? { type: 'button' } : { to: `/mentor/courses/${courseId}` })}
+                onClick={onNavigateRequest ? (event) => handleBreadcrumbClick(event, `/mentor/courses/${courseId}`) : undefined}
                 underline="hover"
-                sx={{ fontSize: 13, color: MUTED, fontWeight: 500, maxWidth: 220 }}
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500, maxWidth: 220, ...(onNavigateRequest ? { border: 0, bgcolor: 'transparent', cursor: 'pointer', p: 0 } : {}) }}
                 noWrap
               >
                 {courseName || `Khóa học #${courseId}`}
@@ -135,10 +153,11 @@ export default function MentorQuestionBankDetailHeader({
             ) : null}
             {courseId && breadcrumbMode === 'default' ? (
               <MuiLink
-                component={Link}
-                to={backPath}
+                component={onNavigateRequest ? 'button' : Link}
+                {...(onNavigateRequest ? { type: 'button' } : { to: backPath })}
+                onClick={onNavigateRequest ? (event) => handleBreadcrumbClick(event, backPath) : undefined}
                 underline="hover"
-                sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}
+                sx={{ fontSize: 13, color: MUTED, fontWeight: 500, ...(onNavigateRequest ? { border: 0, bgcolor: 'transparent', cursor: 'pointer', p: 0 } : {}) }}
               >
                 Ngân hàng câu hỏi
               </MuiLink>

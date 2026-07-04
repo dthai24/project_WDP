@@ -33,6 +33,7 @@ import {
 } from "@/features/mentor/utils/mentorCourseListParams";
 import { getPrimaryRoleLabel, isStudent } from "@/features/auth/utils/authUtils";
 import { useAuth } from '@/context/AuthContext';
+import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import {
   AVATAR_UPDATED_EVENT,
   getStoredAvatarUrl,
@@ -140,8 +141,8 @@ export default function Header({
     []
   );
 
-  // 1. LẤY USER VÀ HÀM LOGOUT TỪ KHO RA XÀI
-  const { user, logout } = useAuth(); 
+  const { user, logout } = useAuth();
+  const { requestGuardedNavigation } = useNavigationGuard() ?? {};
 
   // (Vẫn giữ logic Avatar của ông trong trường hợp ông có update lẻ avatar)
   const [avatarUrl, setAvatarUrl] = useState(() => getStoredAvatarUrl());
@@ -185,7 +186,12 @@ export default function Header({
 
   const handleGoProfile = () => {
     closeUserMenu();
-    navigate(profilePath);
+    const go = () => navigate(profilePath);
+    if (requestGuardedNavigation) {
+      requestGuardedNavigation(go);
+      return;
+    }
+    go();
   };
 
   const handleProfileTriggerClick = (event) => {
@@ -209,16 +215,23 @@ export default function Header({
     else openUserMenu();
   };
 
-  // 2. HÀM LOGOUT: GỌI HÀM CỦA NHÀ KHO THAY VÌ TỰ XÓA STORAGE
-  const handleLogout = () => {
+  const performLogout = () => {
     closeUserMenu();
     if (onLogout) {
       onLogout();
     } else {
-      logout(); // Dùng hàm quét dọn của AuthContext
+      logout();
       toast.info("Đã đăng xuất thành công.");
       navigate("/login", { replace: true });
     }
+  };
+
+  const handleLogout = () => {
+    if (requestGuardedNavigation) {
+      requestGuardedNavigation(performLogout);
+      return;
+    }
+    performLogout();
   };
 
   const handleMenuNavigate = (item) => {

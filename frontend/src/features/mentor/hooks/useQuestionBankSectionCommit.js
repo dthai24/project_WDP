@@ -20,16 +20,11 @@ export default function useQuestionBankSectionCommit() {
     return Boolean(activeSection?.File);
   }, []);
 
-  const prepareSectionNavigation = useCallback((activeSection, isSectionDirty) => {
+  const prepareSectionNavigation = useCallback((activeSection) => {
     flushActiveSection();
 
     if (isActiveSectionBusy(activeSection)) {
       toast.warning('Đang tải file lên, vui lòng đợi hoàn tất.');
-      return false;
-    }
-
-    if (isSectionDirty) {
-      toast.warning('Vui lòng ấn "Cập nhật section" trước khi chuyển sang phần khác.');
       return false;
     }
 

@@ -54,9 +54,11 @@ const getSectionsByPath = async (courseId, pathId) => {
             qp.Question_Path_Id AS QuestionPathId,
             qs.SectionId,
             qs.SectionName,
+            qs.Title,
             qs.TypeId,
             RTRIM(qt.Name) AS SkillType,
             qs.[Order] AS SectionOrder,
+            qs.SourceUrl,
             COUNT(q.QuestionId) AS QuestionCount
 
         FROM dbo.Questions_Path qp
@@ -75,9 +77,11 @@ const getSectionsByPath = async (courseId, pathId) => {
             qp.Question_Path_Id,
             qs.SectionId,
             qs.SectionName,
+            qs.Title,
             qs.TypeId,
             qt.Name,
-            qs.[Order]
+            qs.[Order],
+            qs.SourceUrl
         ORDER BY qs.[Order], qs.SectionId
     `);
     return result.recordset;
@@ -98,6 +102,8 @@ const getQuestionsBySection = async (sectionId) => {
             q.URL,
             q.[Order] AS QuestionOrder,
             q.IsActive,
+            q.Score,
+            q.AllowMultipleAnswers,
             qc.ChoiceId,
             qc.Title AS ChoiceTitle,
             qc.[Order] AS ChoiceOrder,
@@ -109,6 +115,7 @@ const getQuestionsBySection = async (sectionId) => {
         LEFT JOIN dbo.Question_Choices qc
             ON qc.QuestionId = q.QuestionId
         WHERE q.SectionId = @sectionId
+          AND q.IsActive = 1
         ORDER BY q.[Order], q.QuestionId, qc.[Order], qc.ChoiceId
     `);
     return result.recordset;

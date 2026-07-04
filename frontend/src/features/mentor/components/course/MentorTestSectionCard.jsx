@@ -15,6 +15,7 @@ import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import MentorTestQuestionCard from './MentorTestQuestionCard';
 import MentorTestListeningSourceEditor from './MentorTestListeningSourceEditor';
 import MentorTestReadingSourceEditor from './MentorTestReadingSourceEditor';
+import MentorQuestionBankQuestionChangesDialog from '@/features/mentor/components/questionBank/MentorQuestionBankQuestionChangesDialog';
 import {
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_LABELS,
@@ -31,6 +32,11 @@ import {
   getSectionScoreLabel,
   isFilledTestQuestion,
   isPersistedQuestionLocked,
+  appendDeletedQuestionToSection,
+  findInitialSectionQuestion,
+  isQuestionContentChangedFromInitial,
+  restoreQuestionFromInitial,
+  validateTestQuestion,
   SCORING_MODE_AUTO,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
@@ -182,6 +188,7 @@ export default function MentorTestSectionCard({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [changedQuestionDialog, setChangedQuestionDialog] = useState(null);
   const childControlsRef = useRef(null);
 
   const handleRegisterChildControls = useCallback((controls) => {
@@ -275,10 +282,35 @@ export default function MentorTestSectionCard({
     );
   };
 
+  const handleRestoreChangedQuestion = () => {
+    if (!changedQuestionDialog?.initial || !changedQuestionDialog?.current) return;
+
+    const restored = restoreQuestionFromInitial(
+      changedQuestionDialog.current,
+      changedQuestionDialog.initial,
+    );
+    handleQuestionChange(restored.tempId, restored);
+    setChangedQuestionDialog(null);
+  };
+
   const handleDeleteQuestion = (questionTempId) => {
     const target = questions.find((question) => question.tempId === questionTempId);
     if (isPersistedQuestionLocked(target, persistedQuestionIds, coursePublished)) return;
-    updateQuestions(questions.filter((question) => question.tempId !== questionTempId));
+
+    const nextQuestions = questions.filter((question) => question.tempId !== questionTempId);
+    const patch = { Questions: nextQuestions };
+
+    if (questionBankMode && target) {
+      const originalIndex = questions.findIndex((question) => question.tempId === questionTempId);
+      patch.DeletedQuestions = appendDeletedQuestionToSection(
+        section.DeletedQuestions ?? [],
+        target,
+        originalIndex,
+        section.InitialQuestions ?? [],
+      );
+    }
+
+    updateSection(patch);
   };
 
   const handleConfirmDelete = () => {
@@ -672,18 +704,34 @@ export default function MentorTestSectionCard({
                   persistedQuestionIds,
                   coursePublished,
                 );
+                const initialQuestion = questionBankMode
+                  ? findInitialSectionQuestion(section, question.tempId)
+                  : null;
+                const contentChanged = questionBankMode
+                  && isQuestionContentChangedFromInitial(question, section.InitialQuestions);
+                const questionErrors = questionBankMode && isFilledTestQuestion(question)
+                  ? validateTestQuestion(question, { validateScore: showScoreField })
+                  : (errors.Questions?.[question.tempId] ?? {});
                 return (
                 <MentorTestQuestionCard
                   key={question.tempId}
                   question={question}
                   index={questionIndex}
-                  errors={errors.Questions?.[question.tempId] ?? {}}
+                  errors={questionErrors}
                   accentColor={skillAccent}
                   disabled={disabled}
                   contentLocked={contentLocked}
                   showActiveToggle={questionBankMode || (coursePublished && contentLocked)}
                   showScoreField={showScoreField}
                   collapsibleChoices={questionBankMode}
+                  contentChanged={contentChanged}
+                  onViewContentChanges={() =>
+                    setChangedQuestionDialog({
+                      current: question,
+                      initial: initialQuestion,
+                      index: questionIndex,
+                    })
+                  }
                   onChange={(nextQuestion) => handleQuestionChange(question.tempId, nextQuestion)}
                   onDelete={() =>
                     setDeleteConfirm({
@@ -718,6 +766,17 @@ export default function MentorTestSectionCard({
       cancelLabel="Hủy"
       destructive
     />
+
+      {questionBankMode ? (
+        <MentorQuestionBankQuestionChangesDialog
+          open={Boolean(changedQuestionDialog)}
+          onClose={() => setChangedQuestionDialog(null)}
+          onRestore={handleRestoreChangedQuestion}
+          questionIndex={changedQuestionDialog?.index ?? 0}
+          oldQuestion={changedQuestionDialog?.initial}
+          newQuestion={changedQuestionDialog?.current}
+        />
+      ) : null}
   </>
   );
 }

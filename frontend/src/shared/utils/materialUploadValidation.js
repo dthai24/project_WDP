@@ -23,6 +23,9 @@ export const LISTENING_AUDIO_INVALID_TYPE_MESSAGE =
 export const LISTENING_LINK_INVALID_MESSAGE =
   'Vui lòng nhập link audio hoặc video nghe hợp lệ.';
 
+export const LISTENING_UPLOAD_FAILED_MESSAGE =
+  'Lỗi trong quá trình tải file, hãy thử lại';
+
 /** Lấy đuôi file — ưu tiên docx trước doc. */
 export function getFileExtension(fileName = '') {
   const lower = String(fileName ?? '').trim().toLowerCase();
@@ -52,7 +55,14 @@ export function isAllowedReadingDocFile(file) {
 
 export function isAllowedListeningAudioFile(file) {
   if (!file?.name) return false;
-  return isAllowedListeningAudioExtension(getFileExtension(file.name));
+  if (isAllowedListeningAudioExtension(getFileExtension(file.name))) return true;
+  const mime = String(file.type ?? '').toLowerCase();
+  return (
+    mime === 'audio/mpeg'
+    || mime === 'audio/mp3'
+    || mime === 'audio/mp4'
+    || mime === 'video/mp4'
+  );
 }
 
 export function validateReadingDocFile(file) {

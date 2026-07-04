@@ -1,3 +1,5 @@
+import { uploadListeningAudioToCloudinary } from '@/shared/services/cloudinaryDirectUpload';
+
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
 
 async function parseUploadResponse(response) {
@@ -45,16 +47,8 @@ export async function uploadDocMaterial(file) {
   return parseUploadResponse(response);
 }
 
-export async function uploadAudioMaterial(file) {
-  const formData = new FormData();
-  formData.append('type', 'AUDIO');
-  formData.append('file', file);
-
-  const response = await fetch(`${API_BASE}/materials/upload`, {
-    method: 'POST',
-    body: formData,
-  });
-  return parseUploadResponse(response);
+export async function uploadAudioMaterial(file, { onProgress } = {}) {
+  return uploadListeningAudioToCloudinary(file, { onProgress });
 }
 
 export async function fetchTextMaterialHtml(materialUrl) {
