@@ -38,6 +38,10 @@ const PAGE_STATE = {
   ERROR: 'error',
 };
 
+/**
+ * Component chính quản lý giao diện làm bài kiểm tra (bao gồm bài kiểm tra chương và cuối khóa).
+ * Thực hiện quản lý toàn bộ luồng từ lúc hiển thị giới thiệu, đếm ngược làm bài, cho đến khi nộp bài và xem kết quả.
+ */
 export default function CourseTestPage() {
   const { courseId, scope, chapterId } = useParams();
   const navigate = useNavigate();
@@ -106,6 +110,9 @@ export default function CourseTestPage() {
     allowLeave,
   } = useTestLeaveGuard(isTestActive);
 
+  /**
+   * Tải thông tin chung (metadata) của bài kiểm tra (tiêu đề, thời gian làm bài, số câu...) từ server.
+   */
   const loadMeta = useCallback(async () => {
     setPageState(PAGE_STATE.LOADING);
     setErrorMessage('');
@@ -128,6 +135,9 @@ export default function CourseTestPage() {
     loadMeta();
   }, [loadMeta]);
 
+  /**
+   * Cập nhật danh sách câu trả lời của học viên khi họ chọn hoặc thay đổi phương án của một câu hỏi.
+   */
   const handleAnswerChange = useCallback((questionTempId, selectedOptionTempIds) => {
     setAnswers((prev) => ({
       ...prev,
@@ -135,6 +145,9 @@ export default function CourseTestPage() {
     }));
   }, []);
 
+  /**
+   * Gửi bài làm lên server để chấm điểm, nhận kết quả chi tiết và chuyển đổi giao diện sang chế độ hiển thị kết quả.
+   */
   const handleSubmit = useCallback(async (options = {}) => {
     if (!attempt?.attemptId || submitInFlightRef.current) return;
 
@@ -180,6 +193,9 @@ export default function CourseTestPage() {
     return () => window.clearInterval(intervalId);
   }, [pageState, attempt, handleSubmit]);
 
+  /**
+   * Khởi tạo và bắt đầu lượt làm bài kiểm tra. Gọi API lấy đề thi, reset câu trả lời và bắt đầu đếm ngược thời gian.
+   */
   const handleStart = async () => {
     setStarting(true);
     setErrorMessage('');
@@ -207,6 +223,9 @@ export default function CourseTestPage() {
     setPageState(PAGE_STATE.IN_PROGRESS);
   };
 
+  /**
+   * Xóa sạch trạng thái bài làm cũ và gọi hàm tải lại thông tin bài kiểm tra để người dùng chuẩn bị làm lại từ đầu.
+   */
   const handleRetry = async () => {
     setPaper(null);
     setAttempt(null);
@@ -215,6 +234,9 @@ export default function CourseTestPage() {
     await loadMeta();
   };
 
+  /**
+   * Điều hướng người dùng quay trở lại trang giao diện học tập của khóa học hiện tại.
+   */
   const handleBackToLearn = () => {
     navigate(learnPath);
   };
@@ -225,6 +247,7 @@ export default function CourseTestPage() {
   const hideBreadcrumb =
     pageState === PAGE_STATE.IN_PROGRESS || pageState === PAGE_STATE.SUBMITTING;
 
+  // 1. Giao diện tải dữ liệu (Loading Spinner)
   if (pageState === PAGE_STATE.LOADING) {
     return (
       <Box sx={{ maxWidth: 960, mx: 'auto', py: 8, display: 'flex', justifyContent: 'center' }}>
@@ -233,6 +256,7 @@ export default function CourseTestPage() {
     );
   }
 
+  // 2. Giao diện thông báo lỗi (khi không tải được bài kiểm tra)
   if (pageState === PAGE_STATE.ERROR) {
     return (
       <Box sx={{ maxWidth: 960, mx: 'auto' }}>
@@ -251,6 +275,7 @@ export default function CourseTestPage() {
 
   return (
     <Box sx={{ maxWidth: pageState === PAGE_STATE.IN_PROGRESS || pageState === PAGE_STATE.SUBMITTING ? 1180 : 960, mx: 'auto', pb: 6 }}>
+      {/* Thanh điều hướng breadcrumbs (chỉ hiện khi chưa bắt đầu làm bài) */}
       {!hideBreadcrumb && (
         <Breadcrumbs
           separator="/"
@@ -278,12 +303,14 @@ export default function CourseTestPage() {
         </Breadcrumbs>
       )}
 
+      {/* Thông báo lỗi khi khởi tạo lượt thi thất bại */}
       {errorMessage && pageState === PAGE_STATE.INTRO && (
         <Typography sx={{ fontSize: 14, color: '#DC2626', fontWeight: 600, mb: 2 }}>
           {errorMessage}
         </Typography>
       )}
 
+      {/* Màn hình giới thiệu thông tin bài thi trước khi bắt đầu (tên bài, thời gian, số câu, điểm tối thiểu...) */}
       {pageState === PAGE_STATE.INTRO && (
         <TestIntroPanel
           meta={meta}
@@ -293,8 +320,10 @@ export default function CourseTestPage() {
         />
       )}
 
+      {/* Màn hình phòng thi (khi đang làm bài hoặc đang nộp bài) */}
       {(pageState === PAGE_STATE.IN_PROGRESS || pageState === PAGE_STATE.SUBMITTING) && paper && (
         <>
+          {/* Thanh tiêu đề thi chứa tên bài, đồng hồ đếm ngược và nút nộp bài */}
           <TestHeader
             meta={meta}
             answeredCount={answeredCount}
@@ -313,6 +342,7 @@ export default function CourseTestPage() {
               gap: 2.5,
             }}
           >
+            {/* Thanh menu bên trái để chuyển đổi giữa các kỹ năng (Listening, Reading, Writing...) */}
             <TestSkillNav
               sections={paper.sections ?? []}
               activeSkillType={activeSkillType}
@@ -320,9 +350,11 @@ export default function CourseTestPage() {
               onSelect={setActiveSkillType}
             />
 
+            {/* Phần hiển thị câu hỏi của kỹ năng đang chọn */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
               {activeSection && activeGroup && (
                 <>
+                  {/* Thanh điều khiển nhóm câu hỏi đang hiển thị (nhóm 1/3...) kèm nút chuyển trang trước/sau */}
                   <TestSectionToolbar
                     title={SKILL_SHORT_LABELS[activeSection.skillType] ?? activeSection.displayName}
                     groupLabel={
@@ -343,6 +375,7 @@ export default function CourseTestPage() {
                     }
                   />
 
+                  {/* Danh sách các câu hỏi cụ thể và các phương án chọn lựa trắc nghiệm */}
                   <TestSkillSection
                     section={activeSection}
                     answers={answers}
@@ -357,6 +390,7 @@ export default function CourseTestPage() {
         </>
       )}
 
+      {/* Màn hình kết quả sau khi nộp bài thành công (hiển thị điểm, tỉ lệ đúng/sai, đáp án chi tiết) */}
       {pageState === PAGE_STATE.RESULT && result && (
         <TestResultPanel
           meta={meta}
@@ -366,6 +400,7 @@ export default function CourseTestPage() {
         />
       )}
 
+      {/* Hộp thoại Popup xác nhận nộp bài (cảnh báo nếu học viên còn câu hỏi chưa điền đáp án) */}
       <ConfirmDialog
         open={confirmSubmitOpen}
         onClose={() => setConfirmSubmitOpen(false)}
@@ -381,6 +416,7 @@ export default function CourseTestPage() {
         loading={pageState === PAGE_STATE.SUBMITTING}
       />
 
+      {/* Hộp thoại Popup cảnh báo khi học viên cố gắng rời trang lúc đang làm bài thi */}
       <ConfirmDialog
         open={leaveDialogOpen}
         onClose={cancelLeave}

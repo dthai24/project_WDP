@@ -8,18 +8,30 @@ const ROLE_STUDENT = 'Student';
 // Helpers
 // ============================================================
 
+/**
+ * Kiểm tra cấu trúc Email hợp lệ (có @, dấu chấm, tên miền và không chứa khoảng trắng).
+ */
 const validateEmail = (email) => {
   if (!email || email.includes(' ')) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 };
 
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
-
+//const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString(); Hàm tạo OTP chỉ giới hạn từ 100000-> 999999
+/**
+ * Sinh mã OTP ngẫu nhiên gồm đúng 6 chữ số dưới dạng chuỗi (hỗ trợ số 0 ở đầu nhờ padStart).
+ */
+const generateOTP = () => Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
 const isProduction = process.env.NODE_ENV === 'production';
 
+/**
+ * Kiểm tra xem tài khoản và mật khẩu email gửi thư đã được cấu hình trong file .env chưa.
+ */
 const isEmailConfigured = () =>
   Boolean(process.env.EMAIL_USER?.trim() && process.env.EMAIL_PASS?.trim());
 
+/**
+ * Khởi tạo cấu hình kết nối SMTP gửi thư của thư viện Nodemailer (sử dụng dịch vụ Gmail).
+ */
 const createTransporter = () =>
   nodemailer.createTransport({
     service: 'gmail',
@@ -54,20 +66,26 @@ const sendOtpEmail = async ({ to, subject, html, otpCode, label }) => {
   }
 };
 
+/**
+ * Tạo câu thông báo phản hồi thân thiện dựa trên việc email thực sự được gửi hay in ra console.
+ */
 const otpDeliveryMessage = (email, emailSent) =>
   emailSent
     ? `Mã OTP đã được gửi đến ${email}. Vui lòng kiểm tra hộp thư (kể cả Spam).`
     : `Mã OTP đã được tạo. Môi trường dev: xem mã OTP trong terminal backend.`;
 
 /** Email OTP cho đăng ký tài khoản (gradient tím) */
+/**
+ * Tạo giao diện email dạng HTML chứa mã OTP để xác nhận đăng ký tài khoản học viên.
+ */
 const buildRegisterOtpHtml = (fullName, otpCode) => `
   <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#0f0e17;border-radius:16px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#6c63ff,#a78bfa);padding:32px 24px;text-align:center;">
-      <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px;">⭐ S.T.A.R Learning Path</h1>
+      <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px;">⭐ STAR Learning Path</h1>
       <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">Xác thực tài khoản của bạn</p>
     </div>
     <div style="padding:32px 24px;background:#1a1830;">
-      <p style="color:#c4c3d0;font-size:15px;">Xin chào <strong style="color:#a78bfa;">${fullName}</strong>,</p>
+      <p style="color:#c4c3d0;font-size:15px;">Xin chào bạn <strong style="color:#a78bfa;">${fullName}</strong>,</p>
       <p style="color:#c4c3d0;font-size:15px;">Dưới đây là mã OTP để hoàn tất đăng ký tài khoản:</p>
       <div style="text-align:center;margin:28px 0;">
         <span style="display:inline-block;font-size:38px;font-weight:800;letter-spacing:12px;color:#fff;background:linear-gradient(135deg,#6c63ff,#a78bfa);padding:16px 32px;border-radius:12px;">${otpCode}</span>
@@ -75,12 +93,15 @@ const buildRegisterOtpHtml = (fullName, otpCode) => `
       <p style="color:#8885a0;font-size:13px;text-align:center;">⏰ Mã có hiệu lực trong <strong style="color:#f6b93b;">3 phút</strong>. Vui lòng không chia sẻ với bất kỳ ai.</p>
     </div>
     <div style="padding:16px 24px;background:#0f0e17;text-align:center;">
-      <p style="color:#555;font-size:12px;margin:0;">© ${new Date().getFullYear()} S.T.A.R Learning Path. All rights reserved.</p>
+      <p style="color:#555;font-size:12px;margin:0;">© ${new Date().getFullYear()} STAR Learning Path. All rights reserved.</p>
     </div>
   </div>
 `;
 
 /** Email OTP cho đặt lại mật khẩu (gradient cam-đỏ) */
+/**
+ * Tạo giao diện email dạng HTML chứa mã OTP để khôi phục/đặt lại mật khẩu.
+ */
 const buildResetPasswordHtml = (fullName, otpCode) => `
   <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#0f0e17;border-radius:16px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#f6b93b,#ff6b6b);padding:32px 24px;text-align:center;">
@@ -105,6 +126,9 @@ const buildResetPasswordHtml = (fullName, otpCode) => `
 // POST /api/auth/login
 // Works for ALL roles: Admin, Mentor, Student
 // ============================================================
+/**
+ * API: Đăng nhập tài khoản. Xác thực email, password và cấp quyền tương ứng (Student/Mentor/Admin) kèm ký mã JWT.
+ */
 const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -177,6 +201,9 @@ const login = async (req, res) => {
 // ============================================================
 // POST /api/auth/register  (Student only — Admin/Mentor được seed thẳng vào DB)
 // ============================================================
+/**
+ * API: Đăng ký tài khoản Student. Kiểm tra trùng lặp email/SĐT và gửi mã xác thực OTP.
+ */
 const register = async (req, res) => {
   let { fullName, dateOfBirth, phone, email, password } = req.body;
 
@@ -216,6 +243,7 @@ const register = async (req, res) => {
     const otpCode = generateOTP();
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
+    // Chèn thông tin đăng ký và mã OTP vào bảng tạm OTP_Verification
     const insertReq = new sql.Request();
     insertReq.input('email', sql.NVarChar(150), email);
     insertReq.input('fullName', sql.NVarChar(100), fullName);
@@ -232,7 +260,7 @@ const register = async (req, res) => {
 
     const { emailSent } = await sendOtpEmail({
       to: email,
-      subject: '🔐 Mã xác thực OTP của bạn - S.T.A.R Learning Path',
+      subject: 'Mã xác thực OTP của bạn - S.T.A.R Learning Path',
       html: buildRegisterOtpHtml(fullName, otpCode),
       otpCode,
       label: 'đăng ký',
@@ -254,6 +282,9 @@ const register = async (req, res) => {
 // ============================================================
 // POST /api/auth/verify-otp
 // ============================================================
+/**
+ * API: Xác thực mã OTP đăng ký. Nếu hợp lệ, chính thức chèn thông tin người dùng vào bảng Users và User_Roles.
+ */
 const verifyOtp = async (req, res) => {
   const { email, otpCode } = req.body;
 
@@ -335,6 +366,9 @@ const verifyOtp = async (req, res) => {
 // Lấy kết quả 3 câu hỏi (Category, Level, Goal) lưu vào Users
 // ============================================================
 // POST /api/auth/onboarding
+/**
+ * API: Lưu thông tin khảo sát ban đầu (Onboarding) bao gồm danh mục quan tâm, trình độ và mục tiêu học tập.
+ */
 const saveOnboarding = async (req, res) => {
   // Thay vì lấy 1 categoryId, ta lấy mảng categoryIds
   const { userId, categoryIds, levelId, goal } = req.body;
@@ -390,6 +424,9 @@ const saveOnboarding = async (req, res) => {
 // POST /api/auth/forgot-password
 // Works for ALL roles — Admin, Mentor, Student
 // ============================================================
+/**
+ * API: Xử lý Quên mật khẩu. Tìm kiếm tài khoản và gửi mã OTP đặt lại mật khẩu về email người dùng.
+ */
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -444,6 +481,9 @@ const forgotPassword = async (req, res) => {
 // POST /api/auth/reset-password
 // Works for ALL roles — Admin, Mentor, Student
 // ============================================================
+/**
+ * API: Đặt lại mật khẩu mới. So khớp mã OTP quên mật khẩu và tiến hành cập nhật mật khẩu mới vào database.
+ */
 const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
 

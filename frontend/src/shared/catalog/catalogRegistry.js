@@ -12,6 +12,9 @@ import {
 const CATEGORY_STORAGE_KEY = 'admin_categories_v1';
 const LEVEL_STORAGE_KEY = 'admin_levels_v1';
 
+/**
+ * Chuẩn hóa cấu trúc dữ liệu của một Danh mục (Category).
+ */
 function normalizeCategory(raw = {}) {
   const id = raw.id;
   return {
@@ -24,6 +27,9 @@ function normalizeCategory(raw = {}) {
   };
 }
 
+/**
+ * Chuẩn hóa cấu trúc dữ liệu của một Trình độ (Level).
+ */
 function normalizeLevel(raw = {}) {
   const id = raw.id;
   return {
@@ -37,6 +43,9 @@ function normalizeLevel(raw = {}) {
   };
 }
 
+/**
+ * Đọc danh sách các Danh mục được lưu trữ trong localStorage.
+ */
 function loadStoredCategories() {
   try {
     const raw = localStorage.getItem(CATEGORY_STORAGE_KEY);
@@ -48,6 +57,9 @@ function loadStoredCategories() {
   }
 }
 
+/**
+ * Đọc danh sách các Trình độ được lưu trữ trong localStorage.
+ */
 function loadStoredLevels() {
   try {
     const raw = localStorage.getItem(LEVEL_STORAGE_KEY);
@@ -59,14 +71,23 @@ function loadStoredLevels() {
   }
 }
 
+/**
+ * Lấy toàn bộ danh sách Danh mục (ưu tiên dữ liệu từ localStorage, fallback về mock seed).
+ */
 export function getCatalogCategories() {
   return loadStoredCategories() ?? adminCategoriesSeed.map(normalizeCategory);
 }
 
+/**
+ * Lấy toàn bộ danh sách Trình độ (ưu tiên dữ liệu từ localStorage, fallback về mock seed).
+ */
 export function getCatalogLevels() {
   return loadStoredLevels() ?? adminLevelsSeed.map(normalizeLevel);
 }
 
+/**
+ * Tìm kiếm một Danh mục dựa trên ID, tên hiển thị hoặc mã màu.
+ */
 function findCategory({ id, displayName, colorCode } = {}) {
   const categories = getCatalogCategories();
   if (colorCode) {
@@ -84,6 +105,9 @@ function findCategory({ id, displayName, colorCode } = {}) {
   return null;
 }
 
+/**
+ * Tìm kiếm một Trình độ dựa trên ID, tên hiển thị hoặc mã màu.
+ */
 function findLevel({ id, displayName, colorCode } = {}) {
   const levels = getCatalogLevels();
   if (colorCode) {
@@ -101,24 +125,39 @@ function findLevel({ id, displayName, colorCode } = {}) {
   return null;
 }
 
+/**
+ * Tìm kiếm mã màu tương ứng cho Danh mục bằng phương án so khớp chuỗi dự phòng (Legacy).
+ */
 function resolveLegacyCategoryColor(displayName) {
   if (!displayName) return null;
   return LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME[normalizeCatalogLabel(displayName)] ?? null;
 }
 
+/**
+ * Tìm kiếm mã màu tương ứng cho Trình độ bằng phương án so khớp chuỗi dự phòng (Legacy).
+ * Chứa logic khớp tương đối (includes) nếu không tìm thấy trong từ điển khớp tuyệt đối.
+ */
 function resolveLegacyLevelColor(displayName) {
   if (!displayName) return null;
   const key = normalizeCatalogLabel(displayName);
+  
+  // 1. Thử so khớp chính xác tuyệt đối trước
   if (LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME[key]) {
     return LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME[key];
   }
+  
+  // 2. Nếu không khớp tuyệt đối, tiến hành kiểm tra chứa từ khóa (Khớp tương đối/Fuzzy Match)
   if (key.includes('người mới bắt đầu')) return 'lime';
   if (key.includes('cơ bản') || key.includes('sơ cấp')) return 'sky';
   if (key.includes('trung cấp')) return 'amber';
   if (key.includes('cao cấp') || key.includes('nâng cao')) return 'orange';
+  
   return null;
 }
 
+/**
+ * Phân tích và quyết định mã màu cuối cùng cho một Danh mục.
+ */
 export function resolveCategoryColorCode({ id, displayName, colorCode } = {}) {
   if (colorCode) return colorCode;
   const item = findCategory({ id, displayName, colorCode });
@@ -126,6 +165,9 @@ export function resolveCategoryColorCode({ id, displayName, colorCode } = {}) {
   return resolveLegacyCategoryColor(displayName);
 }
 
+/**
+ * Phân tích và quyết định mã màu cuối cùng cho một Trình độ.
+ */
 export function resolveLevelColorCode({ id, displayName, colorCode } = {}) {
   if (colorCode) return colorCode;
   const item = findLevel({ id, displayName, colorCode });
@@ -133,16 +175,25 @@ export function resolveLevelColorCode({ id, displayName, colorCode } = {}) {
   return resolveLegacyLevelColor(displayName);
 }
 
+/**
+ * Lấy đối tượng style CSS (sx) cho nhãn Danh mục.
+ */
 export function resolveCategoryChipSx(input = {}, options = {}) {
   const code = resolveCategoryColorCode(input);
   return code ? getCatalogColorChipSx(code, options) : { ...DEFAULT_CATALOG_CHIP_SX };
 }
 
+/**
+ * Lấy đối tượng style CSS (sx) cho nhãn Trình độ.
+ */
 export function resolveLevelChipSx(input = {}, options = {}) {
   const code = resolveLevelColorCode(input);
   return code ? getCatalogColorChipSx(code, options) : { ...DEFAULT_CATALOG_CHIP_SX };
 }
 
+/**
+ * Tổng hợp toàn bộ siêu dữ liệu màu sắc (gồm thông tin danh mục, mã màu, đối tượng CSS sx) cho Danh mục.
+ */
 export function getCategoryColorMeta(input = {}) {
   const item = findCategory(input);
   const colorCode = resolveCategoryColorCode(input);
@@ -153,6 +204,9 @@ export function getCategoryColorMeta(input = {}) {
   };
 }
 
+/**
+ * Tổng hợp toàn bộ siêu dữ liệu màu sắc (gồm thông tin trình độ, mã màu, đối tượng CSS sx) cho Trình độ.
+ */
 export function getLevelColorMeta(input = {}) {
   const item = findLevel(input);
   const colorCode = resolveLevelColorCode(input);

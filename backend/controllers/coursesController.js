@@ -1,3 +1,4 @@
+const { sql } = require('../config/db'); 
 const courseModel = require('../models/coursesModel');
 const streakService = require("../services/streakService");
 const courseCommentsModel = require('../models/courseCommentsModel');
@@ -523,19 +524,36 @@ const getContinueCourse = async (req, res) => {
       });
     }
 
+    // 1. Lấy khóa học đang học dở dang (< 100%) từ database
     const continueCourse = await courseModel.getContinueCourse(userId);
-
-    if (!continueCourse) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy khóa học đang học.',
+    // Nếu tìm thấy khóa học dở dang (mảng có phần tử)
+    if (continueCourse && continueCourse.length > 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy khóa học đang học thành công.',
+        data: continueCourse,
+        hasCompletedBefore: false
       });
     }
+    // 2. Nếu KHÔNG có khóa học dở dang, kiểm tra xem họ đã từng hoàn thành khóa nào trước đây chưa (đạt 100%)
+    const request = new sql.Request();
+    request.input("UserId", sql.Int, userId);
+    
+    // Đếm xem có bản ghi nào có ProgressPercentage = 100 không
+    const checkResult = await request.query(`
+      SELECT COUNT(*) AS CompletedCount 
+      FROM User_Courses 
+      WHERE UserId = @UserId AND ProgressPercentage = 100
+    `);
+    const completedCount = checkResult.recordset[0]?.CompletedCount || 0;
+    const hasCompletedBefore = completedCount > 0; // true nếu đã từng hoàn thành ít nhất 1 khóa học
 
+       // Trả về mảng data rỗng kèm theo cờ hiệu báo đã từng hoàn thành khóa học trước đó hay chưa
     return res.status(200).json({
       success: true,
       message: 'Lấy khóa học đang học thành công.',
-      data: continueCourse
+      data: continueCourse,
+      hasCompletedBefore: hasCompletedBefore
     });
   } catch (error) {
     console.error('getContinueCourse error:', error);

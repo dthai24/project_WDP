@@ -36,6 +36,9 @@ const TEXT = "#0F172A";
 const MUTED = "#64748B";
 const BORDER = "rgba(8,145,178,0.08)";
 
+/**
+ * Lấy thông tin người dùng hiện tại từ localStorage.
+ */
 function getUser() {
   try {
     return JSON.parse(localStorage.getItem("user")) || {};
@@ -74,6 +77,9 @@ const BENEFITS = [
 
 /* ─── sub-components ─────────────────────────────────────── */
 
+/**
+ * Component hiển thị phần đầu (Header) của mỗi mục nội dung, bao gồm nhãn, tiêu đề chính và nút xem thêm.
+ */
 function SectionHeader({ label, title, action, onAction }) {
   return (
     <Box
@@ -144,6 +150,9 @@ function SectionHeader({ label, title, action, onAction }) {
   );
 }
 
+/**
+ * Thẻ hiển thị tên danh mục khóa học hoặc chủ đề tin tức.
+ */
 function CategoryChip({ category }) {
   const style = resolveCategoryChipSx(
     { displayName: category },
@@ -169,6 +178,9 @@ function CategoryChip({ category }) {
 
 const HERO_IMG = heroImg;
 
+/**
+ * Khối Banner chào mừng chính (Hero Section) ở đầu trang chủ, giới thiệu chung và dẫn đến trang danh sách khóa học/tin tức.
+ */
 function HeroSection({ onExplore, onViewNews }) {
   return (
     <Box
@@ -184,7 +196,7 @@ function HeroSection({ onExplore, onViewNews }) {
         mb: { xs: 6, md: 6 },
         border: "none",
         boxShadow: "none",
-        /* Raw image — no overlay wash on mobile, just a very light left-side assist */
+        /* Ảnh thô — không phủ màu đè lên toàn bộ ảnh trên điện thoại, chỉ tạo lớp phủ sáng rất nhẹ bên trái để dễ đọc chữ */
         backgroundImage: [
           `linear-gradient(90deg,
             rgba(255,255,255,0.38) 0%,
@@ -196,7 +208,7 @@ function HeroSection({ onExplore, onViewNews }) {
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
-        /* Desktop: image shows at full fidelity, tiny left assist only */
+        /* Trên máy tính: Ảnh hiển thị với độ sắc nét tối đa ở bên phải, chỉ phủ sáng nhẹ rìa trái */
         [`@media (min-width:600px)`]: {
           backgroundImage: [
             `linear-gradient(90deg,
@@ -209,9 +221,9 @@ function HeroSection({ onExplore, onViewNews }) {
           backgroundPosition: "center right",
         },
         /*
-         * Soft-edge feather: fades the four outer edges into page white
-         * so the image blends seamlessly without a hard frame.
-         * Gradient layers stack: bottom fade → left/right side fades → top fade.
+         * Làm mềm viền (Soft-edge feather): Làm mờ dần 4 cạnh bên ngoài vào nền trắng của trang
+         * giúp hình ảnh banner hòa nhập mượt mà vào trang web, không có khung viền sắc cạnh cứng nhắc.
+         * Chồng các lớp Gradient: Mờ dần ở cạnh dưới → mờ dần ở cạnh trái/phải → mờ dần ở cạnh trên.
          */
         "&::after": {
           content: '""',
@@ -300,6 +312,10 @@ function HeroSection({ onExplore, onViewNews }) {
 
 /* ─── Section 2: Continue ────────────────────────────────── */
 
+/**
+ * Khối hiển thị khóa học đang học dang dở của học viên, gồm tiến độ % học tập và bài học gần nhất.
+ * Nếu chưa đăng ký khóa nào, sẽ hiển thị khung trống gợi ý đi tìm khóa học.
+ */
 function ContinueSection({ course, onContinue, onExplore }) {
   const theme = useTheme();
 
@@ -326,6 +342,39 @@ function ContinueSection({ course, onContinue, onExplore }) {
           </Typography>
           <Typography sx={{ fontSize: 14, color: MUTED, mb: 2.5 }}>
             Khám phá khóa học phù hợp với mục tiêu của bạn.
+          </Typography>
+          <AppButton onClick={onExplore} sx={{ px: 3 }}>
+            Khám phá khóa học
+          </AppButton>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Trường hợp đã hoàn thành tất cả các khóa học trước đây
+  if (course.isCompletedAll) {
+    return (
+      <Box sx={{ mb: { xs: 7, md: 9 } }}>
+        <SectionHeader label="Tiếp tục học" title="Hôm nay học gì?" />
+        <Box
+          sx={{
+            p: { xs: 3, md: 4 },
+            borderRadius: "20px",
+            border: `1px solid ${BORDER}`,
+            bgcolor: "rgba(8,145,178,0.03)",
+            textAlign: "center",
+          }}
+        >
+          <VerifiedRoundedIcon
+            sx={{ fontSize: 40, color: "#059669", mb: 1.5 }}
+          />
+          <Typography
+            sx={{ fontSize: 16, fontWeight: 600, color: TEXT, mb: 0.75 }}
+          >
+            Bạn đã hoàn thành khóa học trước đây
+          </Typography>
+          <Typography sx={{ fontSize: 14, color: MUTED, mb: 2.5 }}>
+            Hãy ôn tập hoặc học khóa học mới của chúng tôi nhé.
           </Typography>
           <AppButton onClick={onExplore} sx={{ px: 3 }}>
             Khám phá khóa học
@@ -503,6 +552,9 @@ function ContinueSection({ course, onContinue, onExplore }) {
 
 /* ─── Section 3: Tin tức (lộ trình + bài viết) ───────────── */
 
+/**
+ * Khối tin tức nổi bật và lộ trình gợi ý, tải tự động từ API và hiển thị dưới dạng các thẻ Card bài viết.
+ */
 function NewsSection() {
   const navigate = useNavigate();
   const [paths, setPaths] = useState([]);
@@ -732,9 +784,10 @@ function NewsSection() {
 
 /* ─── Section 4: Suggested courses ──────────────────────── */
 
+/**
+ * Khối hiển thị lưới các khóa học đề xuất nổi bật (được mua/chọn nhiều) trên trang chủ.
+ */
 function CoursesSection({ courses = [], onExplore, onNavigateCourse }) {
-  const theme = useTheme();
-
   return (
     <Box sx={{ mb: { xs: 7, md: 9 } }}>
       <SectionHeader
@@ -766,8 +819,10 @@ function CoursesSection({ courses = [], onExplore, onNavigateCourse }) {
   );
 }
 
+/**
+ * Thẻ Card hiển thị thông tin tóm tắt của từng khóa học đề xuất (ảnh, tên, rating, số học viên, giảng viên).
+ */
 function CourseHomeCard({ course, onClick }) {
-  const theme = useTheme();
   const levelSx = resolveLevelChipSx(
     { displayName: course.level },
     { withBorder: false },
@@ -838,6 +893,7 @@ function CourseHomeCard({ course, onClick }) {
         </Typography>
 
         {/* Meta */}
+        {/* 1. Rating*/}
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 1.5 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <StarRoundedIcon sx={{ fontSize: 13, color: "#F59E0B" }} />
@@ -845,6 +901,7 @@ function CourseHomeCard({ course, onClick }) {
               {course.rating}
             </Typography>
           </Box>
+          {/* 2. Số học viên */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <PeopleOutlineRoundedIcon sx={{ fontSize: 13, color: MUTED }} />
             <Typography sx={{ fontSize: 12, color: MUTED }}>
@@ -853,6 +910,7 @@ function CourseHomeCard({ course, onClick }) {
                 : course.studentCount}
             </Typography>
           </Box>
+          {/* 3. Số bài học */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <MenuBookOutlinedIcon sx={{ fontSize: 13, color: MUTED }} />
             <Typography sx={{ fontSize: 12, color: MUTED }}>
@@ -860,8 +918,9 @@ function CourseHomeCard({ course, onClick }) {
             </Typography>
           </Box>
         </Box>
-
+           
         <Divider sx={{ borderColor: BORDER, mb: 1.5 }} />
+         {/* 4. Giảng viên */}
         <Typography sx={{ fontSize: 12, color: MUTED }}>
           {course.instructor}
         </Typography>
@@ -872,6 +931,9 @@ function CourseHomeCard({ course, onClick }) {
 
 /* ─── Section 5: Benefits ────────────────────────────────── */
 
+/**
+ * Khối giới thiệu 4 lợi ích lớn nhất và điểm mạnh khi tham gia học trên S.T.A.R Learning Path.
+ */
 function BenefitsSection() {
   const theme = useTheme();
 
@@ -961,6 +1023,9 @@ function BenefitsSection() {
 
 /* ─── Section 7: CTA block ───────────────────────────────── */
 
+/**
+ * Khung banner kêu gọi hành động cuối trang kích thích học viên bắt đầu học tập.
+ */
 function CtaBlock({ onExplore, onMyCourses }) {
   return (
     <Box
@@ -1024,6 +1089,10 @@ function CtaBlock({ onExplore, onMyCourses }) {
 
 /* ─── Main page ──────────────────────────────────────────── */
 
+/**
+ * Component Trang chủ chính (HomePage) dành cho Học viên.
+ * Quản lý logic gọi các API Backend (khóa học dở, streak, mục tiêu học tập, danh sách đề xuất) và sắp xếp các phần giao diện.
+ */
 export default function HomePage() {
   const navigate = useNavigate();
 
@@ -1039,6 +1108,9 @@ export default function HomePage() {
   const [learningGoal, setLearningGoal] = useState("");
   const [learningGoalLoading, setLearningGoalLoading] = useState(false);
 
+  /**
+   * Effect 1: Tự động gọi API Backend lấy thông tin khóa học đang học dở gần đây nhất của học viên.
+   */
   useEffect(() => {
     console.log("Check useEffect trigger - userId hiện tại là:", user?.userId);
 
@@ -1070,7 +1142,12 @@ export default function HomePage() {
             currentLessonDetail: null,
           });
         } else {
-          setContinueCourseData(null);
+          // Nếu Backend báo thành công nhưng không có khóa học dở dang, kiểm tra xem có cờ đã hoàn thành trước đây không
+          if (result.success && (result.hasCompletedBefore === true || result.isCompletedAll === true)) {
+            setContinueCourseData({ isCompletedAll: true });
+          } else {
+            setContinueCourseData(null);
+          }
         }
       } catch (error) {
         console.error("getContinueCourse error:", error);
@@ -1079,6 +1156,9 @@ export default function HomePage() {
     getData();
   }, [user.userId]);
 
+  /**
+   * Effect 2: Tự động gọi API Backend lấy số ngày học liên tục (Streak) của học viên.
+   */
   useEffect(() => {
     if (!user?.userId) return;
     fetch("http://localhost:5000/api/courses/streak", {
@@ -1091,6 +1171,9 @@ export default function HomePage() {
       .catch(() => {});
   }, [user?.userId]);
 
+  /**
+   * Effect 3: Tự động gọi API Backend lấy mục tiêu học tập (Learning Goal) từ profile của học viên.
+   */
   useEffect(() => {
     if (!user?.userId) {
       setLearningGoal("");
@@ -1124,14 +1207,31 @@ export default function HomePage() {
     };
   }, [user?.userId]);
 
+  // ============================================================
+  // CÁC HÀM XỬ LÝ ĐIỀU HƯỚNG CHUYỂN TRANG (NAVIGATION HANDLERS)
+  // ============================================================
+  
+  /** Chuyển sang trang danh mục tất cả khóa học */
   const handleExplore = () => navigate("/courses");
+  
+  /** Chuyển sang trang danh sách tin tức */
   const handleViewNews = () => navigate("/news");
+  
+  /** Chuyển sang trang danh sách khóa học cá nhân của học viên */
   const handleMyCourses = () => navigate("/my-courses");
+  
+  /** Chuyển thẳng học viên vào bài học đang dang dở để học tiếp */
   const handleContinue = (course) =>
     navigate(`/my-courses/${course.courseId}/learn`);
+    
+  /** Chuyển sang trang chi tiết của một khóa học cụ thể */
   const handleCourseNav = (courseId) => navigate(`/courses/${courseId}`);
 
+  /** State lưu trữ danh sách khóa học đề xuất tải về từ Backend */
   const [courses, setCourses] = useState([]);
+  /**
+   * Effect 4: Tự động gọi API Backend lấy danh sách các khóa học đề xuất nổi bật (Featured Courses).
+   */
   useEffect(() => {
     const getData = async () => {
       const res = await fetch("http://localhost:5000/api/courses/featured");
@@ -1203,7 +1303,7 @@ export default function HomePage() {
         </Box>
       </Box>
 
-      {/* Remaining sections sit in a tighter content column */}
+      {/* Các mục nội dung còn lại sẽ nằm gọn trong một cột hẹp hơn.*/}
       <Box sx={{ maxWidth: 1360, mx: "auto", width: "100%" }}>
         <ContinueSection
           course={continueCourseData}

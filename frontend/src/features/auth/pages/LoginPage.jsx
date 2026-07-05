@@ -48,6 +48,9 @@ import { useAuth } from '@/context/AuthContext';
 
 const REMEMBER_KEY = 'star_remember_email';
 
+/**
+ * Hàm kiểm tra cấu trúc email có hợp lệ không (đúng định dạng RegExp, có @, có dấu chấm và không chứa khoảng trắng).
+ */
 const validateEmail = (email) => {
   if (!email || email.includes(' ')) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
@@ -63,6 +66,10 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false);
   const submittingRef = useRef(false);
 
+  /**
+   * Effect chạy 1 lần duy nhất khi component được dựng (mount) lên:
+   * Kiểm tra xem localStorage có lưu email ghi nhớ đăng nhập không. Nếu có, điền sẵn vào form.
+   */
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBER_KEY);
     if (saved) {
@@ -71,12 +78,20 @@ export default function LoginPage() {
     }
   }, []);
 
+  /**
+   * Effect tự động chuyển hướng người dùng ra trang Dashboard tương ứng
+   * nếu họ đã đăng nhập trước đó rồi (tránh việc vào lại trang Login khi đã có phiên làm việc).
+   */
   useEffect(() => {
     if (isAuthenticatedUser()) {
       navigate(getPostLoginPath(), { replace: true });
     }
   }, [navigate]);
 
+  /**
+   * Hàm validate dữ liệu form Đăng nhập (kiểm tra rỗng, kiểm tra định dạng email).
+   * Trả về danh sách các thông báo lỗi nếu có.
+   */
   const validate = () => {
     const errs = {};
     if (!form.email.trim()) errs.email = 'Email không được để trống.';
@@ -85,15 +100,28 @@ export default function LoginPage() {
     return errs;
   };
 
+  /**
+   * Hàm bắt sự kiện thay đổi dữ liệu trên các ô nhập input (email, password).
+   * Đồng thời xóa bỏ thông báo lỗi tương ứng khi người dùng bắt đầu sửa dữ liệu.
+   */
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setErrors(prev => ({ ...prev, [e.target.name]: '' }));
   };
 
+  /**
+   * Hàm xử lý khi người dùng nhấn nút Đăng nhập:
+   * 1. Chặn hành động reload trang mặc định.
+   * 2. Gọi hàm validate.
+   * 3. Gọi API Đăng nhập và nhận về JWT Token cùng thông tin User.
+   * 4. Ghi nhớ/Xoá Email ghi nhớ đăng nhập trong localStorage.
+   * 5. Lưu JWT và thông tin người dùng vào AuthContext.
+   * 6. Điều hướng đến trang tương ứng với Role của User.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Chặn đồng bộ ngay — trước khi React kịp re-render
+    // Chặn đồng bộ ngay — trước khi React kịp re-render (ngăn spam click)
     if (submittingRef.current) return;
 
     const errs = validate();

@@ -69,7 +69,7 @@ WHERE CourseId = @courseId AND UserId = @userId AND ParentCommentId IS NULL
         request.input('content', sql.NVarChar(sql.MAX), String(content).trim());
         request.input('parentCommentId', sql.Int, parentCommentId);
 
-        // SỬA UTC: Dùng GETUTCDATE() thay vì GETDATE()
+        // SỬA UTC: Dùng GETUTCDATE()
         const result = await request.query(`
             INSERT INTO Course_Comments (CourseId, UserId, Rating, Content, CreatedAt, ParentCommentId)
             OUTPUT INSERTED.CommentId
@@ -89,7 +89,6 @@ WHERE CourseId = @courseId AND UserId = @userId AND ParentCommentId IS NULL
         FROM Course_Comments cc
         WHERE cc.CommentId = @commentId
     `);
-
     // TÍNH TOÁN LẠI ĐIỂM TRUNG BÌNH CỦA KHÓA HỌC
     const avgReq = new sql.Request();
     avgReq.input('courseId', sql.Int, Number(courseId));

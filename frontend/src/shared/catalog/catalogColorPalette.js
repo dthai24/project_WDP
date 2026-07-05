@@ -1,3 +1,9 @@
+/**
+ * ============================================================================
+ * BẢNG MÀU CHỦ ĐẠO CHO DANH MỤC & TRÌNH ĐỘ (Catalog Color Palette)
+ * ============================================================================
+ * Định nghĩa mã màu CSS (background, color, border) chuẩn hệ thống.
+ */
 export const CATALOG_COLOR_PALETTE = [
   {
     code: 'blue',
@@ -73,12 +79,14 @@ export const CATALOG_COLOR_PALETTE = [
   },
 ];
 
+/** Phong cách hiển thị mặc định của nhãn (Chip) nếu không tìm thấy mã màu đặc thù. */
 export const DEFAULT_CATALOG_CHIP_SX = {
   bgcolor: '#F1F5F9',
   color: '#64748B',
   border: '1px solid rgba(100,116,139,0.18)',
 };
 
+/** Gán màu mặc định cho các danh mục (Category) theo ID lúc khởi tạo. */
 export const CATEGORY_SEED_COLOR_BY_ID = {
   1: 'violet',
   2: 'blue',
@@ -88,6 +96,7 @@ export const CATEGORY_SEED_COLOR_BY_ID = {
   6: 'indigo',
 };
 
+/** Gán màu mặc định cho các trình độ (Level) theo ID lúc khởi tạo. */
 export const LEVEL_SEED_COLOR_BY_ID = {
   1: 'sky',
   2: 'amber',
@@ -95,7 +104,7 @@ export const LEVEL_SEED_COLOR_BY_ID = {
   4: 'violet',
 };
 
-/** Màu legacy cho tên chưa có trong catalog admin (home, mock cũ). */
+/** Màu sắc dự phòng (Legacy) cho các Danh mục khi so khớp tên chính xác tuyệt đối. */
 export const LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME = {
   'công nghệ thông tin': 'blue',
   'đời sống & sở thích': 'pink',
@@ -104,6 +113,7 @@ export const LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME = {
   'tài chính & kế toán': 'emerald',
 };
 
+/** Màu sắc dự phòng (Legacy) cho các Trình độ khi so khớp tên chính xác tuyệt đối. */
 export const LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME = {
   'người mới bắt đầu': 'lime',
   'cơ bản': 'sky',
@@ -111,10 +121,17 @@ export const LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME = {
   'cao cấp': 'orange',
 };
 
+/**
+ * Chuẩn hóa nhãn văn bản (xóa khoảng trắng thừa và đổi sang chữ viết thường).
+ */
 export function normalizeCatalogLabel(value = '') {
   return String(value).trim().toLowerCase();
 }
 
+/**
+ * Lấy ra đối tượng style CSS (Style Object) của Chip từ mã màu.
+ * Hỗ trợ ẩn viền (border) nếu options.withBorder = false.
+ */
 export function getCatalogColorChipSx(colorCode, { withBorder = true } = {}) {
   const entry = CATALOG_COLOR_PALETTE.find((item) => item.code === colorCode);
   if (!entry) {
@@ -131,6 +148,9 @@ export function getCatalogColorChipSx(colorCode, { withBorder = true } = {}) {
   return { ...sx };
 }
 
+/**
+ * Tự động chọn mã màu tiếp theo chưa được sử dụng trong danh sách hiện tại.
+ */
 export function pickNextColorCode(existingItems = []) {
   const used = new Set(existingItems.map((item) => item.colorCode).filter(Boolean));
   const next = CATALOG_COLOR_PALETTE.find((item) => !used.has(item.code));
@@ -140,6 +160,9 @@ export function pickNextColorCode(existingItems = []) {
   );
 }
 
+/**
+ * Lấy mã màu khởi tạo mặc định theo loại (category/level) và ID tương ứng.
+ */
 export function resolveSeedColorCode(type, id) {
   const map = type === 'category' ? CATEGORY_SEED_COLOR_BY_ID : LEVEL_SEED_COLOR_BY_ID;
   return map[id] ?? null;

@@ -29,10 +29,16 @@ const SESSIONS_STORAGE_KEY = 'student_test_sessions_v1';
 /** TODO: tắt khi backend enforce giới hạn lượt làm bài */
 export const BYPASS_ATTEMPT_LIMIT = true;
 
+/**
+ * Hàm tạo hiệu ứng trễ (delay) giả lập thời gian phản hồi của mạng khi gọi API.
+ */
 function delay(ms = 120) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Đọc và phân tích cú pháp JSON từ localStorage. Trả về đối tượng trống nếu không tồn tại.
+ */
 function loadMap(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -42,6 +48,9 @@ function loadMap(key) {
   }
 }
 
+/**
+ * Lưu trữ đối tượng JSON map vào localStorage bằng cách chuyển thành chuỗi String.
+ */
 function saveMap(key, map) {
   try {
     localStorage.setItem(key, JSON.stringify(map));
@@ -50,19 +59,31 @@ function saveMap(key, map) {
   }
 }
 
+/**
+ * Trả về khóa định danh dựa trên phạm vi bài kiểm tra (cuối khóa hoặc cuối chương).
+ */
 function getScopeKey(scope, chapterId) {
   return scope === 'final' ? 'final' : String(chapterId ?? '');
 }
 
+/**
+ * Tạo chuỗi khóa duy nhất để quản lý lịch sử làm bài dựa trên userId, courseId và phạm vi thi.
+ */
 function getAttemptHistoryKey(userId, courseId, scope, chapterId) {
   return `${userId}_${courseId}_${getScopeKey(scope, chapterId)}`;
 }
 
+/**
+ * Lấy danh sách lịch sử các lượt làm bài của học viên từ localStorage.
+ */
 function getAttemptHistory(userId, courseId, scope, chapterId) {
   const map = loadMap(ATTEMPTS_STORAGE_KEY);
   return map[getAttemptHistoryKey(userId, courseId, scope, chapterId)] ?? [];
 }
 
+/**
+ * Ghi đè hoặc thêm mới một bản ghi lịch sử làm bài kiểm tra của học viên.
+ */
 function saveAttemptRecord(userId, courseId, scope, chapterId, record) {
   const map = loadMap(ATTEMPTS_STORAGE_KEY);
   const key = getAttemptHistoryKey(userId, courseId, scope, chapterId);
@@ -71,17 +92,26 @@ function saveAttemptRecord(userId, courseId, scope, chapterId, record) {
   saveMap(ATTEMPTS_STORAGE_KEY, map);
 }
 
+/**
+ * Lưu thông tin phiên làm bài thi hiện tại (các câu hỏi, câu trả lời tạm thời...) vào localStorage.
+ */
 function saveSession(attemptId, session) {
   const map = loadMap(SESSIONS_STORAGE_KEY);
   map[attemptId] = session;
   saveMap(SESSIONS_STORAGE_KEY, map);
 }
 
+/**
+ * Lấy thông tin phiên làm bài đang diễn ra thông qua ID của lượt làm bài (attemptId).
+ */
 function getSession(attemptId) {
   const map = loadMap(SESSIONS_STORAGE_KEY);
   return map[attemptId] ?? null;
 }
 
+/**
+ * Tải cấu hình bài kiểm tra (thiết lập bởi Mentor) của chương học hoặc khóa học.
+ */
 async function loadQuizConfig(courseId, scope, chapterId, meta = {}) {
   if (scope === 'final') {
     return getCourseQuizConfig(courseId, { courseTitle: meta.courseTitle ?? '' });
@@ -92,6 +122,9 @@ async function loadQuizConfig(courseId, scope, chapterId, meta = {}) {
   });
 }
 
+/**
+ * Tổng hợp và chuẩn hóa thông tin thô thành một đối tượng Metadata chứa các quy chế thi chuẩn để hiển thị lên UI.
+ */
 function buildMetaFromConfig(config, scope, extras = {}) {
   const userId = getUser()?.userId;
   const history = getAttemptHistory(
@@ -124,6 +157,9 @@ function buildMetaFromConfig(config, scope, extras = {}) {
   };
 }
 
+/**
+ * Tạo danh sách đáp án đúng mẫu (Demo Key) dùng để chấm điểm thử cho các bộ đề Demo.
+ */
 function buildDemoGradingQuestions(paper) {
   return (paper?.sections ?? []).flatMap((section) =>
     (section.questions ?? []).map((question) => ({
@@ -138,7 +174,7 @@ function buildDemoGradingQuestions(paper) {
 }
 
 /**
- * GET meta — chuẩn bị màn intro.
+ * API MOCK: Lấy thông tin chung (metadata) của bài thi phục vụ cho trang giới thiệu bài thi (TestIntroPanel).
  */
 export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   await delay();
@@ -173,7 +209,7 @@ export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
 }
 
 /**
- * POST start — tạo attempt + paper.
+ * API MOCK: Bắt đầu một lượt thi mới. Tạo attemptId, trộn đề thi (nếu có), thiết lập thời gian làm bài.
  */
 export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
   await delay();
@@ -267,7 +303,7 @@ export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
 }
 
 /**
- * POST submit — chấm điểm mock.
+ * API MOCK: Nộp bài thi. Tiến hành so khớp đáp án để tính điểm, xác định Đạt/Không đạt và lưu lịch sử.
  */
 export async function submitTestAttempt(attemptId, answers = {}, options = {}) {
   await delay();
