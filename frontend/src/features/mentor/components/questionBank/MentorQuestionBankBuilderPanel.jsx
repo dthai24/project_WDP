@@ -98,7 +98,6 @@ export default function MentorQuestionBankBuilderPanel({
   sectionBaselines = {},
   sectionSourceBaselines = {},
   activeSectionDirty = false,
-  hasPendingSectionDeletes = false,
   updatingSection = false,
   questionCount = 0,
   disabled = false,
@@ -106,12 +105,10 @@ export default function MentorQuestionBankBuilderPanel({
   publishedHint = null,
   coursePublished = false,
   persistedQuestionIds = null,
-  canDeleteActiveSection = false,
   onSectionSelect,
   onAddBai,
   onSectionChange,
   onQuestionsFullyRestored,
-  onDeleteSection,
   onUpdateSection,
   onRegisterSectionControls,
 }) {
@@ -249,13 +246,9 @@ export default function MentorQuestionBankBuilderPanel({
                   }}
                 >
                   <Typography sx={{ fontSize: 12, color: activeSectionDirty ? '#92400E' : MUTED, lineHeight: 1.5 }}>
-                    {hasPendingSectionDeletes && !activeSectionDirty
-                      ? 'Có section đã đánh dấu xóa. Lưu thay đổi để xóa trên server.'
-                      : activeSectionDirty
-                        ? hasPendingSectionDeletes
-                          ? 'Section có thay đổi chưa lưu và có section chờ xóa. Lưu để đồng bộ.'
-                          : 'Section này có thay đổi chưa lưu. Cập nhật trước khi chuyển sang bài/kỹ năng khác.'
-                        : 'Section đã đồng bộ. Bạn có thể chuyển sang phần khác.'}
+                    {activeSectionDirty
+                      ? 'Section này có thay đổi chưa lưu. Cập nhật trước khi chuyển sang bài/kỹ năng khác.'
+                      : 'Section đã đồng bộ. Bạn có thể chuyển sang phần khác.'}
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, flexShrink: 0 }}>
                     {deletedQuestions.length > 0 ? (
@@ -317,16 +310,13 @@ export default function MentorQuestionBankBuilderPanel({
                     scoringMode={SCORING_MODE_AUTO}
                     totalScore={100}
                     questionCountAll={questionCount}
-                    showScoreField={false}
                     lockSkillType
-                    hideDelete={!canDeleteActiveSection}
                     questionBankMode
                     allSections={sections}
                     coursePublished={coursePublished}
                     persistedQuestionIds={persistedQuestionIds}
                     defaultExpanded
                     onChange={(nextSection) => onSectionChange(activeSection.tempId, nextSection)}
-                    onDelete={() => onDeleteSection(activeSection.tempId)}
                     onRegisterSectionControls={onRegisterSectionControls}
                   />
                 </Box>

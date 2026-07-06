@@ -1,5 +1,6 @@
 const questionBankModel = require('../Models/questionBankModel');
 const questionBankSaveService = require('../services/questionBankSaveService');
+const questionBankSaveModel = require('../Models/questionBankSaveModel');
 
 
 
@@ -47,15 +48,12 @@ function groupQuestionsWithChoices(rows = []) {
 
                 skillType: normalizeSkillType(row.SkillType),
 
-                url: row.URL,
+                sourceUrl: row.SourceUrl ?? null,
 
                 order: row.QuestionOrder,
 
                 isActive: Boolean(row.IsActive),
-
-                score: Number(row.Score) || 1,
-
-                allowMultipleAnswers: Boolean(row.AllowMultipleAnswers),
+                isUseForTest: row.IsUseForTest == null ? true : Boolean(row.IsUseForTest),
 
                 choices: [],
 
@@ -166,6 +164,8 @@ const getChapterSections = async (req, res) => {
             questionCount: Number(row.QuestionCount) || 0,
 
             sourceUrl: row.SourceUrl ?? null,
+
+            isUseForTest: row.IsUseForTest == null ? true : Boolean(row.IsUseForTest),
 
         }));
 
@@ -340,6 +340,43 @@ const getQuestionBankPathsByBankIdController = async (req, res) => {
 }
 
 
+const ensureQuestionPath = async (req, res) => {
+    try {
+        const courseId = Number(req.params.courseId);
+        const pathId = Number(req.params.pathId);
+
+        if (!Number.isInteger(courseId) || courseId <= 0) {
+            return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+        }
+        if (!Number.isInteger(pathId) || pathId <= 0) {
+            return res.status(400).json({ success: false, message: 'pathId không hợp lệ' });
+        }
+
+        const existing = await questionBankSaveModel.findQuestionPathId(courseId, pathId);
+        const questionPathId = existing
+            ?? await questionBankSaveModel.ensureQuestionPathForCourseChapter(courseId, pathId);
+
+        return res.status(existing ? 200 : 201).json({
+            success: true,
+            message: existing
+                ? 'Questions_Path đã tồn tại'
+                : 'Đã tạo Questions_Path cho chương',
+            data: {
+                courseId,
+                pathId,
+                questionPathId,
+                created: !existing,
+            },
+        });
+    } catch (error) {
+        console.error('ensureQuestionPath error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Không thể kiểm tra Questions_Path',
+        });
+    }
+};
+
 const createSectionSave = async (req, res) => {
     try {
         const courseId = Number(req.params.courseId);
@@ -371,6 +408,7 @@ const createSectionSave = async (req, res) => {
                 sectionId: result.sectionId,
                 questionPathId: result.questionPathId,
                 questionIdMap: result.questionIdMap,
+                choiceIdMap: result.choiceIdMap ?? [],
                 sourceUrl: result.sourceUrl ?? null,
             },
         });
@@ -459,39 +497,240 @@ const patchSectionSourceUrl = async (req, res) => {
     }
 };
 
-const deleteSection = async (req, res) => {
+const patchQuestionUseForTest = async (req, res) => {
     try {
-        const sectionId = Number(req.params.sectionId);
-        const courseId = Number(req.query.courseId);
-        const pathId = Number(req.query.pathId);
+        const questionId = Number(req.params.questionId);
+        const isUseForTest = req.body?.isUseForTest;
 
-        if (!Number.isInteger(sectionId) || sectionId <= 0) {
-            return res.status(400).json({ success: false, message: 'sectionId không hợp lệ' });
+        if (!Number.isInteger(questionId) || questionId <= 0) {
+            return res.status(400).json({ success: false, message: 'questionId không hợp lệ' });
         }
-        if (!Number.isInteger(courseId) || courseId <= 0) {
-            return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
-        }
-        if (!Number.isInteger(pathId) || pathId <= 0) {
-            return res.status(400).json({ success: false, message: 'pathId không hợp lệ' });
+        if (typeof isUseForTest !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'isUseForTest phải là boolean' });
         }
 
-        const result = await questionBankSaveService.deleteQuestionBankSection(sectionId, {
+        const updated = await questionBankModel.updateQuestionUseForTestById(questionId, isUseForTest);
+        if (!updated) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy question để cập nhật',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đã cập nhật trạng thái dùng trong bài kiểm tra',
+            data: {
+                questionId,
+                isUseForTest,
+            },
+        });
+    } catch (error) {
+        console.error('patchQuestionUseForTest error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi khi cập nhật trạng thái question',
+        });
+    }
+};
+
+const updateQuestionById = async (req, res) => {
+    try {
+        const questionId = Number(req.params.questionId);
+        const body = req.body ?? {};
+        const sectionId = Number(body.sectionId);
+        const courseId = Number(body.courseId ?? body.context?.courseId);
+        const pathId = Number(body.pathId ?? body.context?.pathId);
+
+        if (!Number.isInteger(questionId) || questionId <= 0) {
+            return res.status(400).json({ success: false, message: 'questionId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.updateQuestionFields(questionId, {
+            sectionId,
+            set: body.set ?? {},
+            order: body.order ?? body.Order ?? null,
             courseId,
             pathId,
         });
 
         return res.status(200).json({
             success: true,
-            message: 'Đã xóa section thành công',
-            data: {
-                sectionId: result.sectionId,
-            },
+            message: 'Đã cập nhật question thành công',
+            data: result,
         });
     } catch (error) {
-        console.error('deleteSection error:', error.message);
+        console.error('updateQuestionById error:', error.message);
         return res.status(error.statusCode || 500).json({
             success: false,
-            message: error.message || 'Lỗi khi xóa section',
+            message: error.message || 'Lỗi khi cập nhật question',
+        });
+    }
+};
+
+const deactivateQuestionById = async (req, res) => {
+    try {
+        const questionId = Number(req.params.questionId);
+        const sectionId = Number(req.body?.sectionId);
+        const courseId = Number(req.body?.courseId ?? req.body?.context?.courseId);
+        const pathId = Number(req.body?.pathId ?? req.body?.context?.pathId);
+
+        if (!Number.isInteger(questionId) || questionId <= 0) {
+            return res.status(400).json({ success: false, message: 'questionId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.deactivateQuestion(questionId, sectionId, {
+            courseId,
+            pathId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đã xóa question thành công',
+            data: result,
+        });
+    } catch (error) {
+        console.error('deactivateQuestionById error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi xóa question',
+        });
+    }
+};
+
+const createSectionQuestionById = async (req, res) => {
+    try {
+        const sectionId = Number(req.params.sectionId);
+        const body = req.body ?? {};
+        const courseId = Number(body.courseId ?? body.context?.courseId);
+        const pathId = Number(body.pathId ?? body.context?.pathId);
+
+        if (!Number.isInteger(sectionId) || sectionId <= 0) {
+            return res.status(400).json({ success: false, message: 'sectionId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.createSectionQuestion(sectionId, {
+            data: body.data ?? {},
+            order: body.order ?? body.Order ?? 1,
+            choices: body.choicesInsert ?? body.choices ?? [],
+            courseId,
+            pathId,
+            questionPathId: body.questionPathId ?? body.context?.questionPathId ?? null,
+            skillType: body.skillType ?? body.context?.skillType ?? null,
+            clientRef: body.clientRef ?? null,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'Đã tạo question thành công',
+            data: result,
+        });
+    } catch (error) {
+        console.error('createSectionQuestionById error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi tạo question',
+        });
+    }
+};
+
+const updateChoiceById = async (req, res) => {
+    try {
+        const choiceId = Number(req.params.choiceId);
+        const body = req.body ?? {};
+        const questionId = Number(body.questionId);
+        const sectionId = Number(body.sectionId);
+        const courseId = Number(body.courseId ?? body.context?.courseId);
+        const pathId = Number(body.pathId ?? body.context?.pathId);
+
+        if (!Number.isInteger(choiceId) || choiceId <= 0) {
+            return res.status(400).json({ success: false, message: 'choiceId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.updateChoiceFields(choiceId, {
+            questionId,
+            sectionId,
+            set: body.set ?? {},
+            courseId,
+            pathId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đã cập nhật choice thành công',
+            data: result,
+        });
+    } catch (error) {
+        console.error('updateChoiceById error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi cập nhật choice',
+        });
+    }
+};
+
+const createQuestionChoiceById = async (req, res) => {
+    try {
+        const questionId = Number(req.params.questionId);
+        const body = req.body ?? {};
+        const sectionId = Number(body.sectionId);
+        const courseId = Number(body.courseId ?? body.context?.courseId);
+        const pathId = Number(body.pathId ?? body.context?.pathId);
+
+        if (!Number.isInteger(questionId) || questionId <= 0) {
+            return res.status(400).json({ success: false, message: 'questionId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.createQuestionChoice(null, questionId, {
+            sectionId,
+            data: body.data ?? {},
+            courseId,
+            pathId,
+            clientRef: body.clientRef ?? null,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'Đã tạo choice thành công',
+            data: result,
+        });
+    } catch (error) {
+        console.error('createQuestionChoiceById error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi tạo choice',
+        });
+    }
+};
+
+const deleteChoiceById = async (req, res) => {
+    try {
+        const choiceId = Number(req.params.choiceId);
+        const questionId = Number(req.body?.questionId);
+        const sectionId = Number(req.body?.sectionId);
+        const courseId = Number(req.body?.courseId ?? req.body?.context?.courseId);
+        const pathId = Number(req.body?.pathId ?? req.body?.context?.pathId);
+
+        if (!Number.isInteger(choiceId) || choiceId <= 0) {
+            return res.status(400).json({ success: false, message: 'choiceId không hợp lệ' });
+        }
+
+        const result = await questionBankSaveService.removeQuestionChoice(choiceId, questionId, {
+            sectionId,
+            courseId,
+            pathId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đã xóa choice thành công',
+            data: result,
+        });
+    } catch (error) {
+        console.error('deleteChoiceById error:', error.message);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Lỗi khi xóa choice',
         });
     }
 };
@@ -502,9 +741,16 @@ module.exports = {
     getSectionQuestions,
     getQuestionBankByIdController,
     getQuestionBankPathsByBankIdController,
+    ensureQuestionPath,
     createSectionSave,
     updateSectionSave,
-    deleteSection,
     patchSectionSourceUrl,
+    patchQuestionUseForTest,
+    updateQuestionById,
+    deactivateQuestionById,
+    createSectionQuestionById,
+    updateChoiceById,
+    createQuestionChoiceById,
+    deleteChoiceById,
 };
 

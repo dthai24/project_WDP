@@ -3,7 +3,7 @@
  */
 
 import axios from 'axios';
-import { serializeQuestionBankSavePayload } from '@/features/mentor/utils/questionBankApiMappers';
+import { isQuestionBankDeleteOnlyPayload, serializeQuestionBankSavePayload } from '@/features/mentor/utils/questionBankApiMappers';
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
 
 const TODO = 'Question bank API chưa được implement.';
@@ -173,6 +173,36 @@ export async function updatePathQuestions() {
   return { ok: false, message: TODO };
 }
 
+export async function ensureQuestionPathForChapter(courseId, pathId) {
+  try {
+    const { data } = await axios.post(
+      `${API_BASE}/question-bank/courses/${encodeURIComponent(courseId)}/paths/${encodeURIComponent(pathId)}/question-path/ensure`,
+      {},
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+
+    if (data?.success === false) {
+      return {
+        ok: false,
+        message: data.message ?? 'Không thể kiểm tra Questions_Path.',
+      };
+    }
+
+    return {
+      ok: true,
+      questionPathId: data?.data?.questionPathId ?? null,
+      created: Boolean(data?.data?.created),
+      message: data?.message ?? 'Đã kiểm tra Questions_Path.',
+    };
+  } catch (error) {
+    console.error('ensureQuestionPathForChapter error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Không thể kiểm tra Questions_Path.',
+    };
+  }
+}
+
 export async function saveQuestionBankSection(savePayload) {
   try {
     let body;
@@ -188,70 +218,216 @@ export async function saveQuestionBankSection(savePayload) {
     const context = body?.context ?? {};
     const sectionId = context.sectionId ?? null;
     const { courseId, pathId } = context;
+    const questionIdMap = [];
+    const choiceIdMap = [];
+    let savedSourceUrl = null;
+    let resolvedQuestionPathId = context.questionPathId ?? null;
 
-    const url = sectionId
-      ? `${API_BASE}/question-bank/sections/${encodeURIComponent(sectionId)}`
-      : `${API_BASE}/question-bank/courses/${encodeURIComponent(courseId)}/paths/${encodeURIComponent(pathId)}/sections`;
+    if (courseId && pathId && !isQuestionBankDeleteOnlyPayload(body)) {
+      const ensureResult = await ensureQuestionPathForChapter(courseId, pathId);
+      if (!ensureResult.ok) {
+        return ensureResult;
+      }
+      resolvedQuestionPathId = ensureResult.questionPathId ?? resolvedQuestionPathId;
+      body.context = {
+        ...body.context,
+        questionPathId: resolvedQuestionPathId,
+      };
+    }
 
-    const { data } = sectionId
-      ? await axios.put(url, body, {
-          headers: { 'Content-Type': 'application/json' },
-        })
-      : await axios.post(url, body, {
-          headers: { 'Content-Type': 'application/json' },
+    for (const item of body.questionsDelete ?? []) {
+      const questionId = item.questionId;
+      const targetSectionId = item.sectionId ?? sectionId;
+      const { data } = await axios.delete(
+        `${API_BASE}/question-bank/questions/${encodeURIComponent(questionId)}`,
+        {
+          data: {
+            sectionId: targetSectionId,
+            courseId,
+            pathId,
+          },
+        },
+      );
+      if (data?.success === false) {
+        return { ok: false, message: data.message ?? 'Không thể xóa question.' };
+      }
+    }
+
+    if (body.sectionSourceUpdate?.sectionId) {
+      const sourceResult = await updateQuestionBankSectionSourceUrl(
+        body.sectionSourceUpdate.sectionId,
+        body.sectionSourceUpdate.SourceUrl,
+        { courseId, pathId },
+      );
+      if (!sourceResult.ok) {
+        return sourceResult;
+      }
+      savedSourceUrl = sourceResult.sourceUrl ?? null;
+    }
+
+    if (body.sectionUpdate?.set && sectionId) {
+      const { data } = await axios.put(
+        `${API_BASE}/question-bank/sections/${encodeURIComponent(sectionId)}`,
+        {
+          context: { courseId, pathId, sectionId },
+          sectionUpdate: body.sectionUpdate,
+        },
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      if (data?.success === false) {
+        return { ok: false, message: data.message ?? 'Không thể cập nhật section.' };
+      }
+      savedSourceUrl = data?.data?.sourceUrl ?? savedSourceUrl;
+    }
+
+    for (const item of body.questionsUpdate ?? []) {
+      const targetSectionId = item.sectionId ?? sectionId;
+      const hasQuestionPatch =
+        Object.keys(item.set ?? {}).length > 0
+        || item.Order != null
+        || item.order != null;
+
+      if (hasQuestionPatch) {
+        const { data } = await axios.put(
+          `${API_BASE}/question-bank/questions/${encodeURIComponent(item.questionId)}`,
+          {
+            sectionId: targetSectionId,
+            courseId,
+            pathId,
+            set: item.set ?? {},
+            order: item.Order ?? item.order ?? null,
+          },
+          { headers: { 'Content-Type': 'application/json' } },
+        );
+        if (data?.success === false) {
+          return { ok: false, message: data.message ?? 'Không thể cập nhật question.' };
+        }
+      }
+
+      for (const choiceUpdate of item.choicesUpdate ?? []) {
+        const { data } = await axios.put(
+          `${API_BASE}/question-bank/choices/${encodeURIComponent(choiceUpdate.choiceId)}`,
+          {
+            questionId: choiceUpdate.questionId ?? item.questionId,
+            sectionId: targetSectionId,
+            courseId,
+            pathId,
+            set: choiceUpdate.set ?? {},
+          },
+          { headers: { 'Content-Type': 'application/json' } },
+        );
+        if (data?.success === false) {
+          return { ok: false, message: data.message ?? 'Không thể cập nhật choice.' };
+        }
+      }
+
+      for (const choiceDelete of item.choicesDelete ?? []) {
+        const { data } = await axios.delete(
+          `${API_BASE}/question-bank/choices/${encodeURIComponent(choiceDelete.choiceId)}`,
+          {
+            data: {
+              questionId: choiceDelete.questionId ?? item.questionId,
+              sectionId: targetSectionId,
+              courseId,
+              pathId,
+            },
+          },
+        );
+        if (data?.success === false) {
+          return { ok: false, message: data.message ?? 'Không thể xóa choice.' };
+        }
+      }
+
+      for (const choiceInsert of item.choicesInsert ?? []) {
+        const { data } = await axios.post(
+          `${API_BASE}/question-bank/questions/${encodeURIComponent(item.questionId)}/choices`,
+          {
+            sectionId: targetSectionId,
+            courseId,
+            pathId,
+            data: choiceInsert.data ?? {},
+            clientRef: choiceInsert.clientRef ?? null,
+          },
+          { headers: { 'Content-Type': 'application/json' } },
+        );
+        if (data?.success === false) {
+          return { ok: false, message: data.message ?? 'Không thể tạo choice.' };
+        }
+        if (data?.data?.clientRef && data?.data?.choiceId) {
+          choiceIdMap.push({
+            clientRef: data.data.clientRef,
+            choiceId: data.data.choiceId,
+            questionId: data.data.questionId ?? item.questionId,
+          });
+        }
+      }
+    }
+
+    for (const item of body.questionsInsert ?? []) {
+      const targetSectionId = item.sectionId ?? sectionId;
+      const { data } = await axios.post(
+        `${API_BASE}/question-bank/sections/${encodeURIComponent(targetSectionId)}/questions`,
+        {
+          courseId,
+          pathId,
+          questionPathId: resolvedQuestionPathId,
+          skillType: context.skillType ?? null,
+          order: item.Order ?? item.order ?? 1,
+          data: item.data ?? {},
+          choicesInsert: item.choicesInsert ?? [],
+          clientRef: item.clientRef ?? null,
+        },
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      if (data?.success === false) {
+        return { ok: false, message: data.message ?? 'Không thể tạo question.' };
+      }
+      if (data?.data?.clientRef && data?.data?.questionId) {
+        questionIdMap.push({
+          clientRef: data.data.clientRef,
+          questionId: data.data.questionId,
         });
+      }
+      if (Array.isArray(data?.data?.choiceIdMap)) {
+        choiceIdMap.push(...data.data.choiceIdMap);
+      }
+    }
 
-    if (data?.success === false) {
+    if (body.sectionInsert?.data) {
+      const url = `${API_BASE}/question-bank/courses/${encodeURIComponent(courseId)}/paths/${encodeURIComponent(pathId)}/sections`;
+      const { data } = await axios.post(
+        url,
+        body,
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      if (data?.success === false) {
+        return { ok: false, message: data.message ?? 'Không thể tạo section.' };
+      }
       return {
-        ok: false,
-        message: data.message ?? 'Không thể cập nhật section.',
+        ok: true,
+        sectionId: data?.data?.sectionId ?? sectionId ?? null,
+        questionPathId: resolvedQuestionPathId,
+        questionIdMap: data?.data?.questionIdMap ?? questionIdMap,
+        choiceIdMap: data?.data?.choiceIdMap ?? choiceIdMap,
+        sourceUrl: data?.data?.sourceUrl ?? savedSourceUrl,
+        message: data?.message ?? 'Đã cập nhật section.',
       };
     }
 
     return {
       ok: true,
-      sectionId: data?.data?.sectionId ?? sectionId ?? null,
-      questionIdMap: data?.data?.questionIdMap ?? [],
-      sourceUrl: data?.data?.sourceUrl ?? null,
-      message: data?.message ?? 'Đã cập nhật section.',
+      sectionId: sectionId ?? null,
+      questionPathId: resolvedQuestionPathId,
+      questionIdMap,
+      choiceIdMap,
+      sourceUrl: savedSourceUrl,
+      message: 'Đã cập nhật section.',
     };
   } catch (error) {
     console.error('saveQuestionBankSection error:', error);
     return {
       ok: false,
       message: error.response?.data?.message ?? 'Không thể cập nhật section.',
-    };
-  }
-}
-
-export async function deleteQuestionBankSection(sectionId, { courseId, pathId } = {}) {
-  try {
-    const params = {};
-    if (courseId) params.courseId = String(courseId);
-    if (pathId) params.pathId = String(pathId);
-
-    const { data } = await axios.delete(
-      `${API_BASE}/question-bank/sections/${encodeURIComponent(sectionId)}`,
-      { params },
-    );
-
-    if (data?.success === false) {
-      return {
-        ok: false,
-        message: data.message ?? 'Không thể xóa section.',
-      };
-    }
-
-    return {
-      ok: true,
-      sectionId: data?.data?.sectionId ?? sectionId,
-      message: data?.message ?? 'Đã xóa section.',
-    };
-  } catch (error) {
-    console.error('deleteQuestionBankSection error:', error);
-    return {
-      ok: false,
-      message: error.response?.data?.message ?? 'Không thể xóa section.',
     };
   }
 }
@@ -289,6 +465,36 @@ export async function updateQuestionBankSectionSourceUrl(
     return {
       ok: false,
       message: error.response?.data?.message ?? 'Không thể cập nhật URL đề bài.',
+    };
+  }
+}
+
+export async function updateQuestionUseForTest(questionId, isUseForTest) {
+  try {
+    const { data } = await axios.patch(
+      `${API_BASE}/question-bank/questions/${encodeURIComponent(questionId)}/use-for-test`,
+      { isUseForTest: Boolean(isUseForTest) },
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+
+    if (data?.success === false) {
+      return {
+        ok: false,
+        message: data.message ?? 'Không thể cập nhật trạng thái câu hỏi.',
+      };
+    }
+
+    return {
+      ok: true,
+      questionId: data?.data?.questionId ?? questionId,
+      isUseForTest: data?.data?.isUseForTest ?? Boolean(isUseForTest),
+      message: data?.message ?? 'Đã cập nhật trạng thái câu hỏi.',
+    };
+  } catch (error) {
+    console.error('updateQuestionUseForTest error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Không thể cập nhật trạng thái câu hỏi.',
     };
   }
 }

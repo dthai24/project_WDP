@@ -7,20 +7,15 @@ import MentorTestQuestionBankSelector from '@/features/mentor/components/questio
 import MentorFinalTestConfigEditor from '@/features/mentor/components/questionBank/MentorFinalTestConfigEditor';
 import {
   SCORING_MODE_AUTO,
-  SCORING_MODE_LABELS,
-  SCORING_MODE_MANUAL,
   TEST_SOURCE_CHAPTER_QUIZ,
   TEST_SOURCE_COURSE_FINAL,
   calculateAutoQuestionScore,
-  calculateManualTotalScore,
   computeMaterialTestSummary,
   DEFAULT_TEST_TOTAL_SCORE,
   formatScoreValue,
-  getEffectiveScoringMode,
   getFinalTestConfigTotal,
   getQuestionCount,
   inferTestSource,
-  scoresMatch,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const fieldLabelSx = { mb: 0.4 };
@@ -43,8 +38,7 @@ function SummaryPill({ children, color = MUTED, bgcolor = 'rgba(15,23,42,0.05)' 
     </Typography>
   );
 }
-
-function ScoringModeButton({ label, selected, disabled, accentColor, onSelect }) {
+function TestSourceButton({ label, selected, disabled, accentColor, onSelect }) {
   return (
     <Box
       component="button"
@@ -78,18 +72,6 @@ function ScoringModeButton({ label, selected, disabled, accentColor, onSelect })
   );
 }
 
-function TestSourceButton({ label, selected, disabled, accentColor, onSelect }) {
-  return (
-    <ScoringModeButton
-      label={label}
-      selected={selected}
-      disabled={disabled}
-      accentColor={accentColor}
-      onSelect={onSelect}
-    />
-  );
-}
-
 export default function MentorTestMaterialEditor({
   material,
   errors = {},
@@ -101,8 +83,6 @@ export default function MentorTestMaterialEditor({
   const theme = MATERIAL_TYPE_THEME.TEST;
   const accentColor = theme.color;
   const sections = material.Sections ?? [];
-  const scoringMode = getEffectiveScoringMode(material);
-  const isAuto = scoringMode === SCORING_MODE_AUTO;
   const totalScore = DEFAULT_TEST_TOTAL_SCORE;
   const testSource = inferTestSource({ testSource: material.TestSource });
   const isChapterQuiz = testSource === TEST_SOURCE_CHAPTER_QUIZ;
@@ -112,7 +92,6 @@ export default function MentorTestMaterialEditor({
     ? getFinalTestConfigTotal(material.FinalTestConfig ?? {})
     : getQuestionCount(sections);
   const perQuestionScore = calculateAutoQuestionScore(totalScore, questionCount);
-  const manualTotal = calculateManualTotalScore(sections);
   const hasBank = Boolean(material.QuestionBankId);
 
   const handleTestSourceChange = (nextSource) => {
@@ -176,45 +155,10 @@ export default function MentorTestMaterialEditor({
       );
     }
 
-    if (isAuto) {
-      return (
-        <SummaryPill>
-          Tổng {questionCount} câu · mỗi câu {formatScoreValue(perQuestionScore)} điểm
-        </SummaryPill>
-      );
-    }
-
-    const matched = scoresMatch(totalScore, manualTotal);
-    const isOver = manualTotal > totalScore + 0.01;
-    const isUnder = manualTotal < totalScore - 0.01;
-
-    let statusColor = '#16A34A';
-    let statusBg = 'rgba(22,163,74,0.10)';
-    let statusText = 'Tổng điểm đã khớp.';
-
-    if (isUnder) {
-      statusColor = '#EA580C';
-      statusBg = 'rgba(234,88,12,0.10)';
-      statusText = 'Tổng điểm câu hỏi đang thấp hơn tổng điểm bài kiểm tra.';
-    } else if (isOver) {
-      statusColor = '#DC2626';
-      statusBg = 'rgba(220,38,38,0.10)';
-      statusText = 'Tổng điểm câu hỏi đang vượt quá tổng điểm bài kiểm tra.';
-    }
-
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-        <SummaryPill color={matched ? '#16A34A' : isOver ? '#DC2626' : '#EA580C'}>
-          Tổng điểm hiện tại: {formatScoreValue(manualTotal)} / {formatScoreValue(totalScore)}
-        </SummaryPill>
-        {!matched ? (
-          <Typography sx={{ fontSize: 12, color: statusColor, bgcolor: statusBg, px: 1, py: 0.5, borderRadius: '8px' }}>
-            {statusText}
-          </Typography>
-        ) : (
-          <Typography sx={{ fontSize: 12, color: statusColor }}>{statusText}</Typography>
-        )}
-      </Box>
+      <SummaryPill>
+        Tổng {questionCount} câu · mỗi câu {formatScoreValue(perQuestionScore)} điểm
+      </SummaryPill>
     );
   };
 
@@ -318,45 +262,8 @@ export default function MentorTestMaterialEditor({
 
       {showConfigPanel && (
         <>
-          <Box sx={{ mb: 1.25 }}>
-            <ContentFieldLabel sx={fieldLabelSx}>Cách tính điểm</ContentFieldLabel>
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.5,
-                p: 0.5,
-                borderRadius: '12px',
-                bgcolor: '#fff',
-                border: '1px solid rgba(15,23,42,0.08)',
-              }}
-            >
-              <ScoringModeButton
-                label={SCORING_MODE_LABELS[SCORING_MODE_AUTO]}
-                selected={isAuto}
-                disabled={disabled}
-                accentColor={accentColor}
-                onSelect={() => onChange(material.tempId, { ScoringMode: SCORING_MODE_AUTO })}
-              />
-              <ScoringModeButton
-                label={SCORING_MODE_LABELS[SCORING_MODE_MANUAL]}
-                selected={!isAuto}
-                disabled={disabled || isCourseFinal}
-                accentColor={accentColor}
-                onSelect={() => onChange(material.tempId, { ScoringMode: SCORING_MODE_MANUAL })}
-              />
-            </Box>
-            {isCourseFinal && (
-              <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.5 }}>
-                Bài cuối khóa dùng tính điểm tự động khi random câu.
-              </Typography>
-            )}
-          </Box>
-
           <Box sx={{ mb: 1.5, p: 1, borderRadius: '12px', bgcolor: '#fff', border: '1px solid rgba(15,23,42,0.06)' }}>
             {renderScoreSummary()}
-            {errors._scoreMismatch && (
-              <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75 }}>{errors._scoreMismatch}</Typography>
-            )}
           </Box>
 
           <Box sx={{ mb: 0 }}>

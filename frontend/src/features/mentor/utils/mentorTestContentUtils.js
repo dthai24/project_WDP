@@ -22,6 +22,7 @@ import {
   validateListeningAudioUrl,
   validateReadingDocFile,
 } from '@/shared/utils/materialUploadValidation';
+import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 export {
   MATERIAL_UPLOAD_MAX_BYTES,
@@ -119,6 +120,49 @@ function isBrowserFile(value) {
   return typeof File !== 'undefined' && value instanceof File;
 }
 
+/** File .mp3/.mp4 (≤10MB) hoặc link nghe hợp lệ — dùng chung cho question bank & test material. */
+export function validateQuestionBankListeningSource(section = {}) {
+  const sErrors = {};
+  const hasFile = Boolean(section.File || section.FileName);
+  const audioUrl = String(section.AudioUrl ?? '').trim();
+  const hasLink = Boolean(audioUrl);
+  const isLinkSource = section.AudioSourceType === LISTENING_SOURCE_LINK;
+
+  if (!hasFile && !hasLink) {
+    sErrors._audio = 'Vui lòng tải file audio hoặc nhập link nghe';
+    return sErrors;
+  }
+
+  if (isBrowserFile(section.File)) {
+    const fileCheck = validateListeningAudioFile(section.File);
+    if (!fileCheck.ok) {
+      sErrors.File = fileCheck.message;
+    }
+  } else if (isLinkSource || (!section.FileName && hasLink)) {
+    const linkCheck = validateListeningAudioUrl(audioUrl);
+    if (!linkCheck.ok) {
+      sErrors.AudioUrl = linkCheck.message;
+    }
+  } else if (hasFile) {
+    if (section.FileName && !isAllowedListeningAudioFileName(section.FileName)) {
+      sErrors.File = LISTENING_AUDIO_INVALID_TYPE_MESSAGE;
+    } else if (Number(section.FileSize) > AUDIO_MAX_BYTES) {
+      sErrors.File = LISTENING_AUDIO_MAX_SIZE_MESSAGE;
+    }
+  }
+
+  return sErrors;
+}
+
+/** Bài đọc question bank — bắt buộc có nội dung soạn thảo. */
+export function validateQuestionBankReadingComposeSource(section = {}) {
+  const sErrors = {};
+  if (isHtmlContentEmpty(section.Description)) {
+    sErrors.Description = 'Vui lòng soạn nội dung bài đọc.';
+  }
+  return sErrors;
+}
+
 export const QUESTION_TYPE_MULTIPLE_CHOICE = 'MULTIPLE_CHOICE';
 
 /** @deprecated Chỉ dùng khi đọc dữ liệu cũ — chuẩn hoá qua normalizeTestQuestion */
@@ -139,6 +183,7 @@ export const ANSWER_MODE_LABELS = {
 };
 
 export const TEST_QUESTION_TEXT_MAX = 250;
+export const TEST_QUESTION_TEXT_MIN = 3;
 export const TEST_QUESTION_OPTION_TEXT_MAX = 250;
 
 export function isMultipleChoiceQuestion(question) {
@@ -146,6 +191,11 @@ export function isMultipleChoiceQuestion(question) {
   return (
     type === QUESTION_TYPE_MULTIPLE_CHOICE || type === LEGACY_QUESTION_TYPE_SINGLE_CHOICE
   );
+}
+
+function toBooleanDefaultTrue(value) {
+  if (value == null) return true;
+  return Boolean(value);
 }
 
 export function normalizeTestQuestion(question) {
@@ -167,14 +217,14 @@ export function normalizeTestQuestion(question) {
   return {
     ...question,
     QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
-    AllowMultipleAnswers: legacySingle ? false : Boolean(question.AllowMultipleAnswers),
-    isActive: question.isActive !== false,
+    isActive: toBooleanDefaultTrue(question.isActive),
+    isUseForTest: toBooleanDefaultTrue(question.isUseForTest),
     Options: options,
   };
 }
 
 export function isQuestionActive(question) {
-  return question?.isActive !== false;
+  return question?.isUseForTest !== false;
 }
 
 export function isPersistedQuestionLocked(question, persistedQuestionIds, coursePublished) {
@@ -197,7 +247,7 @@ export function collectPersistedQuestionIds(sections = []) {
 
 export function buildQuestionContentSnapshot(question) {
   const payload = buildTestQuestionPayload(question);
-  const { isActive: _isActive, ...content } = payload;
+  const { isActive: _isActive, isUseForTest: _isUseForTest, ...content } = payload;
   return JSON.stringify(content);
 }
 
@@ -206,7 +256,7 @@ export function findInitialSectionQuestion(section, tempId) {
   return (section?.InitialQuestions ?? []).find((question) => question.tempId === tempId) ?? null;
 }
 
-/** So sánh nội dung câu (đề, choices, đáp án đúng) với bản ban đầu — không tính isActive. */
+/** So sánh nội dung câu (đề, choices, đáp án đúng) với bản ban đầu — không tính cờ sử dụng. */
 export function isQuestionContentChangedFromInitial(question, initialQuestions = []) {
   if (!question?.tempId || !isFilledTestQuestion(question)) return false;
   const initial = initialQuestions.find((item) => item.tempId === question.tempId);
@@ -332,13 +382,10 @@ export function canShuffleTestQuestionOptions(question) {
 }
 
 export const SCORING_MODE_AUTO = 'AUTO';
-export const SCORING_MODE_MANUAL = 'MANUAL';
-
-export const SCORING_MODES = [SCORING_MODE_AUTO, SCORING_MODE_MANUAL];
+export const SCORING_MODES = [SCORING_MODE_AUTO];
 
 export const SCORING_MODE_LABELS = {
   [SCORING_MODE_AUTO]: 'Tự chia đều',
-  [SCORING_MODE_MANUAL]: 'Nhập điểm thủ công',
 };
 
 export const DEFAULT_TEST_TOTAL_SCORE = 100;
@@ -420,7 +467,8 @@ export function validateFinalTestConfig(config = {}, stats = null) {
 }
 
 export function getEffectiveScoringMode(material) {
-  return material?.ScoringMode === SCORING_MODE_MANUAL ? SCORING_MODE_MANUAL : SCORING_MODE_AUTO;
+  void material;
+  return SCORING_MODE_AUTO;
 }
 
 export function getAllQuestions(sections = []) {
@@ -598,17 +646,11 @@ export function formatScoreValue(value) {
 }
 
 export function calculateManualTotalScore(sections = []) {
-  return getAllQuestions(sections).reduce((sum, question) => {
-    const score = Number(question.Score);
-    return sum + (Number.isFinite(score) && score > 0 ? score : 0);
-  }, 0);
+  return getQuestionCount(sections);
 }
 
 export function calculateSectionManualScore(section) {
-  return (section?.Questions ?? []).reduce((sum, question) => {
-    const score = Number(question.Score);
-    return sum + (Number.isFinite(score) && score > 0 ? score : 0);
-  }, 0);
+  return (section?.Questions ?? []).length;
 }
 
 export function calculateAutoQuestionScore(totalScore, questionCount) {
@@ -638,17 +680,12 @@ export function scoresMatch(target, actual, epsilon = 0.01) {
 }
 
 export function getSectionScoreLabel(section, scoringMode, totalScore, questionCountAll) {
+  void scoringMode;
   const count = (section?.Questions ?? []).length;
   if (count === 0) return '0 câu';
-
-  if (scoringMode === SCORING_MODE_AUTO) {
-    const perQuestion = calculateAutoQuestionScore(totalScore, questionCountAll);
-    const sectionScore = Math.round(perQuestion * count * 100) / 100;
-    return `${count} câu · khoảng ${formatScoreValue(sectionScore)} điểm`;
-  }
-
-  const sectionScore = calculateSectionManualScore(section);
-  return `${count} câu · ${formatScoreValue(sectionScore)} điểm`;
+  const perQuestion = calculateAutoQuestionScore(totalScore, questionCountAll);
+  const sectionScore = Math.round(perQuestion * count * 100) / 100;
+  return `${count} câu · khoảng ${formatScoreValue(sectionScore)} điểm`;
 }
 
 export function createEmptyTestSection(skillType = TEST_SKILL_READING) {
@@ -658,6 +695,7 @@ export function createEmptyTestSection(skillType = TEST_SKILL_READING) {
     DisplayName: '',
     SkillType: skillType,
     Description: '',
+    isUseForTest: true,
     Questions: [],
     ...(skillType === TEST_SKILL_LISTENING ? getListeningSectionFields() : {}),
     ...(skillType === TEST_SKILL_READING ? getReadingSectionFields() : {}),
@@ -682,18 +720,9 @@ export function getSectionsBySkill(sections = [], skillType) {
   return sections.filter((section) => section.SkillType === skillType);
 }
 
-export function isSectionPendingDelete(section) {
-  return Boolean(section?.pendingDelete);
-}
-
 export function getVisibleSectionsBySkill(sections = [], skillType) {
   return getSectionsBySkill(sections, skillType)
-    .filter((section) => !isSectionPendingDelete(section))
     .sort((a, b) => (Number(a.sectionOrder) || 0) - (Number(b.sectionOrder) || 0));
-}
-
-export function getPendingDeleteSections(sections = []) {
-  return (sections ?? []).filter(isSectionPendingDelete);
 }
 
 export function getSectionBySkill(sections = [], skillType) {
@@ -790,13 +819,13 @@ export function getNonEmptyQuestionBankSections(sections = []) {
     );
 }
 
-/** Trim text fields trước khi gửi API — giữ nguyên space khi đang nhập trên form. */
+/** Trim SectionName trước khi gửi API — giữ nguyên space ở Title khi đang nhập trên form. */
 export function normalizeQuestionBankSectionForSave(section) {
   const next = {
     ...section,
-    SectionTitle: String(section.SectionTitle ?? '').trim(),
-    Description: String(section.Description ?? '').trim(),
     DisplayName: String(section.DisplayName ?? '').trim(),
+    SectionTitle: String(section.SectionTitle ?? ''),
+    Description: String(section.Description ?? '').trim(),
   };
   if (section.SkillType === TEST_SKILL_LISTENING) {
     next.AudioUrl = String(section.AudioUrl ?? '').trim();
@@ -825,8 +854,8 @@ export function createEmptyTestQuestion() {
     QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     QuestionText: '',
     Score: 1,
-    AllowMultipleAnswers: false,
     isActive: true,
+    isUseForTest: true,
     Options: createDefaultMultipleChoiceOptions(),
   };
 }
@@ -854,34 +883,29 @@ export function computeMaterialTestSummary(sections = []) {
   );
 }
 
-function isPositiveScore(value) {
-  const score = Number(value);
-  return Number.isFinite(score) && score > 0;
-}
-
 export function validateTestQuestion(question, { validateScore = true } = {}) {
+  void validateScore;
   const normalized = normalizeTestQuestion(question);
   const qErrors = {};
+  const questionText = String(normalized.QuestionText ?? '').trim();
 
-  if (!String(normalized.QuestionText ?? '').trim()) {
+  if (!questionText) {
     qErrors.QuestionText = 'Vui lòng nhập nội dung câu hỏi';
-  } else if (String(normalized.QuestionText ?? '').trim().length > TEST_QUESTION_TEXT_MAX) {
+  } else if (questionText.length < TEST_QUESTION_TEXT_MIN) {
+    qErrors.QuestionText = `Đề bài câu hỏi phải có ít nhất ${TEST_QUESTION_TEXT_MIN} ký tự`;
+  } else if (questionText.length > TEST_QUESTION_TEXT_MAX) {
     qErrors.QuestionText = `Tối đa ${TEST_QUESTION_TEXT_MAX} ký tự`;
-  }
-
-  if (validateScore && !isPositiveScore(normalized.Score)) {
-    qErrors.Score = 'Vui lòng nhập điểm cho câu hỏi';
   }
 
   const options = normalized.Options ?? [];
   if (options.length < 2) {
-    qErrors._options = 'Cần ít nhất 2 đáp án';
+    qErrors._options = 'Mỗi câu hỏi phải có tối thiểu 2 đáp án';
   }
   const optionErrors = {};
   options.forEach((option) => {
     const optionText = String(option.OptionText ?? '').trim();
     if (!optionText) {
-      optionErrors[option.tempId] = { OptionText: 'Vui lòng nhập đáp án' };
+      optionErrors[option.tempId] = { OptionText: 'Vui lòng nhập nội dung đáp án' };
     } else if (optionText.length > TEST_QUESTION_OPTION_TEXT_MAX) {
       optionErrors[option.tempId] = {
         OptionText: `Tối đa ${TEST_QUESTION_OPTION_TEXT_MAX} ký tự`,
@@ -894,7 +918,7 @@ export function validateTestQuestion(question, { validateScore = true } = {}) {
   const correctCount = options.filter((option) => option.IsCorrect).length;
 
   if (options.length >= 2 && correctCount < 1) {
-    qErrors._correctOption = 'Tối thiểu 1 đáp án đúng';
+    qErrors._correctOption = 'Mỗi câu hỏi phải có ít nhất 1 đáp án đúng (có thể chọn nhiều)';
   }
 
   return qErrors;
@@ -910,7 +934,6 @@ export function validateTestMaterial(material, options = {}) {
 
   const testSource = inferTestSource({ testSource: material.TestSource });
 
-  const scoringMode = getEffectiveScoringMode(material);
   const sections = material.Sections ?? [];
 
   if (inlineSections) {
@@ -938,7 +961,6 @@ export function validateTestMaterial(material, options = {}) {
   }
 
   const sectionErrors = {};
-  const validateScore = scoringMode === SCORING_MODE_MANUAL;
   const sectionsToValidate = inlineSections ? getNonEmptyQuestionBankSections(sections) : sections;
 
   sectionsToValidate.forEach((section) => {
@@ -954,30 +976,7 @@ export function validateTestMaterial(material, options = {}) {
     }
 
     if (section.SkillType === TEST_SKILL_LISTENING) {
-      const hasFile = Boolean(section.File || section.FileName);
-      const audioUrl = String(section.AudioUrl ?? '').trim();
-      const hasLink = Boolean(audioUrl);
-      const isLinkSource = section.AudioSourceType === LISTENING_SOURCE_LINK;
-
-      if (!hasFile && !hasLink) {
-        sErrors._audio = 'Vui lòng tải file audio hoặc nhập link nghe';
-      } else if (isBrowserFile(section.File)) {
-        const fileCheck = validateListeningAudioFile(section.File);
-        if (!fileCheck.ok) {
-          sErrors.File = fileCheck.message;
-        }
-      } else if (isLinkSource || (!section.FileName && hasLink)) {
-        const linkCheck = validateListeningAudioUrl(audioUrl);
-        if (!linkCheck.ok) {
-          sErrors.AudioUrl = linkCheck.message;
-        }
-      } else if (hasFile) {
-        if (section.FileName && !isAllowedListeningAudioFileName(section.FileName)) {
-          sErrors.File = LISTENING_AUDIO_INVALID_TYPE_MESSAGE;
-        } else if (Number(section.FileSize) > AUDIO_MAX_BYTES) {
-          sErrors.File = LISTENING_AUDIO_MAX_SIZE_MESSAGE;
-        }
-      }
+      Object.assign(sErrors, validateQuestionBankListeningSource(section));
     }
 
     if (section.SkillType === TEST_SKILL_READING) {
@@ -1007,15 +1006,15 @@ export function validateTestMaterial(material, options = {}) {
             sErrors.File = MATERIAL_UPLOAD_MAX_SIZE_MESSAGE;
           }
         }
-      } else if (!String(section.Description ?? '').trim()) {
-        sErrors.Description = 'Vui lòng soạn nội dung bài đọc.';
+      } else {
+        Object.assign(sErrors, validateQuestionBankReadingComposeSource(section));
       }
     }
 
     const questionErrors = {};
     questions.forEach((question) => {
       if (!isFilledTestQuestion(question)) return;
-      const qErrors = validateTestQuestion(question, { validateScore });
+      const qErrors = validateTestQuestion(question);
       if (Object.keys(qErrors).length > 0) {
         questionErrors[question.tempId] = qErrors;
       }
@@ -1034,26 +1033,15 @@ export function validateTestMaterial(material, options = {}) {
     materialErrors.Sections = sectionErrors;
   }
 
-  if (scoringMode === SCORING_MODE_MANUAL) {
-    const questionCount = getQuestionCount(sections);
-    const targetTotal = DEFAULT_TEST_TOTAL_SCORE;
-    if (questionCount > 0) {
-      const manualTotal = calculateManualTotalScore(sections);
-      if (!scoresMatch(targetTotal, manualTotal)) {
-        materialErrors._scoreMismatch =
-          'Tổng điểm câu hỏi chưa khớp với tổng điểm bài kiểm tra';
-      }
-    }
-  }
-
   return materialErrors;
 }
 
 /** Validate một section question bank (dùng trước khi cập nhật từng section). */
 export function validateQuestionBankSection(
   section,
-  { validateScore = false, requireQuestions = false } = {},
+  { validateScore = false, requireQuestions = false, forSave = false } = {},
 ) {
+  void validateScore;
   const sErrors = {};
 
   if (!section?.tempId) {
@@ -1064,79 +1052,37 @@ export function validateQuestionBankSection(
     sErrors.SkillType = 'Vui lòng chọn kỹ năng cho phần kiểm tra';
   }
 
+  if (forSave) {
+    if (!String(section.DisplayName ?? '').trim()) {
+      sErrors.DisplayName = 'Vui lòng nhập Section name';
+    }
+
+    const sectionTitle = String(section.SectionTitle ?? '').trim()
+      || (section.SkillType === TEST_SKILL_WRITING
+        ? String(section.DisplayName ?? '').trim()
+        : '');
+    if (!sectionTitle) {
+      sErrors.SectionTitle = 'Vui lòng nhập Title (đề bài)';
+    }
+  }
+
   const questions = section.Questions ?? [];
-  if (requireQuestions && questions.length === 0) {
-    sErrors._questions = 'Vui lòng thêm câu hỏi cho phần này';
+  if ((forSave || requireQuestions) && questions.length === 0) {
+    sErrors._questions = 'Section phải có ít nhất 1 câu hỏi';
   }
 
-  if (section.SkillType === TEST_SKILL_LISTENING) {
-    const hasFile = Boolean(section.File || section.FileName);
-    const audioUrl = String(section.AudioUrl ?? '').trim();
-    const hasLink = Boolean(audioUrl);
-    const isLinkSource = section.AudioSourceType === LISTENING_SOURCE_LINK;
-    const hasMediaInput = hasFile || hasLink;
-
-    if (hasMediaInput) {
-      if (!hasFile && !hasLink) {
-        sErrors._audio = 'Vui lòng tải file audio hoặc nhập link nghe';
-      } else if (isBrowserFile(section.File)) {
-        const fileCheck = validateListeningAudioFile(section.File);
-        if (!fileCheck.ok) {
-          sErrors.File = fileCheck.message;
-        }
-      } else if (isLinkSource || (!section.FileName && hasLink)) {
-        const linkCheck = validateListeningAudioUrl(audioUrl);
-        if (!linkCheck.ok) {
-          sErrors.AudioUrl = linkCheck.message;
-        }
-      } else if (hasFile) {
-        if (section.FileName && !isAllowedListeningAudioFileName(section.FileName)) {
-          sErrors.File = LISTENING_AUDIO_INVALID_TYPE_MESSAGE;
-        } else if (Number(section.FileSize) > AUDIO_MAX_BYTES) {
-          sErrors.File = LISTENING_AUDIO_MAX_SIZE_MESSAGE;
-        }
-      }
-    }
+  if (forSave && section.SkillType === TEST_SKILL_LISTENING) {
+    Object.assign(sErrors, validateQuestionBankListeningSource(section));
   }
 
-  if (section.SkillType === TEST_SKILL_READING) {
-    const sourceType =
-      section.ReadingSourceType === READING_SOURCE_UPLOAD
-        ? READING_SOURCE_UPLOAD
-        : READING_SOURCE_COMPOSE;
-
-    if (sourceType === READING_SOURCE_UPLOAD) {
-      const materialUrl = String(section.MaterialUrl ?? '').trim();
-      const hasUploaded = Boolean(materialUrl);
-      const hasPendingFile = isBrowserFile(section.File);
-      const hasFileMeta = Boolean(section.FileName);
-
-      if (hasPendingFile || hasUploaded || hasFileMeta) {
-        if (!hasUploaded && !hasPendingFile && !hasFileMeta) {
-          sErrors.File = 'Vui lòng tải file PDF, DOC hoặc DOCX.';
-        } else if (hasPendingFile) {
-          const fileCheck = validateReadingDocFile(section.File);
-          if (!fileCheck.ok) {
-            sErrors.File = fileCheck.message;
-          }
-        } else if (hasFileMeta) {
-          const ext = getListeningAudioExtension(section.FileName);
-          if (!isAllowedReadingDocExtension(ext)) {
-            sErrors.File = READING_DOC_INVALID_TYPE_MESSAGE;
-          } else if (Number(section.FileSize) > MATERIAL_UPLOAD_MAX_BYTES) {
-            sErrors.File = MATERIAL_UPLOAD_MAX_SIZE_MESSAGE;
-          }
-        }
-      }
-    } else if (String(section.Description ?? '').trim()) {
-      /* compose có nội dung — hợp lệ */
-    }
+  if (forSave && section.SkillType === TEST_SKILL_READING) {
+    Object.assign(sErrors, validateQuestionBankReadingComposeSource(section));
   }
 
   const questionErrors = {};
-  questions.forEach((question) => {
-    if (!isFilledTestQuestion(question)) return;
-    const qErrors = validateTestQuestion(question, { validateScore });
+  const questionsToValidate = forSave ? questions : questions.filter(isFilledTestQuestion);
+  questionsToValidate.forEach((question) => {
+    const qErrors = validateTestQuestion(question);
     if (Object.keys(qErrors).length > 0) {
       questionErrors[question.tempId] = qErrors;
     }
@@ -1151,8 +1097,61 @@ export function validateQuestionBankSection(
 
 export function isQuestionBankSectionValid(section) {
   if (!section?.tempId) return false;
-  const errors = validateQuestionBankSection(normalizeQuestionBankSectionForSave(section));
+  const errors = validateQuestionBankSection(normalizeQuestionBankSectionForSave(section), {
+    forSave: true,
+  });
   return Object.keys(errors).length === 0;
+}
+
+export function getQuestionBankSectionValidationSummary(errors = {}, section = null) {
+  if (errors.DisplayName) return errors.DisplayName;
+  if (errors.SectionTitle) return errors.SectionTitle;
+  if (errors._questions) return errors._questions;
+  if (errors.Questions) {
+    for (const [questionTempId, questionErrors] of Object.entries(errors.Questions)) {
+      const questionMessage = buildQuestionBankQuestionValidationMessage(
+        section,
+        questionTempId,
+        questionErrors,
+      );
+      if (questionMessage) return questionMessage;
+    }
+  }
+  if (errors._audio) return errors._audio;
+  if (errors.File) return errors.File;
+  if (errors.AudioUrl) return errors.AudioUrl;
+  if (errors.Description) return errors.Description;
+  if (errors.SkillType) return errors.SkillType;
+  if (errors._section) return errors._section;
+  return 'Vui lòng kiểm tra lại thông tin section.';
+}
+
+function getQuestionValidationLabel(section, questionTempId) {
+  const questions = section?.Questions ?? [];
+  const questionIndex = questions.findIndex((question) => question.tempId === questionTempId);
+  return questionIndex >= 0 ? `Câu ${questionIndex + 1}` : 'Câu';
+}
+
+function buildQuestionBankQuestionValidationMessage(section, questionTempId, questionErrors = {}) {
+  const label = getQuestionValidationLabel(section, questionTempId);
+
+  if (questionErrors._options) {
+    return `${label} chưa có đáp án`;
+  }
+
+  if (questionErrors._correctOption) {
+    return `${label} chưa có đáp án đúng (Tối thiểu 1 đáp án đúng)`;
+  }
+
+  if (questionErrors.Options && Object.keys(questionErrors.Options).length > 0) {
+    return `${label} chưa có đáp án`;
+  }
+
+  if (questionErrors.QuestionText) {
+    return questionErrors.QuestionText;
+  }
+
+  return null;
 }
 
 export const QUESTION_BANK_SAVE_WARNINGS = {
@@ -1167,46 +1166,55 @@ export function findQuestionBankSectionSaveIssue(section) {
     return { message: 'Section không hợp lệ' };
   }
 
-  const normalized = normalizeQuestionBankSectionForSave(section);
-  const skill = normalized.SkillType;
-  const questions = normalized.Questions ?? [];
+  const errors = validateQuestionBankSection(normalizeQuestionBankSectionForSave(section), {
+    forSave: true,
+  });
+  if (Object.keys(errors).length === 0) return null;
 
-  for (const question of questions) {
-    if (!String(question?.QuestionText ?? '').trim()) {
-      return {
-        message: QUESTION_BANK_SAVE_WARNINGS.MISSING_QUESTION_TITLE,
-        sectionTempId: section.tempId,
-        questionTempId: question.tempId,
-      };
-    }
+  if (errors.DisplayName) {
+    return {
+      message: errors.DisplayName,
+      sectionTempId: section.tempId,
+      field: 'DisplayName',
+    };
   }
 
-  if (skill === TEST_SKILL_LISTENING) {
-    const hasAudio = Boolean(
-      section.File || section.FileName || String(section.AudioUrl ?? '').trim(),
+  if (errors.SectionTitle) {
+    return {
+      message: errors.SectionTitle,
+      sectionTempId: section.tempId,
+      field: 'SectionTitle',
+    };
+  }
+
+  if (errors._questions) {
+    return {
+      message: errors._questions,
+      sectionTempId: section.tempId,
+    };
+  }
+
+  if (errors.Questions) {
+    const questionTempId = Object.keys(errors.Questions)[0];
+    const questionErrors = errors.Questions[questionTempId] ?? {};
+    const questionMessage = buildQuestionBankQuestionValidationMessage(
+      section,
+      questionTempId,
+      questionErrors,
     );
-    if (!hasAudio) {
+    if (questionMessage) {
       return {
-        message: QUESTION_BANK_SAVE_WARNINGS.LISTENING_MISSING_AUDIO,
+        message: questionMessage,
         sectionTempId: section.tempId,
+        questionTempId,
       };
     }
   }
 
-  if (skill === TEST_SKILL_READING) {
-    const hasReadingPrompt =
-      Boolean(String(normalized.SectionTitle ?? '').trim())
-      || Boolean(String(normalized.MaterialUrl ?? '').trim())
-      || Boolean(String(normalized.Description ?? '').trim());
-    if (!hasReadingPrompt) {
-      return {
-        message: QUESTION_BANK_SAVE_WARNINGS.READING_MISSING_PROMPT,
-        sectionTempId: section.tempId,
-      };
-    }
-  }
-
-  return null;
+  return {
+    message: getQuestionBankSectionValidationSummary(errors, section),
+    sectionTempId: section.tempId,
+  };
 }
 
 /** Kiểm tra toàn bộ sections — dùng khi cần validate cả workspace. */
@@ -1224,6 +1232,17 @@ export function buildQuestionBankSectionSaveErrors(section, issue) {
   }
 
   if (issue.questionTempId) {
+    const errors = validateQuestionBankSection(normalizeQuestionBankSectionForSave(section), {
+      forSave: true,
+    });
+    const questionErrors = errors.Questions?.[issue.questionTempId];
+    if (questionErrors) {
+      return {
+        Questions: {
+          [issue.questionTempId]: questionErrors,
+        },
+      };
+    }
     return {
       Questions: {
         [issue.questionTempId]: {
@@ -1231,6 +1250,18 @@ export function buildQuestionBankSectionSaveErrors(section, issue) {
         },
       },
     };
+  }
+
+  if (issue.field === 'DisplayName') {
+    return { DisplayName: issue.message };
+  }
+
+  if (issue.field === 'SectionTitle') {
+    return { SectionTitle: issue.message };
+  }
+
+  if (issue.message?.includes('ít nhất 1 câu hỏi')) {
+    return { _questions: issue.message };
   }
 
   if (issue.message === QUESTION_BANK_SAVE_WARNINGS.LISTENING_MISSING_AUDIO) {
@@ -1246,33 +1277,33 @@ export function buildQuestionBankSectionSaveErrors(section, issue) {
 
 export function buildTestQuestionPayload(question) {
   const normalized = normalizeTestQuestion(question);
-  const { tempId, QuestionText, Score, Options } = normalized;
+  const { tempId, QuestionText, Options } = normalized;
   const mappedOptions = (Options ?? []).map(({ OptionText, IsCorrect }) => ({
     OptionText: String(OptionText ?? '').trim(),
     IsCorrect: Boolean(IsCorrect),
   }));
-  const correctCount = mappedOptions.filter((option) => option.IsCorrect).length;
 
   return {
     tempId,
     QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     QuestionText: String(QuestionText ?? '').trim(),
-    Score: Number(Score) || 1,
-    AllowMultipleAnswers: correctCount > 1,
-    isActive: normalized.isActive !== false,
+    Score: 1,
+    isActive: toBooleanDefaultTrue(normalized.isActive),
+    isUseForTest: toBooleanDefaultTrue(normalized.isUseForTest),
     Options: mappedOptions,
   };
 }
 
 export function buildTestSectionPayload(section, sectionOrder) {
   const skillType = section.SkillType;
-  const sectionTitle = String(section.SectionTitle ?? '').trim();
+  const displayName = String(section.DisplayName ?? '').trim();
 
   const base = {
     tempId: section.tempId,
-    SectionTitle: sectionTitle || getSectionDisplayTitle(section),
-    DisplayName: String(section.DisplayName ?? '').trim() || null,
+    SectionTitle: section.SectionTitle == null ? null : String(section.SectionTitle),
+    DisplayName: displayName || getSectionDisplayTitle(section),
     SkillType: skillType,
+    isUseForTest: section.isUseForTest !== false,
     Description: String(section.Description ?? '').trim() || null,
     SectionOrder: sectionOrder,
     Questions: (section.Questions ?? []).map(buildTestQuestionPayload),
@@ -1340,19 +1371,14 @@ export function scrollToQuestionBankItem(target, { delayMs = 180 } = {}) {
 }
 
 export function buildTestMaterialPayload(material, base) {
-  const scoringMode = getEffectiveScoringMode(material);
   const totalScore = DEFAULT_TEST_TOTAL_SCORE;
-  let sections = material.Sections ?? [];
-
-  if (scoringMode === SCORING_MODE_AUTO) {
-    sections = applyAutoScoresToQuestions(sections, totalScore);
-  }
+  const sections = material.Sections ?? [];
 
   return {
     ...base,
     MaterialUrl: null,
     TotalScore: totalScore,
-    ScoringMode: scoringMode,
+    ScoringMode: SCORING_MODE_AUTO,
     TestSource: material.TestSource ?? null,
     FinalTestConfig: material.FinalTestConfig ?? null,
     QuestionBankId: material.QuestionBankId ?? null,

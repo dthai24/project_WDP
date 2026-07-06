@@ -53,7 +53,6 @@ function toStudentQuestion(question, order, shuffleAnswers) {
     tempId: question.tempId,
     questionType: question.QuestionType ?? 'MULTIPLE_CHOICE',
     questionText: question.QuestionText,
-    allowMultipleAnswers: Boolean(question.AllowMultipleAnswers),
     score: Number(question.Score) || 1,
     order,
     options,
@@ -68,7 +67,6 @@ function toGradingQuestion(question, sourceSection = null) {
 
   return {
     tempId: question.tempId,
-    allowMultipleAnswers: Boolean(question.AllowMultipleAnswers),
     score: Number(question.Score) || 1,
     correctOptionTempIds,
     questionText: question.QuestionText,
@@ -288,7 +286,6 @@ export function gradeTestAnswers(gradingQuestions = [], answers = {}, totalScore
       isCorrect,
       selectedOptionTempIds: selected,
       correctOptionTempIds: correct,
-      allowMultipleAnswers: question.allowMultipleAnswers,
     };
   });
 

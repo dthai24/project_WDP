@@ -1,4 +1,4 @@
--- Migration: Question Bank section metadata + question score
+-- Migration: Question Bank section metadata + question flags
 -- NOTE: After this script, run migrate-question-section-source-url.sql to simplify to SourceUrl only.
 -- Database: LearningPath_Base (SQL Server)
 -- Chay toan bo file trong SSMS (F5). Khong chay lenh sqlcmd trong cua so query.
@@ -67,23 +67,9 @@ BEGIN
 END
 GO
 
--- 2) Questions: score + allowMultipleAnswers
-IF COL_LENGTH('dbo.Questions', 'Score') IS NULL
-BEGIN
-  ALTER TABLE dbo.Questions ADD Score INT NOT NULL
-    CONSTRAINT DF_Questions_Score DEFAULT (1);
-END
-GO
-
-IF COL_LENGTH('dbo.Questions', 'AllowMultipleAnswers') IS NULL
-BEGIN
-  ALTER TABLE dbo.Questions ADD AllowMultipleAnswers BIT NOT NULL
-    CONSTRAINT DF_Questions_AllowMultipleAnswers DEFAULT (0);
-END
-GO
-
--- 3) Migrate audio Listening: Questions.URL -> Question_Sections.AudioUrl
+-- 3) Migrate audio Listening: Questions.URL -> Question_Sections.AudioUrl (legacy)
 IF COL_LENGTH('dbo.Question_Sections', 'AudioUrl') IS NOT NULL
+   AND COL_LENGTH('dbo.Questions', 'URL') IS NOT NULL
 BEGIN
   ;WITH FirstAudio AS (
     SELECT
@@ -113,22 +99,6 @@ BEGIN
   FROM dbo.Question_Sections qs
   INNER JOIN AudioPick ap ON ap.SectionId = qs.SectionId
   WHERE qs.AudioUrl IS NULL;
-END
-GO
-
--- 4) Backfill AllowMultipleAnswers from choices
-IF COL_LENGTH('dbo.Questions', 'AllowMultipleAnswers') IS NOT NULL
-BEGIN
-  UPDATE q
-  SET q.AllowMultipleAnswers = CASE WHEN c.CorrectCount > 1 THEN 1 ELSE 0 END
-  FROM dbo.Questions q
-  INNER JOIN (
-    SELECT
-      QuestionId,
-      SUM(CASE WHEN IsTrue = 1 THEN 1 ELSE 0 END) AS CorrectCount
-    FROM dbo.Question_Choices
-    GROUP BY QuestionId
-  ) c ON c.QuestionId = q.QuestionId;
 END
 GO
 

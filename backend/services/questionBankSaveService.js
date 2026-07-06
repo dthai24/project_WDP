@@ -9,16 +9,23 @@ const SKILL_TO_TYPE_ID = {
 };
 
 const SECTION_SET_COLUMN_MAP = {
-  sectionName: 'SectionName',
-  sourceUrl: 'SourceUrl',
-  order: 'Order',
+  SectionName: 'SectionName',
+  Title: 'Title',
+  SourceUrl: 'SourceUrl',
+  Order: 'Order',
+  IsUseForTest: 'IsUseForTest',
+};
+
+const CHOICE_SET_COLUMN_MAP = {
+  Title: 'Title',
+  Order: 'Order',
+  IsTrue: 'IsTrue',
 };
 
 const QUESTION_SET_COLUMN_MAP = {
-  title: 'Title',
-  isActive: 'IsActive',
-  score: 'Score',
-  allowMultipleAnswers: 'AllowMultipleAnswers',
+  Title: 'Title',
+  IsActive: 'IsActive',
+  IsUseForTest: 'IsUseForTest',
 };
 
 function mapSkillTypeToTypeId(skillType) {
@@ -31,13 +38,18 @@ function normalizeSourceUrl(value) {
 }
 
 function buildSectionInsertRow(data = {}, questionPathId, typeId) {
+  const sectionName = String(data.SectionName ?? '').trim() || 'Section';
+  const hasTitle = data.Title !== undefined && data.Title !== null;
+  const title = hasTitle ? String(data.Title) : sectionName;
+
   return {
     Question_Path_Id: questionPathId,
-    SectionName: String(data.sectionName ?? '').trim() || 'Section',
-    Title: null,
+    SectionName: sectionName,
+    Title: title,
     TypeId: typeId,
-    Order: Number(data.order) || 1,
-    SourceUrl: normalizeSourceUrl(data.sourceUrl),
+    Order: Number(data.Order) || 1,
+    SourceUrl: normalizeSourceUrl(data.SourceUrl),
+    IsUseForTest: data.IsUseForTest !== false ? 1 : 0,
   };
 }
 
@@ -49,14 +61,15 @@ async function insertSectionRow(transaction, row) {
   request.input('typeId', sql.Int, row.TypeId);
   request.input('order', sql.Int, row.Order);
   request.input('sourceUrl', sql.NVarChar(sql.MAX), row.SourceUrl);
+  request.input('isUseForTest', sql.Bit, row.IsUseForTest !== false ? 1 : 0);
 
   const result = await request.query(`
     INSERT INTO dbo.Question_Sections (
-      Question_Path_Id, SectionName, Title, TypeId, [Order], SourceUrl
+      Question_Path_Id, SectionName, Title, TypeId, [Order], SourceUrl, IsUseForTest
     )
     OUTPUT INSERTED.SectionId
     VALUES (
-      @questionPathId, @sectionName, @title, @typeId, @order, @sourceUrl
+      @questionPathId, @sectionName, @title, @typeId, @order, @sourceUrl, @isUseForTest
     )
   `);
   return result.recordset[0].SectionId;
@@ -80,6 +93,8 @@ async function updateSectionRow(transaction, sectionId, set = {}) {
       request.input(param, sql.Int, Number(value) || 1);
     } else if (column === 'SourceUrl') {
       request.input(param, sql.NVarChar(sql.MAX), normalizeSourceUrl(value));
+    } else if (column === 'IsUseForTest') {
+      request.input(param, sql.Bit, value ? 1 : 0);
     } else {
       request.input(param, sql.NVarChar(200), value ?? null);
     }
@@ -134,41 +149,114 @@ async function insertQuestionRow(transaction, { sectionId, questionPathId, typeI
   request.input('sectionId', sql.Int, sectionId);
   request.input('questionPathId', sql.Int, questionPathId);
   request.input('typeId', sql.Int, typeId);
-  request.input('title', sql.NVarChar(sql.MAX), String(data.title ?? '').trim() || 'Câu hỏi');
-  request.input('isActive', sql.Bit, data.isActive !== false ? 1 : 0);
+  request.input('title', sql.NVarChar(sql.MAX), String(data.Title ?? '').trim() || 'Câu hỏi');
+  request.input('isActive', sql.Bit, data.IsActive !== false ? 1 : 0);
+  request.input('isUseForTest', sql.Bit, data.IsUseForTest !== false ? 1 : 0);
   request.input('order', sql.Int, Number(order) || 1);
-  request.input('score', sql.Int, Number(data.score) || 1);
-  request.input('allowMultipleAnswers', sql.Bit, data.allowMultipleAnswers ? 1 : 0);
-  request.input('url', sql.NVarChar(sql.MAX), null);
 
   const result = await request.query(`
     INSERT INTO dbo.Questions (
-      SectionId, Title, Question_Path_Id, IsActive, TypeId, URL, [Order], Score, AllowMultipleAnswers
+      SectionId, Title, Question_Path_Id, IsActive, IsUseForTest, TypeId, [Order]
     )
     OUTPUT INSERTED.QuestionId
     VALUES (
-      @sectionId, @title, @questionPathId, @isActive, @typeId, @url, @order, @score, @allowMultipleAnswers
+      @sectionId, @title, @questionPathId, @isActive, @isUseForTest, @typeId, @order
     )
   `);
   return result.recordset[0].QuestionId;
 }
 
+async function insertChoiceRow(transaction, questionId, data = {}) {
+  const title = String(data.Title ?? '').trim();
+  if (!title) return null;
+
+  const request = new sql.Request(transaction);
+  request.input('questionId', sql.Int, Number(questionId));
+  request.input('title', sql.NVarChar(250), title);
+  request.input('order', sql.Int, Number(data.Order) || 1);
+  request.input('isTrue', sql.Bit, data.IsTrue ? 1 : 0);
+  const result = await request.query(`
+    INSERT INTO dbo.Question_Choices (QuestionId, Title, [Order], IsTrue)
+    OUTPUT INSERTED.ChoiceId
+    VALUES (@questionId, @title, @order, @isTrue)
+  `);
+  return result.recordset[0]?.ChoiceId ?? null;
+}
+
 async function insertChoices(transaction, questionId, choices = []) {
+  const choiceIdMap = [];
   for (const choice of choices) {
     const data = choice.data ?? choice;
-    const title = String(data.title ?? '').trim();
-    if (!title) continue;
-
-    const request = new sql.Request(transaction);
-    request.input('questionId', sql.Int, questionId);
-    request.input('title', sql.NVarChar(250), title);
-    request.input('order', sql.Int, Number(data.order) || 1);
-    request.input('isTrue', sql.Bit, data.isTrue ? 1 : 0);
-    await request.query(`
-      INSERT INTO dbo.Question_Choices (QuestionId, Title, [Order], IsTrue)
-      VALUES (@questionId, @title, @order, @isTrue)
-    `);
+    const choiceId = await insertChoiceRow(transaction, questionId, data);
+    if (choiceId && choice.clientRef) {
+      choiceIdMap.push({ clientRef: choice.clientRef, choiceId });
+    }
   }
+  return choiceIdMap;
+}
+
+async function updateChoiceRow(transaction, choiceId, questionId, set = {}) {
+  const parsedChoiceId = Number(choiceId);
+  const parsedQuestionId = Number(questionId);
+  if (!parsedChoiceId || !parsedQuestionId) return false;
+
+  const belongs = await questionBankSaveModel.choiceBelongsToQuestion(
+    parsedChoiceId,
+    parsedQuestionId,
+    transaction,
+  );
+  if (!belongs) return false;
+
+  const entries = Object.entries(set).filter(([key]) => CHOICE_SET_COLUMN_MAP[key]);
+  if (entries.length === 0) return true;
+
+  const request = new sql.Request(transaction);
+  request.input('choiceId', sql.Int, parsedChoiceId);
+  request.input('questionId', sql.Int, parsedQuestionId);
+
+  const assignments = entries.map(([key, value], index) => {
+    const column = CHOICE_SET_COLUMN_MAP[key];
+    const param = `c${index}`;
+
+    if (column === 'Order') {
+      request.input(param, sql.Int, Number(value) || 1);
+    } else if (column === 'IsTrue') {
+      request.input(param, sql.Bit, value ? 1 : 0);
+    } else {
+      request.input(param, sql.NVarChar(250), String(value ?? '').trim());
+    }
+
+    return `[${column}] = @${param}`;
+  });
+
+  await request.query(`
+    UPDATE dbo.Question_Choices
+    SET ${assignments.join(', ')}
+    WHERE ChoiceId = @choiceId AND QuestionId = @questionId
+  `);
+  return true;
+}
+
+async function deleteChoiceRow(transaction, choiceId, questionId) {
+  const parsedChoiceId = Number(choiceId);
+  const parsedQuestionId = Number(questionId);
+  if (!parsedChoiceId || !parsedQuestionId) return false;
+
+  const belongs = await questionBankSaveModel.choiceBelongsToQuestion(
+    parsedChoiceId,
+    parsedQuestionId,
+    transaction,
+  );
+  if (!belongs) return false;
+
+  const request = new sql.Request(transaction);
+  request.input('choiceId', sql.Int, parsedChoiceId);
+  request.input('questionId', sql.Int, parsedQuestionId);
+  await request.query(`
+    DELETE FROM dbo.Question_Choices
+    WHERE ChoiceId = @choiceId AND QuestionId = @questionId
+  `);
+  return true;
 }
 
 async function updateQuestionRow(transaction, item) {
@@ -194,10 +282,8 @@ async function updateQuestionRow(transaction, item) {
     const column = QUESTION_SET_COLUMN_MAP[key];
     const param = `q${index}`;
 
-    if (column === 'IsActive' || column === 'AllowMultipleAnswers') {
+    if (column === 'IsActive' || column === 'IsUseForTest') {
       request.input(param, sql.Bit, value ? 1 : 0);
-    } else if (column === 'Score') {
-      request.input(param, sql.Int, Number(value) || 1);
     } else if (column === 'Title') {
       request.input(param, sql.NVarChar(sql.MAX), String(value ?? '').trim());
     }
@@ -205,8 +291,9 @@ async function updateQuestionRow(transaction, item) {
     sets.push(`[${column}] = @${param}`);
   });
 
-  if (item.order != null) {
-    request.input('questionOrder', sql.Int, Number(item.order) || 1);
+  const questionOrder = item.Order ?? item.order;
+  if (questionOrder != null) {
+    request.input('questionOrder', sql.Int, Number(questionOrder) || 1);
     sets.push('[Order] = @questionOrder');
   }
 
@@ -217,19 +304,245 @@ async function updateQuestionRow(transaction, item) {
       WHERE QuestionId = @questionId AND SectionId = @sectionId
     `);
   }
+}
 
-  if (Array.isArray(item.choicesReplace)) {
-    const deleteRequest = new sql.Request(transaction);
-    deleteRequest.input('questionId', sql.Int, questionId);
-    await deleteRequest.query(`
-      DELETE FROM dbo.Question_Choices
-      WHERE QuestionId = @questionId
-    `);
-    await insertChoices(
-      transaction,
+async function assertSectionAccess(sectionId, courseId, pathId) {
+  const allowed = await questionBankModel.sectionBelongsToCoursePath(sectionId, courseId, pathId);
+  if (!allowed) {
+    const error = new Error('Không tìm thấy section thuộc course/path này.');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
+async function assertQuestionAccess(questionId, sectionId, courseId, pathId) {
+  const parsedQuestionId = Number(questionId);
+  const parsedSectionId = Number(sectionId);
+  if (!parsedQuestionId || !parsedSectionId) {
+    const error = new Error('questionId hoặc sectionId không hợp lệ.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await assertSectionAccess(parsedSectionId, courseId, pathId);
+  const belongs = await questionBankSaveModel.questionBelongsToSection(parsedQuestionId, parsedSectionId);
+  if (!belongs) {
+    const error = new Error('Không tìm thấy question thuộc section này.');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
+async function updateSectionFields(sectionId, set = {}, { courseId, pathId } = {}) {
+  const parsedSectionId = Number(sectionId);
+  const parsedCourseId = Number(courseId);
+  const parsedPathId = Number(pathId);
+
+  if (!Number.isInteger(parsedSectionId) || parsedSectionId <= 0) {
+    const error = new Error('sectionId không hợp lệ.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!Number.isInteger(parsedCourseId) || parsedCourseId <= 0) {
+    const error = new Error('courseId không hợp lệ.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!Number.isInteger(parsedPathId) || parsedPathId <= 0) {
+    const error = new Error('pathId không hợp lệ.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await assertSectionAccess(parsedSectionId, parsedCourseId, parsedPathId);
+
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+  try {
+    await updateSectionRow(transaction, parsedSectionId, set);
+    await transaction.commit();
+    return { sectionId: parsedSectionId };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function updateQuestionFields(
+  questionId,
+  { sectionId, set = {}, order = null, courseId, pathId } = {},
+) {
+  await assertQuestionAccess(questionId, sectionId, courseId, pathId);
+
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+  try {
+    await updateQuestionRow(transaction, {
       questionId,
-      item.choicesReplace.map((choice) => ({ data: choice })),
-    );
+      sectionId,
+      set,
+      Order: order,
+    });
+    await transaction.commit();
+    return { questionId: Number(questionId), sectionId: Number(sectionId) };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function updateChoiceFields(
+  choiceId,
+  { questionId, sectionId, set = {}, courseId, pathId } = {},
+) {
+  await assertQuestionAccess(questionId, sectionId, courseId, pathId);
+
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+  try {
+    const updated = await updateChoiceRow(transaction, choiceId, questionId, set);
+    if (!updated) {
+      const error = new Error('Không tìm thấy choice để cập nhật.');
+      error.statusCode = 404;
+      throw error;
+    }
+    await transaction.commit();
+    return { choiceId: Number(choiceId), questionId: Number(questionId) };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function createQuestionChoice(_choiceId, questionId, { sectionId, data = {}, courseId, pathId, clientRef = null } = {}) {
+  await assertQuestionAccess(questionId, sectionId, courseId, pathId);
+
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+  try {
+    const newChoiceId = await insertChoiceRow(transaction, questionId, data);
+    if (!newChoiceId) {
+      const error = new Error('Không thể tạo choice.');
+      error.statusCode = 400;
+      throw error;
+    }
+    await transaction.commit();
+    return {
+      choiceId: newChoiceId,
+      questionId: Number(questionId),
+      clientRef,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function removeQuestionChoice(choiceId, questionId, { sectionId, courseId, pathId } = {}) {
+  await assertQuestionAccess(questionId, sectionId, courseId, pathId);
+
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+  try {
+    const deleted = await deleteChoiceRow(transaction, choiceId, questionId);
+    if (!deleted) {
+      const error = new Error('Không tìm thấy choice để xóa.');
+      error.statusCode = 404;
+      throw error;
+    }
+    await transaction.commit();
+    return { choiceId: Number(choiceId), questionId: Number(questionId) };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function createSectionQuestion(
+  sectionId,
+  { data = {}, order = 1, choices = [], courseId, pathId, questionPathId = null, skillType = null, clientRef = null } = {},
+) {
+  const parsedSectionId = Number(sectionId);
+  await assertSectionAccess(parsedSectionId, courseId, pathId);
+  const resolvedQuestionPathId = await questionBankSaveModel.resolveQuestionPathId({
+    courseId,
+    pathId,
+    questionPathId,
+  });
+  const typeId = mapSkillTypeToTypeId(skillType);
+
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+  try {
+    const questionId = await insertQuestionRow(transaction, {
+      sectionId: parsedSectionId,
+      questionPathId: resolvedQuestionPathId,
+      typeId,
+      order,
+      data,
+    });
+    const choiceIdMap = await insertChoices(transaction, questionId, choices);
+    await transaction.commit();
+    return {
+      sectionId: parsedSectionId,
+      questionId,
+      clientRef,
+      choiceIdMap,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function deactivateQuestion(questionId, sectionId, { courseId, pathId } = {}) {
+  await assertQuestionAccess(questionId, sectionId, courseId, pathId);
+
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+  try {
+    await softDeleteQuestions(transaction, [{ questionId, sectionId }]);
+    await transaction.commit();
+    return { questionId: Number(questionId), sectionId: Number(sectionId) };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function updateExistingSectionPayload(payload) {
+  const { context, courseId, pathId } = validateSavePayload(payload);
+  const sectionId = Number(context.sectionId);
+  if (!sectionId) {
+    const error = new Error('Thiếu context.sectionId khi cập nhật section.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await assertSectionAccess(sectionId, courseId, pathId);
+
+  let savedSourceUrl = null;
+  const transaction = new sql.Transaction();
+  await transaction.begin();
+
+  try {
+    if (payload.sectionSourceUpdate?.sectionId) {
+      savedSourceUrl = normalizeSourceUrl(payload.sectionSourceUpdate.SourceUrl);
+      await updateSectionSourceUrlRow(transaction, sectionId, savedSourceUrl);
+    }
+
+    if (payload.sectionUpdate?.set) {
+      await updateSectionRow(transaction, sectionId, payload.sectionUpdate.set);
+    }
+
+    await transaction.commit();
+    return {
+      sectionId,
+      sourceUrl: savedSourceUrl,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
 }
 
@@ -253,25 +566,15 @@ function validateSavePayload(payload) {
 }
 
 async function saveQuestionBankSectionPayload(payload, { requireExistingSection = false } = {}) {
+  if (requireExistingSection) {
+    return updateExistingSectionPayload(payload);
+  }
+
   const { context, courseId, pathId } = validateSavePayload(payload);
   let sectionId = context.sectionId != null ? Number(context.sectionId) : null;
   const typeId = mapSkillTypeToTypeId(context.skillType);
 
-  if (requireExistingSection) {
-    if (!sectionId) {
-      const error = new Error('Thiếu context.sectionId khi cập nhật section.');
-      error.statusCode = 400;
-      throw error;
-    }
-    const allowed = await questionBankModel.sectionBelongsToCoursePath(sectionId, courseId, pathId);
-    if (!allowed) {
-      const error = new Error('Không tìm thấy section thuộc course/path này.');
-      error.statusCode = 404;
-      throw error;
-    }
-  }
-
-  if (!requireExistingSection && sectionId) {
+  if (sectionId) {
     const error = new Error('Section đã tồn tại, hãy dùng PUT để cập nhật.');
     error.statusCode = 400;
     throw error;
@@ -284,37 +587,12 @@ async function saveQuestionBankSectionPayload(payload, { requireExistingSection 
   });
 
   const questionIdMap = [];
+  const choiceIdMap = [];
   let savedSourceUrl = null;
   const transaction = new sql.Transaction();
   await transaction.begin();
 
   try {
-    await softDeleteQuestions(transaction, payload.questionsDelete ?? []);
-
-    if (payload.sectionSourceUpdate?.sectionId) {
-      const targetSectionId = Number(payload.sectionSourceUpdate.sectionId);
-      const allowed = await questionBankModel.sectionBelongsToCoursePath(
-        targetSectionId,
-        courseId,
-        pathId,
-      );
-      if (!allowed) {
-        const error = new Error('Không tìm thấy section để cập nhật URL.');
-        error.statusCode = 404;
-        throw error;
-      }
-      savedSourceUrl = normalizeSourceUrl(payload.sectionSourceUpdate.sourceUrl);
-      await updateSectionSourceUrlRow(transaction, targetSectionId, savedSourceUrl);
-    }
-
-    if (payload.sectionUpdate?.set && sectionId) {
-      await updateSectionRow(transaction, sectionId, payload.sectionUpdate.set);
-    }
-
-    for (const item of payload.questionsUpdate ?? []) {
-      await updateQuestionRow(transaction, item);
-    }
-
     if (payload.sectionInsert?.data) {
       const row = buildSectionInsertRow(payload.sectionInsert.data, questionPathId, typeId);
       sectionId = await insertSectionRow(transaction, row);
@@ -325,31 +603,15 @@ async function saveQuestionBankSectionPayload(payload, { requireExistingSection 
           sectionId,
           questionPathId,
           typeId,
-          order: question.order,
+          order: question.Order ?? question.order,
           data: question.data ?? {},
         });
         if (question.clientRef) {
           questionIdMap.push({ clientRef: question.clientRef, questionId });
         }
-        await insertChoices(transaction, questionId, question.choicesInsert ?? []);
+        const insertedChoices = await insertChoices(transaction, questionId, question.choicesInsert ?? []);
+        choiceIdMap.push(...insertedChoices);
       }
-    }
-
-    for (const item of payload.questionsInsert ?? []) {
-      const targetSectionId = Number(item.sectionId) || sectionId;
-      if (!targetSectionId) continue;
-
-      const questionId = await insertQuestionRow(transaction, {
-        sectionId: targetSectionId,
-        questionPathId,
-        typeId,
-        order: item.order,
-        data: item.data ?? {},
-      });
-      if (item.clientRef) {
-        questionIdMap.push({ clientRef: item.clientRef, questionId });
-      }
-      await insertChoices(transaction, questionId, item.choicesInsert ?? []);
     }
 
     await transaction.commit();
@@ -357,6 +619,7 @@ async function saveQuestionBankSectionPayload(payload, { requireExistingSection 
       sectionId,
       questionPathId,
       questionIdMap,
+      choiceIdMap,
       sourceUrl: savedSourceUrl,
     };
   } catch (error) {
@@ -414,85 +677,15 @@ async function updateSectionSourceUrl(sectionId, sourceUrl, { courseId, pathId }
   }
 }
 
-async function deleteQuestionBankSection(sectionId, { courseId, pathId }) {
-  const parsedSectionId = Number(sectionId);
-  const parsedCourseId = Number(courseId);
-  const parsedPathId = Number(pathId);
-
-  if (!Number.isInteger(parsedSectionId) || parsedSectionId <= 0) {
-    const error = new Error('sectionId không hợp lệ.');
-    error.statusCode = 400;
-    throw error;
-  }
-  if (!Number.isInteger(parsedCourseId) || parsedCourseId <= 0) {
-    const error = new Error('courseId không hợp lệ.');
-    error.statusCode = 400;
-    throw error;
-  }
-  if (!Number.isInteger(parsedPathId) || parsedPathId <= 0) {
-    const error = new Error('pathId không hợp lệ.');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const context = await questionBankSaveModel.getSectionDeleteContext(
-    parsedSectionId,
-    parsedCourseId,
-    parsedPathId,
-  );
-  if (!context) {
-    const error = new Error('Không tìm thấy section thuộc course/path này.');
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const sectionCount = await questionBankSaveModel.countSectionsByPathAndType(
-    context.QuestionPathId,
-    context.TypeId,
-  );
-  if (sectionCount <= 1) {
-    const error = new Error('Không thể xóa section cuối cùng của kỹ năng này.');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const transaction = new sql.Transaction();
-  await transaction.begin();
-
-  try {
-    const deleteChoicesRequest = new sql.Request(transaction);
-    deleteChoicesRequest.input('sectionId', sql.Int, parsedSectionId);
-    await deleteChoicesRequest.query(`
-      DELETE FROM dbo.Question_Choices
-      WHERE QuestionId IN (
-        SELECT QuestionId FROM dbo.Questions WHERE SectionId = @sectionId
-      )
-    `);
-
-    const deleteQuestionsRequest = new sql.Request(transaction);
-    deleteQuestionsRequest.input('sectionId', sql.Int, parsedSectionId);
-    await deleteQuestionsRequest.query(`
-      DELETE FROM dbo.Questions
-      WHERE SectionId = @sectionId
-    `);
-
-    const deleteSectionRequest = new sql.Request(transaction);
-    deleteSectionRequest.input('sectionId', sql.Int, parsedSectionId);
-    await deleteSectionRequest.query(`
-      DELETE FROM dbo.Question_Sections
-      WHERE SectionId = @sectionId
-    `);
-
-    await transaction.commit();
-    return { sectionId: parsedSectionId };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-}
-
 module.exports = {
   saveQuestionBankSectionPayload,
-  deleteQuestionBankSection,
+  updateExistingSectionPayload,
+  updateSectionFields,
   updateSectionSourceUrl,
+  updateQuestionFields,
+  updateChoiceFields,
+  createSectionQuestion,
+  createQuestionChoice,
+  removeQuestionChoice,
+  deactivateQuestion,
 };

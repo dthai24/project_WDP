@@ -43,8 +43,6 @@ export default function useQuestionBankEditorUi({ resetKey } = {}) {
     return getSectionBaiNumber(activeSection, sections) - 1;
   }, [activeSection, sections]);
 
-  const canDeleteActiveSection = skillSections.length > 1;
-
   useEffect(() => {
     if (!activeSection && skillSections[0]) {
       setActiveSectionId(skillSections[0].tempId);
@@ -55,27 +53,6 @@ export default function useQuestionBankEditorUi({ resetKey } = {}) {
     setSections((prev) => prev.map((s) => (s.tempId === tempId ? nextSection : s)));
     if (sectionErrors[tempId]) {
       setSectionErrors((prev) => ({ ...prev, [tempId]: undefined }));
-    }
-  };
-
-  const handleDeleteSection = (tempId) => {
-    const section = sections.find((item) => item.tempId === tempId);
-    if (!section) return;
-
-    const sameSkillSections = getSectionsBySkill(sections, section.SkillType);
-    if (sameSkillSections.length <= 1) return;
-
-    const nextSections = sections.filter((item) => item.tempId !== tempId);
-    setSections(nextSections);
-    setSectionErrors((prev) => {
-      const next = { ...prev };
-      delete next[tempId];
-      return next;
-    });
-
-    if (activeSectionId === tempId) {
-      const fallback = getSectionsBySkill(nextSections, section.SkillType)[0];
-      setActiveSectionId(fallback?.tempId ?? '');
     }
   };
 
@@ -131,9 +108,7 @@ export default function useQuestionBankEditorUi({ resetKey } = {}) {
     skillSections,
     activeSection,
     activeSectionIndex,
-    canDeleteActiveSection,
     handleSectionChange,
-    handleDeleteSection,
     handleSkillSelect,
     handleSectionSelect,
     handleAddBai,

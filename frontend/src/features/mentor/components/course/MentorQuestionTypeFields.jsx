@@ -10,10 +10,6 @@ import {
   TEST_QUESTION_TEXT_MAX,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
-function countCorrectOptions(options = []) {
-  return options.filter((option) => option.IsCorrect).length;
-}
-
 export default function MentorQuestionTypeFields({
   question,
   errors = {},
@@ -32,7 +28,6 @@ export default function MentorQuestionTypeFields({
   const updateOptions = (nextOptions) => {
     handleFieldChange({
       Options: nextOptions,
-      AllowMultipleAnswers: countCorrectOptions(nextOptions) > 1,
     });
   };
 
@@ -47,9 +42,19 @@ export default function MentorQuestionTypeFields({
   };
 
   const handleCorrectToggle = (optionTempId) => {
+    const target = options.find((option) => option.tempId === optionTempId);
+    if (!target) return;
+
+    const nextIsCorrect = !target.IsCorrect;
+    if (!nextIsCorrect && options.filter((option) => option.IsCorrect).length <= 1) {
+      return;
+    }
+
     updateOptions(
       options.map((option) =>
-        option.tempId === optionTempId ? { ...option, IsCorrect: !option.IsCorrect } : option,
+        option.tempId === optionTempId
+          ? { ...option, IsCorrect: nextIsCorrect }
+          : option,
       ),
     );
   };
@@ -193,7 +198,7 @@ export default function MentorQuestionTypeFields({
             mb: 0.65,
           }}
         >
-          Đáp án
+          Đáp án (có thể chọn nhiều đáp án đúng)
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.15 }}>

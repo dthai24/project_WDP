@@ -32,6 +32,8 @@ import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
 
 const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32];
 const DEFAULT_FONT_SIZE = 14;
+const INPUT_SYNC_MS = 300;
+const PROACTIVE_SYNC_MS = 2000;
 
 const EMPTY_FORMATS = {
   bold: false,
@@ -222,6 +224,14 @@ const PREVIEW_CONTENT_SX = {
   ...RICH_CONTENT_SX,
 };
 
+const COMPACT_SCROLL_PANEL_SX = {
+  minHeight: { xs: 160, sm: 200 },
+  maxHeight: { xs: 'min(36vh, 300px)', sm: 'min(42vh, 360px)', lg: 'min(46vh, 420px)' },
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  WebkitOverflowScrolling: 'touch',
+};
+
 export default function MentorTextMaterialEditor({
   material,
   errors = {},
@@ -229,15 +239,18 @@ export default function MentorTextMaterialEditor({
   onRegisterFlush,
   disabled = false,
   compact = false,
+  previewOnRemoteLoad = false,
+  defaultShowPreview = false,
 }) {
   const editorRef = useRef(null);
   const savedRangeRef = useRef(null);
   const lastHtmlRef = useRef('');
   const isComposingRef = useRef(false);
   const syncTimerRef = useRef(null);
+  const proactiveSyncTimerRef = useRef(null);
   const materialTempIdRef = useRef(material.tempId);
   const onChangeRef = useRef(onChange);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(defaultShowPreview);
   const [formats, setFormats] = useState({ ...EMPTY_FORMATS });
   const [editorEmpty, setEditorEmpty] = useState(true);
   const [editorFocused, setEditorFocused] = useState(false);
@@ -262,14 +275,31 @@ export default function MentorTextMaterialEditor({
     updateEditorEmptyState(html);
   }, [updateEditorEmptyState]);
 
+  const clearProactiveSync = useCallback(() => {
+    if (proactiveSyncTimerRef.current) {
+      window.clearTimeout(proactiveSyncTimerRef.current);
+      proactiveSyncTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleProactiveSync = useCallback(() => {
+    if (isComposingRef.current || disabled) return;
+    clearProactiveSync();
+    proactiveSyncTimerRef.current = window.setTimeout(() => {
+      proactiveSyncTimerRef.current = null;
+      flushSyncFromDom();
+    }, PROACTIVE_SYNC_MS);
+  }, [clearProactiveSync, disabled, flushSyncFromDom]);
+
   const scheduleSyncFromDom = useCallback(() => {
     if (isComposingRef.current) return;
     if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
     syncTimerRef.current = window.setTimeout(() => {
       syncTimerRef.current = null;
       flushSyncFromDom();
-    }, 300);
-  }, [flushSyncFromDom]);
+    }, INPUT_SYNC_MS);
+    scheduleProactiveSync();
+  }, [flushSyncFromDom, scheduleProactiveSync]);
 
   const refreshFormats = useCallback(() => {
     if (isComposingRef.current) return;
@@ -289,9 +319,10 @@ export default function MentorTextMaterialEditor({
       runner();
       saveSelection(el, savedRangeRef);
       flushSyncFromDom();
+      scheduleProactiveSync();
       refreshFormats();
     },
-    [disabled, flushSyncFromDom, refreshFormats],
+    [disabled, flushSyncFromDom, refreshFormats, scheduleProactiveSync],
   );
 
   const handleExec = useCallback(
@@ -342,7 +373,8 @@ export default function MentorTextMaterialEditor({
       window.clearTimeout(syncTimerRef.current);
       syncTimerRef.current = null;
     }
-  }, []);
+    clearProactiveSync();
+  }, [clearProactiveSync]);
 
   const handleCompositionEnd = useCallback(() => {
     isComposingRef.current = false;
@@ -350,13 +382,15 @@ export default function MentorTextMaterialEditor({
       flushSyncFromDom();
       captureSelection();
       refreshFormats();
+      scheduleProactiveSync();
     });
-  }, [flushSyncFromDom, captureSelection, refreshFormats]);
+  }, [flushSyncFromDom, captureSelection, refreshFormats, scheduleProactiveSync]);
 
   const handleEditorFocus = useCallback(() => {
     setEditorFocused(true);
     captureSelection();
-  }, [captureSelection]);
+    scheduleProactiveSync();
+  }, [captureSelection, scheduleProactiveSync]);
 
   const handleEditorBlur = useCallback(() => {
     setEditorFocused(false);
@@ -364,10 +398,38 @@ export default function MentorTextMaterialEditor({
       window.clearTimeout(syncTimerRef.current);
       syncTimerRef.current = null;
     }
-    window.requestAnimationFrame(() => {
-      flushSyncFromDom();
+    clearProactiveSync();
+    flushSyncFromDom();
+  }, [clearProactiveSync, flushSyncFromDom]);
+
+  const syncEditorFromMaterial = useCallback(() => {
+    if (!editorRef.current) return;
+
+    const html = material.Content || lastHtmlRef.current || '';
+    const normalizedHtml = cleanHtml(html);
+    if (cleanHtml(editorRef.current.innerHTML) === normalizedHtml) {
+      lastHtmlRef.current = normalizedHtml;
+      updateEditorEmptyState(html);
+      return;
+    }
+
+    editorRef.current.innerHTML = html || '';
+    lastHtmlRef.current = normalizedHtml;
+    updateEditorEmptyState(html || '');
+  }, [material.Content, updateEditorEmptyState]);
+
+  const handleTogglePreview = useCallback(() => {
+    setShowPreview((prev) => {
+      const next = !prev;
+      if (prev && !next) {
+        window.requestAnimationFrame(() => {
+          syncEditorFromMaterial();
+          editorRef.current?.focus();
+        });
+      }
+      return next;
     });
-  }, [flushSyncFromDom]);
+  }, [syncEditorFromMaterial]);
 
   const handleEditorMouseUp = useCallback(() => {
     if (isComposingRef.current) return;
@@ -394,9 +456,10 @@ export default function MentorTextMaterialEditor({
         window.clearTimeout(syncTimerRef.current);
         syncTimerRef.current = null;
       }
+      clearProactiveSync();
       flushSyncFromDom();
     };
-  }, [flushSyncFromDom]);
+  }, [clearProactiveSync, flushSyncFromDom]);
 
   useEffect(() => {
     let cancelled = false;
@@ -410,6 +473,9 @@ export default function MentorTextMaterialEditor({
           html = await fetchTextMaterialHtml(material.MaterialUrl);
           if (!cancelled && html && !isHtmlEmpty(html)) {
             onChangeRef.current(materialTempIdRef.current, { Content: html });
+            if (previewOnRemoteLoad) {
+              setShowPreview(true);
+            }
           }
         } catch {
           /* giữ editor trống nếu không tải được */
@@ -432,6 +498,15 @@ export default function MentorTextMaterialEditor({
   }, [material.tempId]);
 
   useEffect(() => {
+    setShowPreview(defaultShowPreview);
+  }, [material.tempId, defaultShowPreview]);
+
+  useEffect(() => {
+    if (editorFocused || isComposingRef.current) return;
+    syncEditorFromMaterial();
+  }, [material.Content, editorFocused, syncEditorFromMaterial]);
+
+  useEffect(() => {
     const onSelectionChange = () => {
       if (isComposingRef.current) return;
       const el = editorRef.current;
@@ -446,9 +521,13 @@ export default function MentorTextMaterialEditor({
   }, []);
 
   const editorSx = {
-    minHeight: 320,
-    maxHeight: 520,
-    overflowY: 'auto',
+    ...(compact
+      ? COMPACT_SCROLL_PANEL_SX
+      : {
+          minHeight: 320,
+          maxHeight: 520,
+          overflowY: 'auto',
+        }),
     p: 2,
     borderRadius: '14px',
     bgcolor: '#fff',
@@ -458,6 +537,18 @@ export default function MentorTextMaterialEditor({
     transition: 'border-color 0.15s',
     '&:focus': { borderColor: errors.Content ? '#DC2626' : theme.color },
     ...RICH_CONTENT_SX,
+  };
+
+  const previewSx = {
+    ...PREVIEW_CONTENT_SX,
+    ...(compact
+      ? COMPACT_SCROLL_PANEL_SX
+      : {
+          minHeight: 280,
+          maxHeight: 'min(60vh, 520px)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }),
   };
 
   return (
@@ -493,7 +584,7 @@ export default function MentorTextMaterialEditor({
         <AppButton
           variant="outlined"
           size="small"
-          onClick={() => setShowPreview((v) => !v)}
+          onClick={handleTogglePreview}
           sx={{
             minWidth: 0,
             height: 30,
@@ -510,21 +601,42 @@ export default function MentorTextMaterialEditor({
         </AppButton>
       </Box>
 
-      {!showPreview && (
-        <>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 0.25,
-              p: '5px 8px',
-              mb: 1,
-              borderRadius: '12px',
-              bgcolor: '#fff',
-              border: '1px solid rgba(15,23,42,0.08)',
-            }}
-          >
+      {showPreview && (
+        <Box sx={{ mb: showPreview ? 1.25 : 0 }}>
+          <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
+            Xem trước
+          </ContentFieldLabel>
+          {loadingRemote ? (
+            <Box sx={{ ...previewSx, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CircularProgress size={28} sx={{ color: theme.color }} />
+            </Box>
+          ) : (
+            <Box
+              sx={previewSx}
+              dangerouslySetInnerHTML={{
+                __html: isHtmlEmpty(material.Content)
+                  ? '<span style="color:#94A3B8">Chưa có nội dung để xem trước.</span>'
+                  : material.Content,
+              }}
+            />
+          )}
+        </Box>
+      )}
+
+      <Box sx={{ display: showPreview ? 'none' : 'block' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 0.25,
+            p: '5px 8px',
+            mb: 1,
+            borderRadius: '12px',
+            bgcolor: '#fff',
+            border: '1px solid rgba(15,23,42,0.08)',
+          }}
+        >
             <ToolbarBtn
               title="Hoàn tác (Ctrl+Z)"
               disabled={disabled}
@@ -724,35 +836,13 @@ export default function MentorTextMaterialEditor({
               {errors.Content}
             </Typography>
           )}
-        </>
-      )}
+      </Box>
 
-      {showPreview && (
-        <Box>
-          <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
-            Xem trước
-          </ContentFieldLabel>
-          {loadingRemote ? (
-            <Box sx={{ ...PREVIEW_CONTENT_SX, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CircularProgress size={28} sx={{ color: theme.color }} />
-            </Box>
-          ) : (
-            <Box
-              sx={PREVIEW_CONTENT_SX}
-              dangerouslySetInnerHTML={{
-                __html: isHtmlEmpty(material.Content)
-                  ? '<span style="color:#94A3B8">Chưa có nội dung để xem trước.</span>'
-                  : material.Content,
-              }}
-            />
-          )}
-          {errors.Content && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
-              {errors.Content}
-            </Typography>
-          )}
-        </Box>
-      )}
+      {errors.Content && showPreview ? (
+        <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
+          {errors.Content}
+        </Typography>
+      ) : null}
     </Box>
   );
 }

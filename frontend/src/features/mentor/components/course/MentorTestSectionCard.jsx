@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Collapse, IconButton, InputBase, Tooltip, Typography } from '@mui/material';
+import { Box, Collapse, IconButton, InputBase, Switch, Tooltip, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import ShuffleRoundedIcon from '@mui/icons-material/ShuffleRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import { ContentFieldLabel } from './MentorContentSectionHeading';
@@ -134,34 +134,63 @@ function AddQuestionButton({ onClick, disabled, label = 'Thêm câu hỏi', vari
   );
 }
 
-function getDeleteConfirmContent(deleteConfirm, { questionBankMode, isWritingQuestionBank }) {
+function getDeleteConfirmContent(deleteConfirm) {
   if (!deleteConfirm) {
     return { title: 'Xác nhận', message: '' };
-  }
-
-  if (deleteConfirm.type === 'section') {
-    if (questionBankMode) {
-      if (isWritingQuestionBank) {
-        return {
-          title: 'Xóa nhóm này?',
-          message: 'Toàn bộ câu hỏi trong nhóm sẽ bị xóa. Bạn không thể hoàn tác.',
-        };
-      }
-      return {
-        title: 'Xóa bài này?',
-        message: 'Toàn bộ câu hỏi trong bài sẽ bị xóa. Bạn không thể hoàn tác.',
-      };
-    }
-    return {
-      title: 'Xóa phần này?',
-      message: 'Toàn bộ câu hỏi trong phần sẽ bị xóa. Bạn không thể hoàn tác.',
-    };
   }
 
   return {
     title: 'Xóa câu hỏi?',
     message: `Bạn có chắc muốn xóa câu ${deleteConfirm.index + 1}? Hành động này không thể hoàn tác.`,
   };
+}
+
+function SectionUseForTestBadge({ active }) {
+  if (active) {
+    return (
+      <Tooltip title="Section được dùng trong bài kiểm tra" arrow>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 22,
+            height: 22,
+            borderRadius: '999px',
+            bgcolor: 'rgba(5,150,105,0.12)',
+            flexShrink: 0,
+          }}
+        >
+          <CheckCircleRoundedIcon sx={{ fontSize: 15, color: '#059669' }} />
+        </Box>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip title="Section không được dùng trong bài kiểm tra" arrow>
+      <Box
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 22,
+          height: 22,
+          borderRadius: '999px',
+          bgcolor: 'rgba(245,158,11,0.16)',
+          border: '1px solid rgba(245,158,11,0.35)',
+          flexShrink: 0,
+        }}
+      >
+        <Typography
+          component="span"
+          sx={{ fontSize: 13, fontWeight: 800, color: '#D97706', lineHeight: 1 }}
+        >
+          !
+        </Typography>
+      </Box>
+    </Tooltip>
+  );
 }
 
 export default function MentorTestSectionCard({
@@ -173,17 +202,14 @@ export default function MentorTestSectionCard({
   scoringMode = SCORING_MODE_AUTO,
   totalScore = 10,
   questionCountAll = 0,
-  showScoreField = false,
   defaultExpanded = true,
   lockSkillType = false,
-  hideDelete = false,
   sectionBadgeLabel,
   questionBankMode = false,
   allSections = [],
   coursePublished = false,
   persistedQuestionIds = null,
   onChange,
-  onDelete,
   onRegisterSectionControls,
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -219,6 +245,7 @@ export default function MentorTestSectionCard({
       ? `${questionCount} câu`
       : null
     : sectionScoreLabel;
+  const sectionUseForTest = section.isUseForTest !== false;
   const isReadingQuestionBank = questionBankMode && skillType === TEST_SKILL_READING;
   const isWritingQuestionBank = questionBankMode && skillType === TEST_SKILL_WRITING;
   const sectionTitleLabel = (() => {
@@ -242,8 +269,8 @@ export default function MentorTestSectionCard({
       : 'Mô tả ngắn cho bài (tuỳ chọn)';
   })();
   const listeningPromptValue = (() => {
-    const title = String(section.SectionTitle ?? '').trim();
-    const desc = String(section.Description ?? '').trim();
+    const title = String(section.SectionTitle ?? '');
+    const desc = String(section.Description ?? '');
     if (title && desc) return `${title}\n\n${desc}`;
     return title || desc;
   })();
@@ -255,6 +282,12 @@ export default function MentorTestSectionCard({
 
   const updateSection = (patch) => onChange({ ...section, ...patch });
   const updateQuestions = (nextQuestions) => updateSection({ Questions: nextQuestions });
+  const keepTypingKeysInInput = (event) => {
+    event.stopPropagation();
+  };
+  const keepTypingKeysInInputCapture = (event) => {
+    event.stopPropagation();
+  };
 
   const handleAddQuestion = () => {
     updateQuestions([...questions, createEmptyTestQuestion()]);
@@ -265,11 +298,11 @@ export default function MentorTestSectionCard({
     const locked = isPersistedQuestionLocked(prev, persistedQuestionIds, coursePublished);
 
     if (locked) {
-      if (prev?.isActive !== nextQuestion.isActive) {
+      if (prev?.isUseForTest !== nextQuestion.isUseForTest) {
         updateQuestions(
           questions.map((question) =>
             question.tempId === questionTempId
-              ? { ...question, isActive: nextQuestion.isActive }
+              ? { ...question, isUseForTest: nextQuestion.isUseForTest }
               : question,
           ),
         );
@@ -315,26 +348,11 @@ export default function MentorTestSectionCard({
 
   const handleConfirmDelete = () => {
     if (!deleteConfirm) return;
-    if (deleteConfirm.type === 'section') {
-      onDelete?.();
-    } else {
-      handleDeleteQuestion(deleteConfirm.tempId);
-    }
+    handleDeleteQuestion(deleteConfirm.tempId);
     setDeleteConfirm(null);
   };
 
-  const deleteDialogContent = getDeleteConfirmContent(deleteConfirm, {
-    questionBankMode,
-    isWritingQuestionBank,
-  });
-
-  const sectionHasPersistedQuestions =
-    coursePublished &&
-    questions.some((question) =>
-      isPersistedQuestionLocked(question, persistedQuestionIds, coursePublished),
-    );
-
-  const effectiveHideDelete = hideDelete || (questionBankMode && sectionHasPersistedQuestions);
+  const deleteDialogContent = getDeleteConfirmContent(deleteConfirm);
 
   const canShuffleSectionOptions =
     !coursePublished && questions.some((question) => canShuffleTestQuestionOptions(question));
@@ -401,28 +419,35 @@ export default function MentorTestSectionCard({
         >
           {/* QB mode: skill name only */}
           {questionBankMode ? (
-            <InputBase
-              value={section.DisplayName ?? ''}
-              onChange={(event) => updateSection({ DisplayName: event.target.value })}
-              disabled={disabled}
-              placeholder={sectionNamePlaceholder}
-              fullWidth
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                fontSize: 13,
-                fontWeight: 600,
-                color: TEXT,
-                px: 0.35,
-                py: 0.2,
-                borderBottom: `1px solid ${errors.DisplayName ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
-                borderRadius: 0,
-                '&:focus-within': {
-                  borderBottomColor: errors.DisplayName ? '#DC2626' : skillAccent,
-                },
-                '& input::placeholder': { color: MUTED, opacity: 1, fontWeight: 500 },
-              }}
-            />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <InputBase
+                value={section.DisplayName ?? ''}
+                onChange={(event) => updateSection({ DisplayName: event.target.value })}
+                onKeyDown={keepTypingKeysInInput}
+                onKeyDownCapture={keepTypingKeysInInputCapture}
+                disabled={disabled}
+                placeholder={sectionNamePlaceholder}
+                fullWidth
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: TEXT,
+                  px: 0.35,
+                  py: 0.2,
+                  borderBottom: `1px solid ${errors.DisplayName ? '#DC2626' : 'rgba(15,23,42,0.12)'}`,
+                  borderRadius: 0,
+                  '&:focus-within': {
+                    borderBottomColor: errors.DisplayName ? '#DC2626' : skillAccent,
+                  },
+                  '& input::placeholder': { color: MUTED, opacity: 1, fontWeight: 500 },
+                }}
+              />
+              {errors.DisplayName ? (
+                <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35, px: 0.35 }}>
+                  {errors.DisplayName}
+                </Typography>
+              ) : null}
+            </Box>
           ) : (
             <>
               <Typography
@@ -477,6 +502,9 @@ export default function MentorTestSectionCard({
         </Box>
 
         {/* Meta: question count (QB) or score label (test material) */}
+        {questionBankMode && !expanded ? (
+          <SectionUseForTestBadge active={sectionUseForTest} />
+        ) : null}
         {sectionMetaLabel ? (
           <Typography
             component="span"
@@ -499,29 +527,42 @@ export default function MentorTestSectionCard({
             <ExpandMoreRoundedIcon sx={{ fontSize: 19 }} />
           )}
         </IconButton>
-
-        {/* Delete */}
-        {!effectiveHideDelete ? (
-          <IconButton
-            size="small"
-            onClick={() => setDeleteConfirm({ type: 'section' })}
-            disabled={disabled}
-            aria-label="Xóa bài"
-            sx={{
-              color: MUTED,
-              flexShrink: 0,
-              p: 0.45,
-              '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.06)' },
-            }}
-          >
-            <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        ) : null}
       </Box>
 
       {/* ── Body ── */}
       <Collapse in={expanded}>
         <Box sx={{ p: { xs: 1.25, sm: 1.5 }, bgcolor: '#F8FAFC' }}>
+          {questionBankMode ? (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                mb: 1.25,
+                px: 0.25,
+              }}
+            >
+              <Switch
+                size="small"
+                checked={sectionUseForTest}
+                onChange={(event) => updateSection({ isUseForTest: event.target.checked })}
+                disabled={disabled}
+                inputProps={{ 'aria-label': 'Section được dùng cho bài kiểm tra' }}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: skillAccent },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    bgcolor: skillAccent,
+                    opacity: 0.5,
+                  },
+                }}
+              />
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, userSelect: 'none' }}>
+                Section được dùng cho bài kiểm tra
+              </Typography>
+              <SectionUseForTestBadge active={sectionUseForTest} />
+            </Box>
+          ) : null}
+
           {/* ── Basic info fields ── */}
           {isListeningQuestionBank ? (
             <Box sx={{ mb: 1.5 }}>
@@ -531,14 +572,21 @@ export default function MentorTestSectionCard({
                 onChange={(event) =>
                   updateSection({ SectionTitle: event.target.value, Description: '' })
                 }
+                onKeyDown={keepTypingKeysInInput}
+                onKeyDownCapture={keepTypingKeysInInputCapture}
                 disabled={disabled}
                 placeholder="Ví dụ: Nghe hội thoại giới thiệu bản thân tại văn phòng"
                 fullWidth
                 multiline
                 minRows={2}
                 maxRows={6}
-                sx={contentMultilineInputSx(false, skillTheme(skillAccent))}
+                sx={contentMultilineInputSx(Boolean(errors.SectionTitle), skillTheme(skillAccent))}
               />
+              {errors.SectionTitle ? (
+                <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
+                  {errors.SectionTitle}
+                </Typography>
+              ) : null}
             </Box>
           ) : isReadingQuestionBank ? (
             <>
@@ -547,17 +595,25 @@ export default function MentorTestSectionCard({
                 <InputBase
                   value={section.SectionTitle ?? ''}
                   onChange={(event) => updateSection({ SectionTitle: event.target.value })}
+                  onKeyDown={keepTypingKeysInInput}
+                  onKeyDownCapture={keepTypingKeysInInputCapture}
                   disabled={disabled}
                   placeholder={sectionTitlePlaceholder}
                   fullWidth
-                  sx={contentInputSx(false, skillTheme(skillAccent))}
+                  sx={contentInputSx(Boolean(errors.SectionTitle), skillTheme(skillAccent))}
                 />
+                {errors.SectionTitle ? (
+                  <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
+                    {errors.SectionTitle}
+                  </Typography>
+                ) : null}
               </Box>
               <MentorTestReadingSourceEditor
                 section={section}
                 errors={errors}
                 accentColor={skillAccent}
                 disabled={disabled}
+                questionBankMode={questionBankMode}
                 onChange={(patch) => updateSection(patch)}
                 onRegisterControls={handleRegisterChildControls}
               />
@@ -569,6 +625,8 @@ export default function MentorTestSectionCard({
                 <InputBase
                   value={section.SectionTitle ?? ''}
                   onChange={(event) => updateSection({ SectionTitle: event.target.value })}
+                  onKeyDown={keepTypingKeysInInput}
+                  onKeyDownCapture={keepTypingKeysInInputCapture}
                   disabled={disabled}
                   placeholder={sectionTitlePlaceholder}
                   fullWidth
@@ -614,6 +672,8 @@ export default function MentorTestSectionCard({
                   <InputBase
                     value={section.Description ?? ''}
                     onChange={(event) => updateSection({ Description: event.target.value })}
+                    onKeyDown={keepTypingKeysInInput}
+                    onKeyDownCapture={keepTypingKeysInInputCapture}
                     disabled={disabled}
                     placeholder={sectionDescPlaceholder}
                     fullWidth
@@ -710,7 +770,7 @@ export default function MentorTestSectionCard({
                 const contentChanged = questionBankMode
                   && isQuestionContentChangedFromInitial(question, section.InitialQuestions);
                 const questionErrors = questionBankMode && isFilledTestQuestion(question)
-                  ? validateTestQuestion(question, { validateScore: showScoreField })
+                  ? validateTestQuestion(question)
                   : (errors.Questions?.[question.tempId] ?? {});
                 return (
                 <MentorTestQuestionCard
@@ -722,7 +782,6 @@ export default function MentorTestSectionCard({
                   disabled={disabled}
                   contentLocked={contentLocked}
                   showActiveToggle={questionBankMode || (coursePublished && contentLocked)}
-                  showScoreField={showScoreField}
                   collapsibleChoices={questionBankMode}
                   contentChanged={contentChanged}
                   onViewContentChanges={() =>

@@ -10,7 +10,28 @@ import {
   useTheme,
 } from '@mui/material';
 import AppButton from '@/shared/ui/AppButton';
-import { MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { ContentFieldLabel } from '@/features/mentor/components/course/MentorContentSectionHeading';
+import { MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
+
+const PREVIEW_CONTENT_SX = {
+  minHeight: 120,
+  maxHeight: 'min(40vh, 360px)',
+  overflow: 'auto',
+  p: 2,
+  borderRadius: '14px',
+  bgcolor: '#fff',
+  border: '1px solid rgba(15,23,42,0.08)',
+  fontSize: 14,
+  lineHeight: 1.65,
+  color: TEXT,
+  '& p': { m: 0, mb: 1 },
+  '& ul, & ol': { pl: 2.5, my: 1 },
+  '& li': { mb: 0.35 },
+  '& strong, & b': { fontWeight: 700 },
+  '& em, & i': { fontStyle: 'italic' },
+  '& u': { textDecoration: 'underline' },
+};
 
 function SummaryChip({ label, count, color = 'default' }) {
   if (!count) return null;
@@ -28,6 +49,7 @@ function SummaryChip({ label, count, color = 'default' }) {
 export default function MentorQuestionBankSectionSavePreviewDialog({
   open,
   payload,
+  readingTextHtml = null,
   loading = false,
   onClose,
   onConfirm,
@@ -35,6 +57,7 @@ export default function MentorQuestionBankSectionSavePreviewDialog({
   const theme = useTheme();
   const jsonText = JSON.stringify(payload ?? {}, null, 2);
   const summary = payload?.summary ?? {};
+  const showReadingText = !isHtmlContentEmpty(readingTextHtml);
 
   return (
     <Dialog
@@ -53,25 +76,36 @@ export default function MentorQuestionBankSectionSavePreviewDialog({
     >
       <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Payload lưu section (API / DB)</DialogTitle>
       <DialogContent sx={{ pt: 0.5 }}>
+        {showReadingText ? (
+          <Box sx={{ mb: 1.5 }}>
+            <ContentFieldLabel sx={{ mb: 0.75, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
+              Nội dung văn bản
+            </ContentFieldLabel>
+            <Box
+              sx={PREVIEW_CONTENT_SX}
+              dangerouslySetInnerHTML={{ __html: readingTextHtml }}
+            />
+          </Box>
+        ) : null}
+
         <Typography sx={{ fontSize: 13, color: MUTED, mb: 1, lineHeight: 1.5 }}>
-          Mỗi block map trực tiếp 1 thao tác SQL đơn giản. Backend xử lý theo thứ tự:
+          Mỗi block map trực tiếp 1 REST call theo id:
           {' '}
           <strong>
-            sectionsDelete → questionsDelete → sectionSourceUpdate → sectionUpdate → questionsUpdate → sectionInsert / questionsInsert
+            DELETE question → PATCH section source → PUT section → PUT question → PUT choice → POST/DELETE choice → POST question → POST section
           </strong>
-          . URL đề bài lưu qua <strong>sectionSourceUpdate.sourceUrl</strong> → cột <strong>SourceUrl</strong>.
+          .
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.25 }}>
-          <SummaryChip label="DELETE sections" count={summary.sectionsDelete} color="error" />
           <SummaryChip label="UPDATE source URL" count={summary.sectionSourceUpdate} color="info" />
           <SummaryChip label="INSERT section" count={summary.sectionInsert} color="success" />
           <SummaryChip label="UPDATE section" count={summary.sectionUpdate} color="info" />
           <SummaryChip label="INSERT questions" count={summary.questionsInsert} color="success" />
           <SummaryChip label="UPDATE questions" count={summary.questionsUpdate} color="warning" />
           <SummaryChip label="DELETE questions" count={summary.questionsDelete} color="error" />
-          {summary.choicesReplace > 0 ? (
-            <SummaryChip label="REPLACE choices" count={summary.choicesReplace} color="warning" />
-          ) : null}
+          <SummaryChip label="INSERT choices" count={summary.choicesInsert} color="success" />
+          <SummaryChip label="UPDATE choices" count={summary.choicesUpdate} color="warning" />
+          <SummaryChip label="DELETE choices" count={summary.choicesDelete} color="error" />
         </Box>
         <Typography
           component="pre"
@@ -87,7 +121,7 @@ export default function MentorQuestionBankSectionSavePreviewDialog({
             color: '#0F172A',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
-            maxHeight: 'min(60vh, 520px)',
+            maxHeight: showReadingText ? 'min(36vh, 320px)' : 'min(60vh, 520px)',
             overflow: 'auto',
           }}
         >
@@ -99,14 +133,21 @@ export default function MentorQuestionBankSectionSavePreviewDialog({
           Hủy
         </AppButton>
         <AppButton
+          type="button"
           loading={loading}
-          onClick={onConfirm}
+          disabled={loading}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (loading) return;
+            onConfirm?.();
+          }}
           sx={{
             background: theme.palette.primary.main,
             '&:hover': { background: theme.palette.primary.dark },
           }}
         >
-          Xác nhận lưu
+          Lưu thay đổi
         </AppButton>
       </DialogActions>
     </Dialog>

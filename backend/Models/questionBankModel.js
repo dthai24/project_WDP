@@ -7,33 +7,31 @@ const getAllListQuestionBankByMentorId = async (mentorId) => {
         const request = new sql.Request();
         request.input('mentorId', sql.Int, Number(mentorId));
         const result = await request.query(`
-            SELECT c.CourseId,
+            SELECT
+                c.CourseId,
                 qb.BankId,
                 c.CourseName,
                 c.Description AS CourseDescription,
-
                 COUNT(DISTINCT q.QuestionId) AS TotalQuestion,
                 COUNT(DISTINCT CASE WHEN q.IsActive = 1 THEN q.QuestionId END) AS TotalQuestionIsPublic,
-                COUNT(DISTINCT qp.PathId) AS PathHasQuestion,
-
+                COUNT(DISTINCT CASE WHEN q.QuestionId IS NOT NULL THEN qp.PathId END) AS PathHasQuestion,
                 qb.UpdatedAt,
                 c.IsPublished,
                 c.Thumbnail
-
-            FROM Courses c
-            RIGHT JOIN Question_Bank qb ON c.CourseId = qb.CourseId
-            LEFT JOIN Questions_Path qp ON qp.BankId = qb.BankId
-            LEFT JOIN Questions q ON q.Question_Path_Id = qp.Question_Path_Id
-
-            GROUP BY c.CourseId,
+            FROM dbo.Question_Bank qb
+            INNER JOIN dbo.Courses c ON c.CourseId = qb.CourseId
+            LEFT JOIN dbo.Questions_Path qp ON qp.BankId = qb.BankId
+            LEFT JOIN dbo.Questions q ON q.Question_Path_Id = qp.Question_Path_Id
+            WHERE qb.InstructorId = @mentorId
+            GROUP BY
+                c.CourseId,
+                qb.BankId,
                 c.CourseName,
                 c.Description,
-                qp.PathId,
                 qb.UpdatedAt,
                 c.IsPublished,
-                c.Thumbnail,
-                qb.BankId
-
+                c.Thumbnail
+            ORDER BY qb.UpdatedAt DESC, c.CourseId DESC
         `);
         return result.recordset;
     } catch (error) {
@@ -59,6 +57,7 @@ const getSectionsByPath = async (courseId, pathId) => {
             RTRIM(qt.Name) AS SkillType,
             qs.[Order] AS SectionOrder,
             qs.SourceUrl,
+            qs.IsUseForTest,
             COUNT(q.QuestionId) AS QuestionCount
 
         FROM dbo.Questions_Path qp
@@ -81,7 +80,8 @@ const getSectionsByPath = async (courseId, pathId) => {
             qs.TypeId,
             qt.Name,
             qs.[Order],
-            qs.SourceUrl
+            qs.SourceUrl,
+            qs.IsUseForTest
         ORDER BY qs.[Order], qs.SectionId
     `);
     return result.recordset;
@@ -99,17 +99,18 @@ const getQuestionsBySection = async (sectionId) => {
             q.Title,
             q.TypeId,
             RTRIM(qt.Name) AS SkillType,
-            q.URL,
+            qs.SourceUrl AS SourceUrl,
             q.[Order] AS QuestionOrder,
             q.IsActive,
-            q.Score,
-            q.AllowMultipleAnswers,
+            q.IsUseForTest,
             qc.ChoiceId,
             qc.Title AS ChoiceTitle,
             qc.[Order] AS ChoiceOrder,
             qc.IsTrue
 
         FROM dbo.Questions q
+        INNER JOIN dbo.Question_Sections qs
+            ON qs.SectionId = q.SectionId
         INNER JOIN dbo.QuestionType qt
             ON qt.TypeId = q.TypeId
         LEFT JOIN dbo.Question_Choices qc
@@ -179,12 +180,26 @@ const getQuestionBankPathsByBankIdModel = async (bankId) => {
     return result.recordset
 }
 
+const updateQuestionUseForTestById = async (questionId, isUseForTest) => {
+    const request = new sql.Request();
+    request.input('questionId', sql.Int, Number(questionId));
+    request.input('isUseForTest', sql.Bit, isUseForTest ? 1 : 0);
+    const result = await request.query(`
+        UPDATE dbo.Questions
+        SET IsUseForTest = @isUseForTest
+        WHERE QuestionId = @questionId
+          AND IsActive = 1
+    `);
+    return Number(result.rowsAffected?.[0] || 0) > 0;
+}
+
 module.exports = {
     getAllListQuestionBankByMentorId,
     getSectionsByPath,
     getQuestionsBySection,
     sectionBelongsToCoursePath,
     getQuestionBankByIdModel,
-    getQuestionBankPathsByBankIdModel
+    getQuestionBankPathsByBankIdModel,
+    updateQuestionUseForTestById
 };
 

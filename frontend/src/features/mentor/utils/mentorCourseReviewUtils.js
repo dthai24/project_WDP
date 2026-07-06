@@ -21,8 +21,6 @@ import { validateMentorCourseForm } from './mentorCourseFormUtils';
 import {
   computeMaterialTestSummary,
   DEFAULT_TEST_TOTAL_SCORE,
-  getEffectiveScoringMode,
-  SCORING_MODE_MANUAL,
 } from './mentorTestContentUtils';
 
 export { MATERIAL_TYPE_LABELS, countMaterialsInPath };
@@ -156,18 +154,10 @@ export function getMaterialReviewDetailSummary(material) {
     case 'TEST': {
       if (normalized.QuestionBankTitle) {
         const summary = computeMaterialTestSummary(normalized.Sections ?? []);
-        const scoringLabel =
-          getEffectiveScoringMode(normalized) === SCORING_MODE_MANUAL
-            ? 'Chấm tay'
-            : 'Tự động';
-        return `Ngân hàng: ${normalized.QuestionBankTitle} · ${summary.questionCount} câu · ${scoringLabel}`;
+        return `Ngân hàng: ${normalized.QuestionBankTitle} · ${summary.questionCount} câu · Mỗi câu điểm như nhau`;
       }
       const summary = computeMaterialTestSummary(normalized.Sections ?? []);
-      const scoringLabel =
-        getEffectiveScoringMode(normalized) === SCORING_MODE_MANUAL
-          ? 'Nhập điểm thủ công'
-          : 'Tự chia đều';
-      return `${summary.sectionCount} phần · ${summary.questionCount} câu hỏi · ${DEFAULT_TEST_TOTAL_SCORE} điểm · ${scoringLabel}`;
+      return `${summary.sectionCount} phần · ${summary.questionCount} câu hỏi · ${DEFAULT_TEST_TOTAL_SCORE} điểm · Mỗi câu điểm như nhau`;
     }
     default:
       return '';
@@ -308,7 +298,7 @@ export function collectTestMaterials(paths = []) {
           sectionCount: summary.sectionCount,
           questionCount: summary.questionCount,
           totalScore: DEFAULT_TEST_TOTAL_SCORE,
-          scoringMode: getEffectiveScoringMode(material),
+          scoringMode: 'AUTO',
         });
       });
     });

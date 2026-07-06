@@ -13,12 +13,15 @@ export default function MentorTestReadingSourceEditor({
   section,
   errors = {},
   disabled = false,
+  questionBankMode = false,
   onChange,
   onRegisterControls,
 }) {
   const composeFlushRef = useRef(null);
 
   useEffect(() => {
+    if (questionBankMode) return;
+
     const hasUploadArtifacts =
       section.ReadingSourceType === READING_SOURCE_UPLOAD ||
       Boolean(section.FileName || section.MaterialUrl || section.File);
@@ -33,6 +36,7 @@ export default function MentorTestReadingSourceEditor({
       MaterialUrl: '',
     });
   }, [
+    questionBankMode,
     section.tempId,
     section.ReadingSourceType,
     section.FileName,
@@ -58,6 +62,9 @@ export default function MentorTestReadingSourceEditor({
   }, []);
 
   const contentError = errors.Description;
+  const materialUrl = String(section.MaterialUrl ?? '').trim();
+  const hasRemoteReadingUrl = Boolean(materialUrl);
+  const hasLocalContent = Boolean(String(section.Description ?? '').trim());
 
   return (
     <Box sx={{ mb: 1.5 }}>
@@ -69,11 +76,13 @@ export default function MentorTestReadingSourceEditor({
         material={{
           tempId: section.tempId ?? READING_PASSAGE_ID,
           Content: section.Description ?? '',
-          MaterialUrl: '',
+          MaterialUrl: materialUrl,
         }}
         errors={{ Content: contentError }}
         disabled={disabled}
         compact
+        defaultShowPreview={questionBankMode && hasRemoteReadingUrl}
+        previewOnRemoteLoad={questionBankMode && hasRemoteReadingUrl && !hasLocalContent}
         onRegisterFlush={handleRegisterComposeFlush}
         onChange={(_, patch) =>
           onChange({

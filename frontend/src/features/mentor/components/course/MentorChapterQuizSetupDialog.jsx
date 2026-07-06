@@ -593,8 +593,8 @@ export default function MentorChapterQuizSetupDialog({
             <SectionTitle>Nguồn câu hỏi</SectionTitle>
             <Typography sx={{ fontSize: 12, color: MUTED, mb: 1.25, lineHeight: 1.5 }}>
               {isCourseScope
-                ? 'Random các câu hỏi đang bật (isActive) từ ngân hàng của các chương đã chọn.'
-                : 'Chỉ random các câu hỏi đang bật (isActive) trong ngân hàng câu hỏi.'}
+                ? 'Random các câu hỏi đang bật "Dùng trong bài kiểm tra" (IsUseForTest) từ ngân hàng của các chương đã chọn.'
+                : 'Chỉ random các câu hỏi đang bật "Dùng trong bài kiểm tra" (IsUseForTest) trong ngân hàng câu hỏi.'}
             </Typography>
 
             {isCourseScope && !courseHasSelectedChapters ? (

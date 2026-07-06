@@ -173,7 +173,7 @@ export default function MentorQuestionBankListPage() {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {pagination.listQuestionBank.map((bank) => (
-          <MentorQuestionBankRow key={bank.CourseId} bankItem={bank} />
+          <MentorQuestionBankRow key={bank.BankId ?? bank.CourseId} bankItem={bank} />
         ))}
       </Box>
     );

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Chip, InputBase, Switch, Typography } from '@mui/material';
+import { Box, Chip, Switch, Typography } from '@mui/material';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import AppButton from '@/shared/ui/AppButton';
@@ -18,7 +18,6 @@ export default function MentorTestQuestionCard({
   disabled = false,
   contentLocked = false,
   showActiveToggle = false,
-  showScoreField = true,
   collapsibleChoices = false,
   contentChanged = false,
   onViewContentChanges,
@@ -33,14 +32,11 @@ export default function MentorTestQuestionCard({
   const handleChange = (nextQuestion) => onChange(normalizeTestQuestion(nextQuestion));
 
   const handleActiveToggle = (event) => {
-    handleChange({ ...normalizedQuestion, isActive: event.target.checked });
+    handleChange({ ...normalizedQuestion, isUseForTest: event.target.checked });
   };
 
   const isInactive = showActiveToggle && !isActive;
   const hasCorrectAnswerError = Boolean(errors._correctOption);
-
-  const handleScoreChange = (event) =>
-    handleChange({ ...normalizedQuestion, Score: event.target.value });
 
   return (
     <Box
@@ -204,35 +200,6 @@ export default function MentorTestQuestionCard({
       </Box>
 
       <Box sx={{ px: { xs: 1.25, sm: 1.35 }, pt: collapsibleChoices ? 0.85 : 1.15, pb: 1.35 }}>
-        {showScoreField && !contentLocked && (!collapsibleChoices || choicesExpanded) ? (
-          <Box sx={{ maxWidth: 88, mb: 1.25 }}>
-            <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.4 }}>
-              Điểm
-            </Typography>
-            <InputBase
-              value={normalizedQuestion.Score ?? ''}
-              onChange={handleScoreChange}
-              disabled={fieldsDisabled}
-              placeholder="1"
-              fullWidth
-              sx={{
-                fontSize: 13,
-                color: TEXT,
-                px: 0.85,
-                py: 0.45,
-                borderRadius: '8px',
-                border: `1px solid ${errors.Score ? '#DC2626' : 'rgba(15,23,42,0.1)'}`,
-                '&:focus-within': { borderColor: errors.Score ? '#DC2626' : accentColor },
-              }}
-            />
-            {errors.Score ? (
-              <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.25 }}>
-                {errors.Score}
-              </Typography>
-            ) : null}
-          </Box>
-        ) : null}
-
         <MentorQuestionTypeFields
           question={normalizedQuestion}
           errors={errors}

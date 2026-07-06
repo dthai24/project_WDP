@@ -14,12 +14,11 @@ function opt(id, text) {
   return { tempId: id, optionText: text };
 }
 
-function q(id, text, options, allowMultiple = false) {
+function q(id, text, options) {
   return {
     tempId: id,
     questionType: 'MULTIPLE_CHOICE',
     questionText: text,
-    allowMultipleAnswers: allowMultiple,
     order: 0,
     options,
     audioUrl: null,
@@ -159,14 +158,13 @@ export function createDemoTestPaper() {
         {
           ...q(
             'demo-w2',
-            'Chọn TẤT CẢ từ chỉ nơi làm việc:',
+            'Từ nào KHÔNG chỉ nơi làm việc?',
             [
               opt('demo-w2-a', 'headquarters'),
               opt('demo-w2-b', 'branch office'),
               opt('demo-w2-c', 'vacation'),
               opt('demo-w2-d', 'warehouse'),
             ],
-            true,
           ),
           order: 6,
         },
@@ -217,5 +215,5 @@ export const DEMO_ANSWER_KEY = {
   'demo-r1': ['demo-r1-d'],
   'demo-r2': ['demo-r2-b'],
   'demo-w1': ['demo-w1-b'],
-  'demo-w2': ['demo-w2-a', 'demo-w2-b', 'demo-w2-d'],
+  'demo-w2': ['demo-w2-c'],
 };

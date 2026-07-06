@@ -1,5 +1,4 @@
 import {
-  getPendingDeleteSections,
   QUESTION_TYPE_MULTIPLE_CHOICE,
   READING_SOURCE_COMPOSE,
   READING_SOURCE_UPLOAD,
@@ -18,12 +17,19 @@ import {
   normalizeQuestionBankSectionForSave,
   normalizeTestQuestion,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { fetchTextMaterialHtml } from '@/features/mentor/services/materialUploadService';
 
 function mapSkillType(rawSkillType) {
   const name = String(rawSkillType ?? '').trim().toUpperCase();
   if (name === TEST_SKILL_LISTENING) return TEST_SKILL_LISTENING;
   if (name === TEST_SKILL_READING) return TEST_SKILL_READING;
   return TEST_SKILL_WRITING;
+}
+
+function toBooleanDefaultTrue(value) {
+  if (value == null) return true;
+  return Boolean(value);
 }
 
 function resolveSectionSourceUrlFromApi(apiSection = {}) {
@@ -42,17 +48,27 @@ function resolveSectionSourceUrlForSave(sectionPayload = {}) {
   return String(sectionPayload.MaterialUrl ?? sectionPayload.AudioUrl ?? '').trim() || null;
 }
 
+function buildQuestionSaveSnapshot(question) {
+  const payload = buildTestQuestionPayload(question);
+  return JSON.stringify({
+    QuestionText: payload.QuestionText,
+    isActive: payload.isActive,
+    isUseForTest: payload.isUseForTest,
+    Options: payload.Options,
+  });
+}
+
 export function mapApiSectionToEditorSection(apiSection) {
   const skillType = mapSkillType(apiSection.skillType);
   const sectionName = String(apiSection.sectionName ?? '').trim();
-  const displayName = String(apiSection.displayName ?? sectionName).trim();
+  const displayName = String(apiSection.displayName ?? sectionName);
   const sourceUrl = resolveSectionSourceUrlFromApi(apiSection);
 
   const base = {
     tempId: `section_${apiSection.sectionId}`,
     SectionId: apiSection.sectionId,
-    SectionTitle: sectionName,
-    DisplayName: displayName || sectionName,
+    DisplayName: sectionName,
+    SectionTitle: displayName || sectionName,
     SkillType: skillType,
     Description: '',
     Questions: [],
@@ -60,6 +76,7 @@ export function mapApiSectionToEditorSection(apiSection) {
     questionsLoading: false,
     questionCount: Number(apiSection.questionCount) || 0,
     sectionOrder: Number(apiSection.order) || 0,
+    isUseForTest: toBooleanDefaultTrue(apiSection.isUseForTest),
     ...(skillType === TEST_SKILL_LISTENING ? getListeningSectionFields() : {}),
     ...(skillType === TEST_SKILL_READING ? getReadingSectionFields() : {}),
   };
@@ -79,6 +96,28 @@ export function mapApiSectionToEditorSection(apiSection) {
   return base;
 }
 
+/** Tải HTML bài đọc từ SourceUrl/MaterialUrl (Cloudinary) vào Description để hiển thị preview. */
+export async function hydrateReadingSectionFromSourceUrl(section) {
+  if (section?.SkillType !== TEST_SKILL_READING) return section;
+
+  const materialUrl = String(section.MaterialUrl ?? '').trim();
+  if (!materialUrl) return section;
+  if (!isHtmlContentEmpty(section.Description)) return section;
+
+  try {
+    const html = await fetchTextMaterialHtml(materialUrl);
+    if (!html || isHtmlContentEmpty(html)) return section;
+
+    return {
+      ...section,
+      Description: html,
+      ReadingSourceType: READING_SOURCE_COMPOSE,
+    };
+  } catch {
+    return section;
+  }
+}
+
 export function mapApiQuestionToEditorQuestion(apiQuestion) {
   const choices = (apiQuestion.choices ?? []).map((choice) => ({
     tempId: `choice_${choice.choiceId}`,
@@ -87,21 +126,16 @@ export function mapApiQuestionToEditorQuestion(apiQuestion) {
     IsCorrect: Boolean(choice.isTrue),
   }));
 
-  const correctCount = choices.filter((item) => item.IsCorrect).length;
-
   return normalizeTestQuestion({
     tempId: `question_${apiQuestion.questionId}`,
     QuestionId: apiQuestion.questionId,
     QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     QuestionText: apiQuestion.title ?? '',
-    Score: Number(apiQuestion.score) || 1,
-    AllowMultipleAnswers:
-      apiQuestion.allowMultipleAnswers != null
-        ? Boolean(apiQuestion.allowMultipleAnswers)
-        : correctCount > 1,
-    isActive: apiQuestion.isActive !== false,
+    Score: 1,
+    isActive: toBooleanDefaultTrue(apiQuestion.isActive),
+    isUseForTest: toBooleanDefaultTrue(apiQuestion.isUseForTest),
     Options: choices,
-    AudioUrl: apiQuestion.url ?? '',
+    AudioUrl: '',
   });
 }
 
@@ -154,8 +188,15 @@ export function buildSectionSourceSnapshot(section) {
   }
 
   if (skill === TEST_SKILL_READING) {
+    const readingSourceType =
+      normalized.ReadingSourceType === READING_SOURCE_UPLOAD
+        ? READING_SOURCE_UPLOAD
+        : READING_SOURCE_COMPOSE;
+
     return JSON.stringify({
+      ReadingSourceType: readingSourceType,
       MaterialUrl: String(normalized.MaterialUrl ?? '').trim(),
+      Description: String(normalized.Description ?? ''),
     });
   }
 
@@ -182,10 +223,35 @@ export function isSectionSourceDirty(section, sourceBaselines = {}) {
   return snapshot !== baseline;
 }
 
+function isSectionMetaDirty(section, baselines = {}) {
+  if (!section?.tempId) return false;
+
+  const baselineJson = baselines[section.tempId];
+  if (baselineJson == null) return false;
+
+  try {
+    const normalized = normalizeQuestionBankSectionForSave(section ?? {});
+    const baseline = JSON.parse(baselineJson);
+
+    const currentDisplayName = String(normalized.DisplayName ?? '').trim();
+    const baselineDisplayName = String(baseline.DisplayName ?? '').trim();
+    const currentSectionTitle = String(normalized.SectionTitle ?? '');
+    const baselineSectionTitle = String(baseline.SectionTitle ?? '');
+
+    return (
+      currentDisplayName !== baselineDisplayName
+      || currentSectionTitle !== baselineSectionTitle
+      || toBooleanDefaultTrue(normalized.isUseForTest) !== toBooleanDefaultTrue(baseline.isUseForTest)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function getSectionQuestionsSnapshotList(section) {
   const normalized = normalizeQuestionBankSectionForSave(section ?? {});
   return getFilledTestQuestions(normalized.Questions).map((question) =>
-    buildQuestionContentSnapshot(question),
+    buildQuestionSaveSnapshot(question),
   );
 }
 
@@ -210,6 +276,7 @@ export function isSectionSaveDirty(section, baselines = {}, sourceBaselines = {}
   const skill = section?.SkillType;
   if (skill === TEST_SKILL_LISTENING || skill === TEST_SKILL_READING) {
     return (
+      isSectionMetaDirty(section, baselines) ||
       isSectionSourceDirty(section, sourceBaselines) ||
       isSectionQuestionsDirty(section, baselines)
     );
@@ -228,46 +295,14 @@ export function hasSectionUnsavedChanges(section, baselines = {}, sourceBaseline
   return !isSectionSyncedWithBaseline(section, baselines, sourceBaselines);
 }
 
-export function hasPendingSectionDeletes(sections = []) {
-  return getPendingDeleteSections(sections).length > 0;
-}
-
 export function hasQuestionBankWorkspaceChanges(
-  sections = [],
+  _sections = [],
   activeSection,
   baselines = {},
   sourceBaselines = {},
 ) {
-  if (hasPendingSectionDeletes(sections)) return true;
   if (!activeSection) return false;
   return hasSectionUnsavedChanges(activeSection, baselines, sourceBaselines);
-}
-
-function buildSectionsDeleteRows(sections = []) {
-  return getPendingDeleteSections(sections).map((section) => ({
-    table: 'Question_Sections',
-    sectionId: section.SectionId ?? null,
-    sectionTempId: section.tempId ?? null,
-  }));
-}
-
-export function buildQuestionBankWorkspaceSavePayload(
-  section,
-  context,
-  baselines = {},
-  sourceBaselines = {},
-  allSections = [],
-) {
-  const payload = buildQuestionBankSectionSavePayload(section, context, baselines, sourceBaselines);
-  const sectionsDelete = buildSectionsDeleteRows(allSections);
-
-  payload.sectionsDelete = sectionsDelete;
-  payload.summary = {
-    ...payload.summary,
-    sectionsDelete: sectionsDelete.length,
-  };
-
-  return payload;
 }
 
 function isNonJsonSerializable(value) {
@@ -331,6 +366,7 @@ export function revertSectionToSavedBaseline(section, baselines = {}, sourceBase
 
     next.SectionTitle = payload.SectionTitle ?? next.SectionTitle;
     next.DisplayName = payload.DisplayName ?? next.DisplayName;
+    next.isUseForTest = payload.isUseForTest ?? next.isUseForTest;
     next.Description = payload.Description ?? next.Description ?? '';
     next.MaterialUrl = payload.MaterialUrl ?? '';
     next.DeletedQuestions = [];
@@ -379,6 +415,7 @@ export function buildSectionEditorSnapshot(section) {
   const payload = {
     SectionTitle: normalized.SectionTitle,
     DisplayName: normalized.DisplayName,
+    isUseForTest: toBooleanDefaultTrue(normalized.isUseForTest),
     Description: normalized.Description,
     SkillType: normalized.SkillType,
     MaterialUrl: String(normalized.MaterialUrl ?? '').trim(),
@@ -388,7 +425,7 @@ export function buildSectionEditorSnapshot(section) {
     AudioSourceType: normalized.AudioSourceType ?? null,
     ReadingSourceType: normalized.ReadingSourceType ?? null,
     Questions: getFilledTestQuestions(normalized.Questions).map((question) =>
-      buildQuestionContentSnapshot(question),
+      buildQuestionSaveSnapshot(question),
     ),
   };
 
@@ -463,29 +500,44 @@ function buildSectionPayloadForPreview(section, sectionOrder) {
 
 function buildChoiceApiRows(question) {
   return (question.Options ?? [])
-    .map((option, index) => ({
-      title: String(option?.OptionText ?? '').trim(),
-      order: index + 1,
-      isTrue: Boolean(option?.IsCorrect),
-    }))
-    .filter((choice) => choice.title);
+    .map((option, index) => buildChoiceRowFromOption(option, index + 1))
+    .filter((choice) => choice.Title);
+}
+
+function buildChoiceInsertRows(question) {
+  return (question.Options ?? [])
+    .map((option, index) => {
+      const data = buildChoiceRowFromOption(option, index + 1);
+      if (!data.Title) return null;
+      return {
+        table: 'Question_Choices',
+        clientRef: option.tempId ?? null,
+        data,
+      };
+    })
+    .filter(Boolean);
 }
 
 function buildQuestionApiData(question) {
   const payload = buildTestQuestionPayload(question);
   return {
-    title: payload.QuestionText,
-    isActive: payload.isActive,
-    score: payload.Score,
-    allowMultipleAnswers: payload.AllowMultipleAnswers,
+    Title: payload.QuestionText,
+    IsActive: payload.isActive,
+    IsUseForTest: payload.isUseForTest,
   };
 }
 
 function buildSectionApiData(normalized, sectionPayload = {}) {
+  const sectionName = String(sectionPayload.DisplayName ?? '').trim() || null;
+  const rawTitle = String(sectionPayload.SectionTitle ?? '');
+  const title = rawTitle === '' ? sectionName : rawTitle;
+
   return {
-    sectionName: sectionPayload.SectionTitle ?? null,
-    skillType: sectionPayload.SkillType ?? null,
-    sourceUrl: resolveSectionSourceUrlForSave({
+    SectionName: sectionName,
+    Title: title,
+    SkillType: sectionPayload.SkillType ?? null,
+    IsUseForTest: sectionPayload.isUseForTest !== false,
+    SourceUrl: resolveSectionSourceUrlForSave({
       SkillType: normalized.SkillType,
       AudioUrl: normalized.AudioUrl,
       MaterialUrl: normalized.MaterialUrl,
@@ -494,7 +546,8 @@ function buildSectionApiData(normalized, sectionPayload = {}) {
 }
 
 const SECTION_FIELD_BASELINE_MAP = {
-  SectionTitle: 'sectionName',
+  DisplayName: 'SectionName',
+  SectionTitle: 'Title',
 };
 
 function resolveBaselineSourceUrl(baseline = {}, skillType) {
@@ -549,7 +602,7 @@ function buildSectionSourceUpdate(normalized, baselines = {}, sourceBaselines = 
   return {
     table: 'Question_Sections',
     sectionId,
-    sourceUrl: currentUrl || null,
+    SourceUrl: currentUrl || null,
   };
 }
 
@@ -568,6 +621,12 @@ function buildSectionUpdateSet(sectionPayload, baselines = {}, _sourceBaselines 
           set[apiKey] = currentValue;
         }
       });
+
+      const currentUseForTest = sectionPayload.isUseForTest !== false;
+      const baselineUseForTest = baseline.isUseForTest !== false;
+      if (currentUseForTest !== baselineUseForTest) {
+        set.IsUseForTest = currentUseForTest;
+      }
     }
   } catch {
     // ignore invalid baseline
@@ -576,35 +635,114 @@ function buildSectionUpdateSet(sectionPayload, baselines = {}, _sourceBaselines 
   return set;
 }
 
+function buildChoiceRowFromOption(option, order) {
+  return {
+    Title: String(option?.OptionText ?? '').trim(),
+    Order: order,
+    IsTrue: option?.IsCorrect ? 1 : 0,
+  };
+}
+
+function buildChoiceUpdatePlan(current, initial) {
+  const choicesInsert = [];
+  const choicesUpdate = [];
+  const choicesDelete = [];
+
+  const currentOptions = current?.Options ?? [];
+  const initialOptions = initial?.Options ?? [];
+  const initialByChoiceId = new Map(
+    initialOptions
+      .filter((option) => option?.ChoiceId)
+      .map((option) => [Number(option.ChoiceId), option]),
+  );
+  const matchedChoiceIds = new Set();
+
+  currentOptions.forEach((option, index) => {
+    const order = index + 1;
+    const row = buildChoiceRowFromOption(option, order);
+    const choiceId = option?.ChoiceId ? Number(option.ChoiceId) : null;
+
+    if (choiceId && initialByChoiceId.has(choiceId)) {
+      matchedChoiceIds.add(choiceId);
+      const initialOption = initialByChoiceId.get(choiceId);
+      const initialIndex = initialOptions.findIndex((item) => Number(item.ChoiceId) === choiceId);
+      const initialOrder = initialIndex >= 0 ? initialIndex + 1 : order;
+      const initialRow = buildChoiceRowFromOption(initialOption, initialOrder);
+      const set = {};
+
+      if (row.Title !== initialRow.Title) set.Title = row.Title;
+      if (row.Order !== initialRow.Order) set.Order = row.Order;
+      if (row.IsTrue !== initialRow.IsTrue) set.IsTrue = row.IsTrue;
+
+      if (Object.keys(set).length > 0) {
+        choicesUpdate.push({
+          table: 'Question_Choices',
+          choiceId,
+          questionId: current.QuestionId,
+          set,
+        });
+      }
+      return;
+    }
+
+    choicesInsert.push({
+      table: 'Question_Choices',
+      clientRef: option.tempId,
+      data: row,
+    });
+  });
+
+  initialOptions.forEach((option) => {
+    const choiceId = option?.ChoiceId ? Number(option.ChoiceId) : null;
+    if (choiceId && !matchedChoiceIds.has(choiceId)) {
+      choicesDelete.push({
+        table: 'Question_Choices',
+        choiceId,
+        questionId: current.QuestionId,
+      });
+    }
+  });
+
+  return { choicesInsert, choicesUpdate, choicesDelete };
+}
+
 function buildQuestionUpdatePatch(current, initial) {
   const currentPayload = buildTestQuestionPayload(current);
   const initialPayload = buildTestQuestionPayload(initial);
   const set = {};
 
   if (currentPayload.QuestionText !== initialPayload.QuestionText) {
-    set.title = currentPayload.QuestionText;
+    set.Title = currentPayload.QuestionText;
   }
   if (currentPayload.isActive !== initialPayload.isActive) {
-    set.isActive = currentPayload.isActive;
+    set.IsActive = currentPayload.isActive;
   }
-  if (currentPayload.Score !== initialPayload.Score) {
-    set.score = currentPayload.Score;
-  }
-  if (currentPayload.AllowMultipleAnswers !== initialPayload.AllowMultipleAnswers) {
-    set.allowMultipleAnswers = currentPayload.AllowMultipleAnswers;
+  if (currentPayload.isUseForTest !== initialPayload.isUseForTest) {
+    set.IsUseForTest = currentPayload.isUseForTest;
   }
 
-  const choicesChanged =
-    JSON.stringify(buildChoiceApiRows(current)) !== JSON.stringify(buildChoiceApiRows(initial));
+  const { choicesInsert, choicesUpdate, choicesDelete } = buildChoiceUpdatePlan(current, initial);
 
   return {
     set,
-    choicesReplace: choicesChanged ? buildChoiceApiRows(current) : null,
+    choicesInsert,
+    choicesUpdate,
+    choicesDelete,
   };
 }
 
-function countChoicesReplace(questionsUpdate = []) {
-  return questionsUpdate.filter((item) => Array.isArray(item.choicesReplace)).length;
+function countChoiceUpdates(questionsUpdate = []) {
+  return questionsUpdate.reduce((sum, item) => sum + (item.choicesUpdate?.length ?? 0), 0);
+}
+
+function countChoiceInserts(questionsUpdate = [], questionsInsert = []) {
+  const fromUpdates = questionsUpdate.reduce((sum, item) => sum + (item.choicesInsert?.length ?? 0), 0);
+  const fromInserts = questionsInsert.reduce((sum, item) => sum + (item.choicesInsert?.length ?? 0), 0);
+  return fromUpdates + fromInserts;
+}
+
+function countChoiceDeletes(questionsUpdate = []) {
+  return questionsUpdate.reduce((sum, item) => sum + (item.choicesDelete?.length ?? 0), 0);
 }
 
 function buildQuestionsDeleteRows(sectionId, currentQuestions, initialQuestions, deletedQuestions = []) {
@@ -651,9 +789,34 @@ export function isQuestionBankDeleteOnlyPayload(payload) {
 }
 
 /**
- * Payload lưu section — mỗi key map 1 thao tác DB đơn giản.
- * Backend xử lý theo thứ tự: sectionsDelete → questionsDelete → sectionSourceUpdate → sectionUpdate → questionsUpdate → sectionInsert/questionsInsert.
+ * Payload lưu section — mỗi thao tác map REST theo id:
+ * DELETE /questions/:questionId, PATCH /sections/:sectionId/source-url,
+ * PUT /sections/:sectionId, PUT /questions/:questionId, PUT /choices/:choiceId,
+ * POST /questions/:questionId/choices, DELETE /choices/:choiceId,
+ * POST /sections/:sectionId/questions, POST /courses/:courseId/paths/:pathId/sections.
  */
+function applyUploadedReadingSourceUrl(normalized, uploadedReadingSourceUrl) {
+  if (!uploadedReadingSourceUrl || normalized.SkillType !== TEST_SKILL_READING) {
+    return normalized;
+  }
+
+  return {
+    ...normalized,
+    MaterialUrl: uploadedReadingSourceUrl,
+    ReadingSourceType: READING_SOURCE_UPLOAD,
+  };
+}
+
+/** Cần upload HTML bài đọc (soạn thảo) khi xác nhận lưu. */
+export function shouldUploadReadingComposeText(section, sourceBaselines = {}) {
+  if (section?.SkillType !== TEST_SKILL_READING) return false;
+  if (typeof File !== 'undefined' && section.File instanceof File) return false;
+  if (!isSectionSourceDirty(section, sourceBaselines)) return false;
+
+  const normalized = normalizeQuestionBankSectionForSave(section);
+  return Boolean(String(normalized.Description ?? '').trim());
+}
+
 export function buildQuestionBankSectionSavePayload(
   section,
   {
@@ -664,8 +827,19 @@ export function buildQuestionBankSectionSavePayload(
   },
   baselines = {},
   sourceBaselines = {},
+  options = {},
 ) {
-  const { normalized, sectionPayload } = buildSectionPayloadForPreview(section, sectionOrder);
+  const { uploadedReadingSourceUrl = null } = options;
+  let { normalized, sectionPayload } = buildSectionPayloadForPreview(section, sectionOrder);
+
+  if (uploadedReadingSourceUrl) {
+    normalized = applyUploadedReadingSourceUrl(normalized, uploadedReadingSourceUrl);
+    sectionPayload = {
+      ...sectionPayload,
+      MaterialUrl: uploadedReadingSourceUrl,
+      ReadingSourceType: READING_SOURCE_UPLOAD,
+    };
+  }
   const sectionId = normalized.SectionId ?? null;
   const currentQuestions = getFilledTestQuestions(normalized.Questions);
   const initialQuestions = normalized.InitialQuestions ?? [];
@@ -689,7 +863,9 @@ export function buildQuestionBankSectionSavePayload(
       questionsInsert: 0,
       questionsUpdate: 0,
       questionsDelete: 0,
-      sectionsDelete: 0,
+      choicesInsert: 0,
+      choicesUpdate: 0,
+      choicesDelete: 0,
     },
     sectionInsert: null,
     sectionUpdate: null,
@@ -697,7 +873,6 @@ export function buildQuestionBankSectionSavePayload(
     questionsInsert: [],
     questionsUpdate: [],
     questionsDelete: [],
-    sectionsDelete: [],
   };
 
   if (!sectionId) {
@@ -705,17 +880,14 @@ export function buildQuestionBankSectionSavePayload(
       table: 'Question_Sections',
       data: {
         ...buildSectionApiData(normalized, sectionPayload),
-        order: context.sectionOrder,
+        Order: context.sectionOrder,
       },
       questions: currentQuestions.map((question, index) => ({
         table: 'Questions',
         clientRef: question.tempId,
-        order: index + 1,
+        Order: index + 1,
         data: buildQuestionApiData(question),
-        choicesInsert: buildChoiceApiRows(question).map((choice) => ({
-          table: 'Question_Choices',
-          data: choice,
-        })),
+        choicesInsert: buildChoiceInsertRows(question),
       })),
     };
     payload.summary.sectionInsert = 1;
@@ -738,13 +910,19 @@ export function buildQuestionBankSectionSavePayload(
     payload.summary.sectionUpdate = 1;
   }
 
-  const sectionSourceUpdate = buildSectionSourceUpdate(
-    normalized,
-    baselines,
-    sourceBaselines,
-    normalized.tempId,
-    sectionId,
-  );
+  const sectionSourceUpdate = uploadedReadingSourceUrl && sectionId
+    ? {
+        table: 'Question_Sections',
+        sectionId,
+        SourceUrl: uploadedReadingSourceUrl,
+      }
+    : buildSectionSourceUpdate(
+        normalized,
+        baselines,
+        sourceBaselines,
+        normalized.tempId,
+        sectionId,
+      );
   if (sectionSourceUpdate) {
     payload.sectionSourceUpdate = sectionSourceUpdate;
     payload.summary.sectionSourceUpdate = 1;
@@ -756,12 +934,9 @@ export function buildQuestionBankSectionSavePayload(
         table: 'Questions',
         sectionId,
         clientRef: question.tempId,
-        order: index + 1,
+        Order: index + 1,
         data: buildQuestionApiData(question),
-        choicesInsert: buildChoiceApiRows(question).map((choice) => ({
-          table: 'Question_Choices',
-          data: choice,
-        })),
+        choicesInsert: buildChoiceInsertRows(question),
       });
       return;
     }
@@ -772,28 +947,34 @@ export function buildQuestionBankSectionSavePayload(
         table: 'Questions',
         sectionId,
         clientRef: question.tempId,
-        order: index + 1,
+        Order: index + 1,
         data: buildQuestionApiData(question),
-        choicesInsert: buildChoiceApiRows(question).map((choice) => ({
-          table: 'Question_Choices',
-          data: choice,
-        })),
+        choicesInsert: buildChoiceInsertRows(question),
       });
       return;
     }
 
-    if (buildQuestionContentSnapshot(question) === buildQuestionContentSnapshot(initial)) {
+    const { set, choicesInsert, choicesUpdate, choicesDelete } = buildQuestionUpdatePatch(question, initial);
+    const hasQuestionFieldChanges = Object.keys(set).length > 0;
+    const hasChoiceChanges =
+      choicesInsert.length > 0 || choicesUpdate.length > 0 || choicesDelete.length > 0;
+    const initialIndex = initialQuestions.findIndex((item) => item.tempId === question.tempId);
+    const initialOrder = initialIndex >= 0 ? initialIndex + 1 : index + 1;
+    const orderChanged = (index + 1) !== initialOrder;
+
+    if (!hasQuestionFieldChanges && !hasChoiceChanges && !orderChanged) {
       return;
     }
 
-    const { set, choicesReplace } = buildQuestionUpdatePatch(question, initial);
     payload.questionsUpdate.push({
       table: 'Questions',
       questionId: question.QuestionId,
       sectionId,
-      order: index + 1,
-      set,
-      ...(choicesReplace ? { choicesReplace } : {}),
+      ...(orderChanged ? { Order: index + 1 } : {}),
+      ...(hasQuestionFieldChanges ? { set } : {}),
+      ...(choicesInsert.length > 0 ? { choicesInsert } : {}),
+      ...(choicesUpdate.length > 0 ? { choicesUpdate } : {}),
+      ...(choicesDelete.length > 0 ? { choicesDelete } : {}),
     });
   });
 
@@ -807,7 +988,9 @@ export function buildQuestionBankSectionSavePayload(
   payload.summary.questionsInsert = payload.questionsInsert.length;
   payload.summary.questionsUpdate = payload.questionsUpdate.length;
   payload.summary.questionsDelete = payload.questionsDelete.length;
-  payload.summary.choicesReplace = countChoicesReplace(payload.questionsUpdate);
+  payload.summary.choicesInsert = countChoiceInserts(payload.questionsUpdate, payload.questionsInsert);
+  payload.summary.choicesUpdate = countChoiceUpdates(payload.questionsUpdate);
+  payload.summary.choicesDelete = countChoiceDeletes(payload.questionsUpdate);
 
   return payload;
 }

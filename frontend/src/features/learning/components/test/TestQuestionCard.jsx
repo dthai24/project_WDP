@@ -2,7 +2,6 @@ import {
   Box,
   Checkbox,
   FormControlLabel,
-  Radio,
   Typography,
   alpha,
 } from '@mui/material';
@@ -18,18 +17,12 @@ export default function TestQuestionCard({
   selectedOptionTempIds = [],
   onChange,
 }) {
-  const isMultiple = Boolean(question?.allowMultipleAnswers);
-
   const handleToggle = (optionTempId) => {
-    if (isMultiple) {
-      const next = selectedOptionTempIds.includes(optionTempId)
-        ? selectedOptionTempIds.filter((id) => id !== optionTempId)
-        : [...selectedOptionTempIds, optionTempId];
-      onChange(question.tempId, next);
-      return;
-    }
-
-    onChange(question.tempId, [optionTempId]);
+    const current = selectedOptionTempIds ?? [];
+    const next = current.includes(optionTempId)
+      ? current.filter((id) => id !== optionTempId)
+      : [...current, optionTempId];
+    onChange(question.tempId, next);
   };
 
   return (
@@ -64,18 +57,12 @@ export default function TestQuestionCard({
           <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEST_TEXT, lineHeight: 1.55 }}>
             {question.questionText}
           </Typography>
-          {isMultiple && (
-            <Typography sx={{ fontSize: 12.5, color: TEST_MUTED, mt: 0.5 }}>
-              Chọn tất cả đáp án đúng
-            </Typography>
-          )}
         </Box>
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pl: { xs: 0, md: 4.5 } }}>
         {(question.options ?? []).map((option) => {
           const checked = selectedOptionTempIds.includes(option.tempId);
-          const Control = isMultiple ? Checkbox : Radio;
 
           return (
             <Box
@@ -89,7 +76,7 @@ export default function TestQuestionCard({
             >
               <FormControlLabel
                 control={
-                  <Control
+                  <Checkbox
                     checked={checked}
                     onChange={() => handleToggle(option.tempId)}
                     sx={{

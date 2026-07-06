@@ -9,9 +9,16 @@ const {
     getQuestionBankByIdController,
     getQuestionBankPathsByBankIdController,
     createSectionSave,
+    ensureQuestionPath,
     updateSectionSave,
-    deleteSection,
     patchSectionSourceUrl,
+    patchQuestionUseForTest,
+    updateQuestionById,
+    deactivateQuestionById,
+    createSectionQuestionById,
+    updateChoiceById,
+    createQuestionChoiceById,
+    deleteChoiceById,
 } = require('../controllers/questionBankController');
 
 
@@ -30,10 +37,17 @@ questionBankRoutes.get('/getBankPaths/:bankId', optionalAuth, getQuestionBankPat
 questionBankRoutes.get('/getBankById/:bankId', optionalAuth, getQuestionBankByIdController);
 questionBankRoutes.get('/getAllBankOfMentor', optionalAuth, getAllBankOfMentor);
 questionBankRoutes.get('/courses/:courseId/paths/:pathId/sections', optionalAuth, getChapterSections);
+questionBankRoutes.post('/courses/:courseId/paths/:pathId/question-path/ensure', optionalAuth, ensureQuestionPath);
 questionBankRoutes.post('/courses/:courseId/paths/:pathId/sections', optionalAuth, createSectionSave);
 questionBankRoutes.get('/sections/:sectionId/questions', optionalAuth, getSectionQuestions);
+questionBankRoutes.post('/sections/:sectionId/questions', optionalAuth, createSectionQuestionById);
 questionBankRoutes.put('/sections/:sectionId', optionalAuth, updateSectionSave);
 questionBankRoutes.patch('/sections/:sectionId/source-url', optionalAuth, patchSectionSourceUrl);
-questionBankRoutes.delete('/sections/:sectionId', optionalAuth, deleteSection);
+questionBankRoutes.put('/questions/:questionId', optionalAuth, updateQuestionById);
+questionBankRoutes.delete('/questions/:questionId', optionalAuth, deactivateQuestionById);
+questionBankRoutes.patch('/questions/:questionId/use-for-test', optionalAuth, patchQuestionUseForTest);
+questionBankRoutes.put('/choices/:choiceId', optionalAuth, updateChoiceById);
+questionBankRoutes.post('/questions/:questionId/choices', optionalAuth, createQuestionChoiceById);
+questionBankRoutes.delete('/choices/:choiceId', optionalAuth, deleteChoiceById);
 
 module.exports = questionBankRoutes;

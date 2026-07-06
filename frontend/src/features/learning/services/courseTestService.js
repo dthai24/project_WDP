@@ -164,7 +164,6 @@ function buildDemoGradingQuestions(paper) {
   return (paper?.sections ?? []).flatMap((section) =>
     (section.questions ?? []).map((question) => ({
       tempId: question.tempId,
-      allowMultipleAnswers: question.allowMultipleAnswers,
       score: 1,
       correctOptionTempIds: DEMO_ANSWER_KEY[question.tempId] ?? [],
       questionText: question.questionText,
