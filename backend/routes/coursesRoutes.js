@@ -11,6 +11,7 @@ const {
     enrollCourse,
     getLearningPath,
     updateProgress,
+    completeCourse,
     getFeaturedCourses,
     getFeaturedPaths,
     getContinueCourse,
@@ -74,6 +75,10 @@ router.get('/:id/learning', getLearningPath);
 
 // Lưu tiến độ học và đánh dấu bài học hoàn thành
 router.post('/:id/progress', updateProgress);
+
+// Xác nhận hoàn thành toàn bộ khoá học (set progress = 100)
+router.post('/:id/complete', completeCourse);
+
 // lay treak
 router.get("/streak", getStreak);
 module.exports = router;

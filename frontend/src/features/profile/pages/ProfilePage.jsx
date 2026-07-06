@@ -28,6 +28,7 @@ import ProfileImageCropDialog from "@/shared/ProfileImageCropDialog";
 import {
   fetchUserProfile,
   uploadUserAvatar,
+  fetchUserCourses,
 } from "@/features/profile/services/profileService";
 import {
   getStoredAvatarUrl,
@@ -54,6 +55,16 @@ const MUTED = "#64748B";
 const SUCCESS = "#16A34A";
 const ACCENT = "#EA580C";
 const DIVIDER = "rgba(8,145,178,0.08)";
+
+/** Chuyển đổi đường dẫn thumbnail thành URL có thể hiển thị */
+function resolveThumbnail(thumb) {
+  if (!thumb || thumb === "CHƯA FIX LỖI ẢNH") return null;
+  if (thumb.startsWith("http://") || thumb.startsWith("https://")) return thumb;
+  // Đường dẫn local từ backend (VD: /uploads/courses/abc.jpg)
+  if (thumb.startsWith("/")) return `http://localhost:5050${thumb}`;
+  return null;
+}
+
 const INITIAL_PROFILE = {
   name: "",
   email: "",
@@ -232,37 +243,57 @@ function StatRow({
   label,
   value,
   last = false,
+  onClick,
+  expanded = false,
+  expandable = false,
   children,
 }) {
   return (
     <div
-      className="flex items-center gap-3 py-[10px]"
       style={{
-        borderBottom: last ? "none" : `1px solid ${DIVIDER}`,
+        borderBottom: last && !expanded ? "none" : `1px solid ${DIVIDER}`,
       }}
     >
       <div
-        className="w-[34px] h-[34px] rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: alpha(iconColor, 0.1) }}
+        onClick={onClick}
+        className={`flex items-center gap-3 py-[10px] ${
+          expandable
+            ? "cursor-pointer hover:bg-slate-50/70 rounded-xl px-1.5 transition-all"
+            : ""
+        }`}
       >
-        <Icon sx={{ fontSize: 17, color: iconColor }} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <span
-          className="text-[12px] font-medium leading-[1.2] block"
-          style={{ color: MUTED }}
+        <div
+          className="w-[34px] h-[34px] rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: alpha(iconColor, 0.1) }}
         >
-          {label}
-        </span>
-        {children ?? (
+          <Icon sx={{ fontSize: 17, color: iconColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span
+            className="text-[12px] font-medium leading-[1.2] block"
+            style={{ color: MUTED }}
+          >
+            {label}
+          </span>
           <span
             className="text-[15px] font-bold leading-[1.4] block"
             style={{ color: TEXT }}
           >
             {value}
           </span>
+        </div>
+        {expandable && (
+          <div className="text-slate-400 text-[11px] font-bold flex items-center gap-1 flex-shrink-0 select-none">
+            <span>{expanded ? "Thu gọn" : "Xem chi tiết"}</span>
+            <span className="text-[10px]">{expanded ? "▲" : "▼"}</span>
+          </div>
         )}
       </div>
+      {expandable && expanded && children && (
+        <div className="pl-[46px] pr-1 pb-3 pt-0.5 space-y-2 border-t border-dashed border-slate-100/50 mt-1">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -284,8 +315,8 @@ export default function ProfilePage() {
   const location = useLocation();
   const isAdminShell = location.pathname.startsWith("/admin");
   const breadcrumbHome = isAdminShell
-    ? { to: "/admin/accounts", label: "Quan tri" }
-    : { to: "/home", label: "Trang chu" };
+    ? { to: "/admin/accounts", label: "Quản trị" }
+    : { to: "/home", label: "Trang chủ" };
 
   const currentUser = useMemo(() => getInitialUser(), []);
 
@@ -311,6 +342,8 @@ export default function ProfilePage() {
     levels: [],
     evidence: '',
   });
+  const [coursesList, setCoursesList] = useState([]);
+  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | null
 
   useEffect(() => {
     const cUser = getInitialUser();
@@ -365,6 +398,20 @@ export default function ProfilePage() {
       }
     };
     fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const result = await fetchUserCourses();
+        if (result.success && Array.isArray(result.data)) {
+          setCoursesList(result.data);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải khóa học:", err);
+      }
+    };
+    fetchCourses();
   }, []);
 
   const initials = (profile?.name || "Nguoi dung")
@@ -662,10 +709,10 @@ export default function ProfilePage() {
           {breadcrumbHome.label}
         </MuiLink>
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
-          Ho so ca nhan
+          Hồ sơ cá nhân
         </Typography>
       </Breadcrumbs>
-
+ 
       {/* --- Profile Header --- */}
       <div
         className="rounded-[20px] p-3 md:p-4 mb-4 flex flex-wrap items-center gap-3 md:gap-4"
@@ -675,7 +722,7 @@ export default function ProfilePage() {
         }}
       >
         {/* Avatar */}
-        <Tooltip title="Doi anh dai dien" placement="bottom">
+        <Tooltip title="Đổi ảnh đại diện" placement="bottom">
           <div
             onClick={handleAvatarClick}
             className="relative w-[72px] h-[72px] md:w-[88px] md:h-[88px] flex-shrink-0 cursor-pointer rounded-full overflow-hidden group"
@@ -714,7 +761,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </Tooltip>
-
+ 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -745,7 +792,7 @@ export default function ProfilePage() {
               sx={{ fontSize: 13, color: MUTED }}
             />
             <span className="text-[12px]" style={{ color: MUTED }}>
-              Tham gia tu {profile.joinedAt}
+              Tham gia từ {profile.joinedAt}
             </span>
           </div>
         </div>
@@ -755,10 +802,10 @@ export default function ProfilePage() {
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         {/* --- Left column --- */}
         <div className="flex-[1_1_65%] min-w-0 w-full">
-          {/* Thong tin ca nhan */}
+          {/* Thông tin cá nhân */}
           <SectionCard>
             <SectionHead
-              title="Thong tin ca nhan"
+              title="Thông tin cá nhân"
               icon={PersonRoundedIcon}
               iconColor="#2563EB"
               action={
@@ -776,7 +823,7 @@ export default function ProfilePage() {
                         minWidth: "auto",
                       }}
                     >
-                      Luu
+                      Lưu
                     </AppButton>
                     <AppButton
                       size="small"
@@ -789,7 +836,7 @@ export default function ProfilePage() {
                         minWidth: "auto",
                       }}
                     >
-                      Huy
+                      Hủy
                     </AppButton>
                   </div>
                 ) : (
@@ -799,7 +846,7 @@ export default function ProfilePage() {
                     onClick={() => setEditMode(true)}
                     sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
                   >
-                    Chinh sua
+                    Chỉnh sửa
                   </AppButton>
                 )
               }
@@ -809,7 +856,7 @@ export default function ProfilePage() {
               <InfoRow
                 icon={PersonRoundedIcon}
                 iconColor="#2563EB"
-                label="Ho va ten"
+                label="Họ và tên"
                 value={editMode ? formData.name : profile.name}
                 editing={editMode}
                 name="name"
@@ -826,7 +873,7 @@ export default function ProfilePage() {
               <InfoRow
                 icon={PhoneOutlinedIcon}
                 iconColor="#16A34A"
-                label="So dien thoai"
+                label="Số điện thoại"
                 value={editMode ? formData.phone : profile.phone}
                 editing={editMode}
                 name="phone"
@@ -835,7 +882,7 @@ export default function ProfilePage() {
               <InfoRow
                 icon={CakeOutlinedIcon}
                 iconColor={ACCENT}
-                label="Ngay sinh"
+                label="Ngày sinh"
                 value={
                   editMode ? formData.dateOfBirth : profile.dateOfBirth
                 }
@@ -847,10 +894,10 @@ export default function ProfilePage() {
             </div>
           </SectionCard>
 
-          {/* Muc tieu hoc tap */}
+          {/* Mục tiêu học tập */}
           <SectionCard>
             <SectionHead
-              title="Muc tieu hoc tap"
+              title="Mục tiêu học tập"
               icon={RocketLaunchIcon}
               iconColor={ACCENT}
               action={
@@ -860,7 +907,7 @@ export default function ProfilePage() {
                   onClick={handleOpenPopup}
                   sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
                 >
-                  Cap nhat
+                  Cập nhật
                 </AppButton>
               }
             />
@@ -890,7 +937,7 @@ export default function ProfilePage() {
                 />
               ))}
               <Chip
-                label="+ Them muc tieu"
+                label="+ Thêm mục tiêu"
                 onClick={handleOpenPopup}
                 size="small"
                 sx={{
@@ -908,6 +955,8 @@ export default function ProfilePage() {
               />
             </div>
           </SectionCard>
+
+
         </div>
 
         {/* --- Right column --- */}
@@ -915,32 +964,83 @@ export default function ProfilePage() {
           className="flex-[0_0_35%] w-full lg:max-w-[420px]"
         >
           <div className="lg:sticky" style={{ top: 84 }}>
-            {/* Tong quan hoc tap */}
+            {/* Tổng quan học tập */}
             <SectionCard>
               <SectionHead
-                title="Tong quan hoc tap"
+                title="Tổng quan học tập"
                 icon={MenuBookOutlinedIcon}
                 iconColor={PRIMARY}
               />
               <StatRow
                 icon={MenuBookOutlinedIcon}
                 iconColor={PRIMARY}
-                label="Khoa dang hoc"
-                value={`${profile?.stats?.learning || 0} khoa`}
-              />
+                label="Khóa đang học"
+                value={`${profile?.stats?.learning || 0} khóa`}
+                expandable={profile?.stats?.learning > 0}
+                expanded={expandedStat === "learning"}
+                onClick={() => setExpandedStat(prev => prev === "learning" ? null : "learning")}
+              >
+                {coursesList.filter(c => !c.isCompleted).length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {coursesList.filter(c => !c.isCompleted).map(course => (
+                      <Link
+                        key={course.courseId}
+                        to={`/my-courses/${course.courseId}/learn`}
+                        className="flex flex-col gap-1 p-2 rounded-xl border border-slate-100 hover:border-cyan-500/30 hover:bg-cyan-50/10 transition-all font-sans text-left decoration-none block"
+                      >
+                        <span className="text-[12px] font-bold text-slate-700 truncate block">
+                          {course.courseName}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-cyan-500" style={{ width: `${course.progress}%` }} />
+                          </div>
+                          <span className="text-[10px] font-bold text-cyan-600">{course.progress}%</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </StatRow>
               <StatRow
                 icon={CheckCircleRoundedIcon}
                 iconColor={SUCCESS}
-                label="Khoa hoan thanh"
-                value={`${profile?.stats?.completed || 0} khoa`}
+                label="Khóa hoàn thành"
+                value={`${profile?.stats?.completed || 0} khóa`}
+                expandable={profile?.stats?.completed > 0}
+                expanded={expandedStat === "completed"}
+                onClick={() => setExpandedStat(prev => prev === "completed" ? null : "completed")}
                 last
-              />
+              >
+                {coursesList.filter(c => c.isCompleted).length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {coursesList.filter(c => c.isCompleted).map(course => (
+                      <Link
+                        key={course.courseId}
+                        to={`/my-courses/${course.courseId}/learn`}
+                        className="flex flex-col gap-1 p-2 rounded-xl border border-slate-100 hover:border-emerald-500/30 hover:bg-emerald-50/10 transition-all font-sans text-left decoration-none block"
+                      >
+                        <span className="text-[12px] font-bold text-slate-700 truncate block">
+                          {course.courseName}
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5 mt-0.5">
+                          ✓ Đã hoàn thành
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </StatRow>
             </SectionCard>
 
-            {/* Cai dat tai khoan */}
+            {/* Cài đặt tài khoản */}
             <SectionCard>
               <SectionHead
-                title="Cai dat tai khoan"
+                title="Cài đặt tài khoản"
                 icon={LockOutlinedIcon}
                 iconColor={MUTED}
               />
@@ -952,7 +1052,7 @@ export default function ProfilePage() {
                   className="flex-1 text-[13px] font-semibold"
                   style={{ color: TEXT }}
                 >
-                  Doi mat khau
+                  Đổi mật khẩu
                 </span>
                 <AppButton
                   size="small"
@@ -965,7 +1065,7 @@ export default function ProfilePage() {
                     minWidth: "auto",
                   }}
                 >
-                  Thay doi
+                  Thay đổi
                 </AppButton>
               </div>
               {(profile.role?.toLowerCase() === "student" || profile.role === "Hoc vien") && (
@@ -975,7 +1075,7 @@ export default function ProfilePage() {
                     className="flex-1 text-[13px] font-semibold"
                     style={{ color: TEXT }}
                   >
-                    Ung tuyen lam Mentor
+                    Ứng tuyển làm Mentor
                   </span>
                   <AppButton
                     size="small"
@@ -988,7 +1088,7 @@ export default function ProfilePage() {
                       minWidth: "auto",
                     }}
                   >
-                    Dang ky
+                    Đăng ký
                   </AppButton>
                 </div>
               )}

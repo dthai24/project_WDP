@@ -30,3 +30,10 @@ export async function uploadUserAvatar(file) {
 
   return response.json();
 }
+
+export async function fetchUserCourses() {
+  const response = await fetch(`${API_BASE}/users/courses`, {
+    headers: getAuthHeaders(),
+  });
+  return response.json();
+}
