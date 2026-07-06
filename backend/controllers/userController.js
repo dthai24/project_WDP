@@ -180,4 +180,84 @@ const applyMentor = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, changePassword, updateGoals, applyMentor };
+// ============================================================
+// GET /api/users/courses  — Danh sách khoá học của học viên
+// ============================================================
+const TestAttempt = require('../models/MongoDB/TestAttempt');
+const Test        = require('../models/MongoDB/Test');
+const Path        = require('../models/MongoDB/Path');
+const mongoose    = require('mongoose');
+
+// ============================================================
+// GET /api/users/courses  — Danh sách khoá học của học viên
+// ============================================================
+const getMyCoursesList = async (req, res) => {
+
+  const userId = req.user.userId;
+  try {
+    const enrollments = await UserCourse.find({ userId })
+      .populate({
+        path: 'courseId',
+        select: 'courseName thumbnail rating totalLessons',
+        populate: [
+          { path: 'categoryId', select: 'displayName' },
+          { path: 'levelId', select: 'displayName' },
+          { path: 'instructorId', select: 'fullName' },
+        ],
+      })
+      .sort({ enrollmentDate: -1 })
+      .lean();
+
+    // Map đồng thời lấy thêm chapterCount + quizDoneCount cho mỗi khoá
+    const courseDataList = await Promise.all(
+      enrollments
+        .filter(e => e.courseId)
+        .map(async e => {
+          const courseObjId = e.courseId._id;
+          const progress    = e.progressPercentage ?? 0;
+          const isCompleted = progress >= 100;
+
+          // Số chương (Path)
+          const chapterCount = await Path.countDocuments({ courseId: courseObjId });
+
+          // Số quiz user đã làm trong khoá này
+          const testsInCourse = await Test.find({ courseId: courseObjId }).select('_id').lean();
+          const testIds = testsInCourse.map(t => t._id);
+          const quizDoneCount = testIds.length > 0
+            ? await TestAttempt.countDocuments({ userId, testId: { $in: testIds } })
+            : 0;
+
+          return {
+            courseId:       courseObjId.toString(),
+            courseName:     e.courseId.courseName,
+            thumbnail:      e.courseId.thumbnail || null,
+            progress,
+            isCompleted,
+            status:         isCompleted ? 'completed' : 'learning',
+            enrollmentDate: e.enrollmentDate,
+            rating:         e.courseId.rating ?? 0,
+            totalLessons:   e.courseId.totalLessons ?? 0,
+            chapterCount,
+            quizDoneCount,
+            instructorName: e.courseId.instructorId?.fullName || '',
+            categoryName:   e.courseId.categoryId?.displayName || '',
+            levelName:      e.courseId.levelId?.displayName || '',
+          };
+        })
+    );
+
+    // Khoá đang học lên trước, hoàn thành xuống sau
+    courseDataList.sort((a, b) => {
+      if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
+      return new Date(b.enrollmentDate) - new Date(a.enrollmentDate);
+    });
+
+    return res.json({ success: true, data: courseDataList });
+  } catch (err) {
+    console.error('[GetMyCoursesList Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+
+module.exports = { getProfile, updateProfile, changePassword, updateGoals, applyMentor, getMyCoursesList };

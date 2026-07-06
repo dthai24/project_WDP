@@ -92,9 +92,37 @@ export default function MyCoursesListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const keyword = (searchParams.get("keyword") ?? "").trim();
+  const [searchQuery, setSearchQuery] = useState(keyword);
   const [allCourses, setAllCourses] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [levelOptions, setLevelOptions] = useState([]);
+
+  // Đồng bộ từ khoá từ URL khi có thay đổi (ví dụ: khi reset bộ lọc)
+  useEffect(() => {
+    setSearchQuery(keyword);
+  }, [keyword]);
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+
+    const next = new URLSearchParams(searchParams);
+    if (val.trim()) {
+      next.set("keyword", val.trim());
+    } else {
+      next.delete("keyword");
+    }
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    const next = new URLSearchParams(searchParams);
+    next.delete("keyword");
+    setSearchParams(next, { replace: true });
+  };
+
 
   useEffect(() => {
     async function fetchLookups() {
@@ -121,60 +149,82 @@ export default function MyCoursesListPage() {
   useEffect(() => {
     const getData = async () => {
       try {
-        const rawUser = localStorage.getItem("user");
-        if (!rawUser) return;
-        const user = JSON.parse(rawUser);
-        const userId = user.userId || user.UserId || user.id || user.Id;
-        const roleName = Array.isArray(user.roles)
-          ? typeof user.roles[0] === "string"
-            ? user.roles[0]
-            : user.roles[0]?.roleName || user.roles[0]?.RoleName
-          : user.roles || user.roleName || user.RoleName || user.role;
-        if (!userId || !roleName) return;
+        const token = localStorage.getItem("token");
+        const userRaw = localStorage.getItem("user");
+        let userId = "";
+        if (userRaw) {
+          try {
+            const u = JSON.parse(userRaw);
+            userId = u?.userId || u?._id || "";
+          } catch (e) {}
+        }
 
-        const res = await fetch("http://localhost:5050/api/courses/my-courses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: Number(userId), roleName: String(roleName).toLowerCase() }),
+        const headers = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        if (userId) headers["x-user-id"] = String(userId);
+
+        const res = await fetch("http://localhost:5050/api/users/courses", {
+          headers,
         });
         const result = await res.json();
         if (!res.ok || !result.success) return;
 
-        const mappedData = [];
-        const rawData = result.data || [];
-        for (let i = 0; i < rawData.length; i++) {
-          const dbCourse = rawData[i];
-          let currentProgress = dbCourse.progress ?? 0;
-          let status = currentProgress >= 100 ? "completed" : "learning";
-          let courseImage = dbCourse.Thumbnail || dbCourse.thumbnail;
-          if (courseImage === "CHƯA FIX LỖI ẢNH") courseImage = null;
-          mappedData.push({
-            courseId: dbCourse.CourseId,
-            courseName: dbCourse.CourseName,
-            thumbnail: courseImage,
-            category: dbCourse.CategoryDisplayName || dbCourse.CategoryName || "Chưa phân loại",
-            level: dbCourse.LevelDisplayName || dbCourse.levelName || "Cơ bản",
-            instructor: dbCourse.Instructor || "English Master Mentor Team",
-            totalLessons: dbCourse.TotalLessons || 0,
-            totalNodes: dbCourse.Paths?.length || 0,
-            progressPercentage: currentProgress,
+        const mapped = (result.data || []).map((c) => {
+          const progress = c.progress ?? 0;
+          const status = progress >= 100 ? "completed" : "learning";
+          let thumbnail = c.thumbnail;
+          if (!thumbnail || thumbnail === "CHƯA FIX LỖI ẢNH") thumbnail = null;
+          if (thumbnail && thumbnail.startsWith("/")) {
+            thumbnail = `http://localhost:5050${thumbnail}`;
+          }
+          return {
+            courseId: c.courseId,
+            courseName: c.courseName,
+            thumbnail,
+            category: c.categoryName || "Chưa phân loại",
+            level: c.levelName || "Cơ bản",
+            instructor: c.instructorName || "English Master Mentor Team",
+            totalLessons: c.totalLessons ?? 0,
+            totalNodes: c.chapterCount ?? 0,
+            progressPercentage: progress,
             enrollmentStatus: status,
-            modules: dbCourse.Paths || [],
-          });
-        }
-        setAllCourses(mappedData);
+            enrollmentDate: c.enrollmentDate,
+            quizDoneCount: c.quizDoneCount ?? 0,
+            chapterCount: c.chapterCount ?? 0,
+          };
+        });
+
+        setAllCourses(mapped);
       } catch (error) {
-        console.log("Fetch courses error:", error);
+        console.error("Fetch my courses error:", error);
       }
     };
     getData();
   }, []);
+
 
   const showReset = hasActiveFilters(filters, keyword);
   const activeFilterChips = useMemo(
     () => buildActiveFilterChips({ ...filters, keyword, statuses: [] }),
     [filters, keyword]
   );
+
+  // Đếm số khoá học theo danh mục và trình độ (hiển thị trong filter)
+  const categoryCountMap = useMemo(() => {
+    const map = {};
+    allCourses.forEach(c => {
+      map[c.category] = (map[c.category] || 0) + 1;
+    });
+    return map;
+  }, [allCourses]);
+
+  const levelCountMap = useMemo(() => {
+    const map = {};
+    allCourses.forEach(c => {
+      map[c.level] = (map[c.level] || 0) + 1;
+    });
+    return map;
+  }, [allCourses]);
 
   const updateFilters = (patch) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -232,12 +282,14 @@ export default function MyCoursesListPage() {
   };
 
   const handleResetFilters = () => {
+    setSearchQuery("");
     const next = new URLSearchParams(searchParams);
     next.delete("keyword");
     next.delete("page");
     setSearchParams(next, { replace: true });
     updateFilters({ categories: [], levels: [], page: 1 });
   };
+
 
   const handleLearningAction = (course) => {
     navigate(`/my-courses/${course.courseId}/learn`);
@@ -255,26 +307,50 @@ export default function MyCoursesListPage() {
       </nav>
 
       {/* ── Page Header ── */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
-          Khóa học của tôi
-        </h1>
-        <p className="text-[14px] text-slate-400 mt-1">
-          Tiếp tục học tập và theo dõi tiến độ của bạn
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 pb-2">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
+            Khóa học của tôi
+          </h1>
+          <p className="text-[13.5px] text-slate-400 mt-1 font-medium">
+            Theo dõi lộ trình học tập và kiểm tra tiến độ của bạn
+          </p>
+        </div>
+
+        {/* Clean search bar */}
+        <div className="relative w-full md:w-80">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center">
+            <MagnifyingGlass size={16} className="text-slate-400" />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Tìm nhanh khóa học..."
+            className="w-full bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl py-2.5 pl-10 pr-10 text-[13px] font-medium text-slate-700 outline-none transition-all focus:ring-4 focus:ring-emerald-500/10 shadow-inner-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-200 text-slate-400 transition-colors"
+            >
+              <X size={12} weight="bold" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ── Status Tabs ── */}
-      <div className="flex items-center gap-1 mb-5 bg-slate-50 rounded-xl p-1 border border-slate-100 w-fit">
+      {/* ── Status Tabs (Segmented Control) ── */}
+      <div className="flex items-center gap-1 mb-5 bg-slate-100/60 rounded-xl p-1 border border-slate-200/50 w-fit">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
             type="button"
             onClick={() => updateFilters({ statusTab: tab.value, page: 1 })}
-            className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-all ${
+            className={`px-4.5 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
               filters.statusTab === tab.value
                 ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
-                : "text-slate-500 hover:text-slate-700"
+                : "text-slate-500 hover:text-slate-700 border border-transparent"
             }`}
           >
             {tab.label}
@@ -289,9 +365,11 @@ export default function MyCoursesListPage() {
         categories={filters.categories}
         onCategoriesChange={(e) => updateFilters({ categories: e.target.value, page: 1 })}
         categoryOptions={categoryOptions}
+        categoryCountMap={categoryCountMap}
         levels={filters.levels}
         onLevelsChange={(e) => updateFilters({ levels: e.target.value, page: 1 })}
         levelOptions={levelOptions}
+        levelCountMap={levelCountMap}
         sortBy={filters.sort}
         onSortChange={(e) => updateFilters({ sort: e.target.value, page: 1 })}
         sortOptions={SORT_OPTIONS}
@@ -301,6 +379,7 @@ export default function MyCoursesListPage() {
         showReset={showReset}
         onReset={handleResetFilters}
       />
+
 
       {/* ── Continue Section ── */}
       {showContinueSection && (

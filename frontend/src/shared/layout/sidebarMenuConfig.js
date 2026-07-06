@@ -68,13 +68,7 @@ export function getStudentMenuItems(user) {
       Icon: MenuBookOutlinedIcon,
       disabled: !student,
     },
-    {
-      id: "my-courses",
-      label: "Khóa của tôi",
-      to: "/my-courses",
-      Icon: SchoolOutlinedIcon,
-      disabled: !student,
-    },
+
     {
       id: "placement-test",
       label: "Xếp lớp đầu vào",

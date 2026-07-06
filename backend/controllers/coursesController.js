@@ -1023,6 +1023,53 @@ const deleteCourseMentor = async (req, res) => {
   }
 };
 
+// ──────────────────────────────────────────────────────────────
+// POST /api/courses/:id/complete  — Xác nhận hoàn thành khoá học
+// ──────────────────────────────────────────────────────────────
+const completeCourse = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.headers['x-user-id'];
+
+    if (!userId || !courseId) {
+      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc courseId' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
+    }
+
+    const userObjId = new mongoose.Types.ObjectId(userId);
+    const courseObjId = new mongoose.Types.ObjectId(courseId);
+
+    // Đánh dấu tất cả node của khoá học này là hoàn thành cho user
+    const paths = await Path.find({ courseId: courseObjId }).select('_id').lean();
+    const pathIds = paths.map(p => p._id);
+    const nodes = await PathNode.find({ pathId: { $in: pathIds } }).select('_id').lean();
+
+    const bulkOps = nodes.map(node => ({
+      updateOne: {
+        filter: { userId: userObjId, nodeId: node._id },
+        update: { $set: { userId: userObjId, nodeId: node._id, isCompleted: true, completedAt: new Date() } },
+        upsert: true,
+      },
+    }));
+    if (bulkOps.length > 0) await UserNode.bulkWrite(bulkOps);
+
+    // Set progressPercentage = 100 trong UserCourse
+    await UserCourse.findOneAndUpdate(
+      { userId: userObjId, courseId: courseObjId },
+      { progressPercentage: 100 },
+      { upsert: true }
+    );
+
+
+    return res.json({ success: true, message: 'Hoàn thành khoá học thành công', newProgress: 100 });
+  } catch (err) {
+    console.error('completeCourse error:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi Server' });
+  }
+};
+
 module.exports = {
   getMyCourses,
   getInformationCourse,
@@ -1040,4 +1087,5 @@ module.exports = {
   getCourseComments,
   createCourseComment,
   deleteCourseMentor,
+  completeCourse,
 };
