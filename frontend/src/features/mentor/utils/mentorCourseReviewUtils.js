@@ -359,6 +359,14 @@ function flattenContentErrors(paths, contentErrors) {
         });
       }
 
+      if (nodeErrors._materials) {
+        errors.push({
+          type: 'lesson',
+          message: `${chapterLabel} — ${lessonLabel}: ${nodeErrors._materials}`,
+          targetId: node.tempId,
+        });
+      }
+
       (node.materials ?? []).forEach((material) => {
         if (!isLearningMaterial(material)) return;
 

@@ -362,3 +362,27 @@ export const DELETE_ICON_BTN_SX = {
   p: 0.5,
   '&:hover': { color: '#DC2626', bgcolor: 'rgba(220,38,38,0.05)' },
 };
+
+export const DELETE_NEW_PATH_BTN_SX = {
+  minHeight: 36,
+  px: 1.75,
+  py: 0.75,
+  fontSize: 13,
+  fontWeight: 600,
+  lineHeight: 1.2,
+  color: '#DC2626',
+  border: '1.5px solid #DC2626',
+  borderRadius: '10px',
+  flexShrink: 0,
+  boxShadow: 'none',
+  '&:hover': {
+    color: '#B91C1C',
+    borderColor: '#B91C1C',
+    bgcolor: 'rgba(220,38,38,0.06)',
+    boxShadow: 'none',
+  },
+  '&.Mui-disabled': {
+    color: 'rgba(220,38,38,0.45)',
+    borderColor: 'rgba(220,38,38,0.35)',
+  },
+};

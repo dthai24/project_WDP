@@ -1,4 +1,5 @@
 const { sql } = require("../config/db");
+const { toPathIsActiveBit } = require("../utils/pathActiveUtils");
 const {
   saveCourseThumbnailFromDataUrl,
 } = require("../middlewares/courseThumbnailMiddleware");
@@ -209,6 +210,7 @@ const getCourseChaptersOutline = async (courseId) => {
         PathId: path.PathId,
         PathName: path.PathName,
         Order: path.Order,
+        IsActive: toPathIsActiveBit(path.IsActive, 1),
         Nodes: nodes.map((node) => ({
           NodeId: node.NodeId,
           NodeName: node.NodeName,
@@ -442,20 +444,26 @@ const insertPath = async (path, courseId) => {
   request.input("CourseId", sql.Int, Number(courseId));
   request.input("PathName", sql.NVarChar(100), path.PathName);
   request.input("Description", sql.NVarChar(sql.MAX), path.Description || null);
-  request.input("Order", sql.Int, Number(path.PathOrder ?? 1)); // Fix nhẹ lỗi i is not defined cũ
+  request.input("Order", sql.Int, Number(path.PathOrder ?? path.Order ?? 1));
+  request.input("IsActive", sql.Bit, toPathIsActiveBit(path.IsActive, 1));
 
   const result = await request.query(`
-      INSERT INTO [dbo].[Paths] ([CourseId], [PathName], [Description], [CreatedAt], [Order])
+      INSERT INTO [dbo].[Paths] ([CourseId], [PathName], [Description], [CreatedAt], [Order], [IsActive])
       OUTPUT INSERTED.PathId AS pathId
-      VALUES (@CourseId, @PathName, @Description, GETDATE(), @Order)
+      VALUES (@CourseId, @PathName, @Description, GETDATE(), @Order, @IsActive)
     `);
   return result.recordset[0].pathId;
 };
 
 const insertNode = async (node, pathId) => {
+  const nodeName = String(node.NodeName ?? node.nodeName ?? '').trim();
+  if (!nodeName) {
+    throw new Error('Mỗi bài học (Path_Nodes) phải có NodeName.');
+  }
+
   const request = new sql.Request();
   request.input("PathId", sql.Int, pathId);
-  request.input("NodeName", sql.NVarChar(255), node.NodeName);
+  request.input("NodeName", sql.NVarChar(255), nodeName);
   request.input("NodeOrder", sql.Int, node.NodeOrder);
   request.input("Description", sql.NVarChar(sql.MAX), node.Description ?? null);
 
@@ -504,7 +512,43 @@ const increaseCourseTotalLessons = async (courseId) => {
     `);
 };
 
+function assertValidCourseContentPaths(paths) {
+  if (!Array.isArray(paths) || paths.length === 0) {
+    throw new Error('Cần ít nhất 1 chương.');
+  }
+
+  paths.forEach((path, pathIndex) => {
+    const pathName = String(path.PathName ?? path.pathName ?? '').trim();
+    if (!pathName) {
+      throw new Error(`Chương ${pathIndex + 1}: thiếu PathName.`);
+    }
+
+    const nodes = path.nodes ?? path.Nodes ?? [];
+    if (nodes.length === 0) {
+      throw new Error(`Chương ${pathIndex + 1}: cần ít nhất 1 bài học (Path_Nodes).`);
+    }
+
+    nodes.forEach((node, nodeIndex) => {
+      const nodeName = String(node.NodeName ?? node.nodeName ?? '').trim();
+      if (!nodeName) {
+        throw new Error(
+          `Chương ${pathIndex + 1}, bài ${nodeIndex + 1}: thiếu NodeName (Path_Nodes.NodeName).`,
+        );
+      }
+
+      const materials = node.materials ?? node.Materials ?? [];
+      if (!Array.isArray(materials) || materials.length === 0) {
+        throw new Error(
+          `Chương ${pathIndex + 1}, bài ${nodeIndex + 1}: cần ít nhất 1 học liệu.`,
+        );
+      }
+    });
+  });
+}
+
 const buildPathsNodes = async (paths, courseId) => {
+  assertValidCourseContentPaths(paths);
+
   for (const p of paths ?? []) {
     const pathId = await insertPath(p, courseId);
     const nodes = p.Nodes ?? p.nodes ?? [];
@@ -682,6 +726,7 @@ const getCourseLearningPath = async (courseId, userId) => {
             LEFT JOIN Node_Materials nm ON pn.NodeId = nm.NodeId
             LEFT JOIN User_Nodes un ON pn.NodeId = un.NodeId AND un.UserId = @userId
             WHERE p.CourseId = @courseId
+              AND ISNULL(p.IsActive, 1) = 1
             ORDER BY p.[Order], pn.NodeOrder, nm.MaterialOrder
         `;
     const result = await new sql.Request()

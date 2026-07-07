@@ -43,10 +43,10 @@ function getDeleteDialogContent(deleteConfirm) {
     return { title: 'Xác nhận', message: '' };
   }
 
-  if (deleteConfirm.type === 'chapter') {
+  if (deleteConfirm.type === 'newPath') {
     return {
-      title: 'Xóa chương?',
-      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Toàn bộ bài học và học liệu trong chương sẽ bị xóa.`,
+      title: 'Xóa chương mới?',
+      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Chương này chưa lưu lên hệ thống.`,
     };
   }
 
@@ -226,14 +226,21 @@ export default function MentorCreateCourseContentPage() {
     const newPath = createEmptyPath();
     applyPaths((prev) => [...prev, newPath]);
     setExpandedPaths((prev) => ({ ...prev, [newPath.tempId]: true }));
+    setSavedPathSnapshots((prev) => ({
+      ...prev,
+      [newPath.tempId]: serializePathSnapshot(newPath),
+    }));
   };
 
   const handlePathChange = (pathTempId, patch) => {
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
   };
 
-  const handlePathDelete = (pathTempId) => {
-    applyPaths((prev) => prev.filter((path) => path.tempId !== pathTempId));
+  const handleDeleteNewPath = (pathTempId) => {
+    const path = paths.find((item) => item.tempId === pathTempId);
+    if (!path || path.PathId) return;
+
+    applyPaths((prev) => prev.filter((p) => p.tempId !== pathTempId));
     setSavedPathSnapshots((prev) => {
       const next = { ...prev };
       delete next[pathTempId];
@@ -246,15 +253,20 @@ export default function MentorCreateCourseContentPage() {
     });
   };
 
-  const requestDeletePath = (pathTempId) => {
+  const requestDeleteNewPath = (pathTempId) => {
     const path = paths.find((item) => item.tempId === pathTempId);
-    if (!path) return;
+    if (!path || path.PathId) return;
+
     if (!chapterHasContent(path)) {
-      handlePathDelete(pathTempId);
+      handleDeleteNewPath(pathTempId);
       return;
     }
-    const label = String(path?.PathName ?? '').trim() || 'Chương này';
-    setDeleteConfirm({ type: 'chapter', pathTempId, label });
+
+    setDeleteConfirm({
+      type: 'newPath',
+      pathTempId,
+      label: String(path.PathName ?? '').trim() || 'Chương mới',
+    });
   };
 
   const requestDeleteNode = (pathTempId, nodeTempId) => {
@@ -293,8 +305,8 @@ export default function MentorCreateCourseContentPage() {
   const handleConfirmDelete = () => {
     if (!deleteConfirm) return;
 
-    if (deleteConfirm.type === 'chapter') {
-      handlePathDelete(deleteConfirm.pathTempId);
+    if (deleteConfirm.type === 'newPath') {
+      handleDeleteNewPath(deleteConfirm.pathTempId);
     } else if (deleteConfirm.type === 'lesson') {
       handleNodeDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId);
     } else {
@@ -406,7 +418,7 @@ export default function MentorCreateCourseContentPage() {
     if (!path) return false;
 
     const pathErrors = validatePathForSave(path);
-    if (pathErrors.PathName) {
+    if (Object.keys(pathErrors).length > 0) {
       setValidationErrors((prev) => ({
         ...prev,
         paths: {
@@ -417,7 +429,14 @@ export default function MentorCreateCourseContentPage() {
           },
         },
       }));
-      toast.error(pathErrors.PathName);
+
+      const firstNodeError = Object.values(pathErrors.nodes ?? {})[0];
+      const toastMessage = pathErrors.PathName
+        ?? pathErrors._nodes
+        ?? firstNodeError?.NodeName
+        ?? firstNodeError?._materials
+        ?? 'Vui lòng kiểm tra lại thông tin chương.';
+      toast.error(toastMessage);
       return false;
     }
 
@@ -609,7 +628,7 @@ export default function MentorCreateCourseContentPage() {
           }
           onAddPath={handleAddPath}
           onPathChange={handlePathChange}
-          onPathDelete={requestDeletePath}
+          onDeleteNewPath={requestDeleteNewPath}
           onAddNode={handleAddNode}
           onNodeChange={handleNodeChange}
           onNodeDelete={requestDeleteNode}

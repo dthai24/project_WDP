@@ -4,6 +4,7 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import { TAB_STRIP_BG } from './mentorCourseContentStyles';
+import { isPathActive } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 function getTabLabel(path, pathIndex) {
   const prefix = `Chương ${pathIndex + 1}`;
@@ -68,6 +69,7 @@ export default function MentorChapterTabs({
         const isActive = path.tempId === activeId;
         const hasError = Boolean(hasErrorById[path.tempId]);
         const hasContent = Boolean(hasContentById[path.tempId]);
+        const published = isPathActive(path);
 
         return (
           <Box
@@ -93,9 +95,10 @@ export default function MentorChapterTabs({
               borderBottom: isActive ? '1px solid #fff' : '1px solid transparent',
               bgcolor: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
               color: isActive ? TEXT : MUTED,
+              opacity: published ? 1 : 0.72,
               mb: isActive ? '-1px' : 0,
               zIndex: isActive ? 2 : 1,
-              transition: 'background-color 0.15s ease, color 0.15s ease',
+              transition: 'background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease',
               '&:hover': {
                 bgcolor: isActive ? '#fff' : 'rgba(255,255,255,0.85)',
                 color: TEXT,
@@ -125,6 +128,23 @@ export default function MentorChapterTabs({
             >
               {getTabLabel(path, pathIndex)}
             </Typography>
+            {!published ? (
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: '#64748B',
+                  bgcolor: 'rgba(100,116,139,0.12)',
+                  px: 0.6,
+                  py: 0.15,
+                  borderRadius: '999px',
+                  flexShrink: 0,
+                  lineHeight: 1.4,
+                }}
+              >
+                Ẩn
+              </Typography>
+            ) : null}
           </Box>
         );
       })}

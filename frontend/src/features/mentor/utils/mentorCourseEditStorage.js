@@ -3,6 +3,7 @@ import {
   filterLearningMaterials,
   sanitizePathsForStorage,
   stripNonLearningMaterials,
+  toPathIsActiveValue,
 } from './mentorCourseContentUtils';
 
 const editKey = (courseId) => `mentor_course_edit_draft_${courseId}`;
@@ -19,6 +20,7 @@ export function mapDetailPathsToEditPaths(detailPaths = []) {
       PathName: path.PathName ?? path.pathName ?? '',
       Description: path.Description ?? path.description ?? '',
       Order: path.Order ?? path.order,
+      IsActive: toPathIsActiveValue(path.IsActive ?? path.isActive, 1),
       tempId: createTempId('path'),
       nodes: (path.nodes ?? path.Nodes ?? []).map((node) => ({
         NodeId: node.NodeId ?? node.nodeId ?? null,

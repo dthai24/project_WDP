@@ -833,6 +833,142 @@ export function normalizeQuestionBankSectionForSave(section) {
   return next;
 }
 
+function normalizeQuestionBankCompareKey(value) {
+  return String(value ?? '').trim().toLocaleLowerCase('vi-VN');
+}
+
+function resolveQuestionBankSectionTitleForCompare(section) {
+  const trimmedTitle = String(section?.SectionTitle ?? '').trim();
+  if (trimmedTitle) return trimmedTitle;
+  if (section?.SkillType === TEST_SKILL_WRITING) {
+    return String(section?.DisplayName ?? '').trim();
+  }
+  return '';
+}
+
+function validateQuestionBankSectionNameUniqueness(section, allSections = []) {
+  const errors = {};
+  const sectionNameKey = normalizeQuestionBankCompareKey(section?.DisplayName);
+  const sectionTitleKey = normalizeQuestionBankCompareKey(
+    resolveQuestionBankSectionTitleForCompare(section),
+  );
+
+  (allSections ?? []).forEach((other) => {
+    if (!other?.tempId || other.tempId === section?.tempId) return;
+
+    const otherNameKey = normalizeQuestionBankCompareKey(other.DisplayName);
+    const otherTitleKey = normalizeQuestionBankCompareKey(
+      resolveQuestionBankSectionTitleForCompare(other),
+    );
+
+    if (sectionNameKey && otherNameKey && sectionNameKey === otherNameKey) {
+      errors.DisplayName = 'Section name đã tồn tại trong chương này';
+    }
+    if (sectionTitleKey && otherTitleKey && sectionTitleKey === otherTitleKey) {
+      errors.SectionTitle = 'Title (đề bài) đã tồn tại trong chương này';
+    }
+  });
+
+  return errors;
+}
+
+function findQuestionBankDuplicateQuestionGroups(section) {
+  const titleGroups = new Map();
+
+  (section?.Questions ?? []).forEach((question, index) => {
+    const titleKey = normalizeQuestionBankCompareKey(question?.QuestionText);
+    if (!titleKey) return;
+
+    if (!titleGroups.has(titleKey)) {
+      titleGroups.set(titleKey, []);
+    }
+    titleGroups.get(titleKey).push({
+      question,
+      index: index + 1,
+      text: String(question?.QuestionText ?? '').trim(),
+    });
+  });
+
+  return [...titleGroups.values()].filter((items) => items.length > 1);
+}
+
+function formatQuestionBankMissingAnswersToast(section, errors = {}) {
+  const indexes = [];
+
+  (section?.Questions ?? []).forEach((question, index) => {
+    const qErrors = errors?.Questions?.[question.tempId];
+    if (!qErrors) return;
+    if (qErrors._options || (qErrors.Options && Object.keys(qErrors.Options).length > 0)) {
+      indexes.push(index + 1);
+    }
+  });
+
+  if (indexes.length === 0) return null;
+  return `Câu chưa có đáp án — Câu ${indexes.join(', ')}`;
+}
+
+function formatQuestionBankDuplicateQuestionsToast(section) {
+  const groups = findQuestionBankDuplicateQuestionGroups(section);
+  if (groups.length === 0) return null;
+
+  const parts = groups.map((items) => {
+    const nums = items.map((item) => item.index).join(', ');
+    const preview = items[0].text;
+    const shortPreview = preview.length > 60 ? `${preview.slice(0, 57)}...` : preview;
+    return `Câu ${nums}: "${shortPreview}"`;
+  });
+
+  return `Câu hỏi trùng đề bài — ${parts.join(' · ')}`;
+}
+
+function formatQuestionBankMissingCorrectToast(section, errors = {}) {
+  const indexes = [];
+
+  (section?.Questions ?? []).forEach((question, index) => {
+    const qErrors = errors?.Questions?.[question.tempId];
+    if (qErrors?._correctOption) {
+      indexes.push(index + 1);
+    }
+  });
+
+  if (indexes.length === 0) return null;
+  return `Câu chưa có đáp án đúng — Câu ${indexes.join(', ')}`;
+}
+
+function collectQuestionBankQuestionTextToasts(section, errors = {}) {
+  const messages = [];
+
+  (section?.Questions ?? []).forEach((question) => {
+    const qErrors = errors?.Questions?.[question.tempId];
+    if (!qErrors?.QuestionText || String(qErrors.QuestionText).includes('bị trùng')) return;
+    messages.push(qErrors.QuestionText);
+  });
+
+  return messages;
+}
+
+function validateQuestionBankQuestionTitleUniqueness(section) {
+  const questionErrors = {};
+
+  findQuestionBankDuplicateQuestionGroups(section).forEach((items) => {
+    items.forEach(({ question, index }) => {
+      const duplicateIndexes = items
+        .filter((item) => item.question.tempId !== question.tempId)
+        .map((item) => item.index);
+      const suffix = duplicateIndexes.length > 0
+        ? ` (trùng với câu ${duplicateIndexes.join(', ')})`
+        : '';
+
+      questionErrors[question.tempId] = {
+        ...(questionErrors[question.tempId] ?? {}),
+        QuestionText: `Đề bài câu hỏi bị trùng${suffix}`,
+      };
+    });
+  });
+
+  return questionErrors;
+}
+
 export function getSectionDisplayTitle(section) {
   const title = String(section?.SectionTitle ?? '').trim();
   if (title) return title;
@@ -1039,7 +1175,7 @@ export function validateTestMaterial(material, options = {}) {
 /** Validate một section question bank (dùng trước khi cập nhật từng section). */
 export function validateQuestionBankSection(
   section,
-  { validateScore = false, requireQuestions = false, forSave = false } = {},
+  { validateScore = false, requireQuestions = false, forSave = false, allSections = [] } = {},
 ) {
   void validateScore;
   const sErrors = {};
@@ -1064,6 +1200,8 @@ export function validateQuestionBankSection(
     if (!sectionTitle) {
       sErrors.SectionTitle = 'Vui lòng nhập Title (đề bài)';
     }
+
+    Object.assign(sErrors, validateQuestionBankSectionNameUniqueness(section, allSections));
   }
 
   const questions = section.Questions ?? [];
@@ -1088,6 +1226,16 @@ export function validateQuestionBankSection(
     }
   });
 
+  if (forSave) {
+    const duplicateQuestionErrors = validateQuestionBankQuestionTitleUniqueness(section);
+    Object.entries(duplicateQuestionErrors).forEach(([tempId, qErrors]) => {
+      questionErrors[tempId] = {
+        ...(questionErrors[tempId] ?? {}),
+        ...qErrors,
+      };
+    });
+  }
+
   if (Object.keys(questionErrors).length > 0) {
     sErrors.Questions = questionErrors;
   }
@@ -1103,55 +1251,43 @@ export function isQuestionBankSectionValid(section) {
   return Object.keys(errors).length === 0;
 }
 
+export function getQuestionBankSectionValidationToasts(errors = {}, section = null) {
+  const messages = [];
+
+  // Thứ tự khớp validateQuestionBankSection()
+  if (errors._section) messages.push(errors._section);
+  if (errors.SkillType) messages.push(errors.SkillType);
+  if (errors.DisplayName) messages.push(errors.DisplayName);
+  if (errors.SectionTitle) messages.push(errors.SectionTitle);
+  if (errors._questions) messages.push(errors._questions);
+  if (errors._audio) messages.push(errors._audio);
+  if (errors.File) messages.push(errors.File);
+  if (errors.AudioUrl) messages.push(errors.AudioUrl);
+  if (errors.Description) messages.push(errors.Description);
+
+  messages.push(...collectQuestionBankQuestionTextToasts(section, errors));
+
+  const missingAnswersToast = formatQuestionBankMissingAnswersToast(section, errors);
+  if (missingAnswersToast) messages.push(missingAnswersToast);
+
+  const duplicateToast = formatQuestionBankDuplicateQuestionsToast(section);
+  if (duplicateToast) messages.push(duplicateToast);
+
+  const missingCorrectToast = formatQuestionBankMissingCorrectToast(section, errors);
+  if (missingCorrectToast) messages.push(missingCorrectToast);
+
+  return messages.filter(Boolean);
+}
+
+/** Toast lỗi đầu tiên theo thứ tự validate — mỗi lần lưu chỉ hiện một lỗi. */
+export function getQuestionBankSectionValidationToast(errors = {}, section = null) {
+  const toasts = getQuestionBankSectionValidationToasts(errors, section);
+  return toasts[0] ?? null;
+}
+
 export function getQuestionBankSectionValidationSummary(errors = {}, section = null) {
-  if (errors.DisplayName) return errors.DisplayName;
-  if (errors.SectionTitle) return errors.SectionTitle;
-  if (errors._questions) return errors._questions;
-  if (errors.Questions) {
-    for (const [questionTempId, questionErrors] of Object.entries(errors.Questions)) {
-      const questionMessage = buildQuestionBankQuestionValidationMessage(
-        section,
-        questionTempId,
-        questionErrors,
-      );
-      if (questionMessage) return questionMessage;
-    }
-  }
-  if (errors._audio) return errors._audio;
-  if (errors.File) return errors.File;
-  if (errors.AudioUrl) return errors.AudioUrl;
-  if (errors.Description) return errors.Description;
-  if (errors.SkillType) return errors.SkillType;
-  if (errors._section) return errors._section;
-  return 'Vui lòng kiểm tra lại thông tin section.';
-}
-
-function getQuestionValidationLabel(section, questionTempId) {
-  const questions = section?.Questions ?? [];
-  const questionIndex = questions.findIndex((question) => question.tempId === questionTempId);
-  return questionIndex >= 0 ? `Câu ${questionIndex + 1}` : 'Câu';
-}
-
-function buildQuestionBankQuestionValidationMessage(section, questionTempId, questionErrors = {}) {
-  const label = getQuestionValidationLabel(section, questionTempId);
-
-  if (questionErrors._options) {
-    return `${label} chưa có đáp án`;
-  }
-
-  if (questionErrors._correctOption) {
-    return `${label} chưa có đáp án đúng (Tối thiểu 1 đáp án đúng)`;
-  }
-
-  if (questionErrors.Options && Object.keys(questionErrors.Options).length > 0) {
-    return `${label} chưa có đáp án`;
-  }
-
-  if (questionErrors.QuestionText) {
-    return questionErrors.QuestionText;
-  }
-
-  return null;
+  return getQuestionBankSectionValidationToast(errors, section)
+    ?? 'Vui lòng kiểm tra lại thông tin section.';
 }
 
 export const QUESTION_BANK_SAVE_WARNINGS = {
@@ -1161,13 +1297,14 @@ export const QUESTION_BANK_SAVE_WARNINGS = {
 };
 
 /** Kiểm tra section trước khi lưu — trả về cảnh báo đầu tiên nếu thiếu dữ liệu bắt buộc. */
-export function findQuestionBankSectionSaveIssue(section) {
+export function findQuestionBankSectionSaveIssue(section, allSections = []) {
   if (!section?.tempId) {
     return { message: 'Section không hợp lệ' };
   }
 
   const errors = validateQuestionBankSection(normalizeQuestionBankSectionForSave(section), {
     forSave: true,
+    allSections,
   });
   if (Object.keys(errors).length === 0) return null;
 
@@ -1194,21 +1331,14 @@ export function findQuestionBankSectionSaveIssue(section) {
     };
   }
 
-  if (errors.Questions) {
-    const questionTempId = Object.keys(errors.Questions)[0];
-    const questionErrors = errors.Questions[questionTempId] ?? {};
-    const questionMessage = buildQuestionBankQuestionValidationMessage(
-      section,
-      questionTempId,
-      questionErrors,
-    );
-    if (questionMessage) {
-      return {
-        message: questionMessage,
-        sectionTempId: section.tempId,
-        questionTempId,
-      };
-    }
+  const validationToasts = getQuestionBankSectionValidationToasts(errors, section);
+  if (validationToasts.length > 0) {
+    const questionTempId = Object.keys(errors.Questions ?? {})[0] ?? null;
+    return {
+      message: validationToasts[0],
+      sectionTempId: section.tempId,
+      ...(questionTempId ? { questionTempId } : {}),
+    };
   }
 
   return {
@@ -1220,7 +1350,7 @@ export function findQuestionBankSectionSaveIssue(section) {
 /** Kiểm tra toàn bộ sections — dùng khi cần validate cả workspace. */
 export function findQuestionBankSaveValidationIssue(sections = []) {
   for (const section of sections ?? []) {
-    const issue = findQuestionBankSectionSaveIssue(section);
+    const issue = findQuestionBankSectionSaveIssue(section, sections);
     if (issue) return issue;
   }
   return null;

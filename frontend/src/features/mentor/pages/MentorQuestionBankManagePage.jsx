@@ -30,7 +30,7 @@ import {
   normalizeQuestionBankSectionForSave,
   scrollToQuestionBankItem,
   validateQuestionBankSection,
-  getQuestionBankSectionValidationSummary,
+  getQuestionBankSectionValidationToast,
   hasPendingPersistedQuestionDeletes,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
@@ -478,10 +478,14 @@ export default function MentorQuestionBankManagePage() {
     const deleteQuestionsOnly = isQuestionBankDeleteOnlyPayload(previewPayload);
 
     if (!deleteQuestionsOnly) {
-      const errors = validateQuestionBankSection(normalized, { forSave: true });
+      const errors = validateQuestionBankSection(normalized, {
+        forSave: true,
+        allSections: sectionsRef.current,
+      });
       if (Object.keys(errors).length > 0) {
         setSectionErrors((prev) => ({ ...prev, [section.tempId]: errors }));
-        toast.error(getQuestionBankSectionValidationSummary(errors, section));
+        const validationToast = getQuestionBankSectionValidationToast(errors, section);
+        if (validationToast) toast.error(validationToast);
         setSavePreviewOpen(false);
         savePreviewReadingTextRef.current = null;
         savePayloadRef.current = null;

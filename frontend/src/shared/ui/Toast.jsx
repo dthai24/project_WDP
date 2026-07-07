@@ -84,11 +84,25 @@ function showToast(message, type = "info", options = {}) {
   );
 }
 
+export const TOAST_SEQUENCE_GAP_MS = 800;
+
 export const toast = {
   success: (message, options) => showToast(message, "success", options),
   error: (message, options) => showToast(message, "error", options),
   info: (message, options) => showToast(message, "info", options),
   warning: (message, options) => showToast(message, "warning", options),
+  errorSequence: async (messages = [], options = {}) => {
+    const list = (Array.isArray(messages) ? messages : [messages]).filter(Boolean);
+    if (list.length === 0) return;
+
+    const gapMs = options.gapMs ?? TOAST_SEQUENCE_GAP_MS;
+    for (let index = 0; index < list.length; index += 1) {
+      showToast(list[index], "error", options);
+      if (index < list.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, gapMs));
+      }
+    }
+  },
 };
 
 const toastGlobalStyles = {

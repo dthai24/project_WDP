@@ -1,0 +1,743 @@
+import { resolveVideoEmbed } from '@/shared/utils/videoEmbedUtils';
+import {
+  DOC_SOURCE_LINK,
+  DOC_SOURCE_UPLOAD,
+  VIDEO_SOURCE_LINK,
+  filterLearningMaterials,
+  isPathSnapshotSaved,
+  trimShortDescription,
+  toPathIsActiveValue,
+  withNormalizedOrders,
+} from './mentorCourseContentUtils';
+
+function parsePathSnapshot(snapshot) {
+  if (!snapshot) return null;
+  try {
+    return JSON.parse(snapshot);
+  } catch {
+    return null;
+  }
+}
+
+function normalizePathFields(path = {}) {
+  return {
+    PathName: String(path.PathName ?? '').trim(),
+    Description: trimShortDescription(path.Description),
+    IsActive: toPathIsActiveValue(path.IsActive ?? path.isActive, 1),
+  };
+}
+
+function normalizeNodeFields(node = {}) {
+  return {
+    NodeName: String(node.NodeName ?? node.nodeName ?? '').trim(),
+    Description: trimShortDescription(node.Description),
+  };
+}
+
+function buildMaterialApiData(material = {}) {
+  const base = {
+    MaterialType: material.MaterialType,
+    Title: String(material.Title ?? '').trim(),
+    MaterialOrder: Number(material.MaterialOrder ?? 1),
+  };
+
+  if (material.MaterialType === 'TEXT') {
+    return {
+      ...base,
+      SourceType: material.SourceType ?? 'UPLOAD',
+      MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+      FileName: material.FileName ?? null,
+      FileSize: material.FileSize ?? null,
+    };
+  }
+
+  if (material.MaterialType === 'DOC') {
+    const sourceType = material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+    return {
+      ...base,
+      SourceType: sourceType,
+      MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+      FileName: material.FileName ?? null,
+      FileSize: material.FileSize ?? null,
+    };
+  }
+
+  if (material.MaterialType === 'VIDEO') {
+    const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
+    const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
+    return {
+      ...base,
+      SourceType: VIDEO_SOURCE_LINK,
+      MaterialUrl: materialUrl,
+      EmbedUrl: embedUrl,
+    };
+  }
+
+  return {
+    ...base,
+    MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+  };
+}
+
+function buildMaterialContentSet(current = {}, baseline = {}) {
+  const set = {};
+  const currentData = buildMaterialApiData(current);
+  const baselineData = buildMaterialApiData(baseline);
+
+  Object.keys(currentData).forEach((key) => {
+    if (key === 'MaterialOrder') return;
+    if (JSON.stringify(currentData[key]) !== JSON.stringify(baselineData[key])) {
+      set[key] = currentData[key];
+    }
+  });
+
+  return set;
+}
+
+function buildNodeUpdateSet(current = {}, baseline = {}) {
+  const set = {};
+  const currentFields = normalizeNodeFields(current);
+  const baselineFields = normalizeNodeFields(baseline);
+
+  if (currentFields.NodeName !== baselineFields.NodeName) {
+    set.NodeName = currentFields.NodeName;
+  }
+  if (currentFields.Description !== baselineFields.Description) {
+    set.Description = currentFields.Description;
+  }
+
+  return set;
+}
+
+function buildPathUpdateSet(current = {}, baseline = {}, pathOrder = null) {
+  const set = {};
+  const currentFields = normalizePathFields(current);
+  const baselineFields = normalizePathFields(baseline);
+
+  if (currentFields.PathName !== baselineFields.PathName) {
+    set.PathName = currentFields.PathName;
+  }
+  if (currentFields.Description !== baselineFields.Description) {
+    set.Description = currentFields.Description;
+  }
+  if (currentFields.IsActive !== baselineFields.IsActive) {
+    set.IsActive = currentFields.IsActive;
+  }
+  if (pathOrder != null && Number(pathOrder) !== Number(baseline?.Order ?? baseline?.PathOrder ?? pathOrder)) {
+    set.Order = Number(pathOrder);
+  }
+
+  return set;
+}
+
+function diffNodeMaterials(currentNode, baselineNode, nodeId, payload) {
+  const baselineMaterials = filterLearningMaterials(baselineNode?.materials ?? baselineNode?.Materials ?? []);
+  const currentMaterials = filterLearningMaterials(currentNode?.materials ?? currentNode?.Materials ?? []);
+  const currentMaterialIds = new Set(
+    currentMaterials.filter((item) => item.MaterialId).map((item) => item.MaterialId),
+  );
+
+  baselineMaterials.forEach((material) => {
+    if (material.MaterialId && !currentMaterialIds.has(material.MaterialId)) {
+      payload.materialsDelete.push({ materialId: material.MaterialId, nodeId });
+      payload.summary.materialsDelete += 1;
+    }
+  });
+
+  currentMaterials.forEach((material, materialIndex) => {
+    const materialOrder = materialIndex + 1;
+    if (!material.MaterialId) {
+      payload.materialsInsert.push({
+        nodeId,
+        clientRef: material.tempId,
+        MaterialOrder: materialOrder,
+        data: buildMaterialApiData({ ...material, MaterialOrder: materialOrder }),
+      });
+      payload.summary.materialsInsert += 1;
+      return;
+    }
+
+    const baselineMaterial = baselineMaterials.find((item) => item.MaterialId === material.MaterialId)
+      ?? baselineMaterials.find((item) => item.tempId === material.tempId);
+    const materialSet = buildMaterialContentSet(
+      { ...material, MaterialOrder: materialOrder },
+      baselineMaterial ?? {},
+    );
+    const orderChanged = materialOrder !== Number(baselineMaterial?.MaterialOrder ?? materialOrder);
+
+    if (Object.keys(materialSet).length > 0 || orderChanged) {
+      payload.materialsUpdate.push({
+        materialId: material.MaterialId,
+        nodeId,
+        ...(Object.keys(materialSet).length > 0 ? { set: materialSet } : {}),
+        ...(orderChanged ? { MaterialOrder: materialOrder } : {}),
+      });
+      payload.summary.materialsUpdate += 1;
+    }
+  });
+}
+
+export function buildCoursePathSavePayload(
+  path,
+  { courseId, pathOrder },
+  baselineSnapshot = null,
+) {
+  const [normalizedPath] = withNormalizedOrders([path]);
+  const baseline = parsePathSnapshot(baselineSnapshot);
+  const pathId = normalizedPath.PathId ?? null;
+  const currentNodes = normalizedPath.nodes ?? [];
+  const baselineNodes = baseline?.nodes ?? [];
+
+  const payload = {
+    context: {
+      courseId: Number(courseId) || null,
+      pathId,
+      pathOrder: Number(pathOrder) || 1,
+      pathTempId: normalizedPath.tempId ?? null,
+      pathName: normalizePathFields(normalizedPath).PathName || null,
+    },
+    summary: {
+      pathInsert: 0,
+      pathUpdate: 0,
+      nodesInsert: 0,
+      nodesUpdate: 0,
+      nodesDelete: 0,
+      materialsInsert: 0,
+      materialsUpdate: 0,
+      materialsDelete: 0,
+    },
+    pathInsert: null,
+    pathUpdate: null,
+    nodesInsert: [],
+    nodesUpdate: [],
+    nodesDelete: [],
+    materialsInsert: [],
+    materialsUpdate: [],
+    materialsDelete: [],
+  };
+
+  if (!pathId) {
+    payload.pathInsert = {
+      table: 'Paths',
+      data: {
+        ...normalizePathFields(normalizedPath),
+        Order: payload.context.pathOrder,
+      },
+      nodes: currentNodes.map((node, nodeIndex) => ({
+        table: 'Path_Nodes',
+        clientRef: node.tempId,
+        NodeOrder: nodeIndex + 1,
+        data: {
+          ...normalizeNodeFields(node),
+          NodeOrder: nodeIndex + 1,
+        },
+        materialsInsert: filterLearningMaterials(node.materials ?? []).map((material, materialIndex) => ({
+          table: 'Node_Materials',
+          clientRef: material.tempId,
+          MaterialOrder: materialIndex + 1,
+          data: buildMaterialApiData({ ...material, MaterialOrder: materialIndex + 1 }),
+        })),
+      })),
+    };
+    payload.summary.pathInsert = 1;
+    payload.summary.nodesInsert = currentNodes.length;
+    payload.summary.materialsInsert = currentNodes.reduce(
+      (sum, node) => sum + filterLearningMaterials(node.materials ?? []).length,
+      0,
+    );
+    return payload;
+  }
+
+  const pathSet = buildPathUpdateSet(normalizedPath, baseline ?? {}, payload.context.pathOrder);
+  if (Object.keys(pathSet).length > 0) {
+    payload.pathUpdate = {
+      table: 'Paths',
+      pathId,
+      set: pathSet,
+    };
+    payload.summary.pathUpdate = 1;
+  }
+
+  const currentNodeIds = new Set(
+    currentNodes.filter((node) => node.NodeId).map((node) => node.NodeId),
+  );
+
+  baselineNodes.forEach((node) => {
+    if (node.NodeId && !currentNodeIds.has(node.NodeId)) {
+      payload.nodesDelete.push({ table: 'Path_Nodes', nodeId: node.NodeId });
+      payload.summary.nodesDelete += 1;
+    }
+  });
+
+  currentNodes.forEach((node, nodeIndex) => {
+    const nodeOrder = nodeIndex + 1;
+
+    if (!node.NodeId) {
+      payload.nodesInsert.push({
+        table: 'Path_Nodes',
+        pathId,
+        clientRef: node.tempId,
+        NodeOrder: nodeOrder,
+        data: {
+          ...normalizeNodeFields(node),
+          NodeOrder: nodeOrder,
+        },
+        materialsInsert: filterLearningMaterials(node.materials ?? []).map((material, materialIndex) => ({
+          table: 'Node_Materials',
+          clientRef: material.tempId,
+          MaterialOrder: materialIndex + 1,
+          data: buildMaterialApiData({ ...material, MaterialOrder: materialIndex + 1 }),
+        })),
+      });
+      payload.summary.nodesInsert += 1;
+      payload.summary.materialsInsert += filterLearningMaterials(node.materials ?? []).length;
+      return;
+    }
+
+    const baselineNode = baselineNodes.find((item) => item.NodeId === node.NodeId)
+      ?? baselineNodes.find((item) => item.tempId === node.tempId);
+    const nodeSet = buildNodeUpdateSet(node, baselineNode ?? {});
+    const nodeOrderChanged = nodeOrder !== Number(baselineNode?.NodeOrder ?? nodeOrder);
+
+    if (Object.keys(nodeSet).length > 0 || nodeOrderChanged) {
+      payload.nodesUpdate.push({
+        table: 'Path_Nodes',
+        nodeId: node.NodeId,
+        ...(Object.keys(nodeSet).length > 0 ? { set: nodeSet } : {}),
+        ...(nodeOrderChanged ? { NodeOrder: nodeOrder } : {}),
+      });
+      payload.summary.nodesUpdate += 1;
+    }
+
+    diffNodeMaterials(node, baselineNode ?? {}, node.NodeId, payload);
+  });
+
+  return payload;
+}
+
+export function hasCoursePathSaveOperations(payload = {}) {
+  return Boolean(
+    payload.pathInsert
+    || payload.pathUpdate
+    || (payload.nodesInsert?.length ?? 0) > 0
+    || (payload.nodesUpdate?.length ?? 0) > 0
+    || (payload.nodesDelete?.length ?? 0) > 0
+    || (payload.materialsInsert?.length ?? 0) > 0
+    || (payload.materialsUpdate?.length ?? 0) > 0
+    || (payload.materialsDelete?.length ?? 0) > 0,
+  );
+}
+
+function emptyCoursePathSavePayload(context = {}) {
+  return {
+    context,
+    summary: {
+      pathInsert: 0,
+      pathUpdate: 0,
+      nodesInsert: 0,
+      nodesUpdate: 0,
+      nodesDelete: 0,
+      materialsInsert: 0,
+      materialsUpdate: 0,
+      materialsDelete: 0,
+    },
+    pathInsert: null,
+    pathUpdate: null,
+    nodesInsert: [],
+    nodesUpdate: [],
+    nodesDelete: [],
+    materialsInsert: [],
+    materialsUpdate: [],
+    materialsDelete: [],
+  };
+}
+
+export function buildCoursePathOnlySavePayload(
+  path,
+  { courseId, pathOrder },
+  baselineSnapshot = null,
+) {
+  const fullPayload = buildCoursePathSavePayload(
+    path,
+    { courseId, pathOrder },
+    baselineSnapshot,
+  );
+
+  if (fullPayload.pathInsert) {
+    return {
+      ...fullPayload,
+      pathInsert: {
+        table: fullPayload.pathInsert.table,
+        data: fullPayload.pathInsert.data,
+      },
+      nodesInsert: [],
+      nodesUpdate: [],
+      nodesDelete: [],
+      materialsInsert: [],
+      materialsUpdate: [],
+      materialsDelete: [],
+      summary: {
+        pathInsert: fullPayload.summary.pathInsert,
+        pathUpdate: 0,
+        nodesInsert: 0,
+        nodesUpdate: 0,
+        nodesDelete: 0,
+        materialsInsert: 0,
+        materialsUpdate: 0,
+        materialsDelete: 0,
+      },
+    };
+  }
+
+  return {
+    ...fullPayload,
+    pathInsert: null,
+    nodesInsert: [],
+    nodesUpdate: [],
+    nodesDelete: [],
+    materialsInsert: [],
+    materialsUpdate: [],
+    materialsDelete: [],
+    summary: {
+      pathInsert: 0,
+      pathUpdate: fullPayload.summary.pathUpdate,
+      nodesInsert: 0,
+      nodesUpdate: 0,
+      nodesDelete: 0,
+      materialsInsert: 0,
+      materialsUpdate: 0,
+      materialsDelete: 0,
+    },
+  };
+}
+
+export function buildCourseNodeSavePayload(
+  path,
+  nodeTempId,
+  { courseId, pathOrder },
+  baselineSnapshot = null,
+) {
+  const fullPayload = buildCoursePathSavePayload(
+    path,
+    { courseId, pathOrder },
+    baselineSnapshot,
+  );
+  const node = (path.nodes ?? path.Nodes ?? []).find((item) => item.tempId === nodeTempId);
+  if (!node) {
+    return emptyCoursePathSavePayload(fullPayload.context ?? {});
+  }
+
+  const nodeId = node.NodeId ?? null;
+  const nodesInsert = (fullPayload.nodesInsert ?? []).filter(
+    (item) => item.clientRef === nodeTempId,
+  );
+  const nodesUpdate = (fullPayload.nodesUpdate ?? []).filter(
+    (item) => item.nodeId === nodeId,
+  );
+  const materialsInsert = (fullPayload.materialsInsert ?? []).filter(
+    (item) => item.nodeId === nodeId,
+  );
+  const materialsUpdate = (fullPayload.materialsUpdate ?? []).filter(
+    (item) => item.nodeId === nodeId,
+  );
+  const materialsDelete = (fullPayload.materialsDelete ?? []).filter(
+    (item) => item.nodeId === nodeId,
+  );
+
+  const nestedMaterialsInsert = nodesInsert.reduce(
+    (sum, item) => sum + (item.materialsInsert?.length ?? 0),
+    0,
+  );
+
+  return {
+    context: {
+      ...(fullPayload.context ?? {}),
+      nodeTempId,
+      nodeId,
+      nodeName: normalizeNodeFields(node).NodeName || null,
+    },
+    summary: {
+      pathInsert: 0,
+      pathUpdate: 0,
+      nodesInsert: nodesInsert.length,
+      nodesUpdate: nodesUpdate.length,
+      nodesDelete: 0,
+      materialsInsert: materialsInsert.length + nestedMaterialsInsert,
+      materialsUpdate: materialsUpdate.length,
+      materialsDelete: materialsDelete.length,
+    },
+    pathInsert: null,
+    pathUpdate: null,
+    nodesInsert,
+    nodesUpdate,
+    nodesDelete: [],
+    materialsInsert,
+    materialsUpdate,
+    materialsDelete,
+  };
+}
+
+export function hasCoursePathOnlySaveOperations(payload = {}) {
+  return Boolean(payload.pathInsert || payload.pathUpdate);
+}
+
+export function hasCourseNodeSaveOperations(payload = {}) {
+  return Boolean(
+    (payload.nodesInsert?.length ?? 0) > 0
+    || (payload.nodesUpdate?.length ?? 0) > 0
+    || (payload.materialsInsert?.length ?? 0) > 0
+    || (payload.materialsUpdate?.length ?? 0) > 0
+    || (payload.materialsDelete?.length ?? 0) > 0,
+  );
+}
+
+export function buildCoursePathApiCalls(payload = {}) {
+  const calls = [];
+  const ctx = payload.context ?? {};
+  const courseId = ctx.courseId;
+  const pathId = payload.pathUpdate?.pathId ?? ctx.pathId ?? null;
+
+  (payload.materialsDelete ?? []).forEach((item) => {
+    calls.push({
+      method: 'DELETE',
+      url: `/api/mentor/materials/${item.materialId}`,
+      target: 'Node_Materials',
+      id: item.materialId,
+    });
+  });
+
+  (payload.nodesDelete ?? []).forEach((item) => {
+    calls.push({
+      method: 'DELETE',
+      url: `/api/mentor/nodes/${item.nodeId}`,
+      target: 'Path_Nodes',
+      id: item.nodeId,
+    });
+  });
+
+  if (payload.pathInsert) {
+    calls.push({
+      method: 'POST',
+      url: `/api/mentor/courses/${courseId}/paths`,
+      target: 'Paths',
+      body: { data: payload.pathInsert.data },
+    });
+
+    (payload.pathInsert.nodes ?? []).forEach((node) => {
+      calls.push({
+        method: 'POST',
+        url: `/api/mentor/paths/{pathId}/nodes`,
+        target: 'Path_Nodes',
+        body: {
+          clientRef: node.clientRef ?? null,
+          data: { ...node.data, NodeOrder: node.NodeOrder },
+        },
+        nestedMaterials: (node.materialsInsert ?? []).map((material) => ({
+          method: 'POST',
+          url: `/api/mentor/nodes/{nodeId}/materials`,
+          target: 'Node_Materials',
+          body: {
+            clientRef: material.clientRef ?? null,
+            data: material.data,
+          },
+        })),
+      });
+    });
+  } else {
+    if (payload.pathUpdate?.pathId) {
+      calls.push({
+        method: 'PUT',
+        url: `/api/mentor/paths/${payload.pathUpdate.pathId}`,
+        target: 'Paths',
+        id: payload.pathUpdate.pathId,
+        body: { set: payload.pathUpdate.set ?? {} },
+      });
+    }
+
+    (payload.nodesUpdate ?? []).forEach((item) => {
+      calls.push({
+        method: 'PUT',
+        url: `/api/mentor/nodes/${item.nodeId}`,
+        target: 'Path_Nodes',
+        id: item.nodeId,
+        body: {
+          ...(Object.keys(item.set ?? {}).length > 0 ? { set: item.set } : {}),
+          ...(item.NodeOrder != null ? { order: item.NodeOrder } : {}),
+        },
+      });
+    });
+
+    (payload.nodesInsert ?? []).forEach((item) => {
+      calls.push({
+        method: 'POST',
+        url: `/api/mentor/paths/${item.pathId ?? pathId}/nodes`,
+        target: 'Path_Nodes',
+        body: {
+          clientRef: item.clientRef ?? null,
+          data: { ...item.data, NodeOrder: item.NodeOrder },
+        },
+        nestedMaterials: (item.materialsInsert ?? []).map((material) => ({
+          method: 'POST',
+          url: `/api/mentor/nodes/{nodeId}/materials`,
+          target: 'Node_Materials',
+          body: {
+            clientRef: material.clientRef ?? null,
+            data: material.data,
+          },
+        })),
+      });
+    });
+
+    (payload.materialsUpdate ?? []).forEach((item) => {
+      calls.push({
+        method: 'PUT',
+        url: `/api/mentor/materials/${item.materialId}`,
+        target: 'Node_Materials',
+        id: item.materialId,
+        body: {
+          ...(Object.keys(item.set ?? {}).length > 0 ? { set: item.set } : {}),
+          ...(item.MaterialOrder != null ? { order: item.MaterialOrder } : {}),
+        },
+      });
+    });
+
+    (payload.materialsInsert ?? []).forEach((item) => {
+      calls.push({
+        method: 'POST',
+        url: `/api/mentor/nodes/${item.nodeId}/materials`,
+        target: 'Node_Materials',
+        body: {
+          clientRef: item.clientRef ?? null,
+          data: item.data,
+        },
+      });
+    });
+  }
+
+  return calls;
+}
+
+export function compactCoursePathSavePayload(payload = {}) {
+  if (!payload || typeof payload !== 'object') return {};
+
+  const compact = {
+    context: payload.context ?? {},
+    summary: payload.summary ?? {},
+  };
+
+  if (payload.pathInsert) compact.pathInsert = payload.pathInsert;
+  if (payload.pathUpdate) compact.pathUpdate = payload.pathUpdate;
+  if ((payload.nodesInsert?.length ?? 0) > 0) compact.nodesInsert = payload.nodesInsert;
+  if ((payload.nodesUpdate?.length ?? 0) > 0) compact.nodesUpdate = payload.nodesUpdate;
+  if ((payload.nodesDelete?.length ?? 0) > 0) compact.nodesDelete = payload.nodesDelete;
+  if ((payload.materialsInsert?.length ?? 0) > 0) compact.materialsInsert = payload.materialsInsert;
+  if ((payload.materialsUpdate?.length ?? 0) > 0) compact.materialsUpdate = payload.materialsUpdate;
+  if ((payload.materialsDelete?.length ?? 0) > 0) compact.materialsDelete = payload.materialsDelete;
+
+  const apiCalls = buildCoursePathApiCalls(payload);
+  if (apiCalls.length > 0) compact.apiCalls = apiCalls;
+
+  return compact;
+}
+
+export function buildCoursePathSavePreviewPayload(
+  courseId,
+  paths = [],
+  pathTempId,
+  savedPathSnapshots = {},
+) {
+  const pathIndex = paths.findIndex((item) => item.tempId === pathTempId);
+  const path = pathIndex >= 0 ? paths[pathIndex] : null;
+  if (!path) return null;
+
+  const payload = buildCoursePathOnlySavePayload(
+    path,
+    {
+      courseId: Number(courseId),
+      pathOrder: pathIndex + 1,
+    },
+    savedPathSnapshots[pathTempId],
+  );
+
+  const fullPayload = {
+    ...payload,
+    saveScope: 'path',
+    context: {
+      ...payload.context,
+      api: 'REST PUT/POST /api/mentor/paths/:pathId',
+    },
+    summary: {
+      ...payload.summary,
+      otherUnsavedPaths: paths.filter(
+        (item) => item.tempId !== pathTempId
+          && !isPathSnapshotSaved(item, savedPathSnapshots[item.tempId]),
+      ).length,
+    },
+  };
+
+  return {
+    ...fullPayload,
+    preview: compactCoursePathSavePayload(fullPayload),
+  };
+}
+
+export function buildCourseNodeSavePreviewPayload(
+  courseId,
+  paths = [],
+  pathTempId,
+  nodeTempId,
+  savedPathSnapshots = {},
+) {
+  const pathIndex = paths.findIndex((item) => item.tempId === pathTempId);
+  const path = pathIndex >= 0 ? paths[pathIndex] : null;
+  if (!path) return null;
+
+  const payload = buildCourseNodeSavePayload(
+    path,
+    nodeTempId,
+    {
+      courseId: Number(courseId),
+      pathOrder: pathIndex + 1,
+    },
+    savedPathSnapshots[pathTempId],
+  );
+
+  const fullPayload = {
+    ...payload,
+    saveScope: 'node',
+    context: {
+      ...payload.context,
+      api: 'REST /api/mentor/nodes/:nodeId, /materials/:materialId',
+    },
+  };
+
+  return {
+    ...fullPayload,
+    preview: compactCoursePathSavePayload(fullPayload),
+  };
+}
+
+export function applyCoursePathSaveResult(path, saveResult = {}) {
+  const nodeIdMap = new Map((saveResult.nodeIdMap ?? []).map((item) => [item.clientRef, item.nodeId]));
+  const materialIdMap = new Map(
+    (saveResult.materialIdMap ?? []).map((item) => [item.clientRef, item.materialId]),
+  );
+
+  const nextPath = {
+    ...path,
+    PathId: saveResult.pathId ?? path.PathId ?? null,
+    nodes: (path.nodes ?? []).map((node) => {
+      const nextNode = {
+        ...node,
+        NodeId: nodeIdMap.get(node.tempId) ?? node.NodeId ?? null,
+        materials: filterLearningMaterials(node.materials ?? []).map((material) => ({
+          ...material,
+          MaterialId: materialIdMap.get(material.tempId) ?? material.MaterialId ?? null,
+        })),
+      };
+      return nextNode;
+    }),
+  };
+
+  return withNormalizedOrders([nextPath])[0];
+}

@@ -253,18 +253,17 @@ const updateCourseContent = async (req, res) => {
             return res.status(ownership.status).json({ success: false, message: ownership.message });
         }
 
-        await coursesModel.replaceCourseContent(courseId, paths);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Nội dung đã được cập nhật.',
+        return res.status(410).json({
+            success: false,
+            message: 'Endpoint bulk PUT /content đã ngừng dùng. Hãy gọi REST theo id: /mentor/paths, /nodes, /materials.',
             courseId,
         });
     } catch (error) {
         console.error('updateCourseContent error:', error);
-        return res.status(500).json({
+        const isValidationError = /thiếu|Cần ít nhất|Mỗi bài học/i.test(String(error.message ?? ''));
+        return res.status(isValidationError ? 400 : 500).json({
             success: false,
-            message: 'Lỗi server khi cập nhật nội dung khóa học.',
+            message: error.message ?? 'Lỗi server khi cập nhật nội dung khóa học.',
         });
     }
 };

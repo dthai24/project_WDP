@@ -162,6 +162,12 @@ export default function MentorLessonBlock({
         </Box>
       )}
 
+      {errors._materials ? (
+        <Typography sx={{ fontSize: 12, color: '#DC2626', mb: 1.25, lineHeight: 1.5 }}>
+          {errors._materials}
+        </Typography>
+      ) : null}
+
       <Box
         component="button"
         type="button"

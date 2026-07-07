@@ -27,6 +27,8 @@ import { buildCreateCourseStep1Payload } from '@/features/mentor/utils/mentorCou
 import { saveCreateCourseStep1ToStorage, saveCreateCourseContentToStorage } from '@/features/mentor/utils/mentorCourseCreateStorage';
 import { buildCourseContentPayload, buildFullCreateCoursePayload } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { uploadPendingMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
+import { mapDetailPathsToEditPaths } from '@/features/mentor/utils/mentorCourseEditStorage';
+import { saveAllCoursePaths } from '@/features/mentor/services/courseContentService';
 import { getUser } from '@/features/auth/utils/authUtils';
 import { mapMentorCourseComment } from '@/features/mentor/utils/mentorCourseCommentsUtils';
 
@@ -577,42 +579,26 @@ export async function updateCourseBasicInfo(courseId, payload) {
 }
 
 /**
- * PUT /api/mentor/courses/:courseId/content
- * Thay toàn bộ cấu trúc nội dung của khóa học (overwrite).
- *
- * Request JSON: (schema giống saveCreateCourseContent)
- * {
- *   paths: [ ...cấu trúc chương → bài → học liệu... ]
- * }
- *
- * Response JSON:
- * {
- *   success: true,
- *   message: "Nội dung đã được cập nhật."
- * }
- *
- * TODO: replace mock with real API call
+ * Lưu nội dung khóa học theo REST incremental (DELETE/PUT/POST theo từng id).
+ * Không dùng bulk PUT xóa hết rồi insert lại.
  */
 export async function updateCourseContent(courseId, paths) {
   try {
     const uploadedPaths = await uploadPendingMaterialsInPaths(paths);
-    const payload = buildCourseContentPayload(uploadedPaths);
-    const response = await fetch(`${API_BASE}/mentor/courses/${courseId}/content`, {
-      method: 'PUT',
-      headers: getMentorAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
 
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || !data.success) {
+    const detailResult = await fetchMentorCourseDetail(courseId);
+    if (!detailResult.success) {
       return {
         ok: false,
-        message: data.message ?? 'Không thể cập nhật nội dung khóa học.',
+        message: detailResult.message ?? 'Không thể tải nội dung hiện tại để so sánh.',
       };
     }
 
-    return { ok: true };
+    const serverPaths = mapDetailPathsToEditPaths(
+      detailResult.course?.Paths ?? detailResult.course?.paths ?? [],
+    );
+
+    return await saveAllCoursePaths(courseId, uploadedPaths, serverPaths);
   } catch (error) {
     console.error('[updateCourseContent]', error);
     return { ok: false, message: error.message ?? 'Lỗi kết nối khi cập nhật nội dung khóa học.' };

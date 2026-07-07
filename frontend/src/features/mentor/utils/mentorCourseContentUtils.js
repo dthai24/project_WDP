@@ -240,16 +240,180 @@ export function serializePathSnapshot(path) {
   return JSON.stringify(normalized);
 }
 
+export function restorePathFromSnapshot(path, savedSnapshot) {
+  if (!path?.tempId || !savedSnapshot) return path;
+  try {
+    const restored = JSON.parse(savedSnapshot);
+    return withNormalizedOrders([{ ...restored, tempId: path.tempId }])[0];
+  } catch {
+    return path;
+  }
+}
+
 export function isPathSnapshotSaved(path, savedSnapshot) {
   if (!savedSnapshot) return false;
   return serializePathSnapshot(path) === savedSnapshot;
 }
 
-export function validatePathForSave(path) {
-  if (!String(path.PathName ?? '').trim()) {
-    return { PathName: 'Vui lòng nhập tên chương trước khi lưu.' };
+function normalizePathFieldsForCompare(path = {}) {
+  return {
+    PathId: path.PathId ?? null,
+    PathName: String(path.PathName ?? '').trim(),
+    Description: trimShortDescription(path.Description),
+    IsActive: toPathIsActiveValue(path.IsActive ?? path.isActive, 1),
+  };
+}
+
+function getNodeFromSnapshot(savedSnapshot, nodeTempId) {
+  if (!savedSnapshot || !nodeTempId) return null;
+  try {
+    const baseline = JSON.parse(savedSnapshot);
+    const [normalized] = withNormalizedOrders([baseline]);
+    const node = (normalized.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    if (!node) return null;
+    return {
+      ...node,
+      materials: filterLearningMaterials(node.materials ?? node.Materials ?? []),
+    };
+  } catch {
+    return null;
   }
-  return {};
+}
+
+function serializeNodeSnapshot(node) {
+  if (!node) return null;
+  return JSON.stringify({
+    NodeId: node.NodeId ?? null,
+    NodeName: String(node.NodeName ?? node.nodeName ?? '').trim(),
+    Description: trimShortDescription(node.Description),
+    NodeOrder: Number(node.NodeOrder ?? 1),
+    materials: filterLearningMaterials(node.materials ?? node.Materials ?? []).map((material) => ({
+      MaterialId: material.MaterialId ?? null,
+      tempId: material.tempId ?? null,
+      MaterialType: material.MaterialType ?? null,
+      Title: String(material.Title ?? '').trim(),
+      MaterialOrder: Number(material.MaterialOrder ?? 1),
+      SourceType: material.SourceType ?? null,
+      MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+      FileName: material.FileName ?? null,
+      FileSize: material.FileSize ?? null,
+      Content: material.Content ?? null,
+    })),
+  });
+}
+
+/** Chỉ so sánh metadata path (tên, mô tả, xuất bản) — bỏ qua nodes/materials. */
+export function isPathFieldsSnapshotSaved(path, savedSnapshot) {
+  if (!savedSnapshot) return false;
+
+  let baseline;
+  try {
+    baseline = JSON.parse(savedSnapshot);
+  } catch {
+    return false;
+  }
+
+  return JSON.stringify(normalizePathFieldsForCompare(path))
+    === JSON.stringify(normalizePathFieldsForCompare(baseline));
+}
+
+/** So sánh một bài học (kèm học liệu) với snapshot đã lưu của path. */
+export function isNodeSnapshotSaved(path, nodeTempId, savedSnapshot) {
+  if (!savedSnapshot || !nodeTempId) return false;
+
+  const [normalizedPath] = withNormalizedOrders([path]);
+  const node = (normalizedPath.nodes ?? []).find((item) => item.tempId === nodeTempId);
+  if (!node) return true;
+
+  const currentNode = {
+    ...node,
+    materials: filterLearningMaterials(node.materials ?? node.Materials ?? []),
+  };
+  const baselineNode = getNodeFromSnapshot(savedSnapshot, nodeTempId);
+
+  if (!baselineNode) {
+    return serializeNodeSnapshot(currentNode) === serializeNodeSnapshot({
+      ...currentNode,
+      NodeId: null,
+      NodeName: '',
+      Description: '',
+      materials: [],
+    });
+  }
+
+  return serializeNodeSnapshot(currentNode) === serializeNodeSnapshot(baselineNode);
+}
+
+export function validatePathFieldsForSave(path) {
+  const errors = {};
+
+  if (!String(path.PathName ?? '').trim()) {
+    errors.PathName = 'Vui lòng nhập tên chương trước khi lưu.';
+  }
+
+  return errors;
+}
+
+export function validateNodeForSave(node) {
+  const fakePath = {
+    tempId: '_validate_node',
+    PathName: 'placeholder',
+    nodes: [node],
+  };
+  const errors = validateCourseContent([fakePath]);
+  return errors.paths?.['_validate_node']?.nodes?.[node.tempId] ?? {};
+}
+
+export function getNodeContentValidationToast(nodeErrors = {}, node) {
+  if (!node || !nodeErrors || Object.keys(nodeErrors).length === 0) return null;
+
+  if (nodeErrors.NodeName) return nodeErrors.NodeName;
+  if (nodeErrors._materials) return nodeErrors._materials;
+
+  for (const material of node.materials ?? node.Materials ?? []) {
+    const materialErrors = nodeErrors.materials?.[material.tempId];
+    if (!materialErrors) continue;
+    const firstError = Object.values(materialErrors).find(Boolean);
+    if (firstError) return firstError;
+  }
+
+  return 'Vui lòng kiểm tra lại thông tin bài học.';
+}
+
+export function validatePathForSave(path) {
+  const errors = {};
+
+  if (!String(path.PathName ?? '').trim()) {
+    errors.PathName = 'Vui lòng nhập tên chương trước khi lưu.';
+  }
+
+  const nodes = path.nodes ?? path.Nodes ?? [];
+  if (nodes.length === 0) {
+    errors._nodes = 'Mỗi chương cần ít nhất 1 bài học.';
+  }
+
+  const nodeErrors = {};
+  nodes.forEach((node) => {
+    const currentNodeErrors = {};
+
+    if (!String(node.NodeName ?? node.nodeName ?? '').trim()) {
+      currentNodeErrors.NodeName = 'Vui lòng nhập tên bài học.';
+    }
+
+    if (countLearningMaterials(node.materials ?? node.Materials ?? []) === 0) {
+      currentNodeErrors._materials = 'Mỗi bài học cần ít nhất 1 học liệu.';
+    }
+
+    if (Object.keys(currentNodeErrors).length > 0) {
+      nodeErrors[node.tempId] = currentNodeErrors;
+    }
+  });
+
+  if (Object.keys(nodeErrors).length > 0) {
+    errors.nodes = nodeErrors;
+  }
+
+  return errors;
 }
 
 export function stripNonLearningMaterials(paths) {
@@ -279,11 +443,26 @@ export function createTempId(prefix = 'tmp') {
   return `${prefix}_${Date.now()}_${tempIdCounter}`;
 }
 
+export function toPathIsActiveValue(value, defaultValue = 1) {
+  if (value === true || value === 1 || value === '1') return 1;
+  if (value === false || value === 0 || value === '0') return 0;
+  return defaultValue;
+}
+
+export function isNewUnsavedPath(path = {}) {
+  return path.PathId == null;
+}
+
+export function isPathActive(path = {}) {
+  return toPathIsActiveValue(path.IsActive ?? path.isActive, 1) === 1;
+}
+
 export function createEmptyPath() {
   return {
     tempId: createTempId('path'),
     PathName: '',
     Description: '',
+    IsActive: 0,
     nodes: [],
   };
 }
@@ -404,8 +583,12 @@ export function validateCourseContent(paths, options = {}) {
     (path.nodes ?? []).forEach((node) => {
       const nodeErrors = { materials: {} };
 
-      if (!String(node.NodeName ?? '').trim()) {
+      if (!String(node.NodeName ?? node.nodeName ?? '').trim()) {
         nodeErrors.NodeName = 'Vui lòng nhập tên bài học.';
+      }
+
+      if (countLearningMaterials(node.materials ?? node.Materials ?? []) === 0) {
+        nodeErrors._materials = 'Mỗi bài học cần ít nhất 1 học liệu.';
       }
 
       (node.materials ?? []).forEach((material) => {
@@ -478,7 +661,7 @@ export function validateCourseContent(paths, options = {}) {
         }
       });
 
-      if (Object.keys(nodeErrors.materials).length > 0 || nodeErrors.NodeName) {
+      if (Object.keys(nodeErrors.materials).length > 0 || nodeErrors.NodeName || nodeErrors._materials) {
         pathErrors.nodes[node.tempId] = nodeErrors;
       }
     });
@@ -500,6 +683,52 @@ export function hasContentValidationErrors(errors) {
   return Object.keys(errors.paths ?? {}).length > 0;
 }
 
+export function getPathContentValidationToast(errors = {}, pathTempId, paths = []) {
+  if ((errors.root ?? []).length > 0) return errors.root[0];
+
+  const path = paths.find((item) => item.tempId === pathTempId);
+  const pathErrors = errors.paths?.[pathTempId];
+  if (!path || !pathErrors) return null;
+
+  if (pathErrors.PathName) return pathErrors.PathName;
+  if (pathErrors._nodes) return pathErrors._nodes;
+
+  for (const node of path.nodes ?? []) {
+    const nodeErrors = pathErrors.nodes?.[node.tempId];
+    if (!nodeErrors) continue;
+    if (nodeErrors.NodeName) return nodeErrors.NodeName;
+    if (nodeErrors._materials) return nodeErrors._materials;
+
+    for (const material of node.materials ?? []) {
+      const materialErrors = nodeErrors.materials?.[material.tempId];
+      if (!materialErrors) continue;
+      const firstMessage = Object.values(materialErrors).find(Boolean);
+      if (firstMessage) return firstMessage;
+    }
+  }
+
+  return null;
+}
+
+/** Toast lỗi đầu tiên theo thứ tự validate toàn bộ khóa học. */
+export function getFirstContentValidationToast(errors = {}, paths = []) {
+  if ((errors.root ?? []).length > 0) return errors.root[0];
+
+  for (const path of paths) {
+    const toast = getPathContentValidationToast(errors, path.tempId, paths);
+    if (toast) return toast;
+  }
+
+  return null;
+}
+
+export function hasOtherUnsavedPaths(pathTempId, paths = [], savedPathSnapshots = {}) {
+  return paths.some(
+    (path) => path.tempId !== pathTempId
+      && !isPathSnapshotSaved(path, savedPathSnapshots[path.tempId]),
+  );
+}
+
 export function getFirstContentErrorTarget(errors, paths = []) {
   if ((errors.root ?? []).length > 0) return 'content-builder-root';
 
@@ -515,7 +744,7 @@ export function getFirstContentErrorTarget(errors, paths = []) {
       const nodeErrors = pathErrors.nodes?.[node.tempId];
       if (!nodeErrors) continue;
 
-      if (nodeErrors.NodeName) return `lesson-${node.tempId}`;
+      if (nodeErrors.NodeName || nodeErrors._materials) return `lesson-${node.tempId}`;
 
       for (const material of node.materials ?? []) {
         if (nodeErrors.materials?.[material.tempId]) {
@@ -613,7 +842,7 @@ export function buildCourseContentPayload(paths) {
       Description: trimShortDescription(path.Description),
       PathOrder: Number(index + 1),
       nodes: (nodes ?? []).map(({ tempId: _nodeTempId, materials, ...node }) => ({
-        NodeName: String(node.NodeName ?? '').trim(),
+        NodeName: String(node.NodeName ?? node.nodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
         Description: trimShortDescription(node.Description),
         materials: filterLearningMaterials(materials ?? []).map(

@@ -1,10 +1,11 @@
-import { Box, Collapse, IconButton, InputBase, Typography } from '@mui/material';
+import { Box, Collapse, IconButton, InputBase, Switch, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
 import AppButton from '@/shared/ui/AppButton';
@@ -21,6 +22,9 @@ import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import {
   chapterHasContent,
   filterLearningMaterials,
+  isNewUnsavedPath,
+  isNodeSnapshotSaved,
+  isPathActive,
   lessonHasContent,
   materialHasContent,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
@@ -36,6 +40,7 @@ import {
   CHAPTER_THEME,
   CONTENT_SECTION_LABEL_SX,
   DELETE_ICON_BTN_SX,
+  DELETE_NEW_PATH_BTN_SX,
   ICON_BTN_SX,
   chapterCardSx,
   contentAddButtonSx,
@@ -55,6 +60,61 @@ function getMaterialToolbarSummary(material) {
   return `${typeLabel} · ${title || 'Chưa đặt tiêu đề'}`;
 }
 
+function PathPublishToggle({ path, onChange, disabled = false }) {
+  const published = isPathActive(path);
+
+  return (
+    <Box
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.75,
+        px: 1,
+        py: 0.35,
+        borderRadius: '999px',
+        bgcolor: published ? 'rgba(4,120,87,0.08)' : 'rgba(100,116,139,0.08)',
+        border: `1px solid ${published ? 'rgba(4,120,87,0.2)' : 'rgba(15,23,42,0.08)'}`,
+        flexShrink: 0,
+      }}
+    >
+      <Typography sx={{ fontSize: 12, fontWeight: 600, color: published ? '#047857' : MUTED }}>
+        Xuất bản
+      </Typography>
+      <Switch
+        size="small"
+        checked={published}
+        onChange={(event) => onChange(path.tempId, { IsActive: event.target.checked ? 1 : 0 })}
+        disabled={disabled}
+        inputProps={{ 'aria-label': 'Xuất bản chương cho học viên' }}
+        sx={{
+          m: 0,
+          '& .MuiSwitch-switchBase.Mui-checked': { color: '#047857' },
+          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#047857' },
+        }}
+      />
+    </Box>
+  );
+}
+
+function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false }) {
+  if (isNewUnsavedPath(path)) {
+    return (
+      <AppButton
+        variant="outlined"
+        onClick={() => onDeleteNewPath?.(path.tempId)}
+        disabled={disabled}
+        aria-label="Xóa chương mới"
+        startIcon={<DeleteOutlineRoundedIcon sx={{ fontSize: 20 }} />}
+        sx={DELETE_NEW_PATH_BTN_SX}
+      >
+        Xóa
+      </AppButton>
+    );
+  }
+
+  return <PathPublishToggle path={path} onChange={onChange} disabled={disabled} />;
+}
+
 export default function MentorChapterCard({
   path,
   pathIndex,
@@ -64,7 +124,7 @@ export default function MentorChapterCard({
   onToggle,
   onToggleNode,
   onChange,
-  onDelete,
+  onDeleteNewPath,
   onAddNode,
   onNodeChange,
   onNodeDelete,
@@ -77,6 +137,10 @@ export default function MentorChapterCard({
   saving = false,
   onSave,
   showSave = true,
+  showNodeUpdate = false,
+  savedPathSnapshot = null,
+  updatingNodeKey = null,
+  onUpdateNode,
   courseId = null,
   chapterId = null,
   onQuizSetup,
@@ -199,6 +263,14 @@ export default function MentorChapterCard({
   const activeLessonIndex = nodesNormal.findIndex((n) => n.tempId === activeLessonId);
   const activeLesson = activeLessonIndex >= 0 ? nodesNormal[activeLessonIndex] : null;
   const activeMaterials = filterLearningMaterials(activeLesson?.Materials ?? activeLesson?.materials ?? []);
+  const activeNodeDirty = Boolean(
+    showNodeUpdate
+    && activeLesson
+    && !isNodeSnapshotSaved(path, activeLesson.tempId, savedPathSnapshot),
+  );
+  const updatingActiveNode = Boolean(
+    activeLesson && updatingNodeKey === `${path.tempId}:${activeLesson.tempId}`,
+  );
 
   useEffect(() => {
     if (activeLessonIndex >= 0) activeLessonIndexRef.current = activeLessonIndex;
@@ -589,6 +661,57 @@ export default function MentorChapterCard({
     </>
   );
 
+  const renderNodeUpdateBar = () => {
+    if (!showNodeUpdate || !activeLesson) return null;
+
+    const needsPathFirst = !path.PathId;
+
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          mt: 2,
+          p: 1.25,
+          borderRadius: '12px',
+          bgcolor: activeNodeDirty ? 'rgba(245,158,11,0.08)' : 'rgba(15,23,42,0.03)',
+          border: `1px solid ${activeNodeDirty ? 'rgba(245,158,11,0.22)' : 'rgba(15,23,42,0.06)'}`,
+        }}
+      >
+        <Typography sx={{ fontSize: 12, color: activeNodeDirty ? '#92400E' : MUTED, lineHeight: 1.5 }}>
+          {needsPathFirst
+            ? 'Cập nhật path trước khi lưu bài học này.'
+            : activeNodeDirty
+              ? 'Bài học và học liệu chưa lưu.'
+              : 'Bài học đã đồng bộ.'}
+        </Typography>
+        <AppButton
+          startIcon={<SaveOutlinedIcon />}
+          onClick={() => onUpdateNode?.(activeLesson.tempId)}
+          disabled={disabled || updatingActiveNode || !activeNodeDirty || needsPathFirst}
+          sx={{
+            height: 36,
+            px: 2,
+            fontSize: 13,
+            fontWeight: 700,
+            borderRadius: '999px',
+            bgcolor: PRIMARY,
+            color: '#fff',
+            boxShadow: 'none',
+            flexShrink: 0,
+            '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+            '&.Mui-disabled': { bgcolor: 'rgba(15,23,42,0.12)', color: MUTED },
+          }}
+        >
+          {updatingActiveNode ? 'Đang cập nhật...' : 'Cập nhật Node'}
+        </AppButton>
+      </Box>
+    );
+  };
+
   const renderLessonsSection = () => (
     <Box sx={{ mt: 0 }}>
       {errors._nodes && (
@@ -708,15 +831,12 @@ export default function MentorChapterCard({
           onQuizSetup={onQuizSetup}
         />
       ) : null}
-      <IconButton
-        size="small"
-        onClick={onDelete}
+      <PathChapterActions
+        path={path}
+        onChange={onChange}
+        onDeleteNewPath={onDeleteNewPath}
         disabled={disabled}
-        aria-label="Xóa chương"
-        sx={DELETE_ICON_BTN_SX}
-      >
-        <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
-      </IconButton>
+      />
     </Box>
   );
 
@@ -805,6 +925,8 @@ export default function MentorChapterCard({
       {renderLessonsSection()}
 
       {tabMode ? renderMaterialsZoneTabMode() : null}
+
+      {tabMode ? renderNodeUpdateBar() : null}
 
           {showSave ? (
             <Box
@@ -926,15 +1048,12 @@ export default function MentorChapterCard({
           />
         ) : null}
 
-        <IconButton
-          size="small"
-          onClick={onDelete}
+        <PathChapterActions
+          path={path}
+          onChange={onChange}
+          onDeleteNewPath={onDeleteNewPath}
           disabled={disabled}
-          aria-label="Xóa chương"
-          sx={DELETE_ICON_BTN_SX}
-        >
-          <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
-        </IconButton>
+        />
       </Box>
 
       <Collapse in={expanded}>

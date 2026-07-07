@@ -1,21 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Breadcrumbs, CircularProgress, Link as MuiLink, Typography } from '@mui/material';
-import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
+import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseContentBuilder from '@/features/mentor/components/course/MentorCourseContentBuilder';
 import MentorContentOverview from '@/features/mentor/components/course/MentorContentOverview';
-import MentorCourseContentFooterActions, {
-  COURSE_CONTENT_MOBILE_FOOTER_ID,
-} from '@/features/mentor/components/course/MentorCourseContentFooterActions';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
-import MentorCourseLeaveDialog from '@/features/mentor/components/course/MentorCourseLeaveDialog';
+import MentorCoursePathSavePreviewDialog from '@/features/mentor/components/course/MentorCoursePathSavePreviewDialog';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
-import { useMentorCourseLeaveGuard } from '@/features/mentor/hooks/useMentorCourseLeaveGuard';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
-import { getUser } from '@/features/auth/utils/authUtils';
+import { saveCoursePath } from '@/features/mentor/services/courseContentService';
 import { uploadPendingMaterialsInPaths, hydrateTextMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
+import {
+  applyCoursePathSaveResult,
+  buildCoursePathOnlySavePayload,
+  buildCoursePathSavePreviewPayload,
+  buildCourseNodeSavePayload,
+  buildCourseNodeSavePreviewPayload,
+  hasCoursePathOnlySaveOperations,
+  hasCourseNodeSaveOperations,
+} from '@/features/mentor/utils/courseContentApiMappers';
 import {
   courseDetailToEditCourse,
   loadEditCourseDraft,
@@ -23,32 +29,37 @@ import {
   persistEditContent,
 } from '@/features/mentor/utils/mentorCourseEditStorage';
 import {
+  getNodeContentValidationToast,
   createEmptyMaterial,
   createEmptyNode,
   createEmptyPath,
   chapterHasContent,
   lessonHasContent,
   materialHasContent,
-  getFirstContentErrorTarget,
-  hasContentValidationErrors,
+  isPathFieldsSnapshotSaved,
   isPathSnapshotSaved,
+  isNodeSnapshotSaved,
   MATERIAL_TYPE_LABELS,
   parseContentFocusTarget,
   reorderMaterials,
+  restorePathFromSnapshot,
   scrollToContentItem,
   serializePathSnapshot,
-  validateCourseContent,
+  validateNodeForSave,
+  validatePathFieldsForSave,
   withNormalizedOrders,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
+
+const COURSE_CONTENT_MOBILE_BACK_ID = 'course-content-mobile-back';
 
 // ─── pure helpers ─────────────────────────────────────────────────────────────
 
 function getDeleteDialogContent(deleteConfirm) {
   if (!deleteConfirm) return { title: 'Xác nhận', message: '' };
-  if (deleteConfirm.type === 'chapter') {
+  if (deleteConfirm.type === 'newPath') {
     return {
-      title: 'Xóa chương?',
-      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Toàn bộ bài học và học liệu trong chương sẽ bị xóa.`,
+      title: 'Xóa chương mới?',
+      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Chương này chưa lưu lên hệ thống.`,
     };
   }
   if (deleteConfirm.type === 'lesson') {
@@ -112,39 +123,36 @@ export default function MentorEditCourseContentPage() {
   const [savedPathSnapshots, setSavedPathSnapshots] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [focusTarget, setFocusTarget] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [savingDraft, setSavingDraft] = useState(false);
+  const [activeChapterId, setActiveChapterId] = useState(null);
+  const [unsavedNavDialogOpen, setUnsavedNavDialogOpen] = useState(false);
+  const [savePreviewOpen, setSavePreviewOpen] = useState(false);
+  const [savePreviewPayload, setSavePreviewPayload] = useState(null);
+  const [updatingPathId, setUpdatingPathId] = useState(null);
+  const [updatingNodeKey, setUpdatingNodeKey] = useState(null);
 
-  const instructorId = getUser()?.userId ?? null;
+  const pathsRef = useRef(paths);
+  const savedPathSnapshotsRef = useRef(savedPathSnapshots);
+  const savePayloadRef = useRef(null);
+  const pendingPathTempIdRef = useRef(null);
+  const pendingNodeTempIdRef = useRef(null);
+  const pendingNavigationRef = useRef(null);
+  const confirmSaveInFlightRef = useRef(false);
+
+  useEffect(() => {
+    pathsRef.current = paths;
+  }, [paths]);
+
+  useEffect(() => {
+    savedPathSnapshotsRef.current = savedPathSnapshots;
+  }, [savedPathSnapshots]);
+
   const courseName = coursePascal?.CourseName ?? '';
-
-  const isDirty = useMemo(
-    () => paths.some((p) => !isPathSnapshotSaved(p, savedPathSnapshots[p.tempId])),
-    [paths, savedPathSnapshots],
-  );
 
   const buildSnapshots = useCallback((nextPaths) => {
     const snap = {};
     nextPaths.forEach((p) => { snap[p.tempId] = serializePathSnapshot(p); });
     return snap;
   }, []);
-
-  const doPersist = useCallback(
-    async ({ markAllSaved = true } = {}) => {
-      if (!coursePascal) return;
-      persistEditContent(courseId, coursePascal, paths);
-      if (markAllSaved) setSavedPathSnapshots(buildSnapshots(paths));
-    },
-    [buildSnapshots, courseId, coursePascal, paths],
-  );
-
-  const { dialogOpen, saving, requestLeave, handleStay, handleDiscard, handleSaveDraft } =
-    useMentorCourseLeaveGuard({
-      isDirty,
-      form: {},
-      instructorId,
-      onPersistDraft: doPersist,
-    });
 
   // ── initial load ────────────────────────────────────────────────────────────
 
@@ -190,18 +198,12 @@ export default function MentorEditCourseContentPage() {
       setCoursePascal(resolvedCoursePascal);
       setPaths(loaded);
       setSavedPathSnapshots(snapshots);
+      setActiveChapterId(loaded[0]?.tempId ?? null);
       setReady(true);
     })();
 
     return () => { cancelled = true; };
   }, [buildSnapshots, courseId, navigate]);
-
-  useEffect(() => {
-    if (!isDirty) return undefined;
-    const onBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [isDirty]);
 
   // ── path / node / material handlers ────────────────────────────────────────
 
@@ -214,25 +216,50 @@ export default function MentorEditCourseContentPage() {
     const newPath = createEmptyPath();
     applyPaths((prev) => [...prev, newPath]);
     setExpandedPaths((prev) => ({ ...prev, [newPath.tempId]: true }));
+    setSavedPathSnapshots((prev) => ({
+      ...prev,
+      [newPath.tempId]: serializePathSnapshot(newPath),
+    }));
   };
 
   const handlePathChange = (pathTempId, patch) =>
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
 
-  const handlePathDelete = (pathTempId) => {
+  const handleDeleteNewPath = (pathTempId) => {
+    const path = paths.find((item) => item.tempId === pathTempId);
+    if (!path || path.PathId) return;
+
     applyPaths((prev) => prev.filter((p) => p.tempId !== pathTempId));
-    setSavedPathSnapshots((prev) => { const n = { ...prev }; delete n[pathTempId]; return n; });
-    setExpandedPaths((prev) => { const n = { ...prev }; delete n[pathTempId]; return n; });
+    setSavedPathSnapshots((prev) => {
+      const next = { ...prev };
+      delete next[pathTempId];
+      return next;
+    });
+    setExpandedPaths((prev) => {
+      const next = { ...prev };
+      delete next[pathTempId];
+      return next;
+    });
+    if (activeChapterId === pathTempId) {
+      const remaining = paths.filter((p) => p.tempId !== pathTempId);
+      setActiveChapterId(remaining[0]?.tempId ?? null);
+    }
   };
 
-  const requestDeletePath = (pathTempId) => {
-    const p = paths.find((x) => x.tempId === pathTempId);
-    if (!p) return;
-    if (!chapterHasContent(p)) {
-      handlePathDelete(pathTempId);
+  const requestDeleteNewPath = (pathTempId) => {
+    const path = paths.find((item) => item.tempId === pathTempId);
+    if (!path || path.PathId) return;
+
+    if (!chapterHasContent(path)) {
+      handleDeleteNewPath(pathTempId);
       return;
     }
-    setDeleteConfirm({ type: 'chapter', pathTempId, label: String(p?.PathName ?? '').trim() || 'Chương này' });
+
+    setDeleteConfirm({
+      type: 'newPath',
+      pathTempId,
+      label: String(path.PathName ?? '').trim() || 'Chương mới',
+    });
   };
 
   const requestDeleteNode = (pathTempId, nodeTempId) => {
@@ -297,9 +324,13 @@ export default function MentorEditCourseContentPage() {
 
   const handleConfirmDelete = () => {
     if (!deleteConfirm) return;
-    if (deleteConfirm.type === 'chapter') handlePathDelete(deleteConfirm.pathTempId);
-    else if (deleteConfirm.type === 'lesson') handleNodeDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId);
-    else handleMaterialDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId, deleteConfirm.materialTempId);
+    if (deleteConfirm.type === 'newPath') {
+      handleDeleteNewPath(deleteConfirm.pathTempId);
+    } else if (deleteConfirm.type === 'lesson') {
+      handleNodeDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId);
+    } else {
+      handleMaterialDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId, deleteConfirm.materialTempId);
+    }
     setDeleteConfirm(null);
   };
 
@@ -361,68 +392,313 @@ export default function MentorEditCourseContentPage() {
     );
   };
 
-  // ── submit (Lưu nội dung → review) ─────────────────────────────────────────
+  const handleUpdatePath = (pathTempId) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    if (!path) return;
 
-  const handleNavigateToContent = useCallback((target) => {
-    setFocusTarget(target);
-    scrollToContentItem(target, { setExpandedPaths, setExpandedNodes });
-  }, []);
-
-  const handleSaveContent = async () => {
-    const errors = validateCourseContent(paths, { courseId: Number(courseId) });
-    setValidationErrors(errors);
-
-    if (hasContentValidationErrors(errors)) {
-      toast.error('Vui lòng kiểm tra lại cấu trúc nội dung khóa học.');
-
-      setExpandedPaths((prev) => {
-        const next = { ...prev };
-        paths.forEach((p) => { if (errors.paths?.[p.tempId]) next[p.tempId] = true; });
-        return next;
-      });
-      setExpandedNodes((prev) => {
-        const next = { ...prev };
-        paths.forEach((p) => {
-          const pe = errors.paths?.[p.tempId];
-          if (!pe?.nodes) return;
-          (p.nodes ?? []).forEach((n) => { if (pe.nodes[n.tempId]) next[n.tempId] = true; });
-        });
-        return next;
-      });
-
-      const target = getFirstContentErrorTarget(errors, paths);
-      if (target) {
-        const focus = parseContentFocusTarget(target, paths);
-        if (focus) setFocusTarget(focus);
-        setTimeout(() => {
-          document
-            .querySelector(`[data-content-error="${target}"]`)
-            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 220);
-      }
+    const isDirty = !isPathFieldsSnapshotSaved(path, savedPathSnapshotsRef.current[pathTempId]);
+    if (!isDirty) {
+      toast.info('Không có thay đổi path để lưu.');
       return;
     }
 
-    setSubmitting(true);
+    const previewPayload = buildCoursePathSavePreviewPayload(
+      courseId,
+      pathsRef.current,
+      pathTempId,
+      savedPathSnapshotsRef.current,
+    );
+
+    if (!previewPayload || !hasCoursePathOnlySaveOperations(previewPayload)) {
+      toast.info('Không có thay đổi path để lưu.');
+      return;
+    }
+
+    pendingPathTempIdRef.current = pathTempId;
+    pendingNodeTempIdRef.current = null;
+    savePayloadRef.current = previewPayload;
+    setSavePreviewPayload(previewPayload);
+    setSavePreviewOpen(true);
+  };
+
+  const handleUpdateNode = (pathTempId, nodeTempId) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    const node = (path?.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    if (!path || !node) return;
+
+    if (!path.PathId) {
+      toast.error('Vui lòng cập nhật path trước khi lưu bài học.');
+      return;
+    }
+
+    const isDirty = !isNodeSnapshotSaved(path, nodeTempId, savedPathSnapshotsRef.current[pathTempId]);
+    if (!isDirty) {
+      toast.info('Không có thay đổi bài học để lưu.');
+      return;
+    }
+
+    const previewPayload = buildCourseNodeSavePreviewPayload(
+      courseId,
+      pathsRef.current,
+      pathTempId,
+      nodeTempId,
+      savedPathSnapshotsRef.current,
+    );
+
+    if (!previewPayload || !hasCourseNodeSaveOperations(previewPayload)) {
+      toast.info('Không có thay đổi bài học để lưu.');
+      return;
+    }
+
+    pendingPathTempIdRef.current = pathTempId;
+    pendingNodeTempIdRef.current = nodeTempId;
+    savePayloadRef.current = previewPayload;
+    setSavePreviewPayload(previewPayload);
+    setSavePreviewOpen(true);
+  };
+
+  const handleSavePreviewClose = () => {
+    if (updatingPathId || updatingNodeKey) return;
+    setSavePreviewOpen(false);
+    setSavePreviewPayload(null);
+    savePayloadRef.current = null;
+    pendingPathTempIdRef.current = null;
+    pendingNodeTempIdRef.current = null;
+  };
+
+  const handleConfirmSavePreview = async () => {
+    if (confirmSaveInFlightRef.current) return;
+
+    const pathTempId = pendingPathTempIdRef.current;
+    const nodeTempId = pendingNodeTempIdRef.current;
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    if (!path || !pathTempId) return;
+
+    const saveScope = savePayloadRef.current?.saveScope ?? 'path';
+    const pathIndex = pathsRef.current.findIndex((item) => item.tempId === pathTempId);
+
+    if (saveScope === 'path') {
+      const pathErrors = validatePathFieldsForSave(path);
+      if (Object.keys(pathErrors).length > 0) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          paths: {
+            ...(prev.paths ?? {}),
+            [pathTempId]: {
+              ...(prev.paths?.[pathTempId] ?? {}),
+              ...pathErrors,
+            },
+          },
+        }));
+        if (pathErrors.PathName) toast.error(pathErrors.PathName);
+        setExpandedPaths((prev) => ({ ...prev, [pathTempId]: true }));
+        setSavePreviewOpen(false);
+        savePayloadRef.current = null;
+        pendingPathTempIdRef.current = null;
+        return;
+      }
+    } else {
+      const node = (path.nodes ?? []).find((item) => item.tempId === nodeTempId);
+      if (!node) return;
+
+      const nodeErrors = validateNodeForSave(node);
+      if (Object.keys(nodeErrors).length > 0) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          paths: {
+            ...(prev.paths ?? {}),
+            [pathTempId]: {
+              ...(prev.paths?.[pathTempId] ?? {}),
+              nodes: {
+                ...(prev.paths?.[pathTempId]?.nodes ?? {}),
+                [nodeTempId]: nodeErrors,
+              },
+            },
+          },
+        }));
+
+        const validationToast = getNodeContentValidationToast(nodeErrors, node);
+        if (validationToast) toast.error(validationToast);
+
+        setExpandedPaths((prev) => ({ ...prev, [pathTempId]: true }));
+        setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
+        setSavePreviewOpen(false);
+        savePayloadRef.current = null;
+        pendingPathTempIdRef.current = null;
+        pendingNodeTempIdRef.current = null;
+        return;
+      }
+    }
+
+    confirmSaveInFlightRef.current = true;
+    if (saveScope === 'path') {
+      setUpdatingPathId(pathTempId);
+    } else {
+      setUpdatingNodeKey(`${pathTempId}:${nodeTempId}`);
+    }
+
     try {
-      const uploadedPaths = await uploadPendingMaterialsInPaths(paths);
-      persistEditContent(courseId, coursePascal, uploadedPaths);
-      navigate(`/mentor/courses/${courseId}/review`);
+      let workingPath = path;
+
+      if (saveScope === 'node') {
+        [workingPath] = await uploadPendingMaterialsInPaths([path]);
+      }
+
+      const savePayload = saveScope === 'path'
+        ? buildCoursePathOnlySavePayload(
+          workingPath,
+          {
+            courseId: Number(courseId),
+            pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+          },
+          savedPathSnapshotsRef.current[pathTempId],
+        )
+        : buildCourseNodeSavePayload(
+          workingPath,
+          nodeTempId,
+          {
+            courseId: Number(courseId),
+            pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+          },
+          savedPathSnapshotsRef.current[pathTempId],
+        );
+
+      const hasOperations = saveScope === 'path'
+        ? hasCoursePathOnlySaveOperations(savePayload)
+        : hasCourseNodeSaveOperations(savePayload);
+
+      if (!hasOperations) {
+        toast.info(saveScope === 'path'
+          ? 'Không có thay đổi path để lưu.'
+          : 'Không có thay đổi bài học để lưu.');
+        return;
+      }
+
+      const result = await saveCoursePath({
+        ...savePayload,
+        context: {
+          ...(savePayload?.context ?? {}),
+          courseId: Number(courseId),
+          pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+        },
+      });
+
+      if (!result.ok) {
+        toast.error(result.message ?? (saveScope === 'path'
+          ? 'Không thể cập nhật path.'
+          : 'Không thể cập nhật bài học.'));
+        return;
+      }
+
+      const savedPath = applyCoursePathSaveResult(workingPath, result);
+      const nextPaths = withNormalizedOrders(
+        pathsRef.current.map((item) => (item.tempId === pathTempId ? savedPath : item)),
+      );
+
+      persistEditContent(courseId, coursePascal, nextPaths);
+      setPaths(nextPaths);
+      setSavedPathSnapshots((prev) => ({
+        ...prev,
+        [pathTempId]: serializePathSnapshot(savedPath),
+      }));
+      setSavePreviewOpen(false);
+      setSavePreviewPayload(null);
+      savePayloadRef.current = null;
+      pendingPathTempIdRef.current = null;
+      pendingNodeTempIdRef.current = null;
+      toast.success(saveScope === 'path' ? 'Đã cập nhật path.' : 'Đã cập nhật bài học.');
     } catch (error) {
-      toast.error(error?.message || 'Không thể tải học liệu lên. Vui lòng thử lại.');
+      toast.error(error?.message || (saveScope === 'path'
+        ? 'Không thể cập nhật path. Vui lòng thử lại.'
+        : 'Không thể cập nhật bài học. Vui lòng thử lại.'));
     } finally {
-      setSubmitting(false);
+      confirmSaveInFlightRef.current = false;
+      setUpdatingPathId(null);
+      setUpdatingNodeKey(null);
     }
   };
 
-  const handleSaveDraftClick = async () => {
-    setSavingDraft(true);
-    try {
-      await doPersist();
-      toast.success('Đã lưu bản nháp nội dung khóa học.');
-    } finally {
-      setSavingDraft(false);
+  const revertActivePathChanges = useCallback((pathTempId) => {
+    if (!pathTempId) return;
+
+    const snapshot = savedPathSnapshotsRef.current[pathTempId];
+    if (!snapshot) return;
+
+    setPaths((prev) => prev.map((path) => (
+      path.tempId === pathTempId
+        ? restorePathFromSnapshot(path, snapshot)
+        : path
+    )));
+    setValidationErrors((prev) => ({
+      ...prev,
+      paths: {
+        ...(prev.paths ?? {}),
+        [pathTempId]: undefined,
+      },
+    }));
+  }, []);
+
+  const requestPathNavigation = useCallback((navigateFn) => {
+    const currentPathId = activeChapterId;
+    if (!currentPathId) {
+      navigateFn();
+      return;
     }
+
+    const path = pathsRef.current.find((item) => item.tempId === currentPathId);
+    const isDirty = path
+      && !isPathSnapshotSaved(path, savedPathSnapshotsRef.current[currentPathId]);
+
+    if (!isDirty) {
+      navigateFn();
+      return;
+    }
+
+    pendingNavigationRef.current = navigateFn;
+    setUnsavedNavDialogOpen(true);
+  }, [activeChapterId]);
+
+  const handleRequestChapterChange = useCallback((nextChapterId) => {
+    if (nextChapterId === activeChapterId) return;
+    if (!nextChapterId) {
+      setActiveChapterId(null);
+      return;
+    }
+    requestPathNavigation(() => setActiveChapterId(nextChapterId));
+  }, [activeChapterId, requestPathNavigation]);
+
+  const handleUnsavedNavCancel = () => {
+    pendingNavigationRef.current = null;
+    setUnsavedNavDialogOpen(false);
+  };
+
+  const handleUnsavedNavContinue = () => {
+    const navigateFn = pendingNavigationRef.current;
+    pendingNavigationRef.current = null;
+    setUnsavedNavDialogOpen(false);
+    revertActivePathChanges(activeChapterId);
+    navigateFn?.();
+  };
+
+  const handleNavigateToContent = useCallback((target) => {
+    const applyNavigation = () => {
+      if (target?.pathTempId) {
+        setActiveChapterId(target.pathTempId);
+      }
+      setFocusTarget(target);
+      scrollToContentItem(target, { setExpandedPaths, setExpandedNodes });
+    };
+
+    if (target?.pathTempId && target.pathTempId !== activeChapterId) {
+      requestPathNavigation(applyNavigation);
+      return;
+    }
+
+    applyNavigation();
+  }, [activeChapterId, requestPathNavigation]);
+
+  const handleBack = () => {
+    navigate(`/mentor/courses/${courseId}/edit`);
   };
 
   if (!ready || !coursePascal) {
@@ -434,21 +710,25 @@ export default function MentorEditCourseContentPage() {
   }
 
   const deleteDialogContent = getDeleteDialogContent(deleteConfirm);
-  const busy = submitting || savingDraft || saving;
+  const busy = Boolean(updatingPathId || updatingNodeKey);
 
-  const footerActions = (
-    <MentorCourseContentFooterActions
-      onBack={() => navigate(`/mentor/courses/${courseId}/edit`)}
-      onSaveDraft={handleSaveDraftClick}
-      onPrimary={handleSaveContent}
-      primaryLabel="Lưu nội dung"
-      primaryEndIcon={!submitting ? <SaveRoundedIcon sx={{ fontSize: 16 }} /> : undefined}
-      backDisabled={busy}
-      saveDraftDisabled={submitting || saving}
-      primaryDisabled={savingDraft || saving}
-      saveDraftLoading={savingDraft}
-      primaryLoading={submitting}
-    />
+  const backButton = (
+    <AppButton
+      variant="outlined"
+      startIcon={<ArrowBackRoundedIcon sx={{ fontSize: 18 }} />}
+      onClick={handleBack}
+      disabled={busy}
+      sx={{
+        height: 42,
+        borderRadius: '999px',
+        fontWeight: 700,
+        fontSize: 14,
+        px: 2,
+        width: { xs: '100%', lg: 'auto' },
+      }}
+    >
+      Quay lại
+    </AppButton>
   );
 
   return (
@@ -508,7 +788,7 @@ export default function MentorEditCourseContentPage() {
           }
           onAddPath={handleAddPath}
           onPathChange={handlePathChange}
-          onPathDelete={requestDeletePath}
+          onDeleteNewPath={requestDeleteNewPath}
           onAddNode={handleAddNode}
           onNodeChange={handleNodeChange}
           onNodeDelete={requestDeleteNode}
@@ -519,6 +799,14 @@ export default function MentorEditCourseContentPage() {
           disabled={busy}
           savedPathSnapshots={savedPathSnapshots}
           showChapterSave={false}
+          showPathUpdate
+          updatingPathId={updatingPathId}
+          onUpdatePath={handleUpdatePath}
+          showNodeUpdate
+          updatingNodeKey={updatingNodeKey}
+          onUpdateNode={handleUpdateNode}
+          activeChapterId={activeChapterId}
+          onActiveChapterChange={handleRequestChapterChange}
           focusTarget={focusTarget}
         />
 
@@ -526,13 +814,13 @@ export default function MentorEditCourseContentPage() {
           paths={paths}
           courseName={courseName}
           focusTarget={focusTarget}
-          footer={footerActions}
+          footer={backButton}
           onNavigateToItem={handleNavigateToContent}
         />
       </Box>
 
       <Box
-        id={COURSE_CONTENT_MOBILE_FOOTER_ID}
+        id={COURSE_CONTENT_MOBILE_BACK_ID}
         sx={{
           display: { xs: 'block', lg: 'none' },
           position: 'sticky',
@@ -546,19 +834,21 @@ export default function MentorEditCourseContentPage() {
           borderTop: '1px solid rgba(15,23,42,0.08)',
         }}
       >
-        {footerActions}
+        {backButton}
       </Box>
 
       <ScrollToTopButton
-        avoidSelectors={['#app-site-footer', `#${COURSE_CONTENT_MOBILE_FOOTER_ID}`]}
+        avoidSelectors={['#app-site-footer', `#${COURSE_CONTENT_MOBILE_BACK_ID}`]}
       />
 
-      <MentorCourseLeaveDialog
-        open={dialogOpen}
-        onStay={handleStay}
-        onDiscard={handleDiscard}
-        onSaveDraft={handleSaveDraft}
-        saving={saving}
+      <ConfirmDialog
+        open={unsavedNavDialogOpen}
+        onClose={handleUnsavedNavCancel}
+        onConfirm={handleUnsavedNavContinue}
+        title="Thay đổi chưa được lưu"
+        message="Nếu bạn chuyển sang mục khác, các thay đổi sẽ không được lưu. Bạn có muốn tiếp tục?"
+        confirmLabel="Tiếp tục"
+        cancelLabel="Hủy"
       />
 
       <ConfirmDialog
@@ -570,6 +860,14 @@ export default function MentorEditCourseContentPage() {
         confirmLabel="Xóa"
         cancelLabel="Hủy"
         destructive
+      />
+
+      <MentorCoursePathSavePreviewDialog
+        open={savePreviewOpen}
+        payload={savePreviewPayload}
+        loading={Boolean(updatingPathId || updatingNodeKey)}
+        onClose={handleSavePreviewClose}
+        onConfirm={handleConfirmSavePreview}
       />
     </Box>
   );
