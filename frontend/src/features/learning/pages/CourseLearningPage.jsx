@@ -633,7 +633,8 @@ function LessonQuizPlayer({ lesson, isCompleted, onComplete }) {
     setScore(percent);
     setSubmitted(true);
     
-    const isPass = percent >= 80;
+    // Always pass once submitted (user has ticked all answers)
+    const isPass = true;
     setPassed(isPass);
 
     if (isPass && !isCompleted) {
@@ -660,7 +661,7 @@ function LessonQuizPlayer({ lesson, isCompleted, onComplete }) {
             Trắc nghiệm đánh giá nhanh (Quick Quiz)
           </h4>
           <p className="text-[11px] text-slate-400">
-            Trả lời đúng tối thiểu 80% số câu hỏi để hoàn thành bài học này.
+            Hoàn thành tất cả các câu hỏi để được tính là hoàn thành bài học.
           </p>
         </div>
       </div>
@@ -739,7 +740,7 @@ function LessonQuizPlayer({ lesson, isCompleted, onComplete }) {
             }`}>
               {passed ? `Đạt: ${score}%` : `Chưa đạt: ${score}%`}
             </span>
-            {!passed && (
+            {submitted && (
               <button
                 type="button"
                 onClick={handleRetry}
@@ -1740,7 +1741,7 @@ export default function CourseLearningPage() {
           <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-base font-extrabold text-slate-800">📝 Bài kiểm tra đánh giá kiến thức</h3>
-              <p className="text-xs text-slate-400 mt-1">Trả lời đúng từ 4/5 câu hỏi (&gt;= 80%) để hoàn thành bài test.</p>
+              <p className="text-xs text-slate-400 mt-1">Hoàn thành tất cả các câu hỏi để hoàn thành bài test.</p>
             </div>
             {quizAttemptStatus && (
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -1931,21 +1932,16 @@ export default function CourseLearningPage() {
                 if (quizAnswers.q5 === "A") score += 20;
 
                 setQuizGrade(score);
-                if (score >= 80) {
-                  setQuizAttemptStatus("Passed");
-                  // Update modules state to show completed
-                  setModules(prev =>
-                    prev.map(mod => ({
-                      ...mod,
-                      lessons: mod.lessons.map(l =>
-                        l.type === "quiz" ? { ...l, status: "completed" } : l
-                      )
-                    }))
-                  );
-                } else {
-                  setQuizAttemptStatus("Failed");
-                  setCooldownRemaining(10); // 10s cooldown penalty for testing
-                }
+                setQuizAttemptStatus("Passed");
+                // Update modules state to show completed
+                setModules(prev =>
+                  prev.map(mod => ({
+                    ...mod,
+                    lessons: mod.lessons.map(l =>
+                      l.type === "quiz" ? { ...l, status: "completed" } : l
+                    )
+                  }))
+                );
               }}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
             >
@@ -1954,14 +1950,8 @@ export default function CourseLearningPage() {
           </div>
 
           {quizGrade !== null && (
-            <div className={`mt-6 p-4 rounded-2xl border ${
-              quizGrade >= 80 ? "bg-emerald-50/50 border-emerald-100 text-emerald-800" : "bg-red-50/50 border-red-100 text-red-800"
-            } text-xs font-bold`}>
-              {quizGrade >= 80 ? (
-                <span>🎉 Chúc mừng! Bạn đạt {quizGrade}% điểm. Bạn đã hoàn thành xuất sắc bài kiểm tra này.</span>
-              ) : (
-                <span>❌ Rất tiếc, bạn chỉ đạt {quizGrade}% điểm (yêu cầu &gt;= 80%). Hệ thống đã kích hoạt khóa cool-down tạm thời.</span>
-              )}
+            <div className="mt-6 p-4 rounded-2xl border bg-emerald-50/50 border-emerald-100 text-emerald-800 text-xs font-bold">
+              <span>🎉 Chúc mừng! Bạn đạt {quizGrade}% điểm. Bạn đã hoàn thành bài kiểm tra này.</span>
             </div>
           )}
         </div>
