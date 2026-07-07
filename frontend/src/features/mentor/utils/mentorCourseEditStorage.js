@@ -27,6 +27,7 @@ export function mapDetailPathsToEditPaths(detailPaths = []) {
         NodeName: node.NodeName ?? node.nodeName ?? '',
         NodeOrder: node.NodeOrder ?? node.nodeOrder ?? 0,
         Description: node.Description ?? node.description ?? '',
+        IsActive: toPathIsActiveValue(node.IsActive ?? node.isActive, 1),
         tempId: createTempId('node'),
         materials: filterLearningMaterials(node.materials ?? node.Materials ?? []).map(
           (material) => ({
@@ -37,7 +38,6 @@ export function mapDetailPathsToEditPaths(detailPaths = []) {
             Content: material.Content ?? material.content ?? '',
             MaterialOrder: material.MaterialOrder ?? material.materialOrder ?? 0,
             SourceType: material.SourceType ?? material.sourceType,
-            EmbedUrl: material.EmbedUrl ?? material.embedUrl,
             FileName: material.FileName ?? material.fileName,
             FileSize: material.FileSize ?? material.fileSize ?? null,
             tempId: createTempId('material'),

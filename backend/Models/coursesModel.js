@@ -215,6 +215,7 @@ const getCourseChaptersOutline = async (courseId) => {
           NodeId: node.NodeId,
           NodeName: node.NodeName,
           NodeOrder: node.NodeOrder,
+          IsActive: toPathIsActiveBit(node.IsActive, 1),
         })),
       };
     }),
@@ -466,11 +467,12 @@ const insertNode = async (node, pathId) => {
   request.input("NodeName", sql.NVarChar(255), nodeName);
   request.input("NodeOrder", sql.Int, node.NodeOrder);
   request.input("Description", sql.NVarChar(sql.MAX), node.Description ?? null);
+  request.input("IsActive", sql.Bit, toPathIsActiveBit(node.IsActive, 1));
 
   const result = await request.query(`
-        INSERT INTO [dbo].[Path_Nodes] ([PathId], [NodeName], [NodeOrder], [Description])
+        INSERT INTO [dbo].[Path_Nodes] ([PathId], [NodeName], [NodeOrder], [Description], [IsActive])
         OUTPUT INSERTED.NodeId
-        VALUES (@PathId, @NodeName, @NodeOrder, @Description)
+        VALUES (@PathId, @NodeName, @NodeOrder, @Description, @IsActive)
     `);
   return result.recordset[0].NodeId;
 };
@@ -491,13 +493,12 @@ const insertMaterial = async (material, nodeId) => {
     sql.BigInt,
     material.FileSize != null ? Number(material.FileSize) : null,
   );
-  request.input("EmbedUrl", sql.NVarChar(sql.MAX), material.EmbedUrl ?? null);
 
   const result = await request.query(`
         INSERT INTO [dbo].[Node_Materials]
-            ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder], [SourceType], [FileName], [FileSize], [EmbedUrl])
+            ([NodeId], [MaterialType], [Title], [MaterialUrl], [MaterialOrder], [SourceType], [FileName], [FileSize])
         OUTPUT INSERTED.MaterialId AS MaterialId
-        VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize, @EmbedUrl)
+        VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize)
     `);
   return result.recordset[0].MaterialId;
 };
@@ -727,6 +728,7 @@ const getCourseLearningPath = async (courseId, userId) => {
             LEFT JOIN User_Nodes un ON pn.NodeId = un.NodeId AND un.UserId = @userId
             WHERE p.CourseId = @courseId
               AND ISNULL(p.IsActive, 1) = 1
+              AND (pn.NodeId IS NULL OR ISNULL(pn.IsActive, 1) = 1)
             ORDER BY p.[Order], pn.NodeOrder, nm.MaterialOrder
         `;
     const result = await new sql.Request()

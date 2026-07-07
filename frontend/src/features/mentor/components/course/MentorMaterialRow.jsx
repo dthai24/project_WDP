@@ -34,7 +34,6 @@ function buildTypeChangePatch(_currentType, nextType) {
     Title: '',
     Content: '',
     MaterialUrl: '',
-    EmbedUrl: null,
     File: null,
     FileName: null,
     FileSize: null,

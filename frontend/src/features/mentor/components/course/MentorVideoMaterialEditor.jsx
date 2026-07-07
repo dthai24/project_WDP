@@ -17,8 +17,6 @@ import {
   resolveVideoEmbed,
 } from '@/shared/utils/videoEmbedUtils';
 
-// TODO: backend should support EmbedUrl for VIDEO material
-
 const PRIMARY = '#0891B2';
 const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
 
@@ -68,16 +66,17 @@ export function MentorVideoUrlField({
   const applyVideoUrl = useCallback(
     async (value, { fillTitle = false } = {}) => {
       const trimmed = String(value ?? '').trim();
-      const { embedUrl } = resolveVideoEmbed(trimmed);
       const patch = {
         MaterialUrl: trimmed,
-        EmbedUrl: embedUrl,
         SourceType: 'LINK',
       };
 
-      if (fillTitle && embedUrl) {
-        const title = await fetchVideoTitle(trimmed);
-        if (title) patch.Title = title;
+      if (fillTitle && trimmed) {
+        const { embedUrl } = resolveVideoEmbed(trimmed);
+        if (embedUrl) {
+          const title = await fetchVideoTitle(trimmed);
+          if (title) patch.Title = title;
+        }
       }
 
       onChange(material.tempId, patch);
@@ -86,10 +85,8 @@ export function MentorVideoUrlField({
   );
 
   const handleUrlChange = (value) => {
-    const { embedUrl } = resolveVideoEmbed(value);
     onChange(material.tempId, {
       MaterialUrl: value,
-      EmbedUrl: embedUrl,
       SourceType: 'LINK',
     });
   };

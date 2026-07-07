@@ -11,7 +11,6 @@ function normalizeMaterial(raw = {}) {
     Content: raw.content ?? raw.Content ?? null,
     SourceType: raw.sourceType ?? raw.SourceType ?? null,
     Sections: raw.sections ?? raw.Sections ?? null,
-    EmbedUrl: raw.embedUrl ?? raw.EmbedUrl ?? null,
     FileName: raw.fileName ?? raw.FileName ?? null,
   };
 }
@@ -22,6 +21,7 @@ function normalizeNode(raw = {}) {
     NodeName: raw.nodeName ?? raw.NodeName ?? '',
     NodeOrder: raw.nodeOrder ?? raw.NodeOrder ?? 0,
     Description: raw.description ?? raw.Description ?? '',
+    IsActive: raw.isActive ?? raw.IsActive ?? 1,
     materials: (raw.materials ?? raw.Materials ?? []).map(normalizeMaterial),
   };
 }
@@ -31,6 +31,7 @@ function normalizePath(raw = {}) {
     pathId: raw.pathId ?? raw.PathId ?? null,
     PathName: raw.pathName ?? raw.PathName ?? '',
     Description: raw.description ?? raw.Description ?? '',
+    IsActive: raw.isActive ?? raw.IsActive ?? 1,
     nodes: (raw.nodes ?? raw.Nodes ?? []).map(normalizeNode),
   };
 }

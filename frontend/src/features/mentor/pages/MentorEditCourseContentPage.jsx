@@ -6,21 +6,20 @@ import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import AppButton from '@/shared/ui/AppButton';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseContentBuilder from '@/features/mentor/components/course/MentorCourseContentBuilder';
-import MentorContentOverview from '@/features/mentor/components/course/MentorContentOverview';
+import MentorCourseContentSidebar from '@/features/mentor/components/course/MentorCourseContentSidebar';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
-import MentorCoursePathSavePreviewDialog from '@/features/mentor/components/course/MentorCoursePathSavePreviewDialog';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
-import { saveCoursePath } from '@/features/mentor/services/courseContentService';
-import { uploadPendingMaterialsInPaths, hydrateTextMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
+import { saveCoursePath, deleteCoursePath } from '@/features/mentor/services/courseContentService';
+import { uploadPendingMaterialInPath, hydrateTextMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
 import {
   applyCoursePathSaveResult,
   buildCoursePathOnlySavePayload,
-  buildCoursePathSavePreviewPayload,
-  buildCourseNodeSavePayload,
-  buildCourseNodeSavePreviewPayload,
+  buildCourseNodeOnlySavePayload,
+  buildCourseMaterialSavePayload,
   hasCoursePathOnlySaveOperations,
-  hasCourseNodeSaveOperations,
+  hasCourseNodeOnlySaveOperations,
+  hasCourseMaterialSaveOperations,
 } from '@/features/mentor/utils/courseContentApiMappers';
 import {
   courseDetailToEditCourse,
@@ -29,7 +28,8 @@ import {
   persistEditContent,
 } from '@/features/mentor/utils/mentorCourseEditStorage';
 import {
-  getNodeContentValidationToast,
+  filterLearningMaterials,
+  getMaterialContentValidationToast,
   createEmptyMaterial,
   createEmptyNode,
   createEmptyPath,
@@ -38,14 +38,14 @@ import {
   materialHasContent,
   isPathFieldsSnapshotSaved,
   isPathSnapshotSaved,
-  isNodeSnapshotSaved,
+  isNodeFieldsSnapshotSaved,
+  isMaterialSnapshotSaved,
   MATERIAL_TYPE_LABELS,
-  parseContentFocusTarget,
   reorderMaterials,
   restorePathFromSnapshot,
-  scrollToContentItem,
   serializePathSnapshot,
-  validateNodeForSave,
+  validateMaterialForSave,
+  validateNodeFieldsForSave,
   validatePathFieldsForSave,
   withNormalizedOrders,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
@@ -71,6 +71,42 @@ function getDeleteDialogContent(deleteConfirm) {
   return {
     title: 'Xóa học liệu?',
     message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Nội dung học liệu sẽ bị xóa vĩnh viễn.`,
+  };
+}
+
+function getSaveConfirmDialogContent({
+  saveScope,
+  path,
+  pathIndex,
+  node,
+  material,
+}) {
+  if (saveScope === 'path') {
+    const name = String(path?.PathName ?? '').trim() || 'Chưa đặt tên';
+    return {
+      title: 'Cập nhật chương?',
+      message: `Lưu thông tin chương ${pathIndex + 1}: "${name}" lên hệ thống? Chỉ tên, mô tả và trạng thái xuất bản của chương được cập nhật.`,
+      confirmLabel: 'Cập nhật path',
+    };
+  }
+
+  if (saveScope === 'node') {
+    const name = String(node?.NodeName ?? node?.nodeName ?? '').trim() || 'Chưa đặt tên';
+    return {
+      title: 'Cập nhật bài học?',
+      message: `Lưu thông tin bài học "${name}" lên hệ thống? Chỉ tên, mô tả và trạng thái xuất bản của bài học được cập nhật.`,
+      confirmLabel: 'Cập nhật Node',
+    };
+  }
+
+  const materialLabel = String(material?.Title ?? '').trim()
+    || MATERIAL_TYPE_LABELS[material?.MaterialType]
+    || 'Học liệu';
+
+  return {
+    title: 'Cập nhật học liệu?',
+    message: `Lưu học liệu "${materialLabel}" lên hệ thống? Chỉ nội dung học liệu này được cập nhật.`,
+    confirmLabel: 'Cập nhật học liệu',
   };
 }
 
@@ -122,19 +158,16 @@ export default function MentorEditCourseContentPage() {
   const [expandedNodes, setExpandedNodes] = useState({});
   const [savedPathSnapshots, setSavedPathSnapshots] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [saveConfirm, setSaveConfirm] = useState(null);
   const [focusTarget, setFocusTarget] = useState(null);
   const [activeChapterId, setActiveChapterId] = useState(null);
   const [unsavedNavDialogOpen, setUnsavedNavDialogOpen] = useState(false);
-  const [savePreviewOpen, setSavePreviewOpen] = useState(false);
-  const [savePreviewPayload, setSavePreviewPayload] = useState(null);
   const [updatingPathId, setUpdatingPathId] = useState(null);
   const [updatingNodeKey, setUpdatingNodeKey] = useState(null);
+  const [updatingMaterialKey, setUpdatingMaterialKey] = useState(null);
 
   const pathsRef = useRef(paths);
   const savedPathSnapshotsRef = useRef(savedPathSnapshots);
-  const savePayloadRef = useRef(null);
-  const pendingPathTempIdRef = useRef(null);
-  const pendingNodeTempIdRef = useRef(null);
   const pendingNavigationRef = useRef(null);
   const confirmSaveInFlightRef = useRef(false);
 
@@ -199,6 +232,7 @@ export default function MentorEditCourseContentPage() {
       setPaths(loaded);
       setSavedPathSnapshots(snapshots);
       setActiveChapterId(loaded[0]?.tempId ?? null);
+      setFocusTarget(null);
       setReady(true);
     })();
 
@@ -220,16 +254,37 @@ export default function MentorEditCourseContentPage() {
       ...prev,
       [newPath.tempId]: serializePathSnapshot(newPath),
     }));
+    setActiveChapterId(newPath.tempId);
+    setFocusTarget({ type: 'chapter-edit', pathTempId: newPath.tempId });
   };
 
   const handlePathChange = (pathTempId, patch) =>
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
 
-  const handleDeleteNewPath = (pathTempId) => {
-    const path = paths.find((item) => item.tempId === pathTempId);
-    if (!path || path.PathId) return;
+  const handleDeleteNewPath = async (pathTempId) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    if (!path) return;
 
-    applyPaths((prev) => prev.filter((p) => p.tempId !== pathTempId));
+    if (path.PathId) {
+      setUpdatingPathId(pathTempId);
+      try {
+        const result = await deleteCoursePath(path.PathId);
+        if (!result.ok) {
+          toast.error(result.message ?? 'Không thể xóa chương.');
+          return;
+        }
+      } finally {
+        setUpdatingPathId(null);
+      }
+    }
+
+    const nextPaths = withNormalizedOrders(
+      pathsRef.current.filter((p) => p.tempId !== pathTempId),
+    );
+
+    persistEditContent(courseId, coursePascal, nextPaths);
+    setPaths(nextPaths);
+    setValidationErrors({ root: [], paths: {} });
     setSavedPathSnapshots((prev) => {
       const next = { ...prev };
       delete next[pathTempId];
@@ -241,25 +296,30 @@ export default function MentorEditCourseContentPage() {
       return next;
     });
     if (activeChapterId === pathTempId) {
-      const remaining = paths.filter((p) => p.tempId !== pathTempId);
-      setActiveChapterId(remaining[0]?.tempId ?? null);
+      setActiveChapterId(nextPaths[0]?.tempId ?? null);
+      setFocusTarget(null);
     }
   };
 
   const requestDeleteNewPath = (pathTempId) => {
-    const path = paths.find((item) => item.tempId === pathTempId);
-    if (!path || path.PathId) return;
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    if (!path) return;
 
-    if (!chapterHasContent(path)) {
+    if (!path.PathId && !chapterHasContent(path)) {
       handleDeleteNewPath(pathTempId);
       return;
     }
 
-    setDeleteConfirm({
-      type: 'newPath',
-      pathTempId,
-      label: String(path.PathName ?? '').trim() || 'Chương mới',
-    });
+    if (!path.PathId) {
+      setDeleteConfirm({
+        type: 'newPath',
+        pathTempId,
+        label: String(path.PathName ?? '').trim() || 'Chương mới',
+      });
+      return;
+    }
+
+    handleDeleteNewPath(pathTempId);
   };
 
   const requestDeleteNode = (pathTempId, nodeTempId) => {
@@ -344,6 +404,12 @@ export default function MentorEditCourseContentPage() {
       ),
     );
     setExpandedNodes((prev) => ({ ...prev, [newNode.tempId]: true }));
+    setActiveChapterId(pathTempId);
+    setFocusTarget({
+      type: 'lesson',
+      pathTempId,
+      nodeTempId: newNode.tempId,
+    });
   };
 
   const handleNodeChange = (pathTempId, nodeTempId, patch) =>
@@ -393,91 +459,35 @@ export default function MentorEditCourseContentPage() {
   };
 
   const handleUpdatePath = (pathTempId) => {
-    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
-    if (!path) return;
-
-    const isDirty = !isPathFieldsSnapshotSaved(path, savedPathSnapshotsRef.current[pathTempId]);
-    if (!isDirty) {
-      toast.info('Không có thay đổi path để lưu.');
-      return;
-    }
-
-    const previewPayload = buildCoursePathSavePreviewPayload(
-      courseId,
-      pathsRef.current,
-      pathTempId,
-      savedPathSnapshotsRef.current,
-    );
-
-    if (!previewPayload || !hasCoursePathOnlySaveOperations(previewPayload)) {
-      toast.info('Không có thay đổi path để lưu.');
-      return;
-    }
-
-    pendingPathTempIdRef.current = pathTempId;
-    pendingNodeTempIdRef.current = null;
-    savePayloadRef.current = previewPayload;
-    setSavePreviewPayload(previewPayload);
-    setSavePreviewOpen(true);
+    requestScopedSave('path', pathTempId, null, null);
   };
 
   const handleUpdateNode = (pathTempId, nodeTempId) => {
-    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
-    const node = (path?.nodes ?? []).find((item) => item.tempId === nodeTempId);
-    if (!path || !node) return;
-
-    if (!path.PathId) {
-      toast.error('Vui lòng cập nhật path trước khi lưu bài học.');
-      return;
-    }
-
-    const isDirty = !isNodeSnapshotSaved(path, nodeTempId, savedPathSnapshotsRef.current[pathTempId]);
-    if (!isDirty) {
-      toast.info('Không có thay đổi bài học để lưu.');
-      return;
-    }
-
-    const previewPayload = buildCourseNodeSavePreviewPayload(
-      courseId,
-      pathsRef.current,
-      pathTempId,
-      nodeTempId,
-      savedPathSnapshotsRef.current,
-    );
-
-    if (!previewPayload || !hasCourseNodeSaveOperations(previewPayload)) {
-      toast.info('Không có thay đổi bài học để lưu.');
-      return;
-    }
-
-    pendingPathTempIdRef.current = pathTempId;
-    pendingNodeTempIdRef.current = nodeTempId;
-    savePayloadRef.current = previewPayload;
-    setSavePreviewPayload(previewPayload);
-    setSavePreviewOpen(true);
+    requestScopedSave('node', pathTempId, nodeTempId, null);
   };
 
-  const handleSavePreviewClose = () => {
-    if (updatingPathId || updatingNodeKey) return;
-    setSavePreviewOpen(false);
-    setSavePreviewPayload(null);
-    savePayloadRef.current = null;
-    pendingPathTempIdRef.current = null;
-    pendingNodeTempIdRef.current = null;
+  const handleUpdateMaterial = (pathTempId, nodeTempId, materialTempId) => {
+    requestScopedSave('material', pathTempId, nodeTempId, materialTempId);
   };
 
-  const handleConfirmSavePreview = async () => {
+  const requestScopedSave = (saveScope, pathTempId, nodeTempId, materialTempId) => {
     if (confirmSaveInFlightRef.current) return;
 
-    const pathTempId = pendingPathTempIdRef.current;
-    const nodeTempId = pendingNodeTempIdRef.current;
     const path = pathsRef.current.find((item) => item.tempId === pathTempId);
     if (!path || !pathTempId) return;
 
-    const saveScope = savePayloadRef.current?.saveScope ?? 'path';
     const pathIndex = pathsRef.current.findIndex((item) => item.tempId === pathTempId);
+    const snapshot = savedPathSnapshotsRef.current[pathTempId];
+    const node = (path.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    const material = filterLearningMaterials(node?.materials ?? node?.Materials ?? [])
+      .find((item) => item.tempId === materialTempId);
 
     if (saveScope === 'path') {
+      if (isPathFieldsSnapshotSaved(path, snapshot)) {
+        toast.info('Không có thay đổi path để lưu.');
+        return;
+      }
+
       const pathErrors = validatePathFieldsForSave(path);
       if (Object.keys(pathErrors).length > 0) {
         setValidationErrors((prev) => ({
@@ -492,16 +502,20 @@ export default function MentorEditCourseContentPage() {
         }));
         if (pathErrors.PathName) toast.error(pathErrors.PathName);
         setExpandedPaths((prev) => ({ ...prev, [pathTempId]: true }));
-        setSavePreviewOpen(false);
-        savePayloadRef.current = null;
-        pendingPathTempIdRef.current = null;
         return;
       }
-    } else {
-      const node = (path.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    } else if (saveScope === 'node') {
       if (!node) return;
+      if (!path.PathId) {
+        toast.error('Vui lòng cập nhật path trước khi lưu bài học.');
+        return;
+      }
+      if (isNodeFieldsSnapshotSaved(path, nodeTempId, snapshot)) {
+        toast.info('Không có thay đổi bài học để lưu.');
+        return;
+      }
 
-      const nodeErrors = validateNodeForSave(node);
+      const nodeErrors = validateNodeFieldsForSave(node);
       if (Object.keys(nodeErrors).length > 0) {
         setValidationErrors((prev) => ({
           ...prev,
@@ -516,32 +530,114 @@ export default function MentorEditCourseContentPage() {
             },
           },
         }));
-
-        const validationToast = getNodeContentValidationToast(nodeErrors, node);
-        if (validationToast) toast.error(validationToast);
-
+        toast.error(nodeErrors.NodeName ?? 'Vui lòng kiểm tra lại thông tin bài học.');
         setExpandedPaths((prev) => ({ ...prev, [pathTempId]: true }));
         setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
-        setSavePreviewOpen(false);
-        savePayloadRef.current = null;
-        pendingPathTempIdRef.current = null;
-        pendingNodeTempIdRef.current = null;
+        return;
+      }
+    } else {
+      if (!node || !material) return;
+      if (!path.PathId) {
+        toast.error('Vui lòng cập nhật path trước khi lưu học liệu.');
+        return;
+      }
+      if (!node.NodeId) {
+        toast.error('Vui lòng cập nhật node trước khi lưu học liệu.');
+        return;
+      }
+      if (isMaterialSnapshotSaved(path, nodeTempId, materialTempId, snapshot)) {
+        toast.info('Không có thay đổi học liệu để lưu.');
+        return;
+      }
+
+      const materialErrors = validateMaterialForSave(material);
+      if (Object.keys(materialErrors).length > 0) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          paths: {
+            ...(prev.paths ?? {}),
+            [pathTempId]: {
+              ...(prev.paths?.[pathTempId] ?? {}),
+              nodes: {
+                ...(prev.paths?.[pathTempId]?.nodes ?? {}),
+                [nodeTempId]: {
+                  ...(prev.paths?.[pathTempId]?.nodes?.[nodeTempId] ?? {}),
+                  materials: {
+                    ...(prev.paths?.[pathTempId]?.nodes?.[nodeTempId]?.materials ?? {}),
+                    [materialTempId]: materialErrors,
+                  },
+                },
+              },
+            },
+          },
+        }));
+        const validationToast = getMaterialContentValidationToast(materialErrors);
+        if (validationToast) toast.error(validationToast);
+        setExpandedPaths((prev) => ({ ...prev, [pathTempId]: true }));
+        setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
         return;
       }
     }
 
+    const dialogContent = getSaveConfirmDialogContent({
+      saveScope,
+      path,
+      pathIndex,
+      node,
+      material,
+    });
+
+    setSaveConfirm({
+      saveScope,
+      pathTempId,
+      nodeTempId,
+      materialTempId,
+      ...dialogContent,
+    });
+  };
+
+  const handleConfirmScopedSave = () => {
+    if (!saveConfirm || confirmSaveInFlightRef.current) return;
+    const { saveScope, pathTempId, nodeTempId, materialTempId } = saveConfirm;
+    void executeScopedSave(saveScope, pathTempId, nodeTempId, materialTempId);
+  };
+
+  const executeScopedSave = async (saveScope, pathTempId, nodeTempId, materialTempId) => {
+    if (confirmSaveInFlightRef.current) return;
+
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    if (!path || !pathTempId) return;
+
+    const pathIndex = pathsRef.current.findIndex((item) => item.tempId === pathTempId);
+
     confirmSaveInFlightRef.current = true;
     if (saveScope === 'path') {
       setUpdatingPathId(pathTempId);
-    } else {
+    } else if (saveScope === 'node') {
       setUpdatingNodeKey(`${pathTempId}:${nodeTempId}`);
+    } else {
+      setUpdatingMaterialKey(`${pathTempId}:${nodeTempId}:${materialTempId}`);
     }
 
     try {
       let workingPath = path;
+      let nextPathsDraft = pathsRef.current;
 
-      if (saveScope === 'node') {
-        [workingPath] = await uploadPendingMaterialsInPaths([path]);
+      if (saveScope === 'material') {
+        const [uploadedPath] = await uploadPendingMaterialInPath(
+          pathsRef.current,
+          pathTempId,
+          nodeTempId,
+          materialTempId,
+        );
+        if (uploadedPath) {
+          workingPath = uploadedPath;
+          nextPathsDraft = pathsRef.current.map((item) => (
+            item.tempId === pathTempId ? uploadedPath : item
+          ));
+          setPaths(nextPathsDraft);
+          pathsRef.current = nextPathsDraft;
+        }
       }
 
       const savePayload = saveScope === 'path'
@@ -553,24 +649,42 @@ export default function MentorEditCourseContentPage() {
           },
           savedPathSnapshotsRef.current[pathTempId],
         )
-        : buildCourseNodeSavePayload(
-          workingPath,
-          nodeTempId,
-          {
-            courseId: Number(courseId),
-            pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
-          },
-          savedPathSnapshotsRef.current[pathTempId],
-        );
+        : saveScope === 'node'
+          ? buildCourseNodeOnlySavePayload(
+            workingPath,
+            nodeTempId,
+            {
+              courseId: Number(courseId),
+              pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+            },
+            savedPathSnapshotsRef.current[pathTempId],
+          )
+          : buildCourseMaterialSavePayload(
+            workingPath,
+            nodeTempId,
+            materialTempId,
+            {
+              courseId: Number(courseId),
+              pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+            },
+            savedPathSnapshotsRef.current[pathTempId],
+          );
 
       const hasOperations = saveScope === 'path'
         ? hasCoursePathOnlySaveOperations(savePayload)
-        : hasCourseNodeSaveOperations(savePayload);
+        : saveScope === 'node'
+          ? hasCourseNodeOnlySaveOperations(savePayload)
+          : hasCourseMaterialSaveOperations(savePayload);
 
       if (!hasOperations) {
-        toast.info(saveScope === 'path'
-          ? 'Không có thay đổi path để lưu.'
-          : 'Không có thay đổi bài học để lưu.');
+        toast.info(
+          saveScope === 'path'
+            ? 'Không có thay đổi path để lưu.'
+            : saveScope === 'node'
+              ? 'Không có thay đổi bài học để lưu.'
+              : 'Không có thay đổi học liệu để lưu.',
+        );
+        setSaveConfirm(null);
         return;
       }
 
@@ -584,37 +698,53 @@ export default function MentorEditCourseContentPage() {
       });
 
       if (!result.ok) {
-        toast.error(result.message ?? (saveScope === 'path'
-          ? 'Không thể cập nhật path.'
-          : 'Không thể cập nhật bài học.'));
+        toast.error(result.message ?? (
+          saveScope === 'path'
+            ? 'Không thể cập nhật path.'
+            : saveScope === 'node'
+              ? 'Không thể cập nhật bài học.'
+              : 'Không thể cập nhật học liệu.'
+        ));
         return;
       }
 
       const savedPath = applyCoursePathSaveResult(workingPath, result);
       const nextPaths = withNormalizedOrders(
-        pathsRef.current.map((item) => (item.tempId === pathTempId ? savedPath : item)),
+        nextPathsDraft.map((item) => (item.tempId === pathTempId ? savedPath : item)),
       );
 
-      persistEditContent(courseId, coursePascal, nextPaths);
+      pathsRef.current = nextPaths;
       setPaths(nextPaths);
       setSavedPathSnapshots((prev) => ({
         ...prev,
         [pathTempId]: serializePathSnapshot(savedPath),
       }));
-      setSavePreviewOpen(false);
-      setSavePreviewPayload(null);
-      savePayloadRef.current = null;
-      pendingPathTempIdRef.current = null;
-      pendingNodeTempIdRef.current = null;
-      toast.success(saveScope === 'path' ? 'Đã cập nhật path.' : 'Đã cập nhật bài học.');
+
+      queueMicrotask(() => {
+        persistEditContent(courseId, coursePascal, nextPaths);
+      });
+
+      setSaveConfirm(null);
+      toast.success(
+        saveScope === 'path'
+          ? 'Đã cập nhật path.'
+          : saveScope === 'node'
+            ? 'Đã cập nhật bài học.'
+            : 'Đã cập nhật học liệu.',
+      );
     } catch (error) {
-      toast.error(error?.message || (saveScope === 'path'
-        ? 'Không thể cập nhật path. Vui lòng thử lại.'
-        : 'Không thể cập nhật bài học. Vui lòng thử lại.'));
+      toast.error(error?.message || (
+        saveScope === 'path'
+          ? 'Không thể cập nhật path. Vui lòng thử lại.'
+          : saveScope === 'node'
+            ? 'Không thể cập nhật bài học. Vui lòng thử lại.'
+            : 'Không thể cập nhật học liệu. Vui lòng thử lại.'
+      ));
     } finally {
       confirmSaveInFlightRef.current = false;
       setUpdatingPathId(null);
       setUpdatingNodeKey(null);
+      setUpdatingMaterialKey(null);
     }
   };
 
@@ -680,25 +810,66 @@ export default function MentorEditCourseContentPage() {
     navigateFn?.();
   };
 
-  const handleNavigateToContent = useCallback((target) => {
-    const applyNavigation = () => {
-      if (target?.pathTempId) {
-        setActiveChapterId(target.pathTempId);
-      }
-      setFocusTarget(target);
-      scrollToContentItem(target, { setExpandedPaths, setExpandedNodes });
+  const handleSelectChapter = useCallback((pathTempId) => {
+    const navigate = () => {
+      setActiveChapterId(pathTempId);
+      setFocusTarget(null);
     };
 
-    if (target?.pathTempId && target.pathTempId !== activeChapterId) {
-      requestPathNavigation(applyNavigation);
+    if (pathTempId === activeChapterId) {
+      navigate();
       return;
     }
 
-    applyNavigation();
+    requestPathNavigation(navigate);
+  }, [activeChapterId, requestPathNavigation]);
+
+  const handleEditChapter = useCallback((pathTempId) => {
+    const navigate = () => {
+      setActiveChapterId(pathTempId);
+      setFocusTarget({ type: 'chapter-edit', pathTempId });
+    };
+
+    if (pathTempId === activeChapterId) {
+      navigate();
+      return;
+    }
+
+    requestPathNavigation(navigate);
+  }, [activeChapterId, requestPathNavigation]);
+
+  const handleSelectNode = useCallback((pathTempId, nodeTempId) => {
+    const navigate = () => {
+      setActiveChapterId(pathTempId);
+      setFocusTarget({ type: 'lesson', pathTempId, nodeTempId });
+      setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
+    };
+
+    if (pathTempId === activeChapterId) {
+      navigate();
+      return;
+    }
+
+    requestPathNavigation(navigate);
+  }, [activeChapterId, requestPathNavigation]);
+
+  const handleSelectMaterial = useCallback((pathTempId, nodeTempId, materialTempId) => {
+    const navigate = () => {
+      setActiveChapterId(pathTempId);
+      setFocusTarget({ type: 'material', pathTempId, nodeTempId, materialTempId });
+      setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
+    };
+
+    if (pathTempId === activeChapterId) {
+      navigate();
+      return;
+    }
+
+    requestPathNavigation(navigate);
   }, [activeChapterId, requestPathNavigation]);
 
   const handleBack = () => {
-    navigate(`/mentor/courses/${courseId}/edit`);
+    navigate(`/mentor/courses/${courseId}?tab=content`);
   };
 
   if (!ready || !coursePascal) {
@@ -768,11 +939,29 @@ export default function MentorEditCourseContentPage() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' },
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(280px, 4fr) minmax(0, 8fr)' },
           gap: { xs: 2, lg: 2 },
           alignItems: 'start',
         }}
       >
+        <MentorCourseContentSidebar
+          paths={paths}
+          courseName={courseName}
+          activeChapterId={activeChapterId}
+          focusTarget={focusTarget}
+          errors={validationErrors}
+          savedPathSnapshots={savedPathSnapshots}
+          onSelectChapter={handleSelectChapter}
+          onEditChapter={handleEditChapter}
+          onSelectNode={handleSelectNode}
+          onSelectMaterial={handleSelectMaterial}
+          onAddChapter={handleAddPath}
+          onAddNode={handleAddNode}
+          onDeleteNewPath={handleDeleteNewPath}
+          disabled={busy}
+          footer={backButton}
+        />
+
         <MentorCourseContentBuilder
           paths={paths}
           courseId={Number(courseId)}
@@ -805,17 +994,13 @@ export default function MentorEditCourseContentPage() {
           showNodeUpdate
           updatingNodeKey={updatingNodeKey}
           onUpdateNode={handleUpdateNode}
+          showMaterialUpdate
+          updatingMaterialKey={updatingMaterialKey}
+          onUpdateMaterial={handleUpdateMaterial}
           activeChapterId={activeChapterId}
           onActiveChapterChange={handleRequestChapterChange}
           focusTarget={focusTarget}
-        />
-
-        <MentorContentOverview
-          paths={paths}
-          courseName={courseName}
-          focusTarget={focusTarget}
-          footer={backButton}
-          onNavigateToItem={handleNavigateToContent}
+          sidebarLayout
         />
       </Box>
 
@@ -842,6 +1027,20 @@ export default function MentorEditCourseContentPage() {
       />
 
       <ConfirmDialog
+        open={Boolean(saveConfirm)}
+        onClose={() => {
+          if (updatingPathId || updatingNodeKey || updatingMaterialKey) return;
+          setSaveConfirm(null);
+        }}
+        onConfirm={handleConfirmScopedSave}
+        title={saveConfirm?.title ?? 'Xác nhận cập nhật'}
+        message={saveConfirm?.message ?? ''}
+        confirmLabel={saveConfirm?.confirmLabel ?? 'Cập nhật'}
+        cancelLabel="Hủy"
+        loading={Boolean(updatingPathId || updatingNodeKey || updatingMaterialKey)}
+      />
+
+      <ConfirmDialog
         open={unsavedNavDialogOpen}
         onClose={handleUnsavedNavCancel}
         onConfirm={handleUnsavedNavContinue}
@@ -860,14 +1059,6 @@ export default function MentorEditCourseContentPage() {
         confirmLabel="Xóa"
         cancelLabel="Hủy"
         destructive
-      />
-
-      <MentorCoursePathSavePreviewDialog
-        open={savePreviewOpen}
-        payload={savePreviewPayload}
-        loading={Boolean(updatingPathId || updatingNodeKey)}
-        onClose={handleSavePreviewClose}
-        onConfirm={handleConfirmSavePreview}
       />
     </Box>
   );

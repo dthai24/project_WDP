@@ -87,10 +87,7 @@ export function getMaterialOutlineDetail(material) {
   switch (normalized.MaterialType) {
     case 'VIDEO': {
       if (url) return { type: 'link', href: url, label: linkLabel };
-      if (String(normalized.EmbedUrl ?? '').trim()) {
-        return { type: 'text', text: 'Nguồn: Mã nhúng video' };
-      }
-      return { type: 'text', text: 'Chưa có link hoặc mã nhúng' };
+      return { type: 'text', text: 'Chưa có link video' };
     }
     case 'TEXT': {
       const plainText = stripHtmlContent(normalized.Content);
@@ -129,10 +126,8 @@ export function getMaterialReviewDetailSummary(material) {
   switch (normalized.MaterialType) {
     case 'VIDEO': {
       const hasUrl = Boolean(String(normalized.MaterialUrl ?? '').trim());
-      const hasEmbed = Boolean(String(normalized.EmbedUrl ?? '').trim());
       if (hasUrl) return `Link: ${truncatePreview(normalized.MaterialUrl, 120)}`;
-      if (hasEmbed) return 'Nguồn: Mã nhúng video';
-      return 'Chưa có link hoặc mã nhúng';
+      return 'Chưa có link video';
     }
     case 'TEXT': {
       return getTextMaterialPreview(normalized);
@@ -249,11 +244,9 @@ function collectMaterialsByType(paths = [], materialType, mapDetail) {
 export function collectVideoMaterials(paths = []) {
   return collectMaterialsByType(paths, 'VIDEO', (material) => {
     const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
-    const hasEmbed = Boolean(String(material.EmbedUrl ?? '').trim());
 
     if (hasUrl) return `Link: ${truncatePreview(material.MaterialUrl, 120)}`;
-    if (hasEmbed) return 'Nguồn: Mã nhúng video';
-    return 'Chưa có link hoặc mã nhúng';
+    return 'Chưa có link video';
   });
 }
 
@@ -506,13 +499,12 @@ export function validateCourseDraft(draft) {
 
         if (material.MaterialType === 'VIDEO') {
           const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
-          const hasEmbed = Boolean(String(material.EmbedUrl ?? '').trim());
-          if (!hasUrl && !hasEmbed) {
+          if (!hasUrl) {
             const alreadyReported = errors.some((item) => item.targetId === material.tempId);
             if (!alreadyReported) {
               errors.push({
                 type: 'material',
-                message: `${materialLabel}: Video chưa có link hoặc mã nhúng.`,
+                message: `${materialLabel}: Video chưa có link.`,
                 targetId: material.tempId,
               });
             }

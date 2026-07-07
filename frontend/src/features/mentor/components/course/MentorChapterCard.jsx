@@ -1,4 +1,4 @@
-import { Box, Collapse, IconButton, InputBase, Switch, Typography } from '@mui/material';
+import { Box, Collapse, IconButton, InputBase, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
@@ -16,6 +16,7 @@ import MentorMaterialRow from './MentorMaterialRow';
 import MentorChapterCardMenu from './MentorChapterCardMenu';
 import MentorSectionToolbar from './MentorSectionToolbar';
 import MentorSectionTabToggle from './MentorSectionTabToggle';
+import { PathPublishToggle, NodePublishToggle } from './MentorPublishToggles';
 import { ContentStatusIcon } from './MentorChapterTabs';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
@@ -23,8 +24,7 @@ import {
   chapterHasContent,
   filterLearningMaterials,
   isNewUnsavedPath,
-  isNodeSnapshotSaved,
-  isPathActive,
+  isNodeFieldsSnapshotSaved,
   lessonHasContent,
   materialHasContent,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
@@ -46,6 +46,8 @@ import {
   contentAddButtonSx,
   contentFieldSx,
   contentInputInnerSx,
+  scopedEditorBarSx,
+  scopedUpdateButtonSx,
 } from './mentorCourseContentStyles';
 
 const MATERIAL_TYPE_LABEL = {
@@ -58,42 +60,6 @@ function getMaterialToolbarSummary(material) {
   const typeLabel = MATERIAL_TYPE_LABEL[material.MaterialType] ?? 'Học liệu';
   const title = String(material.Title ?? '').trim();
   return `${typeLabel} · ${title || 'Chưa đặt tiêu đề'}`;
-}
-
-function PathPublishToggle({ path, onChange, disabled = false }) {
-  const published = isPathActive(path);
-
-  return (
-    <Box
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.75,
-        px: 1,
-        py: 0.35,
-        borderRadius: '999px',
-        bgcolor: published ? 'rgba(4,120,87,0.08)' : 'rgba(100,116,139,0.08)',
-        border: `1px solid ${published ? 'rgba(4,120,87,0.2)' : 'rgba(15,23,42,0.08)'}`,
-        flexShrink: 0,
-      }}
-    >
-      <Typography sx={{ fontSize: 12, fontWeight: 600, color: published ? '#047857' : MUTED }}>
-        Xuất bản
-      </Typography>
-      <Switch
-        size="small"
-        checked={published}
-        onChange={(event) => onChange(path.tempId, { IsActive: event.target.checked ? 1 : 0 })}
-        disabled={disabled}
-        inputProps={{ 'aria-label': 'Xuất bản chương cho học viên' }}
-        sx={{
-          m: 0,
-          '& .MuiSwitch-switchBase.Mui-checked': { color: '#047857' },
-          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#047857' },
-        }}
-      />
-    </Box>
-  );
 }
 
 function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false }) {
@@ -151,6 +117,10 @@ export default function MentorChapterCard({
   focusMaterialId = null,
   chapterSectionOpen: chapterSectionOpenProp,
   onChapterSectionOpenChange,
+  sidebarLayout = false,
+  showChapterEdit = true,
+  showNodeContent = true,
+  showMaterialContent = true,
 }) {
   const nodesNormal = path.nodes ?? path.Nodes ?? [];
   const lessonCount = nodesNormal.length;
@@ -248,17 +218,32 @@ export default function MentorChapterCard({
   }, [nodesNormal, activeLessonId]);
 
   useEffect(() => {
-    if (!focusLessonId) return;
+    if (!focusLessonId) {
+      appliedFocusKeyRef.current = '';
+      return;
+    }
     const focusKey = `${focusLessonId}:${focusMaterialId ?? ''}`;
     if (appliedFocusKeyRef.current === focusKey) return;
     appliedFocusKeyRef.current = focusKey;
     setActiveLessonId(focusLessonId);
     setLessonSectionOpen(true);
+    setMaterialsSectionOpen(true);
+
+    const node = nodesNormal.find((item) => item.tempId === focusLessonId);
+    const materials = filterLearningMaterials(node?.materials ?? node?.Materials ?? []);
+
     if (focusMaterialId) {
       setActiveMaterialId(focusMaterialId);
-      setMaterialsSectionOpen(true);
+      return;
     }
-  }, [focusLessonId, focusMaterialId]);
+
+    if (sidebarLayout) {
+      setActiveMaterialId(null);
+      return;
+    }
+
+    setActiveMaterialId(materials[0]?.tempId ?? null);
+  }, [focusLessonId, focusMaterialId, nodesNormal, sidebarLayout]);
 
   const activeLessonIndex = nodesNormal.findIndex((n) => n.tempId === activeLessonId);
   const activeLesson = activeLessonIndex >= 0 ? nodesNormal[activeLessonIndex] : null;
@@ -266,7 +251,7 @@ export default function MentorChapterCard({
   const activeNodeDirty = Boolean(
     showNodeUpdate
     && activeLesson
-    && !isNodeSnapshotSaved(path, activeLesson.tempId, savedPathSnapshot),
+    && !isNodeFieldsSnapshotSaved(path, activeLesson.tempId, savedPathSnapshot),
   );
   const updatingActiveNode = Boolean(
     activeLesson && updatingNodeKey === `${path.tempId}:${activeLesson.tempId}`,
@@ -304,6 +289,11 @@ export default function MentorChapterCard({
       setActiveMaterialId(null);
       return;
     }
+    if (activeMaterialId == null) {
+      if (sidebarLayout) return;
+      setActiveMaterialId(activeMaterials[0]?.tempId ?? null);
+      return;
+    }
     const stillExists = activeMaterials.some((m) => m.tempId === activeMaterialId);
     if (!stillExists) {
       const nextIdx = Math.max(0, activeMaterialIndexRef.current - 1);
@@ -311,7 +301,7 @@ export default function MentorChapterCard({
         activeMaterials[Math.min(nextIdx, activeMaterials.length - 1)]?.tempId ?? null,
       );
     }
-  }, [activeMaterials, activeMaterialId]);
+  }, [activeMaterials, activeMaterialId, sidebarLayout]);
 
   const activeMaterialIndex = activeMaterials.findIndex((m) => m.tempId === activeMaterialId);
   const activeMaterial = activeMaterialIndex >= 0 ? activeMaterials[activeMaterialIndex] : null;
@@ -488,23 +478,78 @@ export default function MentorChapterCard({
     );
   };
 
-  const renderMaterialsZoneTabMode = () => {
+  const renderSidebarMaterialEditor = () => {
     if (!activeLesson) {
       return (
-        <Typography sx={{ mt: 2.5, fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
-          Thêm bài học để gắn học liệu.
+        <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+          Chọn học liệu bên trái để chỉnh sửa.
+        </Typography>
+      );
+    }
+
+    if (!activeMaterial) {
+      return (
+        <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+          Học liệu không tồn tại hoặc đã bị xóa.
         </Typography>
       );
     }
 
     return (
+      <Box sx={{ mt: 0 }}>
+        <Typography sx={{ ...CONTENT_SECTION_LABEL_SX, mt: 0, mb: 1.25 }}>
+          {getMaterialToolbarSummary(activeMaterial)}
+        </Typography>
+        <MentorMaterialRow
+          key={activeMaterial.tempId}
+          material={activeMaterial}
+          materialIndex={activeMaterialIndex}
+          errors={errors.nodes?.[activeLesson.tempId]?.materials?.[activeMaterial.tempId] ?? {}}
+          onChange={(materialTempId, patch) =>
+            onMaterialChange(path.tempId, activeLesson.tempId, materialTempId, patch)
+          }
+          onDelete={(materialTempId) =>
+            handleMaterialDelete(activeLesson.tempId, materialTempId)
+          }
+          disabled={disabled}
+          courseId={courseId}
+          chapterId={chapterId}
+          tabMode
+        />
+      </Box>
+    );
+  };
+
+  const renderMaterialsZoneTabMode = () => {
+    if (sidebarLayout && !showMaterialContent) return null;
+
+    if (sidebarLayout && showMaterialContent) {
+      return renderSidebarMaterialEditor();
+    }
+
+    if (!activeLesson) {
+      return (
+        <Typography sx={{ mt: 2.5, fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+          Chọn bài học bên trái để xem học liệu.
+        </Typography>
+      );
+    }
+
+    const materialsExpanded = sidebarLayout ? true : materialsSectionOpen;
+
+    return (
       <Box
         ref={materialAnchorRef}
         sx={{
-          mt: chapterSectionOpen || lessonSectionOpen ? 2.5 : 0,
+          mt: sidebarLayout ? 1.5 : (chapterSectionOpen || lessonSectionOpen ? 2.5 : 0),
           scrollMarginTop: BUILDER_STICKY_MATERIAL_TABS_ONLY_TOP,
         }}
       >
+        {sidebarLayout ? (
+          <Typography sx={{ ...CONTENT_SECTION_LABEL_SX, mt: 0, mb: 1.25 }}>
+            Học liệu
+          </Typography>
+        ) : null}
         <Box
           ref={materialCollapseSentinelRef}
           aria-hidden
@@ -525,11 +570,13 @@ export default function MentorChapterCard({
             hasErrorById={hasMaterialErrorById}
             hasContentById={hasMaterialContentById}
             trailingActions={
-              <MentorSectionTabToggle
-                label="Học liệu"
-                expanded={materialsSectionOpen}
-                onToggle={() => setMaterialsSectionOpen((v) => !v)}
-              />
+              sidebarLayout ? null : (
+                <MentorSectionTabToggle
+                  label="Học liệu"
+                  expanded={materialsSectionOpen}
+                  onToggle={() => setMaterialsSectionOpen((v) => !v)}
+                />
+              )
             }
           />
           {activeMaterial ? (
@@ -553,9 +600,41 @@ export default function MentorChapterCard({
             />
           ) : null}
         </Box>
-        <Collapse in={materialsSectionOpen}>
-          {renderMaterialsTabPanel()}
-        </Collapse>
+        {materialsExpanded ? (
+          activeMaterials.length === 0 ? (
+            <Box
+              sx={{
+                mt: 1.5,
+                px: 2,
+                py: 2.5,
+                borderRadius: '12px',
+                bgcolor: 'rgba(15,23,42,0.02)',
+                border: '1px dashed rgba(15,23,42,0.1)',
+                textAlign: 'center',
+              }}
+            >
+              <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55, mb: 1.5 }}>
+                Bài học này chưa có học liệu.
+              </Typography>
+              <AppButton
+                variant="outlined"
+                startIcon={<AddRoundedIcon sx={{ fontSize: 18 }} />}
+                onClick={handleAddMaterial}
+                disabled={disabled}
+                sx={{
+                  height: 36,
+                  borderRadius: '10px',
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                Thêm học liệu
+              </AppButton>
+            </Box>
+          ) : (
+            renderMaterialsTabPanel()
+          )
+        ) : null}
       </Box>
     );
   };
@@ -623,7 +702,30 @@ export default function MentorChapterCard({
 
   const renderMaterialsSection = () => renderMaterialsBody();
 
-  const renderLessonMaterialStickyRail = () => (
+  const renderLessonMaterialStickyRail = () => {
+    if (sidebarLayout) {
+      if (!showNodeContent || !activeLesson) return null;
+
+      return (
+        <MentorSectionToolbar
+          hasContent={lessonHasContent(activeLesson)}
+          summary={`Bài ${activeLessonIndex + 1}${activeLesson.NodeName ? ` · ${String(activeLesson.NodeName).trim()}` : ''} · ${activeMaterials.length} học liệu`}
+          actions={
+            <IconButton
+              size="small"
+              onClick={() => handleNodeDelete(activeLesson.tempId)}
+              disabled={disabled}
+              aria-label="Xóa bài học"
+              sx={DELETE_ICON_BTN_SX}
+            >
+              <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          }
+        />
+      );
+    }
+
+    return (
     <>
       <MentorLessonTabs
         nodes={nodesNormal}
@@ -659,52 +761,37 @@ export default function MentorChapterCard({
         />
       ) : null}
     </>
-  );
+    );
+  };
 
   const renderNodeUpdateBar = () => {
-    if (!showNodeUpdate || !activeLesson) return null;
+    if (!showNodeUpdate || !activeLesson || sidebarLayout) return null;
 
     const needsPathFirst = !path.PathId;
 
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1,
-          mt: 2,
-          p: 1.25,
-          borderRadius: '12px',
-          bgcolor: activeNodeDirty ? 'rgba(245,158,11,0.08)' : 'rgba(15,23,42,0.03)',
-          border: `1px solid ${activeNodeDirty ? 'rgba(245,158,11,0.22)' : 'rgba(15,23,42,0.06)'}`,
-        }}
-      >
-        <Typography sx={{ fontSize: 12, color: activeNodeDirty ? '#92400E' : MUTED, lineHeight: 1.5 }}>
-          {needsPathFirst
-            ? 'Cập nhật path trước khi lưu bài học này.'
-            : activeNodeDirty
-              ? 'Bài học và học liệu chưa lưu.'
-              : 'Bài học đã đồng bộ.'}
-        </Typography>
+      <Box sx={{ ...scopedEditorBarSx(activeNodeDirty), mb: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
+          <NodePublishToggle
+            node={activeLesson}
+            onChange={onNodeChange}
+            disabled={disabled}
+          />
+          {needsPathFirst ? (
+            <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+              Cập nhật path trước khi lưu bài học này.
+            </Typography>
+          ) : activeNodeDirty ? (
+            <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+              Thông tin bài học chưa lưu.
+            </Typography>
+          ) : null}
+        </Box>
         <AppButton
           startIcon={<SaveOutlinedIcon />}
           onClick={() => onUpdateNode?.(activeLesson.tempId)}
           disabled={disabled || updatingActiveNode || !activeNodeDirty || needsPathFirst}
-          sx={{
-            height: 36,
-            px: 2,
-            fontSize: 13,
-            fontWeight: 700,
-            borderRadius: '999px',
-            bgcolor: PRIMARY,
-            color: '#fff',
-            boxShadow: 'none',
-            flexShrink: 0,
-            '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-            '&.Mui-disabled': { bgcolor: 'rgba(15,23,42,0.12)', color: MUTED },
-          }}
+          sx={scopedUpdateButtonSx(activeNodeDirty && !needsPathFirst)}
         >
           {updatingActiveNode ? 'Đang cập nhật...' : 'Cập nhật Node'}
         </AppButton>
@@ -720,10 +807,15 @@ export default function MentorChapterCard({
         </Typography>
       )}
 
+      {showNodeSaveBar && activeLesson ? renderNodeUpdateBar() : null}
+
       {tabMode ? (
-        <Collapse in={lessonSectionOpen} unmountOnExit collapsedSize={0}>
-          <Box sx={{ mt: 2.5, scrollMarginTop: BUILDER_SCROLL_MARGIN_TOP }}>
-            {activeLesson ? (
+        sidebarLayout && showNodeContent ? (
+          activeLesson ? (
+            <Box sx={{ mt: 0, mb: 0.5 }}>
+              <Typography sx={{ ...CONTENT_SECTION_LABEL_SX, mt: 0, mb: 1.25 }}>
+                Thông tin bài học
+              </Typography>
               <MentorLessonBlock
                 key={activeLesson.tempId}
                 node={activeLesson}
@@ -735,14 +827,35 @@ export default function MentorChapterCard({
                 onChange={onNodeChange}
                 onDelete={() => handleNodeDelete(activeLesson.tempId)}
                 disabled={disabled}
+                hidePublishToggle={sidebarLayout || showNodeUpdate}
               />
-            ) : (
-              <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
-                Chương này chưa có bài học. Nhấn + trên thanh tab để thêm.
-              </Typography>
-            )}
-          </Box>
-        </Collapse>
+            </Box>
+          ) : null
+        ) : (
+          <Collapse in={lessonSectionOpen} unmountOnExit collapsedSize={0}>
+            <Box sx={{ mt: 2.5, scrollMarginTop: BUILDER_SCROLL_MARGIN_TOP }}>
+              {activeLesson ? (
+                <MentorLessonBlock
+                  key={activeLesson.tempId}
+                  node={activeLesson}
+                  nodeIndex={activeLessonIndex}
+                  errors={errors.nodes?.[activeLesson.tempId] ?? {}}
+                  tabMode
+                  fieldsOnly
+                  showDelete={false}
+                  onChange={onNodeChange}
+                  onDelete={() => handleNodeDelete(activeLesson.tempId)}
+                  disabled={disabled}
+                  hidePublishToggle={sidebarLayout || showNodeUpdate}
+                />
+              ) : (
+                <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+                  Chương này chưa có bài học. Nhấn + trên thanh tab để thêm.
+                </Typography>
+              )}
+            </Box>
+          </Collapse>
+        )
       ) : (
         <>
           <Typography sx={{ ...CONTENT_SECTION_LABEL_SX, mt: 0, mb: 1.25 }}>Bài học</Typography>
@@ -816,10 +929,22 @@ export default function MentorChapterCard({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mr: 'auto', minWidth: 0 }}>
           <ContentStatusIcon hasContent={hasContent} size={16} />
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: MUTED }}>
-            Chương {pathIndex + 1} · {lessonCount} bài học
-            <Box component="span" sx={{ color: hasContent ? '#059669' : '#94A3B8', ml: 0.75 }}>
-              · {hasContent ? 'Đã có nội dung' : 'Chưa có nội dung'}
-            </Box>
+            {sidebarLayout ? (
+              showMaterialContent && activeMaterial
+                ? getMaterialToolbarSummary(activeMaterial)
+                : showNodeContent && activeLesson
+                  ? `Bài ${activeLessonIndex + 1} · ${String(activeLesson.NodeName ?? '').trim() || 'Chưa đặt tên'}`
+                  : showChapterEdit
+                    ? `Chương ${pathIndex + 1} · Thông tin chương`
+                    : `Chương ${pathIndex + 1}`
+            ) : (
+              <>
+                Chương {pathIndex + 1} · {lessonCount} bài học
+                <Box component="span" sx={{ color: hasContent ? '#059669' : '#94A3B8', ml: 0.75 }}>
+                  · {hasContent ? 'Đã có nội dung' : 'Chưa có nội dung'}
+                </Box>
+              </>
+            )}
           </Typography>
         </Box>
       ) : null}
@@ -831,102 +956,111 @@ export default function MentorChapterCard({
           onQuizSetup={onQuizSetup}
         />
       ) : null}
-      <PathChapterActions
-        path={path}
-        onChange={onChange}
-        onDeleteNewPath={onDeleteNewPath}
-        disabled={disabled}
-      />
+      {!sidebarLayout ? (
+        <PathChapterActions
+          path={path}
+          onChange={onChange}
+          onDeleteNewPath={onDeleteNewPath}
+          disabled={disabled}
+        />
+      ) : showChapterEdit && isNewUnsavedPath(path) ? (
+        <PathChapterActions
+          path={path}
+          onChange={onChange}
+          onDeleteNewPath={onDeleteNewPath}
+          disabled={disabled}
+        />
+      ) : null}
     </Box>
+  );
+
+  const showChapterFields = !sidebarLayout || showChapterEdit;
+  const showLessonFields = !sidebarLayout || showNodeContent;
+  const showMaterialsFields = !sidebarLayout ? showNodeContent : showMaterialContent;
+  const showNodeSaveBar = !sidebarLayout && showNodeContent;
+  const showSidebarMaterialOnly = sidebarLayout && showMaterialContent && !showChapterEdit && !showNodeContent;
+
+  const renderChapterFields = () => (
+    <>
+      {!sidebarLayout ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT }}>
+            Xuất bản chương
+          </Typography>
+          <PathPublishToggle path={path} onChange={onChange} disabled={disabled} />
+        </Box>
+      ) : null}
+
+      <ContentFieldLabel>Tên chương *</ContentFieldLabel>
+      <Box sx={contentFieldSx(Boolean(errors.PathName), CHAPTER_THEME)}>
+        <InputBase
+          value={path.PathName}
+          onChange={(event) => onChange(path.tempId, { PathName: event.target.value })}
+          disabled={disabled}
+          placeholder="Ví dụ: TOEIC 900+: Chiến lược cao điểm"
+          fullWidth
+          sx={contentInputInnerSx}
+        />
+      </Box>
+      {errors.PathName && (
+        <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.5 }}>
+          {errors.PathName}
+        </Typography>
+      )}
+
+      <ContentShortDescriptionField
+        label="Mô tả ngắn"
+        value={path.Description}
+        onChange={(event) => onChange(path.tempId, { Description: event.target.value })}
+        disabled={disabled}
+        theme={CHAPTER_THEME}
+        placeholder="Mô tả ngắn về nội dung chương (tuỳ chọn)"
+        labelSx={{ mt: 2 }}
+      />
+    </>
   );
 
   const body = (
     <Box
       sx={{
         px: 2,
-        pt: tabMode && !chapterSectionOpen ? 0 : 2.5,
+        pt: tabMode && !sidebarLayout && !chapterSectionOpen ? 0 : 2.5,
         pb: 2.5,
       }}
     >
-      {tabMode ? (
-        <Collapse in={chapterSectionOpen} unmountOnExit collapsedSize={0}>
-          <Box sx={{ scrollMarginTop: BUILDER_STICKY_ACTION_BAR_TOP + 8 }}>
-            <ContentFieldLabel>Tên chương *</ContentFieldLabel>
-            <Box sx={contentFieldSx(Boolean(errors.PathName), CHAPTER_THEME)}>
-              <InputBase
-                value={path.PathName}
-                onChange={(event) => onChange(path.tempId, { PathName: event.target.value })}
-                disabled={disabled}
-                placeholder="Ví dụ: TOEIC 900+: Chiến lược cao điểm"
-                fullWidth
-                sx={contentInputInnerSx}
-              />
+      {showChapterFields ? (
+        tabMode ? (
+          sidebarLayout ? (
+            <Box sx={{ scrollMarginTop: 0 }}>
+              {renderChapterFields()}
             </Box>
-            {errors.PathName && (
-              <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.5 }}>
-                {errors.PathName}
-              </Typography>
-            )}
+          ) : (
+            <Collapse in={chapterSectionOpen} unmountOnExit collapsedSize={0}>
+              <Box sx={{ scrollMarginTop: BUILDER_STICKY_ACTION_BAR_TOP + 8 }}>
+                {renderChapterFields()}
+              </Box>
+            </Collapse>
+          )
+        ) : (
+          renderChapterFields()
+        )
+      ) : null}
 
-            <ContentShortDescriptionField
-              label="Mô tả ngắn"
-              value={path.Description}
-              onChange={(event) => onChange(path.tempId, { Description: event.target.value })}
-              disabled={disabled}
-              theme={CHAPTER_THEME}
-              placeholder="Mô tả ngắn về nội dung chương (tuỳ chọn)"
-              labelSx={{ mt: 2 }}
-            />
-          </Box>
-        </Collapse>
-      ) : (
-        <>
-          <ContentFieldLabel>Tên chương *</ContentFieldLabel>
-          <Box sx={contentFieldSx(Boolean(errors.PathName), CHAPTER_THEME)}>
-            <InputBase
-              value={path.PathName}
-              onChange={(event) => onChange(path.tempId, { PathName: event.target.value })}
-              disabled={disabled}
-              placeholder="Ví dụ: TOEIC 900+: Chiến lược cao điểm"
-              fullWidth
-              sx={contentInputInnerSx}
-            />
-          </Box>
-          {errors.PathName && (
-            <Typography sx={{ fontSize: 12, color: '#DC2626', mt: 0.5 }}>
-              {errors.PathName}
-            </Typography>
-          )}
-
-          <ContentShortDescriptionField
-            label="Mô tả ngắn"
-            value={path.Description}
-            onChange={(event) => onChange(path.tempId, { Description: event.target.value })}
-            disabled={disabled}
-            theme={CHAPTER_THEME}
-            placeholder="Mô tả ngắn về nội dung chương (tuỳ chọn)"
-            labelSx={{ mt: 2 }}
-          />
-        </>
-      )}
-
-      {tabMode ? (
+      {tabMode && showLessonFields ? (
         <Box
           sx={(theme) => ({
             ...breakoutBodyPaddingSx()(theme),
-            mt: chapterSectionOpen ? 2.5 : 0,
-            borderBottom: '1px solid rgba(15,23,42,0.06)',
+            mt: showChapterFields && chapterSectionOpen ? 2.5 : showChapterFields ? 0 : 0,
+            borderBottom: (showNodeContent || showMaterialContent) ? '1px solid rgba(15,23,42,0.06)' : 'none',
           })}
         >
           {renderLessonMaterialStickyRail()}
         </Box>
       ) : null}
 
-      {renderLessonsSection()}
+      {showLessonFields ? renderLessonsSection() : null}
 
-      {tabMode ? renderMaterialsZoneTabMode() : null}
-
-      {tabMode ? renderNodeUpdateBar() : null}
+      {tabMode && showMaterialsFields ? renderMaterialsZoneTabMode() : null}
 
           {showSave ? (
             <Box
@@ -988,7 +1122,7 @@ export default function MentorChapterCard({
   if (tabMode) {
     return (
       <Box data-content-error={`chapter-${path.tempId}`}>
-        {actionBar}
+        {!showSidebarMaterialOnly ? actionBar : null}
         {body}
       </Box>
     );

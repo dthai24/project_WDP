@@ -10,6 +10,7 @@ import {
   filterLearningMaterials,
   lessonHasContent,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { NodePublishToggle } from './MentorPublishToggles';
 import MentorMaterialRow from './MentorMaterialRow';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
@@ -43,6 +44,7 @@ export default function MentorLessonBlock({
   tabMode = false,
   fieldsOnly = false,
   showDelete = true,
+  hidePublishToggle = false,
 }) {
   const materials = filterLearningMaterials(node.Materials ?? node.materials ?? []);
   const materialCount = countLearningMaterials(materials);
@@ -98,6 +100,15 @@ export default function MentorLessonBlock({
 
   const lessonFields = (
   <>
+      {!hidePublishToggle ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT }}>
+            Xuất bản bài học
+          </Typography>
+          <NodePublishToggle node={node} onChange={onChange} disabled={disabled} />
+        </Box>
+      ) : null}
+
       <ContentFieldLabel>Tên bài học *</ContentFieldLabel>
       <Box sx={contentFieldSx(Boolean(errors.NodeName), LESSON_THEME)}>
         <InputBase

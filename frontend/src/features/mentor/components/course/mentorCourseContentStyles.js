@@ -386,3 +386,47 @@ export const DELETE_NEW_PATH_BTN_SX = {
     borderColor: 'rgba(220,38,38,0.35)',
   },
 };
+
+export function scopedEditorBarSx(dirty = false) {
+  return {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 1,
+    mb: 1.5,
+    p: 1.25,
+    borderRadius: '12px',
+    bgcolor: dirty ? 'rgba(245,158,11,0.08)' : 'rgba(15,23,42,0.03)',
+    border: `1px solid ${dirty ? 'rgba(245,158,11,0.22)' : 'rgba(15,23,42,0.06)'}`,
+  };
+}
+
+export function scopedUpdateButtonSx(dirty = false) {
+  return {
+    height: 36,
+    px: 2,
+    fontSize: 13,
+    fontWeight: 700,
+    borderRadius: '999px',
+    boxShadow: 'none',
+    flexShrink: 0,
+    ...(dirty
+      ? {
+        bgcolor: PRIMARY,
+        color: '#fff',
+        '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+      }
+      : {
+        bgcolor: 'rgba(15,23,42,0.06)',
+        color: MUTED,
+        border: '1px solid rgba(15,23,42,0.08)',
+        '&:hover': { bgcolor: 'rgba(15,23,42,0.09)', boxShadow: 'none' },
+      }),
+    '&.Mui-disabled': {
+      bgcolor: 'rgba(15,23,42,0.06)',
+      color: MUTED,
+      opacity: 0.72,
+    },
+  };
+}

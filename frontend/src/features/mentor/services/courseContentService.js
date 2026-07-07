@@ -24,6 +24,21 @@ function ensureSuccess(data, fallbackMessage) {
   return { ok: true, data: data?.data ?? data };
 }
 
+export async function deleteCoursePath(pathId) {
+  try {
+    const { data } = await axios.delete(
+      `${API_BASE}/mentor/paths/${encodeURIComponent(pathId)}`,
+      { headers: getMentorAuthHeaders() },
+    );
+    return ensureSuccess(data, 'Không thể xóa chương.');
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? error.message ?? 'Không thể xóa chương.',
+    };
+  }
+}
+
 export async function saveCoursePath(body = {}) {
   const headers = getMentorAuthHeaders();
   const courseId = body.context?.courseId;

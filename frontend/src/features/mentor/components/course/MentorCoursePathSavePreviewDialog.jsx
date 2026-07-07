@@ -39,9 +39,11 @@ export default function MentorCoursePathSavePreviewDialog({
   const context = displayPayload?.context ?? payload?.context ?? {};
   const apiCallCount = displayPayload?.apiCalls?.length ?? 0;
   const saveScope = payload?.saveScope ?? 'path';
-  const dialogTitle = saveScope === 'node'
-    ? 'Payload cập nhật bài học (API / DB)'
-    : 'Payload cập nhật path (API / DB)';
+  const dialogTitle = saveScope === 'material'
+    ? 'Payload cập nhật học liệu (API / DB)'
+    : saveScope === 'node'
+      ? 'Payload cập nhật bài học (API / DB)'
+      : 'Payload cập nhật path (API / DB)';
 
   return (
     <Dialog
@@ -60,16 +62,21 @@ export default function MentorCoursePathSavePreviewDialog({
     >
       <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{dialogTitle}</DialogTitle>
       <DialogContent sx={{ pt: 0.5 }}>
-        {context.pathName ? (
+        {context.pathName || context.nodeName || context.materialTitle ? (
           <Typography sx={{ fontSize: 13, color: TEXT, mb: 1, lineHeight: 1.5 }}>
-            {saveScope === 'node' ? 'Bài học đang cập nhật' : 'Chương đang cập nhật'}
+            {saveScope === 'material'
+              ? 'Học liệu đang cập nhật'
+              : saveScope === 'node'
+                ? 'Bài học đang cập nhật'
+                : 'Chương đang cập nhật'}
             :
             {' '}
             <strong>
-              {context.pathOrder && saveScope === 'path' ? `Chương ${context.pathOrder} — ` : ''}
-              {saveScope === 'node'
-                ? (context.nodeName || context.nodeTempId || 'Bài học')
-                : context.pathName}
+              {saveScope === 'material'
+                ? (context.materialTitle || context.materialTempId || 'Học liệu')
+                : saveScope === 'node'
+                  ? (context.nodeName || context.nodeTempId || 'Bài học')
+                  : `${context.pathOrder ? `Chương ${context.pathOrder} — ` : ''}${context.pathName}`}
             </strong>
           </Typography>
         ) : null}

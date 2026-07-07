@@ -7,9 +7,10 @@ import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCard from './MentorChapterCard';
 import MentorChapterTabs from './MentorChapterTabs';
 import MentorSectionTabToggle from './MentorSectionTabToggle';
-import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-import { BUILDER_PANEL_SX } from './mentorCourseContentStyles';
-import { isPathFieldsSnapshotSaved, resolveChapterId, chapterHasContent } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { BUILDER_PANEL_SX, scopedEditorBarSx, scopedUpdateButtonSx } from './mentorCourseContentStyles';
+import { PathPublishToggle, NodePublishToggle } from './MentorPublishToggles';
+import { filterLearningMaterials, isPathFieldsSnapshotSaved, isNodeFieldsSnapshotSaved, isMaterialSnapshotSaved, resolveChapterId, chapterHasContent } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentBuilder({
   paths,
@@ -39,11 +40,15 @@ export default function MentorCourseContentBuilder({
   showNodeUpdate = false,
   updatingNodeKey = null,
   onUpdateNode,
+  showMaterialUpdate = false,
+  updatingMaterialKey = null,
+  onUpdateMaterial,
   activeChapterId: controlledActiveChapterId,
   onActiveChapterChange,
   courseId = null,
   courseTitle = '',
   focusTarget = null,
+  sidebarLayout = false,
 }) {
   const [internalActiveChapterId, setInternalActiveChapterId] = useState(() => paths[0]?.tempId ?? null);
   const isControlledChapter = controlledActiveChapterId !== undefined;
@@ -119,6 +124,61 @@ export default function MentorCourseContentBuilder({
     activePath && !isPathFieldsSnapshotSaved(activePath, savedPathSnapshots[activePath.tempId]),
   );
   const updatingPath = updatingPathId === activePath?.tempId;
+  const showChapterEdit = !sidebarLayout || (
+    focusTarget?.type === 'chapter-edit'
+    && focusTarget.pathTempId === activePath?.tempId
+  );
+  const showNodeContent = !sidebarLayout || (
+    focusTarget?.type === 'lesson'
+    && focusTarget.pathTempId === activePath?.tempId
+    && focusTarget.nodeTempId
+  );
+  const showMaterialContent = !sidebarLayout || (
+    focusTarget?.type === 'material'
+    && focusTarget.pathTempId === activePath?.tempId
+    && focusTarget.nodeTempId
+    && focusTarget.materialTempId
+  );
+  const showRightEditor = !sidebarLayout || showChapterEdit || showNodeContent || showMaterialContent;
+
+  const activeNodeTempId = (showNodeContent || showMaterialContent) ? focusTarget?.nodeTempId : null;
+  const activeMaterialTempId = showMaterialContent ? focusTarget?.materialTempId : null;
+  const activeNode = useMemo(() => {
+    if (!activePath || !activeNodeTempId) return null;
+    return (activePath.nodes ?? activePath.Nodes ?? []).find((node) => node.tempId === activeNodeTempId) ?? null;
+  }, [activePath, activeNodeTempId]);
+  const activeMaterial = useMemo(() => {
+    if (!activeNode || !activeMaterialTempId) return null;
+    return filterLearningMaterials(activeNode.materials ?? activeNode.Materials ?? [])
+      .find((material) => material.tempId === activeMaterialTempId) ?? null;
+  }, [activeNode, activeMaterialTempId]);
+  const activeNodeDirty = Boolean(
+    activePath
+    && activeNode
+    && !isNodeFieldsSnapshotSaved(activePath, activeNode.tempId, savedPathSnapshots[activePath.tempId]),
+  );
+  const activeMaterialDirty = Boolean(
+    activePath
+    && activeNode
+    && activeMaterial
+    && !isMaterialSnapshotSaved(
+      activePath,
+      activeNode.tempId,
+      activeMaterial.tempId,
+      savedPathSnapshots[activePath.tempId],
+    ),
+  );
+  const updatingActiveNode = Boolean(
+    activePath && activeNodeTempId && updatingNodeKey === `${activePath.tempId}:${activeNodeTempId}`,
+  );
+  const updatingActiveMaterial = Boolean(
+    activePath
+    && activeNodeTempId
+    && activeMaterialTempId
+    && updatingMaterialKey === `${activePath.tempId}:${activeNodeTempId}:${activeMaterialTempId}`,
+  );
+  const activeNodeNeedsPathFirst = Boolean(activePath && !activePath.PathId);
+  const activeMaterialNeedsNodeFirst = Boolean(activePath && activeNode && !activeNode.NodeId);
 
   useEffect(() => {
     if (activePathIndex >= 0) activeChapterIndexRef.current = activePathIndex;
@@ -187,75 +247,140 @@ export default function MentorCourseContentBuilder({
           </Box>
         ) : (
           <Box>
-            <MentorChapterTabs
-              paths={paths}
-              activeId={activeChapterId}
-              onChange={requestActiveChapterChange}
-              onAdd={handleAddChapterClick}
-              disabled={disabled}
-              hasErrorById={hasErrorById}
-              hasContentById={hasContentById}
-              trailingActions={
-                <MentorSectionTabToggle
-                  label="Chương"
-                  expanded={chapterSectionOpen}
-                  onToggle={() => setChapterSectionOpen((v) => !v)}
-                />
-              }
-            />
+            {!sidebarLayout ? (
+              <MentorChapterTabs
+                paths={paths}
+                activeId={activeChapterId}
+                onChange={requestActiveChapterChange}
+                onAdd={handleAddChapterClick}
+                disabled={disabled}
+                hasErrorById={hasErrorById}
+                hasContentById={hasContentById}
+                trailingActions={
+                  <MentorSectionTabToggle
+                    label="Chương"
+                    expanded={chapterSectionOpen}
+                    onToggle={() => setChapterSectionOpen((v) => !v)}
+                  />
+                }
+              />
+            ) : null}
 
             <Box
               sx={{
                 ...BUILDER_PANEL_SX,
-                borderRadius: '0 0 14px 14px',
-                borderTop: '1px solid rgba(15,23,42,0.1)',
+                borderRadius: sidebarLayout ? '14px' : '0 0 14px 14px',
+                borderTop: sidebarLayout ? undefined : '1px solid rgba(15,23,42,0.1)',
                 overflow: 'visible',
               }}
             >
               {activePath ? (
                 <>
-                {showPathUpdate ? (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                      mb: 1.5,
-                      p: 1.25,
-                      borderRadius: '12px',
-                      bgcolor: activePathDirty ? 'rgba(245,158,11,0.08)' : 'rgba(15,23,42,0.03)',
-                      border: `1px solid ${activePathDirty ? 'rgba(245,158,11,0.22)' : 'rgba(15,23,42,0.06)'}`,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 12, color: activePathDirty ? '#92400E' : MUTED, lineHeight: 1.5 }}>
-                      {activePathDirty
-                        ? 'Thông tin path (tên, mô tả, xuất bản) chưa lưu.'
-                        : 'Thông tin path đã đồng bộ.'}
-                    </Typography>
+                {showPathUpdate && showChapterEdit ? (
+                  <Box sx={scopedEditorBarSx(activePathDirty)}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
+                      <PathPublishToggle
+                        path={activePath}
+                        onChange={onPathChange}
+                        disabled={disabled}
+                      />
+                      {activePathDirty ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          Thông tin chương chưa lưu.
+                        </Typography>
+                      ) : null}
+                    </Box>
                     <AppButton
                       startIcon={<SaveOutlinedIcon />}
                       onClick={() => onUpdatePath?.(activePath.tempId)}
                       disabled={disabled || updatingPath || !activePathDirty}
-                      sx={{
-                        height: 36,
-                        px: 2,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        borderRadius: '999px',
-                        bgcolor: PRIMARY,
-                        color: '#fff',
-                        boxShadow: 'none',
-                        flexShrink: 0,
-                        '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-                        '&.Mui-disabled': { bgcolor: 'rgba(15,23,42,0.12)', color: MUTED },
-                      }}
+                      sx={scopedUpdateButtonSx(activePathDirty)}
                     >
                       {updatingPath ? 'Đang cập nhật...' : 'Cập nhật path'}
                     </AppButton>
                   </Box>
                 ) : null}
+                {showNodeUpdate && showNodeContent && activeNode ? (
+                  <Box sx={scopedEditorBarSx(activeNodeDirty)}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
+                      <NodePublishToggle
+                        node={activeNode}
+                        onChange={(nodeTempId, patch) =>
+                          onNodeChange(activePath.tempId, nodeTempId, patch)
+                        }
+                        disabled={disabled}
+                      />
+                      {activeNodeNeedsPathFirst ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          Cập nhật path trước khi lưu bài học này.
+                        </Typography>
+                      ) : activeNodeDirty ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          Thông tin bài học chưa lưu.
+                        </Typography>
+                      ) : null}
+                    </Box>
+                    <AppButton
+                      startIcon={<SaveOutlinedIcon />}
+                      onClick={() => onUpdateNode?.(activePath.tempId, activeNode.tempId)}
+                      disabled={
+                        disabled
+                        || updatingActiveNode
+                        || !activeNodeDirty
+                        || activeNodeNeedsPathFirst
+                      }
+                      sx={scopedUpdateButtonSx(activeNodeDirty && !activeNodeNeedsPathFirst)}
+                    >
+                      {updatingActiveNode ? 'Đang cập nhật...' : 'Cập nhật Node'}
+                    </AppButton>
+                  </Box>
+                ) : null}
+                {showMaterialUpdate && showMaterialContent && activeNode && activeMaterial ? (
+                  <Box sx={scopedEditorBarSx(activeMaterialDirty)}>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      {activeNodeNeedsPathFirst ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          Cập nhật path trước khi lưu học liệu này.
+                        </Typography>
+                      ) : activeMaterialNeedsNodeFirst ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          Cập nhật node trước khi lưu học liệu này.
+                        </Typography>
+                      ) : activeMaterialDirty ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          Học liệu chưa lưu.
+                        </Typography>
+                      ) : (
+                        <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
+                          Học liệu đã đồng bộ.
+                        </Typography>
+                      )}
+                    </Box>
+                    <AppButton
+                      startIcon={<SaveOutlinedIcon />}
+                      onClick={() => onUpdateMaterial?.(
+                        activePath.tempId,
+                        activeNode.tempId,
+                        activeMaterial.tempId,
+                      )}
+                      disabled={
+                        disabled
+                        || updatingActiveMaterial
+                        || !activeMaterialDirty
+                        || activeNodeNeedsPathFirst
+                        || activeMaterialNeedsNodeFirst
+                      }
+                      sx={scopedUpdateButtonSx(
+                        activeMaterialDirty
+                        && !activeNodeNeedsPathFirst
+                        && !activeMaterialNeedsNodeFirst,
+                      )}
+                    >
+                      {updatingActiveMaterial ? 'Đang cập nhật...' : 'Cập nhật học liệu'}
+                    </AppButton>
+                  </Box>
+                ) : null}
+                {showRightEditor ? (
                 <MentorChapterCard
                   key={activePath.tempId}
                   path={activePath}
@@ -289,14 +414,43 @@ export default function MentorCourseContentBuilder({
                   updatingNodeKey={updatingNodeKey}
                   onUpdateNode={(nodeTempId) => onUpdateNode?.(activePath.tempId, nodeTempId)}
                   focusLessonId={
-                    focusTarget?.pathTempId === activePath.tempId ? focusTarget.nodeTempId : null
+                    focusTarget?.pathTempId === activePath.tempId
+                    && (focusTarget.type === 'lesson' || focusTarget.type === 'material')
+                      ? focusTarget.nodeTempId
+                      : null
                   }
                   focusMaterialId={
-                    focusTarget?.pathTempId === activePath.tempId ? focusTarget.materialTempId : null
+                    focusTarget?.pathTempId === activePath.tempId
+                    && focusTarget.type === 'material'
+                      ? focusTarget.materialTempId
+                      : null
                   }
                   chapterSectionOpen={chapterSectionOpen}
                   onChapterSectionOpenChange={setChapterSectionOpen}
+                  sidebarLayout={sidebarLayout}
+                  showChapterEdit={showChapterEdit}
+                  showNodeContent={showNodeContent}
+                  showMaterialContent={showMaterialContent}
                 />
+                ) : (
+                  <Box
+                    sx={{
+                      py: 6,
+                      px: 2,
+                      textAlign: 'center',
+                      borderRadius: '12px',
+                      bgcolor: 'rgba(15,23,42,0.02)',
+                      border: '1px dashed rgba(15,23,42,0.1)',
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 14, fontWeight: 600, color: TEXT, mb: 0.75 }}>
+                      Chưa chọn nội dung để chỉnh sửa
+                    </Typography>
+                    <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55, maxWidth: 360, mx: 'auto' }}>
+                      Bấm <strong>Sửa</strong> trên chương để chỉnh thông tin chương, chọn bài học để sửa bài, hoặc chọn học liệu bên trái để sửa nội dung học liệu.
+                    </Typography>
+                  </Box>
+                )}
                 </>
               ) : null}
             </Box>

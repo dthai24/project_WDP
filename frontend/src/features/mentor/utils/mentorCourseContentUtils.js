@@ -1,5 +1,4 @@
 // TODO: update backend/DB MaterialType to support TEXT
-import { resolveVideoEmbed } from '@/shared/utils/videoEmbedUtils';
 import {
   getFileExtension,
   MATERIAL_UPLOAD_MAX_BYTES,
@@ -30,7 +29,6 @@ export function normalizeMaterialForDisplay(material = {}) {
     FileName: material.FileName ?? material.fileName ?? '',
     FileSize: material.FileSize ?? material.fileSize ?? null,
     SourceType: material.SourceType ?? material.sourceType ?? null,
-    EmbedUrl: material.EmbedUrl ?? material.embedUrl ?? null,
     MaterialId: material.MaterialId ?? material.materialId ?? null,
   };
 }
@@ -156,7 +154,6 @@ export function getVideoDefaultFields() {
   return {
     SourceType: VIDEO_SOURCE_LINK,
     MaterialUrl: '',
-    EmbedUrl: null,
   };
 }
 
@@ -287,6 +284,7 @@ function serializeNodeSnapshot(node) {
     NodeName: String(node.NodeName ?? node.nodeName ?? '').trim(),
     Description: trimShortDescription(node.Description),
     NodeOrder: Number(node.NodeOrder ?? 1),
+    IsActive: toPathIsActiveValue(node.IsActive ?? node.isActive, 1),
     materials: filterLearningMaterials(node.materials ?? node.Materials ?? []).map((material) => ({
       MaterialId: material.MaterialId ?? null,
       tempId: material.tempId ?? null,
@@ -315,6 +313,83 @@ export function isPathFieldsSnapshotSaved(path, savedSnapshot) {
 
   return JSON.stringify(normalizePathFieldsForCompare(path))
     === JSON.stringify(normalizePathFieldsForCompare(baseline));
+}
+
+function serializeNodeFieldsSnapshot(node) {
+  if (!node) return null;
+  return JSON.stringify({
+    NodeId: node.NodeId ?? null,
+    NodeName: String(node.NodeName ?? node.nodeName ?? '').trim(),
+    Description: trimShortDescription(node.Description),
+    NodeOrder: Number(node.NodeOrder ?? 1),
+    IsActive: toPathIsActiveValue(node.IsActive ?? node.isActive, 1),
+  });
+}
+
+function serializeMaterialFieldsSnapshot(material) {
+  if (!material) return null;
+  return JSON.stringify({
+    MaterialId: material.MaterialId ?? null,
+    MaterialType: material.MaterialType ?? null,
+    Title: String(material.Title ?? '').trim(),
+    MaterialOrder: Number(material.MaterialOrder ?? 1),
+    SourceType: material.SourceType ?? null,
+    MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+    FileName: material.FileName ?? null,
+    FileSize: material.FileSize ?? null,
+    Content: material.Content ?? null,
+  });
+}
+
+/** Chỉ so sánh metadata bài học (tên, mô tả, thứ tự, xuất bản) — bỏ qua học liệu. */
+export function isNodeFieldsSnapshotSaved(path, nodeTempId, savedSnapshot) {
+  if (!savedSnapshot || !nodeTempId) return false;
+
+  const [normalizedPath] = withNormalizedOrders([path]);
+  const node = (normalizedPath.nodes ?? []).find((item) => item.tempId === nodeTempId);
+  if (!node) return true;
+
+  const baselineNode = getNodeFromSnapshot(savedSnapshot, nodeTempId);
+  if (!baselineNode) {
+    return serializeNodeFieldsSnapshot(node) === serializeNodeFieldsSnapshot({
+      ...node,
+      NodeId: null,
+      NodeName: '',
+      Description: '',
+    });
+  }
+
+  return serializeNodeFieldsSnapshot(node) === serializeNodeFieldsSnapshot(baselineNode);
+}
+
+/** So sánh một học liệu với snapshot đã lưu của path. */
+export function isMaterialSnapshotSaved(path, nodeTempId, materialTempId, savedSnapshot) {
+  if (!savedSnapshot || !nodeTempId || !materialTempId) return false;
+
+  const [normalizedPath] = withNormalizedOrders([path]);
+  const node = (normalizedPath.nodes ?? []).find((item) => item.tempId === nodeTempId);
+  if (!node) return true;
+
+  const materials = filterLearningMaterials(node.materials ?? node.Materials ?? []);
+  const material = materials.find((item) => item.tempId === materialTempId);
+  if (!material) return true;
+
+  const baselineNode = getNodeFromSnapshot(savedSnapshot, nodeTempId);
+  const baselineMaterial = filterLearningMaterials(baselineNode?.materials ?? [])
+    .find((item) => item.tempId === materialTempId
+      || (material.MaterialId && item.MaterialId === material.MaterialId));
+
+  if (!baselineMaterial) {
+    return serializeMaterialFieldsSnapshot(material) === serializeMaterialFieldsSnapshot({
+      ...material,
+      MaterialId: null,
+      Title: '',
+      MaterialUrl: null,
+      Content: null,
+    });
+  }
+
+  return serializeMaterialFieldsSnapshot(material) === serializeMaterialFieldsSnapshot(baselineMaterial);
 }
 
 /** So sánh một bài học (kèm học liệu) với snapshot đã lưu của path. */
@@ -354,6 +429,16 @@ export function validatePathFieldsForSave(path) {
   return errors;
 }
 
+export function validateNodeFieldsForSave(node) {
+  const errors = {};
+
+  if (!String(node.NodeName ?? node.nodeName ?? '').trim()) {
+    errors.NodeName = 'Vui lòng nhập tên bài học.';
+  }
+
+  return errors;
+}
+
 export function validateNodeForSave(node) {
   const fakePath = {
     tempId: '_validate_node',
@@ -362,6 +447,26 @@ export function validateNodeForSave(node) {
   };
   const errors = validateCourseContent([fakePath]);
   return errors.paths?.['_validate_node']?.nodes?.[node.tempId] ?? {};
+}
+
+export function validateMaterialForSave(material) {
+  const fakeNode = {
+    tempId: '_validate_material',
+    NodeName: 'placeholder',
+    materials: [material],
+  };
+  const fakePath = {
+    tempId: '_validate_material_path',
+    PathName: 'placeholder',
+    nodes: [fakeNode],
+  };
+  const errors = validateCourseContent([fakePath]);
+  return errors.paths?.['_validate_material_path']?.nodes?.['_validate_material']?.materials?.[material.tempId] ?? {};
+}
+
+export function getMaterialContentValidationToast(materialErrors = {}) {
+  if (!materialErrors || Object.keys(materialErrors).length === 0) return null;
+  return Object.values(materialErrors).find(Boolean) ?? 'Vui lòng kiểm tra lại học liệu.';
 }
 
 export function getNodeContentValidationToast(nodeErrors = {}, node) {
@@ -457,6 +562,10 @@ export function isPathActive(path = {}) {
   return toPathIsActiveValue(path.IsActive ?? path.isActive, 1) === 1;
 }
 
+export function isNodeActive(node = {}) {
+  return toPathIsActiveValue(node.IsActive ?? node.isActive, 1) === 1;
+}
+
 export function createEmptyPath() {
   return {
     tempId: createTempId('path'),
@@ -478,6 +587,7 @@ export function createEmptyNode() {
     NodeName: '',
     NodeOrder: 1,
     Description: '',
+    IsActive: 0,
     materials: [],
   };
 }
@@ -841,10 +951,12 @@ export function buildCourseContentPayload(paths) {
       PathName: String(path.PathName ?? '').trim(),
       Description: trimShortDescription(path.Description),
       PathOrder: Number(index + 1),
+      IsActive: toPathIsActiveValue(path.IsActive ?? path.isActive, 1),
       nodes: (nodes ?? []).map(({ tempId: _nodeTempId, materials, ...node }) => ({
         NodeName: String(node.NodeName ?? node.nodeName ?? '').trim(),
         NodeOrder: node.NodeOrder,
         Description: trimShortDescription(node.Description),
+        IsActive: toPathIsActiveValue(node.IsActive ?? node.isActive, 1),
         materials: filterLearningMaterials(materials ?? []).map(
           ({
             tempId: _materialTempId,
@@ -883,14 +995,10 @@ export function buildCourseContentPayload(paths) {
             }
 
             if (material.MaterialType === 'VIDEO') {
-              const materialUrl = String(material.MaterialUrl ?? '').trim() || null;
-              const { embedUrl } = resolveVideoEmbed(materialUrl ?? '');
-              // TODO: backend should support EmbedUrl for VIDEO material
               return {
                 ...base,
                 SourceType: VIDEO_SOURCE_LINK,
-                MaterialUrl: materialUrl,
-                EmbedUrl: embedUrl,
+                MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
               };
             }
 

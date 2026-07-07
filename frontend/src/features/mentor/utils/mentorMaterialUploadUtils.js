@@ -113,3 +113,60 @@ export async function uploadPendingMaterialsInPaths(paths = []) {
 
   return nextPaths;
 }
+
+/** Chỉ upload một học liệu đang lưu — tránh quét/upload cả path. */
+export async function uploadPendingMaterialInPath(
+  paths = [],
+  pathTempId,
+  nodeTempId,
+  materialTempId,
+) {
+  const normalized = withNormalizedOrders(paths);
+  let uploadedMaterial = null;
+
+  const nextPaths = normalized.map((path) => {
+    if (path.tempId !== pathTempId) return path;
+    return {
+      ...path,
+      nodes: (path.nodes ?? []).map((node) => {
+        if (node.tempId !== nodeTempId) return node;
+        return {
+          ...node,
+          materials: filterLearningMaterials(node.materials ?? []).map((material) => {
+            if (material.tempId !== materialTempId) return material;
+            return material;
+          }),
+        };
+      }),
+    };
+  });
+
+  const targetPath = nextPaths.find((path) => path.tempId === pathTempId);
+  const targetNode = (targetPath?.nodes ?? []).find((node) => node.tempId === nodeTempId);
+  const targetMaterial = filterLearningMaterials(targetNode?.materials ?? [])
+    .find((material) => material.tempId === materialTempId);
+
+  if (targetMaterial) {
+    uploadedMaterial = await uploadSingleMaterial(targetMaterial);
+  }
+
+  const resultPaths = nextPaths.map((path) => {
+    if (path.tempId !== pathTempId) return path;
+    return {
+      ...path,
+      nodes: (path.nodes ?? []).map((node) => {
+        if (node.tempId !== nodeTempId) return node;
+        return {
+          ...node,
+          materials: filterLearningMaterials(node.materials ?? []).map((material) => (
+            material.tempId === materialTempId && uploadedMaterial
+              ? uploadedMaterial
+              : material
+          )),
+        };
+      }),
+    };
+  });
+
+  return [resultPaths.find((path) => path.tempId === pathTempId) ?? targetPath, uploadedMaterial];
+}

@@ -16,7 +16,7 @@ async function getNodeById(nodeId, transaction = null) {
   const request = transaction ? new sql.Request(transaction) : new sql.Request();
   request.input('nodeId', sql.Int, Number(nodeId));
   const result = await request.query(`
-    SELECT NodeId, PathId, NodeName, NodeOrder, Description
+    SELECT NodeId, PathId, NodeName, NodeOrder, Description, IsActive
     FROM dbo.Path_Nodes
     WHERE NodeId = @nodeId
   `);
@@ -28,7 +28,7 @@ async function getMaterialById(materialId, transaction = null) {
   request.input('materialId', sql.Int, Number(materialId));
   const result = await request.query(`
     SELECT MaterialId, NodeId, MaterialType, Title, MaterialUrl, MaterialOrder,
-           SourceType, FileName, FileSize, EmbedUrl
+           SourceType, FileName, FileSize
     FROM dbo.Node_Materials
     WHERE MaterialId = @materialId
   `);
@@ -147,11 +147,12 @@ async function insertNodeRow(pathId, data = {}, transaction = null) {
   request.input('NodeName', sql.NVarChar(255), nodeName);
   request.input('NodeOrder', sql.Int, Number(data.NodeOrder ?? data.Order ?? 1));
   request.input('Description', sql.NVarChar(sql.MAX), data.Description ?? null);
+  request.input('IsActive', sql.Bit, toPathIsActiveBit(data.IsActive, 1));
 
   const result = await request.query(`
-    INSERT INTO dbo.Path_Nodes (PathId, NodeName, NodeOrder, Description)
+    INSERT INTO dbo.Path_Nodes (PathId, NodeName, NodeOrder, Description, IsActive)
     OUTPUT INSERTED.NodeId AS NodeId
-    VALUES (@PathId, @NodeName, @NodeOrder, @Description)
+    VALUES (@PathId, @NodeName, @NodeOrder, @Description, @IsActive)
   `);
   return result.recordset[0]?.NodeId ?? null;
 }
@@ -174,6 +175,10 @@ async function updateNodeById(nodeId, set = {}, transaction = null) {
   if (set.NodeOrder != null || set.Order != null) {
     request.input('NodeOrder', sql.Int, Number(set.NodeOrder ?? set.Order));
     fields.push('NodeOrder = @NodeOrder');
+  }
+  if (set.IsActive !== undefined) {
+    request.input('IsActive', sql.Bit, toPathIsActiveBit(set.IsActive, 1));
+    fields.push('IsActive = @IsActive');
   }
 
   if (fields.length === 0) return nodeId;
@@ -213,13 +218,12 @@ async function insertMaterialRow(nodeId, data = {}, transaction = null) {
     sql.BigInt,
     data.FileSize != null ? Number(data.FileSize) : null,
   );
-  request.input('EmbedUrl', sql.NVarChar(sql.MAX), data.EmbedUrl ?? null);
 
   const result = await request.query(`
     INSERT INTO dbo.Node_Materials
-      (NodeId, MaterialType, Title, MaterialUrl, MaterialOrder, SourceType, FileName, FileSize, EmbedUrl)
+      (NodeId, MaterialType, Title, MaterialUrl, MaterialOrder, SourceType, FileName, FileSize)
     OUTPUT INSERTED.MaterialId AS MaterialId
-    VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize, @EmbedUrl)
+    VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize)
   `);
   return result.recordset[0]?.MaterialId ?? null;
 }
@@ -256,10 +260,6 @@ async function updateMaterialById(materialId, set = {}, transaction = null) {
   if (set.FileSize !== undefined) {
     request.input('FileSize', sql.BigInt, set.FileSize != null ? Number(set.FileSize) : null);
     fields.push('FileSize = @FileSize');
-  }
-  if (set.EmbedUrl !== undefined) {
-    request.input('EmbedUrl', sql.NVarChar(sql.MAX), set.EmbedUrl ?? null);
-    fields.push('EmbedUrl = @EmbedUrl');
   }
 
   if (fields.length === 0) return materialId;
