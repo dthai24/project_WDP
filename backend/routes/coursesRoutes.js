@@ -19,6 +19,9 @@ const {
     getCourseComments,
     createCourseComment,
     deleteCourseMentor,
+    completeCourse: completeCourseCtrl, // Avoid duplicate names if any
+    getUserCertificates,
+    verifyCertificate,
 } = require('../controllers/coursesController');
 
 
@@ -71,6 +74,10 @@ router.post('/enroll', protect, enrollCourse);
 // Bình luận khóa học (trang detail)
 router.get('/:courseId/comments', optionalAuth, getCourseComments);
 router.post('/:courseId/comments', optionalAuth, createCourseComment);
+
+// Chứng chỉ
+router.get('/certificates/user/:userId', protect, getUserCertificates);
+router.get('/certificates/verify/:code', verifyCertificate);
 
 // Lấy lộ trình học và trạng thái hoàn thành (Trang Course Learning)
 router.get('/:id/learning', protect, getLearningPath);

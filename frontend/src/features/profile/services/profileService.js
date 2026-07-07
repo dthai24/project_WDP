@@ -37,3 +37,15 @@ export async function fetchUserCourses() {
   });
   return response.json();
 }
+
+export async function fetchUserCertificates(userId) {
+  const response = await fetch(`${API_BASE}/courses/certificates/user/${userId}`, {
+    headers: getAuthHeaders(),
+  });
+  return response.json();
+}
+
+export async function verifyCertificateByCode(code) {
+  const response = await fetch(`${API_BASE}/courses/certificates/verify/${code}`);
+  return response.json();
+}

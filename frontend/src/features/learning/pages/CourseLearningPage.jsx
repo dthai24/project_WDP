@@ -1099,6 +1099,11 @@ export default function CourseLearningPage() {
     ? currentMod.lessons.every(l => l.status === "completed")
     : false;
 
+  // Các bài học khác trước đó đã hoàn thành hết chưa
+  const allOtherLessonsCompleted = allLessons.length > 0
+    ? allLessons.filter(l => l.id !== currentLessonId).every(l => l.status === "completed")
+    : true;
+
 
   if (!courseInfo.courseTitle) {
     return (
@@ -1422,19 +1427,6 @@ export default function CourseLearningPage() {
                     className={RICH_CONTENT_CLASSES}
                     dangerouslySetInnerHTML={{ __html: currentLesson.contentBody }}
                   />
-                  {currentLesson.type === "reading" && (
-                    <div className="mt-6 flex justify-end">
-                      <AppButton
-                        size="small"
-                        variant={isCompleted ? "outlined" : "contained"}
-                        onClick={handleToggleComplete}
-                        startIcon={<CheckCircle size={16} />}
-                        style={isCompleted ? { color: SUCCESS, borderColor: SUCCESS } : { backgroundColor: SUCCESS, color: '#fff' }}
-                      >
-                        {isCompleted ? "Đã đọc xong" : "Đánh dấu hoàn thành bài đọc"}
-                      </AppButton>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -1577,35 +1569,73 @@ export default function CourseLearningPage() {
 
                 {/* Nút Đánh dấu hoàn thành hoặc Hoàn tất khoá học */}
                 {isLastInCourse ? (
-                  <AppButton
-                    size="small"
-                    variant={progress === 100 ? "outlined" : "contained"}
-                    onClick={handleConfirmCourseComplete}
-                    startIcon={<Trophy size={16} />}
-                    className="min-w-[190px] font-semibold animate-pulse"
-                    style={
-                      progress === 100
-                        ? { borderColor: "rgba(245,158,11,0.5)", color: "#d97706", backgroundColor: "rgba(245,158,11,0.08)" }
-                        : { backgroundColor: "#f59e0b", color: "#fff", boxShadow: "0 2px 8px rgba(245,158,11,0.28)" }
-                    }
-                  >
-                    {progress === 100 ? "Đã hoàn thành khóa học" : "Hoàn tất khoá học"}
-                  </AppButton>
+                  currentLesson?.type === "quiz" && !isCompleted ? (
+                    <AppButton
+                      size="small"
+                      disabled
+                      startIcon={<CheckCircle size={16} />}
+                      className="min-w-[190px] font-semibold opacity-60"
+                      style={{ backgroundColor: "#94a3b8", color: "#fff" }}
+                    >
+                      Hãy làm bài trắc nghiệm
+                    </AppButton>
+                  ) : !allOtherLessonsCompleted ? (
+                    <AppButton
+                      size="small"
+                      disabled
+                      startIcon={<CheckCircle size={16} />}
+                      className="min-w-[190px] font-semibold opacity-60"
+                      style={{ backgroundColor: "#94a3b8", color: "#fff" }}
+                    >
+                      Hãy hoàn thành các bài học trước
+                    </AppButton>
+                  ) : (
+                    <AppButton
+                      size="small"
+                      variant={progress === 100 ? "outlined" : "contained"}
+                      onClick={handleConfirmCourseComplete}
+                      startIcon={<Trophy size={16} />}
+                      className="min-w-[190px] font-semibold animate-pulse"
+                      style={
+                        progress === 100
+                          ? { borderColor: "rgba(245,158,11,0.5)", color: "#d97706", backgroundColor: "rgba(245,158,11,0.08)" }
+                          : { backgroundColor: "#f59e0b", color: "#fff", boxShadow: "0 2px 8px rgba(245,158,11,0.28)" }
+                      }
+                    >
+                      {progress === 100 ? "Đã hoàn thành khóa học" : "Hoàn tất khoá học"}
+                    </AppButton>
+                  )
                 ) : (
-                  <AppButton
-                    size="small"
-                    variant={isCompleted ? "outlined" : "contained"}
-                    onClick={handleToggleComplete}
-                    startIcon={<CheckCircle size={16} />}
-                    className="min-w-[190px] font-semibold"
-                    style={
-                      isCompleted
-                        ? { borderColor: "rgba(22,163,74,0.5)", color: SUCCESS, backgroundColor: "rgba(22,163,74,0.08)" }
-                        : { backgroundColor: SUCCESS, color: "#fff", boxShadow: "0 2px 8px rgba(22,163,74,0.28)" }
-                    }
-                  >
-                    {isCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
-                  </AppButton>
+                  currentLesson?.type === "quiz" ? (
+                    <AppButton
+                      size="small"
+                      disabled
+                      startIcon={<CheckCircle size={16} />}
+                      className="min-w-[190px] font-semibold opacity-60"
+                      style={
+                        isCompleted
+                          ? { borderColor: "rgba(22,163,74,0.5)", color: SUCCESS, backgroundColor: "rgba(22,163,74,0.08)" }
+                          : { backgroundColor: "#94a3b8", color: "#fff" }
+                      }
+                    >
+                      {isCompleted ? "Đã hoàn thành bài trắc nghiệm" : "Hãy làm bài trắc nghiệm"}
+                    </AppButton>
+                  ) : (
+                    <AppButton
+                      size="small"
+                      variant={isCompleted ? "outlined" : "contained"}
+                      onClick={handleToggleComplete}
+                      startIcon={<CheckCircle size={16} />}
+                      className="min-w-[190px] font-semibold"
+                      style={
+                        isCompleted
+                          ? { borderColor: "rgba(22,163,74,0.5)", color: SUCCESS, backgroundColor: "rgba(22,163,74,0.08)" }
+                          : { backgroundColor: SUCCESS, color: "#fff", boxShadow: "0 2px 8px rgba(22,163,74,0.28)" }
+                      }
+                    >
+                      {isCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
+                    </AppButton>
+                  )
                 )}
 
 

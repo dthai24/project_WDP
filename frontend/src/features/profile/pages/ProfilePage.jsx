@@ -29,7 +29,9 @@ import {
   fetchUserProfile,
   uploadUserAvatar,
   fetchUserCourses,
+  fetchUserCertificates,
 } from "@/features/profile/services/profileService";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import {
   getStoredAvatarUrl,
   persistUserAvatar,
@@ -343,7 +345,8 @@ export default function ProfilePage() {
     evidence: '',
   });
   const [coursesList, setCoursesList] = useState([]);
-  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | null
+  const [certificatesList, setCertificatesList] = useState([]);
+  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | 'certificates' | null
 
   useEffect(() => {
     const cUser = getInitialUser();
@@ -401,18 +404,25 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchCoursesAndCertificates = async () => {
       try {
         const result = await fetchUserCourses();
         if (result.success && Array.isArray(result.data)) {
           setCoursesList(result.data);
         }
+
+        if (currentUser?.userId) {
+          const certResult = await fetchUserCertificates(currentUser.userId);
+          if (certResult.success && Array.isArray(certResult.certificates)) {
+            setCertificatesList(certResult.certificates);
+          }
+        }
       } catch (err) {
-        console.error("Lỗi khi tải khóa học:", err);
+        console.error("Lỗi khi tải khóa học và chứng chỉ:", err);
       }
     };
-    fetchCourses();
-  }, []);
+    fetchCoursesAndCertificates();
+  }, [currentUser]);
 
   const initials = (profile?.name || "Nguoi dung")
     .split(" ")
@@ -1012,28 +1022,87 @@ export default function ProfilePage() {
                 expandable={profile?.stats?.completed > 0}
                 expanded={expandedStat === "completed"}
                 onClick={() => setExpandedStat(prev => prev === "completed" ? null : "completed")}
-                last
               >
                 {coursesList.filter(c => c.isCompleted).length === 0 ? (
                   <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
                 ) : (
                   <div className="space-y-2">
-                    {coursesList.filter(c => c.isCompleted).map(course => (
-                      <Link
-                        key={course.courseId}
-                        to={`/my-courses/${course.courseId}/learn`}
-                        className="flex flex-col gap-1 p-2 rounded-xl border border-slate-100 hover:border-emerald-500/30 hover:bg-emerald-50/10 transition-all font-sans text-left decoration-none block"
-                      >
-                        <span className="text-[12px] font-bold text-slate-700 truncate block">
-                          {course.courseName}
-                        </span>
-                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5 mt-0.5">
-                          ✓ Đã hoàn thành
-                        </span>
-                      </Link>
-                    ))}
+                    {coursesList.filter(c => c.isCompleted).map(course => {
+                      const cert = certificatesList.find(
+                        c => (c.courseId?._id || c.courseId) === course.courseId
+                      );
+
+                      return (
+                        <div
+                          key={course.courseId}
+                          className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
+                        >
+                          <Link
+                            to={`/my-courses/${course.courseId}/learn`}
+                            className="text-[12px] font-bold text-slate-700 hover:text-emerald-600 transition-colors truncate block decoration-none"
+                          >
+                            {course.courseName}
+                          </Link>
+
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                              ✓ Đã hoàn thành
+                            </span>
+                            {cert && (
+                              <Link
+                                to={`/certificate/${cert.certificateCode}`}
+                                target="_blank"
+                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
+                              >
+                                <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
+                                Xem chứng chỉ
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
+              </StatRow>
+
+              <StatRow
+                icon={WorkspacePremiumIcon}
+                iconColor="#d97706"
+                label="Chứng chỉ của tôi"
+                value={`${certificatesList.length} chứng chỉ`}
+                expandable={certificatesList.length > 0}
+                expanded={expandedStat === "certificates"}
+                onClick={() => setExpandedStat(prev => prev === "certificates" ? null : "certificates")}
+                last
+              >
+                <div className="space-y-2">
+                  {certificatesList.map(cert => (
+                    <div
+                      key={cert._id}
+                      className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
+                    >
+                      <span className="text-[12px] font-bold text-slate-700 truncate block">
+                        {cert.courseId?.courseName || 'Khóa học của StarLearning'}
+                      </span>
+
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          Cấp ngày: {new Date(cert.issuedAt).toLocaleDateString('vi-VN')}
+                        </span>
+
+                        <Link
+                          to={`/certificate/${cert.certificateCode}`}
+                          target="_blank"
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
+                        >
+                          <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
+                          Xem chứng chỉ
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </StatRow>
             </SectionCard>
 
