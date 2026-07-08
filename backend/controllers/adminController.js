@@ -208,11 +208,11 @@ const getLevels = async (req, res) => {
 
 const createLevel = async (req, res) => {
   try {
-    const { LevelName, DisplayName, SortOrder } = req.body;
+    const { LevelName, DisplayName, SortOrder, IsActive } = req.body;
     if (!LevelName || !DisplayName || SortOrder === undefined) {
       return res.status(400).json({ success: false, message: 'Thiếu thông tin trình độ' });
     }
-    const result = await adminModel.createLevel({ LevelName, DisplayName, SortOrder: Number(SortOrder) });
+    const result = await adminModel.createLevel({ LevelName, DisplayName, SortOrder: Number(SortOrder), IsActive });
     return res.status(201).json({ success: true, message: 'Tạo trình độ thành công', data: result });
   } catch (err) {
     console.error('[Admin CreateLevel Error]', err.message);
@@ -223,11 +223,16 @@ const createLevel = async (req, res) => {
 const updateLevel = async (req, res) => {
   try {
     const levelId = Number(req.params.levelId);
-    const { LevelName, DisplayName, SortOrder } = req.body;
-    if (!LevelName || !DisplayName || SortOrder === undefined) {
-      return res.status(400).json({ success: false, message: 'Thiếu thông tin trình độ' });
+    const { LevelName, DisplayName, SortOrder, IsActive } = req.body;
+
+    // Chỉ validate nếu có trong request body
+    if (LevelName !== undefined || DisplayName !== undefined || SortOrder !== undefined) {
+      if (!LevelName || !DisplayName || SortOrder === undefined) {
+        return res.status(400).json({ success: false, message: 'Thiếu thông tin trình độ' });
+      }
     }
-    await adminModel.updateLevel(levelId, { LevelName, DisplayName, SortOrder: Number(SortOrder) });
+
+    await adminModel.updateLevel(levelId, { LevelName, DisplayName, SortOrder: Number(SortOrder), IsActive });
     return res.json({ success: true, message: 'Cập nhật trình độ thành công' });
   } catch (err) {
     console.error('[Admin UpdateLevel Error]', err.message);

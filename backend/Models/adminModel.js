@@ -222,10 +222,11 @@ const createLevel = async (data) => {
   request.input('LevelName', sql.NVarChar(20), data.LevelName);
   request.input('DisplayName', sql.NVarChar(50), data.DisplayName);
   request.input('SortOrder', sql.Int, data.SortOrder);
+  request.input('IsActive', sql.Bit, data.IsActive !== undefined ? data.IsActive : true);
   const result = await request.query(`
-    INSERT INTO Levels (LevelName, DisplayName, SortOrder, CreatedAt)
+    INSERT INTO Levels (LevelName, DisplayName, SortOrder, IsActive, CreatedAt)
     OUTPUT INSERTED.*
-    VALUES (@LevelName, @DisplayName, @SortOrder, GETDATE())
+    VALUES (@LevelName, @DisplayName, @SortOrder, @IsActive, GETDATE())
   `);
   return result.recordset[0];
 };
@@ -236,9 +237,10 @@ const updateLevel = async (levelId, data) => {
   request.input('LevelName', sql.NVarChar(20), data.LevelName);
   request.input('DisplayName', sql.NVarChar(50), data.DisplayName);
   request.input('SortOrder', sql.Int, data.SortOrder);
+  request.input('IsActive', sql.Bit, data.IsActive);
   await request.query(`
     UPDATE Levels
-    SET LevelName = @LevelName, DisplayName = @DisplayName, SortOrder = @SortOrder
+    SET LevelName = @LevelName, DisplayName = @DisplayName, SortOrder = @SortOrder, IsActive = @IsActive
     WHERE LevelId = @LevelId
   `);
 };
