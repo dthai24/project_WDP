@@ -169,6 +169,9 @@ export default function MyCourseRow({
   const data = normalizeCourse(course);
   const isCompleted = variant === "completed";
   const isLearning = variant === "learning";
+  const isNotStarted = variant === "not_started";
+  const isNotJoined = variant === "not_joined";
+
   const canExpand = data.modules.length > 0 || data.currentLessonDetail;
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, "/my-courses");
@@ -176,12 +179,46 @@ export default function MyCourseRow({
   const titlePath = detailPath;
   const progressTextColor = getProgressColor(progressValue);
 
-  const statusChip = isCompleted ? getCompletedStatusChip() : getLearningStatusChip();
+  let statusChip;
+  if (variant === "completed") {
+    statusChip = getCompletedStatusChip();
+  } else if (variant === "learning") {
+    statusChip = getLearningStatusChip();
+  } else if (variant === "not_started") {
+    statusChip = {
+      label: "Chưa học",
+      sx: {
+        bgcolor: "rgba(245,158,11,0.12)",
+        color: "#d97706",
+        border: "1px solid rgba(245,158,11,0.20)",
+      },
+    };
+  } else {
+    statusChip = {
+      label: "Chưa tham gia",
+      sx: {
+        bgcolor: "rgba(100,116,139,0.12)",
+        color: "#64748b",
+        border: "1px solid rgba(100,116,139,0.20)",
+      },
+    };
+  }
 
-  const actionLabel = isCompleted ? "Ôn tập lại" : "Tiếp tục học";
+  let actionLabel = "Tiếp tục học";
+  if (variant === "completed") {
+    actionLabel = "Ôn tập lại";
+  } else if (variant === "not_started") {
+    actionLabel = "Bắt đầu học";
+  } else if (variant === "not_joined") {
+    actionLabel = "Tìm hiểu thêm";
+  }
 
   const handleAction = () => {
-    navigate(learningPath);
+    if (variant === "not_joined") {
+      navigate(`/courses/${data.courseId}`);
+    } else {
+      navigate(learningPath);
+    }
   };
 
   return (

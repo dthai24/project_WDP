@@ -51,18 +51,22 @@ const DEFAULT_FILTERS = {
 const STATUS_TABS = [
   { value: "all", label: "Tất cả" },
   { value: "learning", label: "Đang học" },
+  { value: "not_started", label: "Chưa học" },
   { value: "completed", label: "Đã hoàn thành" },
 ];
 
 function getRowVariant(course) {
   if (course.enrollmentStatus === "completed") return "completed";
-  return "learning";
+  if (course.enrollmentStatus === "learning") return "learning";
+  if (course.enrollmentStatus === "not_started") return "not_started";
+  return "not_joined";
 }
 
 function matchesStatusTab(course, tab) {
   if (tab === "all") return true;
   if (tab === "learning") return course.enrollmentStatus === "learning";
   if (tab === "completed") return course.enrollmentStatus === "completed";
+  if (tab === "not_started") return course.enrollmentStatus === "not_started" || course.enrollmentStatus === "not_joined";
   return true;
 }
 
@@ -163,33 +167,68 @@ export default function MyCoursesListPage() {
         if (token) headers["Authorization"] = `Bearer ${token}`;
         if (userId) headers["x-user-id"] = String(userId);
 
-        const res = await fetch("http://localhost:5050/api/users/courses", {
-          headers,
-        });
-        const result = await res.json();
-        if (!res.ok || !result.success) return;
+        const [enrolledRes, allCoursesRes] = await Promise.all([
+          fetch("http://localhost:5050/api/users/courses", { headers }),
+          fetch("http://localhost:5050/api/courses/student")
+        ]);
 
-        const mapped = (result.data || []).map((c) => {
-          const progress = c.progress ?? 0;
-          const status = progress >= 100 ? "completed" : "learning";
+        const enrolledResult = await enrolledRes.json();
+        const allCoursesResult = await allCoursesRes.json();
+
+        let enrolledCourses = [];
+        if (enrolledRes.ok && enrolledResult.success) {
+          enrolledCourses = enrolledResult.data || [];
+        }
+
+        let publishedCourses = [];
+        if (allCoursesRes.ok && allCoursesResult.success) {
+          publishedCourses = allCoursesResult.data || [];
+        }
+
+        const enrolledMap = new Map();
+        enrolledCourses.forEach((c) => {
+          if (c.courseId) {
+            enrolledMap.set(c.courseId.toString(), c);
+          }
+        });
+
+        const mapped = publishedCourses.map((c) => {
+          const courseId = c._id.toString();
+          const enrolled = enrolledMap.get(courseId);
+
+          let progress = 0;
+          let status = "not_joined";
+
+          if (enrolled) {
+            progress = enrolled.progress ?? 0;
+            if (progress >= 100) {
+              status = "completed";
+            } else if (progress > 0) {
+              status = "learning";
+            } else {
+              status = "not_started";
+            }
+          }
+
           let thumbnail = c.thumbnail;
           if (!thumbnail || thumbnail === "CHƯA FIX LỖI ẢNH") thumbnail = null;
           if (thumbnail && thumbnail.startsWith("/")) {
             thumbnail = `http://localhost:5050${thumbnail}`;
           }
+
           return {
-            courseId: c.courseId,
+            courseId: courseId,
             courseName: c.courseName,
             thumbnail,
-            category: c.categoryName || "Chưa phân loại",
-            level: c.levelName || "Cơ bản",
-            instructor: c.instructorName || "English Master Mentor Team",
+            category: c.categoryId?.displayName || "Chưa phân loại",
+            level: c.levelId?.displayName || "Cơ bản",
+            instructor: c.instructorId?.fullName || "English Master Mentor Team",
             totalLessons: c.totalLessons ?? 0,
             totalNodes: c.chapterCount ?? 0,
             progressPercentage: progress,
             enrollmentStatus: status,
-            enrollmentDate: c.enrollmentDate,
-            quizDoneCount: c.quizDoneCount ?? 0,
+            enrollmentDate: enrolled ? enrolled.enrollmentDate : null,
+            quizDoneCount: enrolled ? enrolled.quizDoneCount : 0,
             chapterCount: c.chapterCount ?? 0,
           };
         });
