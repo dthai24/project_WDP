@@ -3,13 +3,14 @@ const Course = require('../models/MongoDB/Course');
 const User = require('../models/MongoDB/User');
 const UserCourse = require('../models/MongoDB/UserCourse');
 const vnpayService = require('../services/vnpayService');
+const { createNotification } = require('../services/notificationService');
 
 // ==========================================
 // 1. CREATE PAYMENT - TẠO ĐƠN HÀNG
 // ==========================================
 exports.createPayment = async (req, res) => {
   try {
-    const { courseId, paymentType = 'one-time', subscriptionDurationMonths = 1 } = req.body;
+    const { courseId, paymentType = 'one-time', subscriptionDurationMonths = 1, bankCode } = req.body;
     const userId = req.user?.userId || req.user?._id || req.user?.id;
 
     // Simple validation
@@ -82,7 +83,8 @@ exports.createPayment = async (req, res) => {
       description: payment.paymentDescription,
       userId,
       courseId,
-      ipAddress: req.ip || '127.0.0.1'
+      ipAddress: req.ip || '127.0.0.1',
+      bankCode
     });
 
     res.status(201).json({
@@ -147,12 +149,22 @@ exports.paymentCallback = async (req, res) => {
       if (payment.paymentType === 'subscription') {
         const startDate = new Date();
         const endDate = new Date(startDate.getTime() + payment.subscriptionDurationMonths * 30 * 24 * 60 * 60 * 1000);
-        
         payment.subscriptionStartDate = startDate;
         payment.subscriptionEndDate = endDate;
         payment.isSubscriptionActive = true;
         await payment.save();
       }
+
+      // Thông báo cho tài khoản: tiền đã về, khóa học đã kích hoạt
+      const paidCourse = await Course.findById(payment.courseId);
+      await createNotification({
+        userId: payment.userId,
+        type: 'payment',
+        title: '💰 Thanh toán thành công',
+        message: `Bạn đã thanh toán ${payment.finalAmount.toLocaleString('vi-VN')} ₫ cho khóa học "${paidCourse?.courseName || ''}". Khóa học đã được kích hoạt.`,
+        link: `/courses/${payment.courseId}`,
+        metadata: { paymentId: payment._id, courseId: payment.courseId }
+      });
 
       // Redirect to success page
        // Redirect to success page

@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, IconButton } from '@mui/material';
-import ViewListIcon from '@mui/icons-material/ViewList';
-import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Box, Typography, IconButton } from '@mui/material';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
+import ViewListRoundedIcon from '@mui/icons-material/ViewListRounded';
+import ViewModuleRoundedIcon from '@mui/icons-material/ViewModuleRounded';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from '@/shared/ui/Toast';
+import AppButton from '@/shared/ui/AppButton';
 import AppPagination from '@/shared/ui/AppPagination';
 import AdminCatalogToolbar from '@/features/admin/components/AdminCatalogToolbar';
 import AdminCategoryList from '@/features/admin/components/AdminCategoryList';
@@ -17,7 +20,6 @@ import {
   createCategory,
   getCategories,
   updateCategory,
-  deleteCategory,
 } from '@/features/admin/services/adminCategoryService';
 import { filterAndSortCategories } from '@/features/admin/utils/adminCategoryUtils';
 import {
@@ -26,29 +28,24 @@ import {
   buildAdminCategoryActiveChips,
   buildAdminCategoryListSearchParams,
   hasActiveAdminCategoryFilters,
+  paginateCategories,
   parseAdminCategoryListParams,
   resetAdminCategoryListParams,
 } from '@/features/admin/utils/adminCategoryUtils';
-import { useSearchParams } from 'react-router-dom';
-import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 const PAGE_SIZE = ADMIN_CATEGORY_LIST_PAGE_SIZE;
 
 export default function AdminCategoryManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-
-  // Dialog States
   const [createOpen, setCreateOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [saving, setSaving] = useState(false);
-
-  // View state: 'list' | 'grid'
+  const [creating, setCreating] = useState(false);
   const [viewMode, setViewMode] = useState('list');
 
   const queryState = useMemo(
@@ -60,9 +57,7 @@ export default function AdminCategoryManagementPage() {
 
   const activeFilterChips = useMemo(
     () =>
-      buildAdminCategoryActiveChips(queryState, {
-        statusOptions: ADMIN_CATALOG_STATUS_FILTER_OPTIONS,
-      }),
+      buildAdminCategoryActiveChips(queryState, ADMIN_CATALOG_STATUS_FILTER_OPTIONS),
     [queryState],
   );
 
@@ -70,29 +65,20 @@ export default function AdminCategoryManagementPage() {
     setLoading(true);
     setLoadError(false);
     try {
-      const res = await getCategories({
-        page: queryState.page,
-        limit: PAGE_SIZE,
-        q: queryState.q,
-        status: queryState.status,
-        sort: queryState.sort,
-      });
-
+      const res = await getCategories();
       if (res.ok) {
         setCategories(res.categories ?? []);
-        setTotalPages(res.totalPages ?? 1);
       } else {
         setCategories([]);
         setLoadError(true);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setCategories([]);
       setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [queryState.page, queryState.q, queryState.status, queryState.sort]);
+  }, []);
 
   useEffect(() => {
     loadCategories();
@@ -105,13 +91,38 @@ export default function AdminCategoryManagementPage() {
     );
   };
 
+  const filteredCategories = useMemo(
+    () => filterAndSortCategories(categories, queryState),
+    [categories, queryState],
+  );
+
+  const pagination = useMemo(
+    () => paginateCategories(filteredCategories, queryState.page, PAGE_SIZE),
+    [filteredCategories, queryState.page],
+  );
+
+  useEffect(() => {
+    if (!loading && queryState.page !== pagination.page) {
+      updateQuery({ page: pagination.page });
+    }
+  }, [loading, queryState.page, pagination.page]);
+
+  const existingNames = useMemo(
+    () =>
+      categories
+        .filter((item) => item.id !== editingCategory?.id)
+        .map((item) => item.displayName.trim().toLowerCase()),
+    [categories, editingCategory],
+  );
+
   const handleStatusChange = (value) => updateQuery({ status: value, page: 1 });
   const handleSortChange = (value) => updateQuery({ sort: value, page: 1 });
   const handlePageChange = (page) => {
     updateQuery({ page });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handleReset = () => setSearchParams(resetAdminCategoryListParams(searchParams), { replace: true });
+  const handleReset = () =>
+    setSearchParams(resetAdminCategoryListParams(searchParams), { replace: true });
   const handleRemoveChip = ({ type }) => {
     const defaults = {
       q: '',
@@ -125,42 +136,15 @@ export default function AdminCategoryManagementPage() {
     setEditOpen(true);
   };
 
-  const handleDeleteCategory = async (category) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${category.displayName}" không?`)) {
-      setSaving(true);
-      try {
-        const res = await deleteCategory(category.id);
-        if (!res.ok) {
-          toast.error(res.message ?? 'Không thể xóa danh mục');
-          return;
-        }
-        toast.success('Đã xóa danh mục thành công');
-        await loadCategories();
-      } catch (err) {
-        console.error(err);
-        toast.error('Lỗi kết nối khi xóa danh mục');
-      } finally {
-        setSaving(false);
-      }
-    }
-  };
-
-  const existingNames = useMemo(() => {
-    if (!editingCategory) return [];
-    return categories
-      .filter((item) => item.id !== editingCategory.id)
-      .map((item) => item.displayName.trim().toLowerCase());
-  }, [categories, editingCategory]);
-
   const handleCreateSubmit = async (values) => {
     setCreating(true);
     try {
       const res = await createCategory(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể tạo danh mục');
+        toast.error(res.message ?? 'Khong the tao danh muc');
         return;
       }
-      toast.success('Đã tạo danh mục mới');
+      toast.success('Da tao danh muc moi');
       setCreateOpen(false);
       await loadCategories();
     } finally {
@@ -175,10 +159,10 @@ export default function AdminCategoryManagementPage() {
     try {
       const res = await updateCategory(editingCategory.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật danh mục');
+        toast.error(res.message ?? 'Khong the cap nhat danh muc');
         return;
       }
-      toast.success('Đã cập nhật danh mục');
+      toast.success('Da cap nhat danh muc');
       setEditOpen(false);
       setEditingCategory(null);
       await loadCategories();
@@ -187,17 +171,15 @@ export default function AdminCategoryManagementPage() {
     }
   };
 
-  const filteredCategories = categories;
-
   return (
-    <div className="w-full max-w-7xl mx-auto px-1">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight" style={{ color: TEXT }}>
-            Quản lý danh mục
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
+            Quan ly danh muc
           </h1>
-          <p className="text-[14px] mt-1 text-slate-500 max-w-2xl leading-relaxed">
-            Thêm, chỉnh sửa và sắp xếp danh mục khóa học (IELTS, Giao tiếp, Phát âm...).
+          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
+            Them, chinh sua va sap xep danh muc khoa hoc (IELTS, Giao tiep, Phat am...).
           </p>
         </div>
 
@@ -207,41 +189,50 @@ export default function AdminCategoryManagementPage() {
               size="small"
               onClick={() => setViewMode('list')}
               sx={{
-                color: viewMode === 'list' ? PRIMARY : MUTED,
+                color: viewMode === 'list' ? '#0891B2' : '#94A3B8',
                 bgcolor: viewMode === 'list' ? '#fff' : 'transparent',
-                boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 '&:hover': { bgcolor: viewMode === 'list' ? '#fff' : 'rgba(0,0,0,0.04)' }
               }}
             >
-              <ViewListIcon sx={{ fontSize: 18 }} />
+              <ViewListRoundedIcon sx={{ fontSize: 18 }} />
             </IconButton>
             <IconButton
               size="small"
               onClick={() => setViewMode('grid')}
               sx={{
-                color: viewMode === 'grid' ? PRIMARY : MUTED,
+                color: viewMode === 'grid' ? '#0891B2' : '#94A3B8',
                 bgcolor: viewMode === 'grid' ? '#fff' : 'transparent',
-                boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 '&:hover': { bgcolor: viewMode === 'grid' ? '#fff' : 'rgba(0,0,0,0.04)' }
               }}
             >
-              <ViewModuleIcon sx={{ fontSize: 18 }} />
+              <ViewModuleRoundedIcon sx={{ fontSize: 18 }} />
             </IconButton>
           </Box>
 
-          <button
+          <AppButton
+            startIcon={<AddRoundedIcon />}
             onClick={() => setCreateOpen(true)}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-[13px] font-bold text-white rounded-lg transition-all duration-200 hover:shadow-md hover:brightness-105 active:scale-95"
-            style={{ backgroundColor: PRIMARY }}
+            sx={{
+              height: 44,
+              px: 2.5,
+              fontSize: 14,
+              fontWeight: 700,
+              borderRadius: '999px',
+              bgcolor: '#0891B2',
+              color: '#fff',
+              flexShrink: 0,
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
+            }}
           >
-            Thêm danh mục
-          </button>
+            Tao danh muc
+          </AppButton>
         </Box>
       </div>
 
       <AdminCatalogToolbar
-        keyword={queryState.q || ''}
-        onKeywordChange={(val) => updateQuery({ q: val, page: 1 })}
         statusFilter={queryState.status}
         onStatusChange={handleStatusChange}
         sortBy={queryState.sort}
@@ -249,7 +240,7 @@ export default function AdminCategoryManagementPage() {
         showReset={showReset}
         onReset={handleReset}
         totalCount={filteredCategories.length}
-        countLabel="danh mục"
+        countLabel="danh muc"
         CountIcon={CategoryOutlinedIcon}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
@@ -257,13 +248,12 @@ export default function AdminCategoryManagementPage() {
       />
 
       <AdminCategoryList
-        categories={filteredCategories}
+        categories={pagination.items}
         loading={loading}
         error={loadError}
         hasAnyCategories={categories.length > 0}
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={openEditDialog}
-        onDelete={handleDeleteCategory}
         onClearFilters={handleReset}
         viewMode={viewMode}
         sortBy={queryState.sort}
@@ -273,8 +263,8 @@ export default function AdminCategoryManagementPage() {
       />
 
       <AppPagination
-        page={queryState.page}
-        totalPages={totalPages}
+        page={pagination.page}
+        totalPages={pagination.totalPages}
         onPageChange={handlePageChange}
       />
 

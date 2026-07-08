@@ -5,10 +5,11 @@ import {
 import { createCatalogListParams } from '@/features/admin/utils/adminCatalogListParams';
 
 export const ADMIN_LEVEL_TABLE_GRID_COLUMNS =
-  'minmax(180px, 1.2fr) minmax(110px, 0.65fr) minmax(100px, 0.55fr) minmax(48px, auto)';
+  'minmax(180px, 1.2fr) minmax(150px, 1fr) minmax(110px, 0.65fr) minmax(100px, 0.55fr) minmax(48px, auto)';
 
 export const ADMIN_LEVEL_TABLE_HEADERS = [
   'Tên hiển thị',
+  'Danh mục liên kết',
   'Trạng thái',
   'Ngày tạo',
   'Hành động',

@@ -146,7 +146,7 @@ const PaymentSuccessPage = () => {
             >
               Go to Course
             </button>
-            <button onClick={() => navigate('/my-courses')} className="btn btn-outline">
+            <button onClick={() => navigate('/student/my-courses')} className="btn btn-outline">
               My Courses
             </button>
           </div>

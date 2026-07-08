@@ -29,14 +29,15 @@ const paymentApi = {
   },
 
   // Tạo thanh toán
-  createPayment: async (courseId, paymentType = 'one-time', subscriptionDurationMonths = 1) => {
+  createPayment: async (courseId, paymentType = 'one-time', subscriptionDurationMonths = 1, bankCode) => {
     try {
       const response = await axios.post(
         `${API_URL}/payment/create`,
         {
           courseId,
           paymentType,
-          subscriptionDurationMonths
+          subscriptionDurationMonths,
+          bankCode
         },
         { headers: getPaymentAuthHeaders() }
       );

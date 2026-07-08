@@ -11,6 +11,10 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
+  Link,
   Switch,
   Tabs,
   Tab,
@@ -247,6 +251,7 @@ export default function AdminCoursesPage() {
         })
       });
       
+      // Also update its status in the DB
       const res2 = await fetch(`http://localhost:5050/api/admin/courses/${courseToToggle._id}/${targetStatus === 'active' ? 'approve' : 'reject'}`, {
         method: 'POST',
         headers: {
@@ -262,7 +267,7 @@ export default function AdminCoursesPage() {
 
       const data = await res2.json();
       if (data.success) {
-        toast.success(`Đã chuyển trạng thái khóa học sang ${targetStatus === 'active' ? 'Đang hoạt động' : 'Đã ẩn/khóa'} thành công`);
+        toast.success(`Đã chuyển trạng thái khóa học sang ${targetStatus === 'active' ? 'Đang hoạt động' : 'Đã ẩn/khóa'}`);
         setToggleConfirmOpen(false);
         setCourseToToggle(null);
         fetchCourses();
@@ -301,37 +306,76 @@ export default function AdminCoursesPage() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-1">
+    <div className="w-full max-w-7xl mx-auto">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight flex items-center gap-2" style={{ color: TEXT }}>
-            <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} /> Quản lý khóa học
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
+            Quản lý khóa học
           </h1>
-          <p className="text-[14px] mt-1 text-slate-500 max-w-2xl leading-relaxed">
+          <p className="text-[14px] mt-1 leading-[1.55]" style={{ color: MUTED }}>
             Xem danh sách khóa học của các mentor, kiểm duyệt chương trình giảng dạy và cấu hình trạng thái hoạt động.
           </p>
         </div>
 
         {/* Status Filters */}
         <Box sx={{ display: 'flex', gap: 1, bgcolor: 'rgba(15,23,42,0.03)', p: 0.5, borderRadius: '99px', border: '1px solid rgba(15,23,42,0.06)' }}>
-          {['all', 'pending', 'active', 'inactive'].map((status) => (
-            <Chip
-              key={status}
-              label={status === 'all' ? 'Tất cả' : status === 'pending' ? 'Chờ duyệt' : status === 'active' ? 'Đang hoạt động' : 'Đã khóa'}
-              onClick={() => setStatusFilter(status)}
-              sx={{
-                height: 28,
-                fontSize: 12,
-                fontWeight: 650,
-                cursor: 'pointer',
-                bgcolor: statusFilter === status ? '#fff' : 'transparent',
-                color: statusFilter === status ? (status === 'pending' ? '#EA580C' : status === 'active' ? '#16A34A' : status === 'inactive' ? '#DC2626' : PRIMARY) : MUTED,
-                boxShadow: statusFilter === status ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                '&:hover': { bgcolor: statusFilter === status ? '#fff' : 'rgba(0,0,0,0.04)' }
-              }}
-            />
-          ))}
+          <Chip
+            label="Tất cả"
+            onClick={() => setStatusFilter('all')}
+            sx={{
+              height: 28,
+              fontSize: 12,
+              fontWeight: 650,
+              cursor: 'pointer',
+              bgcolor: statusFilter === 'all' ? '#fff' : 'transparent',
+              color: statusFilter === 'all' ? PRIMARY : MUTED,
+              boxShadow: statusFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              '&:hover': { bgcolor: statusFilter === 'all' ? '#fff' : 'rgba(0,0,0,0.04)' }
+            }}
+          />
+          <Chip
+            label="Chờ duyệt"
+            onClick={() => setStatusFilter('pending')}
+            sx={{
+              height: 28,
+              fontSize: 12,
+              fontWeight: 650,
+              cursor: 'pointer',
+              bgcolor: statusFilter === 'pending' ? '#fff' : 'transparent',
+              color: statusFilter === 'pending' ? '#EA580C' : MUTED,
+              boxShadow: statusFilter === 'pending' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              '&:hover': { bgcolor: statusFilter === 'pending' ? '#fff' : 'rgba(0,0,0,0.04)' }
+            }}
+          />
+          <Chip
+            label="Đang hoạt động"
+            onClick={() => setStatusFilter('active')}
+            sx={{
+              height: 28,
+              fontSize: 12,
+              fontWeight: 650,
+              cursor: 'pointer',
+              bgcolor: statusFilter === 'active' ? '#fff' : 'transparent',
+              color: statusFilter === 'active' ? '#16A34A' : MUTED,
+              boxShadow: statusFilter === 'active' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              '&:hover': { bgcolor: statusFilter === 'active' ? '#fff' : 'rgba(0,0,0,0.04)' }
+            }}
+          />
+          <Chip
+            label="Đã khóa"
+            onClick={() => setStatusFilter('inactive')}
+            sx={{
+              height: 28,
+              fontSize: 12,
+              fontWeight: 650,
+              cursor: 'pointer',
+              bgcolor: statusFilter === 'inactive' ? '#fff' : 'transparent',
+              color: statusFilter === 'inactive' ? '#DC2626' : MUTED,
+              boxShadow: statusFilter === 'inactive' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              '&:hover': { bgcolor: statusFilter === 'inactive' ? '#fff' : 'rgba(0,0,0,0.04)' }
+            }}
+          />
         </Box>
       </div>
 
@@ -340,15 +384,15 @@ export default function AdminCoursesPage() {
       ) : filteredCourses.length === 0 ? (
         <Typography sx={{ color: MUTED, py: 4, textAlign: 'center' }}>Không tìm thấy khóa học nào phù hợp.</Typography>
       ) : (
-        <Box className="rounded-xl shadow-sm border border-slate-100/80" sx={{ bgcolor: '#fff', overflow: 'hidden' }}>
+        <Box sx={{ bgcolor: '#fff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: '16px', overflow: 'hidden' }}>
           {/* Table Headers */}
-          <Box className="bg-slate-50/50" sx={{ display: 'grid', gridTemplateColumns: '2.5fr 2fr 1.5fr 1.5fr 1.5fr 1fr', gap: 2, px: 3, py: 1.5, borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>TÊN KHÓA HỌC</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>MENTOR PHỤ TRÁCH</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>DANH MỤC</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>TRÌNH ĐỘ</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>TRẠNG THÁI</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED, textAlign: 'right' }}>THAO TÁC</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '2.5fr 2fr 1.5fr 1.5fr 1.5fr 1fr', gap: 2, px: 3, py: 1.5, bgcolor: 'rgba(15,23,42,0.02)', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Tên khóa học</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Mentor phụ trách</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Danh mục</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Trình độ</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Trạng thái</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED, textAlign: 'right' }}>Thao tác</Typography>
           </Box>
 
           {/* Table Content */}
@@ -391,7 +435,7 @@ export default function AdminCoursesPage() {
                     height: 22,
                     fontSize: 11,
                     fontWeight: 700,
-                    borderRadius: '6px',
+                    borderRadius: '999px',
                     ...getStatusChipStyles(c.status)
                   }}
                 />
@@ -441,7 +485,7 @@ export default function AdminCoursesPage() {
           backdrop: { sx: { backdropFilter: 'blur(8px)', backgroundColor: alpha('#0F172A', 0.35) } }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 800, pb: 0.5 }}>Chi tiết khóa học & Lộ trình</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>Chi tiết khóa học & Lộ trình</DialogTitle>
         <DialogContent dividers sx={{ pt: 2, bgcolor: 'rgba(15,23,42,0.01)' }}>
           {selectedCourse && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -457,7 +501,7 @@ export default function AdminCoursesPage() {
                 </Box>
                 <Box>
                   <Typography sx={{ fontSize: 11, fontWeight: 650, color: MUTED, mb: 0.5 }}>TRẠNG THÁI</Typography>
-                  <Chip label={getStatusLabel(selectedCourse.status)} size="small" sx={{ ...getStatusChipStyles(selectedCourse.status), height: 22, fontSize: 11, fontWeight: 700, borderRadius: '6px' }} />
+                  <Chip label={getStatusLabel(selectedCourse.status)} size="small" sx={{ ...getStatusChipStyles(selectedCourse.status), height: 22, fontSize: 11, fontWeight: 700 }} />
                 </Box>
               </Box>
 
@@ -469,7 +513,7 @@ export default function AdminCoursesPage() {
 
               {/* Course Outline (Chapters & Lessons) */}
               <Box>
-                <Typography sx={{ fontSize: 13.5, fontWeight: 750, color: TEXT, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <MenuBookOutlinedIcon sx={{ fontSize: 18, color: PRIMARY }} /> Lộ trình & Nội dung giảng dạy
                 </Typography>
 
@@ -519,8 +563,8 @@ export default function AdminCoursesPage() {
                                   const materials = lesson.Materials || lesson.materials || [];
                                   return (
                                     <Box key={lesson._id || lesIdx} sx={{ p: 1.5, borderRadius: '8px', border: '1px dashed rgba(15,23,42,0.08)', bgcolor: 'rgba(15,23,42,0.005)' }}>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                        <Typography sx={{ fontSize: 13, fontWeight: 750, color: TEXT }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyBetween: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
                                           Bài {lesIdx + 1}: {lesson.nodeName}
                                         </Typography>
                                         <Chip
@@ -652,7 +696,7 @@ export default function AdminCoursesPage() {
         onClose={() => !submitting && setApproveConfirmOpen(false)}
         onConfirm={handleConfirmApprove}
         loading={submitting}
-        title="Phê duyệt khóa học?"
+        title="Duyệt khóa học này?"
         message={selectedCourse ? `Bạn có chắc muốn phê duyệt khóa học "${selectedCourse.courseName}" không? Học viên sẽ lập tức học thử và mua được khóa học này.` : ''}
         confirmLabel="Phê duyệt"
         cancelLabel="Hủy"
@@ -666,7 +710,7 @@ export default function AdminCoursesPage() {
         loading={submitting}
         title="Thay đổi trạng thái khóa học?"
         message={courseToToggle ? `Bạn có chắc muốn ${courseToToggle.status === 'active' ? 'ẨN/KHÓA' : 'MỞ HOẠT ĐỘNG'} khóa học "${courseToToggle.courseName}" không?` : ''}
-        confirmLabel="Xác nhận"
+        confirmLabel="Đồng ý"
         cancelLabel="Hủy"
       />
 
@@ -680,7 +724,7 @@ export default function AdminCoursesPage() {
           backdrop: { sx: { backdropFilter: 'blur(8px)', backgroundColor: alpha('#0F172A', 0.35) } }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 800 }}>Từ chối duyệt khóa học</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>Lý do từ chối khóa học</DialogTitle>
         <DialogContent dividers>
           <Typography sx={{ fontSize: 13, color: MUTED, mb: 2 }}>
             Vui lòng chọn các lí do kiểm duyệt chưa đạt yêu cầu của khóa học.
@@ -707,7 +751,7 @@ export default function AdminCoursesPage() {
                     height: 28,
                     fontSize: 12,
                     fontWeight: 600,
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     bgcolor: selected ? 'rgba(220,38,38,0.1)' : 'rgba(15,23,42,0.03)',
                     color: selected ? '#DC2626' : MUTED,
                     border: `1px solid ${selected ? 'rgba(220,38,38,0.2)' : 'rgba(15,23,42,0.06)'}`,

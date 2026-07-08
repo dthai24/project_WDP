@@ -42,7 +42,7 @@ export function createCatalogListParams(defaults) {
       );
     },
 
-    buildActiveChips(filters, { statusOptions = [] } = {}) {
+    buildActiveChips(filters, statusOptions = []) {
       const chips = [];
       if (filters.q) {
         chips.push({ key: `q:${filters.q}`, type: 'q', value: filters.q, label: `"${filters.q}"` });

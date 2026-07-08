@@ -9,29 +9,21 @@ import { resolveSeedColorCode } from '@/shared/catalog/catalogColorPalette';
  * Backend returns: CategoryId, CategoryName, DisplayName, CreatedAt
  */
 function mapCategory(raw) {
-  const id = raw.CategoryId || raw._id || raw.id;
   return {
-    id,
-    categoryName: raw.CategoryName || raw.categoryName || '',
-    displayName: raw.DisplayName || raw.displayName || '',
-    colorCode: raw.ColorCode || raw.colorCode || resolveSeedColorCode('category', id) || null,
-    status: raw.Status || raw.status || 'ACTIVE',
-    createdAt: raw.CreatedAt || raw.createdAt || null,
+    id: raw.CategoryId,
+    categoryName: raw.CategoryName || '',
+    displayName: raw.DisplayName || '',
+    colorCode: raw.ColorCode || resolveSeedColorCode('category', raw.CategoryId) || null,
+    status: raw.Status || 'ACTIVE',
+    createdAt: raw.CreatedAt || null,
   };
 }
 
-export async function getCategories({ page = 1, limit = 10, q = '', status = '', sort = '' } = {}) {
-  const params = new URLSearchParams();
-  params.set('page', page);
-  params.set('limit', limit);
-  if (q) params.set('q', q);
-  if (status && status !== 'all') params.set('status', status);
-  if (sort) params.set('sort', sort);
-
-  const res = await apiGet(`/categories?${params.toString()}`);
-  if (!res.ok) return { ok: false, categories: [], totalPages: 1 };
+export async function getCategories() {
+  const res = await apiGet('/categories');
+  if (!res.ok) return { ok: false, categories: [] };
   const categories = (res.data || []).map(mapCategory);
-  return { ok: true, categories, totalPages: res.totalPages || 1 };
+  return { ok: true, categories };
 }
 
 export async function createCategory(payload) {
@@ -54,7 +46,7 @@ export async function updateCategory(id, payload) {
     return { ok: false, message: res.message || 'Không thể cập nhật danh mục' };
   }
   // Re-fetch to get updated data
-  const fetchRes = await getCategories(1, 100);
+  const fetchRes = await getCategories();
   const updated = (fetchRes.categories || []).find((c) => String(c.id) === String(id));
   return { ok: true, category: updated || null };
 }

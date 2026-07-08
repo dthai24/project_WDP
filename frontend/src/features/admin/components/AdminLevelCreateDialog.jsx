@@ -26,6 +26,7 @@ import { PRIMARY, MUTED } from '@/features/mentor/components/course/mentorCourse
 const EMPTY_FORM = {
   displayName: '',
   status: 'ACTIVE',
+  categoryId: '',
 };
 
 function clearFieldError(setErrors, field) {
@@ -46,7 +47,22 @@ export default function AdminLevelCreateDialog({
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
 
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await fetch("http://localhost:5050/api/categories");
+        const data = await res.json();
+        if (data.success) {
+          setCategories(data.data || []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCats();
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -74,6 +90,7 @@ export default function AdminLevelCreateDialog({
     await onSubmit?.({
       displayName: form.displayName.trim(),
       status: form.status,
+      CategoryId: form.categoryId || null,
     });
     setConfirmOpen(false);
   };
@@ -114,7 +131,13 @@ export default function AdminLevelCreateDialog({
               placeholder="Cơ bản"
             />
 
-
+            <FormFieldSelect
+              label="Danh mục liên kết"
+              value={form.categoryId}
+              options={categories.map(c => ({ value: c.id, label: c.displayName }))}
+              onChange={(value) => updateField('categoryId', value)}
+              error={errors.categoryId}
+            />
 
             <FormFieldSelect
               label="Trạng thái"

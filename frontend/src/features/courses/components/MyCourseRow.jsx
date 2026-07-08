@@ -39,11 +39,8 @@ import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
-import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
-import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
-import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
 import ThumbnailImage from "@/shared/ui/ThumbnailImage";
@@ -51,7 +48,6 @@ import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import MyCourseProgressSummary from "./MyCourseProgressSummary";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
 import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
-
 
 const MUTED = "#64748B";
 const TEXT = "#0F172A";
@@ -72,7 +68,7 @@ function normalizeCourse(course = {}) {
     level: course.level ?? "",
     instructor: course.instructor ?? "",
     totalLessons: course.totalLessons ?? 0,
-    totalNodes: course.totalNodes ?? course.chapterCount ?? 0,
+    totalNodes: course.totalNodes ?? 0,
     totalMaterials: course.totalMaterials ?? 0,
     progressPercentage: progress,
     enrollmentStatus: course.enrollmentStatus ?? "none",
@@ -82,8 +78,6 @@ function normalizeCourse(course = {}) {
     modules: course.modules ?? [],
     currentLessonDetail: course.currentLessonDetail ?? null,
     recentLessons: course.recentLessons ?? [],
-    quizDoneCount: course.quizDoneCount ?? 0,
-    chapterCount: course.chapterCount ?? course.totalNodes ?? 0,
   };
 }
 
@@ -169,9 +163,6 @@ export default function MyCourseRow({
   const data = normalizeCourse(course);
   const isCompleted = variant === "completed";
   const isLearning = variant === "learning";
-  const isNotStarted = variant === "not_started";
-  const isNotJoined = variant === "not_joined";
-
   const canExpand = data.modules.length > 0 || data.currentLessonDetail;
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, "/my-courses");
@@ -179,46 +170,12 @@ export default function MyCourseRow({
   const titlePath = detailPath;
   const progressTextColor = getProgressColor(progressValue);
 
-  let statusChip;
-  if (variant === "completed") {
-    statusChip = getCompletedStatusChip();
-  } else if (variant === "learning") {
-    statusChip = getLearningStatusChip();
-  } else if (variant === "not_started") {
-    statusChip = {
-      label: "Chưa học",
-      sx: {
-        bgcolor: "rgba(245,158,11,0.12)",
-        color: "#d97706",
-        border: "1px solid rgba(245,158,11,0.20)",
-      },
-    };
-  } else {
-    statusChip = {
-      label: "Chưa tham gia",
-      sx: {
-        bgcolor: "rgba(100,116,139,0.12)",
-        color: "#64748b",
-        border: "1px solid rgba(100,116,139,0.20)",
-      },
-    };
-  }
+  const statusChip = isCompleted ? getCompletedStatusChip() : getLearningStatusChip();
 
-  let actionLabel = "Tiếp tục học";
-  if (variant === "completed") {
-    actionLabel = "Ôn tập lại";
-  } else if (variant === "not_started") {
-    actionLabel = "Bắt đầu học";
-  } else if (variant === "not_joined") {
-    actionLabel = "Tìm hiểu thêm";
-  }
+  const actionLabel = isCompleted ? "Ôn tập lại" : "Tiếp tục học";
 
   const handleAction = () => {
-    if (variant === "not_joined") {
-      navigate(`/courses/${data.courseId}`);
-    } else {
-      navigate(learningPath);
-    }
+    navigate(learningPath);
   };
 
   return (
@@ -270,92 +227,99 @@ export default function MyCourseRow({
           }}
         />
 
-        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 0.75 }}>
-          {/* Row 1: Category & Level */}
-          <Typography sx={{ fontSize: 11, fontWeight: 700, color: PRIMARY, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            {data.category || "Chưa phân loại"} • Trình độ {data.level || "Mọi cấp độ"}
+        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1.25 }}>
+          <Typography
+            component={Link}
+            to={titlePath}
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: 16, md: 17 },
+              lineHeight: 1.35,
+              color: TEXT,
+              textDecoration: "none",
+              pr: { xs: 5, md: 0 },
+              transition: `color 0.18s ${theme.ios18?.transition}`,
+              "&:hover": { color: "primary.main" },
+            }}
+          >
+            {data.courseName}
           </Typography>
 
-          {/* Row 2: Title & Status Badges */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-            <Typography
-              component={Link}
-              to={titlePath}
-              sx={{
-                fontWeight: 800,
-                fontSize: 16,
-                lineHeight: 1.3,
-                color: TEXT,
-                textDecoration: "none",
-                transition: `color 0.18s ${theme.ios18?.transition}`,
-                "&:hover": { color: "primary.main" },
-              }}
-            >
-              {data.courseName}
-            </Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
             <Chip
               label={statusChip.label}
               size="small"
-              sx={{
-                height: 18,
-                fontSize: 9,
-                fontWeight: 800,
-                textTransform: "uppercase",
-                borderRadius: "4px",
-                px: 0.5,
-                ...statusChip.sx
-              }}
+              sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }}
             />
-            {data.quizDoneCount > 0 && (
+            {data.level && (
               <Chip
-                label={`${data.quizDoneCount} Quiz`}
+                label={data.level}
                 size="small"
                 sx={{
-                  height: 18,
-                  fontSize: 9,
-                  fontWeight: 800,
-                  textTransform: "uppercase",
-                  borderRadius: "4px",
-                  bgcolor: "rgba(124,58,237,0.08)",
-                  color: "#7c3aed",
-                  border: "1px solid rgba(124,58,237,0.16)",
-                  px: 0.5,
+                  height: 22,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  borderRadius: "99px",
+                  ...resolveLevelChipSx({ displayName: data.level }),
+                }}
+              />
+            )}
+            {data.category && (
+              <Chip
+                label={data.category}
+                size="small"
+                sx={{
+                  height: 22,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  borderRadius: "99px",
+                  ...resolveCategoryChipSx({ displayName: data.category }, { withBorder: false }),
                 }}
               />
             )}
           </Box>
 
-          {/* Row 3: Meta details */}
-          <Typography sx={{ fontSize: 12.5, color: MUTED, display: "flex", alignItems: "center", gap: 0.75 }}>
-            <span>Bởi {data.instructor || "English Master Team"}</span>
-            <span style={{ opacity: 0.4 }}>•</span>
-            <span>{data.chapterCount} chương</span>
-            <span style={{ opacity: 0.4 }}>•</span>
-            <span>{data.totalLessons} bài học</span>
-          </Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+            <MetaItem icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
+            <MetaItem icon={RouteOutlinedIcon} label={`${data.totalNodes} chương`} />
+            <MetaItem icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
+            {data.instructor && (
+              <MetaItem icon={PersonOutlineOutlinedIcon} label={data.instructor} />
+            )}
+          </Box>
 
-          {/* Row 4: Study location */}
-          {isLearning && data.currentStage != null && data.currentLesson != null && (
-            <Typography sx={{ fontSize: 12.5, color: "#475569", fontWeight: 500 }}>
-              Đang ở: <span style={{ color: PRIMARY, fontWeight: 600 }}>Chương {data.currentStage} · Bài {data.currentLesson}</span>
-              {data.lastActivity && <span style={{ color: MUTED, fontWeight: 400 }}> ({data.lastActivity})</span>}
-            </Typography>
-          )}
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+            {isLearning && data.currentStage != null && data.currentLesson != null && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <PlaceOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8" }} />
+                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
+                  Đang ở: Chương {data.currentStage} · Bài {data.currentLesson}
+                </Typography>
+              </Box>
+            )}
+            {data.lastActivity && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <AccessTimeOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8" }} />
+                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
+                  Học gần nhất: {data.lastActivity}
+                </Typography>
+              </Box>
+            )}
+          </Box>
 
-          {/* Row 5: Progress Bar */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 0.5 }}>
-            <AppProgressBar value={progressValue} height={5} sx={{ flex: 1 }} />
-            <Typography
-              sx={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: progressTextColor,
-                minWidth: 32,
-                textAlign: "right",
-              }}
-            >
-              {progressValue}%
-            </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 0.25 }}>
+              <AppProgressBar value={progressValue} height={6} sx={{ flex: 1 }} />
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: progressTextColor,
+                  minWidth: 36,
+                  textAlign: "right",
+                }}
+              >
+                {progressValue}%
+              </Typography>
           </Box>
         </Box>
 

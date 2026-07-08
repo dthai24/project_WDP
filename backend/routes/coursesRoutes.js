@@ -11,7 +11,6 @@ const {
     enrollCourse,
     getLearningPath,
     updateProgress,
-    completeCourse,
     getFeaturedCourses,
     getFeaturedPaths,
     getContinueCourse,
@@ -19,9 +18,6 @@ const {
     getCourseComments,
     createCourseComment,
     deleteCourseMentor,
-    completeCourse: completeCourseCtrl, // Avoid duplicate names if any
-    getUserCertificates,
-    verifyCertificate,
 } = require('../controllers/coursesController');
 
 
@@ -75,19 +71,11 @@ router.post('/enroll', protect, enrollCourse);
 router.get('/:courseId/comments', optionalAuth, getCourseComments);
 router.post('/:courseId/comments', optionalAuth, createCourseComment);
 
-// Chứng chỉ
-router.get('/certificates/user/:userId', protect, getUserCertificates);
-router.get('/certificates/verify/:code', verifyCertificate);
-
 // Lấy lộ trình học và trạng thái hoàn thành (Trang Course Learning)
 router.get('/:id/learning', protect, getLearningPath);
 
 // Lưu tiến độ học và đánh dấu bài học hoàn thành
 router.post('/:id/progress', protect, updateProgress);
-
-// Xác nhận hoàn thành toàn bộ khoá học (set progress = 100)
-router.post('/:id/complete', protect, completeCourse);
-
 // lay treak
 router.get("/streak", getStreak);
 module.exports = router;

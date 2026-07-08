@@ -1,5 +1,4 @@
-import { Box, Chip, Typography, Tooltip, IconButton } from '@mui/material';
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import { Box, Chip, Typography } from '@mui/material';
 import {
   ADMIN_CATALOG_STATUS_CHIP_SX,
   ADMIN_CATALOG_STATUS_LABELS,
@@ -45,7 +44,7 @@ function DesktopValue({ value }) {
   );
 }
 
-export default function AdminCategoryRow({ category, onEdit, onDelete }) {
+export default function AdminCategoryRow({ category, onEdit }) {
   const statusSx =
     ADMIN_CATALOG_STATUS_CHIP_SX[category.status] ?? ADMIN_CATALOG_STATUS_CHIP_SX.ACTIVE;
 
@@ -106,34 +105,11 @@ export default function AdminCategoryRow({ category, onEdit, onDelete }) {
         <DesktopValue value={formatCategoryDate(category.createdAt)} />
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'center' }}>
-        <AdminCatalogEditButton
-          ariaLabel="Chỉnh sửa danh mục"
-          title="Chỉnh sửa"
-          onClick={() => onEdit?.(category)}
-        />
-        <Tooltip title="Xóa danh mục">
-          <IconButton
-            size="small"
-            aria-label="Xóa danh mục"
-            onClick={() => onDelete?.(category)}
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: '10px',
-              border: '1px solid rgba(220,38,38,0.08)',
-              color: '#DC2626',
-              '&:hover': {
-                color: '#B91C1C',
-                bgcolor: 'rgba(220,38,38,0.06)',
-                borderColor: 'rgba(220,38,38,0.2)',
-              },
-            }}
-          >
-            <DeleteOutlinedIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Tooltip>
-      </Box>
+      <AdminCatalogEditButton
+        ariaLabel="Chỉnh sửa danh mục"
+        title="Chỉnh sửa danh mục"
+        onClick={() => onEdit?.(category)}
+      />
     </Box>
   );
 }

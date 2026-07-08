@@ -1,5 +1,4 @@
-import { Box, Chip, Typography, Tooltip, IconButton } from '@mui/material';
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import { Box, Chip, Typography } from '@mui/material';
 import {
   ADMIN_CATALOG_STATUS_CHIP_SX,
   ADMIN_CATALOG_STATUS_LABELS,
@@ -45,7 +44,7 @@ function DesktopValue({ value }) {
   );
 }
 
-export default function AdminLevelRow({ level, onEdit, onDelete }) {
+export default function AdminLevelRow({ level, onEdit }) {
   const statusSx = ADMIN_CATALOG_STATUS_CHIP_SX[level.status] ?? ADMIN_CATALOG_STATUS_CHIP_SX.ACTIVE;
 
   return (
@@ -75,6 +74,13 @@ export default function AdminLevelRow({ level, onEdit, onDelete }) {
         </Box>
       </Box>
 
+      <Box sx={{ minWidth: 0 }}>
+        <MobileField label="Danh mục liên kết">
+          <Typography sx={VALUE_SX}>{level.categoryId?.displayName || '—'}</Typography>
+        </MobileField>
+        <DesktopValue value={level.categoryId?.displayName || '—'} />
+      </Box>
+
       <Box>
         <MobileField label="Trạng thái">
           <Chip
@@ -101,34 +107,11 @@ export default function AdminLevelRow({ level, onEdit, onDelete }) {
         <DesktopValue value={formatLevelDate(level.createdAt)} />
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'center' }}>
-        <AdminCatalogEditButton
-          ariaLabel="Chỉnh sửa trình độ"
-          title="Chỉnh sửa"
-          onClick={() => onEdit?.(level)}
-        />
-        <Tooltip title="Xóa trình độ">
-          <IconButton
-            size="small"
-            aria-label="Xóa trình độ"
-            onClick={() => onDelete?.(level)}
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: '10px',
-              border: '1px solid rgba(220,38,38,0.08)',
-              color: '#DC2626',
-              '&:hover': {
-                color: '#B91C1C',
-                bgcolor: 'rgba(220,38,38,0.06)',
-                borderColor: 'rgba(220,38,38,0.2)',
-              },
-            }}
-          >
-            <DeleteOutlinedIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Tooltip>
-      </Box>
+      <AdminCatalogEditButton
+        ariaLabel="Chỉnh sửa trình độ"
+        title="Chỉnh sửa trình độ"
+        onClick={() => onEdit?.(level)}
+      />
     </Box>
   );
 }
