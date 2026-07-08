@@ -25,12 +25,13 @@ const getAllUsers = async () => {
   const result = await request.query(`
     SELECT u.UserId, u.FullName, u.Email, u.Phone, u.DateOfBirth,
            u.IsFirstLogin, u.CreatedAt, u.UpdatedAt, u.CurrentLevelId, u.LearningGoal,
+           u.IsActive,
            STRING_AGG(r.RoleName, ', ') AS Roles
     FROM Users u
     LEFT JOIN User_Roles ur ON u.UserId = ur.UserId
     LEFT JOIN Roles r ON ur.RoleId = r.RoleId
     GROUP BY u.UserId, u.FullName, u.Email, u.Phone, u.DateOfBirth,
-             u.IsFirstLogin, u.CreatedAt, u.UpdatedAt, u.CurrentLevelId, u.LearningGoal
+             u.IsFirstLogin, u.CreatedAt, u.UpdatedAt, u.CurrentLevelId, u.LearningGoal, u.IsActive
     ORDER BY u.UserId
   `);
   return result.recordset;
@@ -41,7 +42,8 @@ const getUserById = async (userId) => {
   request.input('userId', sql.Int, userId);
   const result = await request.query(`
     SELECT u.UserId, u.FullName, u.Email, u.Phone, u.DateOfBirth,
-           u.IsFirstLogin, u.CreatedAt, u.UpdatedAt, u.CurrentLevelId, u.LearningGoal
+           u.IsFirstLogin, u.CreatedAt, u.UpdatedAt, u.CurrentLevelId, u.LearningGoal,
+           u.IsActive
     FROM Users u
     WHERE u.UserId = @userId
   `);
@@ -57,6 +59,7 @@ const updateUser = async (userId, data) => {
   request.input('DateOfBirth', sql.Date, data.DateOfBirth || null);
   request.input('LearningGoal', sql.NVarChar(100), data.LearningGoal || null);
   request.input('CurrentLevelId', sql.Int, data.CurrentLevelId || null);
+  request.input('IsActive', sql.Bit, data.IsActive !== undefined ? data.IsActive : true);
 
   await request.query(`
     UPDATE Users
@@ -66,6 +69,7 @@ const updateUser = async (userId, data) => {
         DateOfBirth = @DateOfBirth,
         LearningGoal = @LearningGoal,
         CurrentLevelId = @CurrentLevelId,
+        IsActive = @IsActive,
         UpdatedAt = GETDATE()
     WHERE UserId = @userId
   `);
@@ -120,6 +124,16 @@ const deleteUser = async (userId) => {
   await request.query(`DELETE FROM Users WHERE UserId = @userId`);
 };
 
+const toggleUserActive = async (userId, isActive) => {
+  const request = new sql.Request();
+  request.input('userId', sql.Int, userId);
+  request.input('IsActive', sql.Bit, isActive);
+  await request.query(`
+    UPDATE Users
+    SET IsActive = @IsActive, UpdatedAt = GETDATE()
+    WHERE UserId = @userId
+  `);
+};
 
 // ==========================================
 // ROLES
@@ -304,6 +318,7 @@ module.exports = {
   updateUser,
   createUser,
   deleteUser,
+  toggleUserActive,
   getUserRoles,
   setUserRoles,
   getAllRoles,

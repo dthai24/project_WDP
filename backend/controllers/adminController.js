@@ -60,11 +60,16 @@ const getUserDetail = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const userId = Number(req.params.userId);
-    const { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId } = req.body;
-    if (!FullName || !Email) {
-      return res.status(400).json({ success: false, message: 'Thiếu họ tên hoặc email' });
+    const { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId, IsActive } = req.body;
+
+    // Chỉ validate FullName/Email nếu có trong request body
+    if (FullName !== undefined || Email !== undefined) {
+      if (!FullName || !Email) {
+        return res.status(400).json({ success: false, message: 'Thiếu họ tên hoặc email' });
+      }
     }
-    await adminModel.updateUser(userId, { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId });
+
+    await adminModel.updateUser(userId, { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId, IsActive });
     return res.json({ success: true, message: 'Cập nhật user thành công' });
   } catch (err) {
     console.error('[Admin UpdateUser Error]', err.message);
@@ -83,8 +88,24 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const toggleUserActive = async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    const { IsActive } = req.body;
+    if (IsActive === undefined) {
+      return res.status(400).json({ success: false, message: 'Thiếu trạng thái IsActive' });
+    }
+    await adminModel.toggleUserActive(userId, IsActive);
+    return res.json({ success: true, message: 'Cập nhật trạng thái tài khoản thành công' });
+  } catch (err) {
+    console.error('[Admin ToggleActive Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 // ==========================================
 // USER ROLES
+
 // ==========================================
 const updateUserRoles = async (req, res) => {
   try {
@@ -268,6 +289,7 @@ module.exports = {
   getUserDetail,
   updateUser,
   deleteUser,
+  toggleUserActive,
   updateUserRoles,
   getRoles,
   getCategories,
