@@ -1,7 +1,8 @@
-import { Box, Typography, Skeleton } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SearchOffOutlinedIcon from '@mui/icons-material/SearchOffOutlined';
 import EmptyState from '@/shared/ui/EmptyState';
+import Loading from '@/shared/ui/Loading';
 import AdminAccountRow from './AdminAccountRow';
 import { MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import {
@@ -13,11 +14,11 @@ import {
 function ListHeader() {
   return (
     <Box
-      className="bg-slate-50/50"
       sx={{
         display: { xs: 'none', md: 'grid' },
         ...ADMIN_ACCOUNT_TABLE_LAYOUT_SX,
-        py: 1.5,
+        py: 1.25,
+        bgcolor: 'rgba(15,23,42,0.02)',
         borderBottom: '1px solid rgba(15,23,42,0.06)',
       }}
     >
@@ -28,8 +29,6 @@ function ListHeader() {
             fontSize: 11,
             fontWeight: 700,
             color: MUTED,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
             ...getAdminAccountHeaderCellSx(index),
           }}
         >
@@ -48,43 +47,10 @@ export default function AdminAccountList({
   isFiltered,
   onEdit,
   onView,
-  onToggleStatus,
   onClearFilters,
 }) {
   if (loading) {
-    return (
-      <Box
-        className="rounded-xl shadow-sm border border-slate-100"
-        sx={{
-          overflow: 'hidden',
-          bgcolor: '#fff',
-        }}
-      >
-        <ListHeader />
-        {[...Array(5)].map((_, i) => (
-          <Box
-            key={i}
-            sx={{
-              ...ADMIN_ACCOUNT_TABLE_LAYOUT_SX,
-              py: 2,
-              borderBottom: '1px solid rgba(15,23,42,0.06)',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Skeleton variant="circular" width={32} height={32} />
-              <Skeleton variant="text" width={110} />
-            </Box>
-            <Skeleton variant="text" width={160} />
-            <Skeleton variant="rectangular" width={60} height={20} sx={{ borderRadius: 1 }} />
-            <Skeleton variant="rectangular" width={70} height={20} sx={{ borderRadius: 1 }} />
-            <Skeleton variant="text" width={90} />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Skeleton variant="circular" width={28} height={28} />
-            </Box>
-          </Box>
-        ))}
-      </Box>
-    );
+    return <Loading message="Đang tải danh sách tài khoản..." />;
   }
 
   if (error) {
@@ -92,7 +58,7 @@ export default function AdminAccountList({
       <EmptyState
         embedded
         title="Không thể tải danh sách tài khoản."
-        description="Vui lòng kiểm tra lại kết nối hệ thống."
+        description="Vui lòng thử lại."
       />
     );
   }
@@ -102,8 +68,8 @@ export default function AdminAccountList({
       <EmptyState
         embedded
         icon={PeopleAltOutlinedIcon}
-        title="Không có tài khoản nào."
-        description="Chưa có tài khoản nào được đăng ký trong hệ thống."
+        title="Chưa có tài khoản nào."
+        description="Danh sách tài khoản sẽ hiển thị tại đây khi có dữ liệu."
       />
     );
   }
@@ -123,21 +89,16 @@ export default function AdminAccountList({
 
   return (
     <Box
-      className="rounded-xl shadow-sm border border-slate-100"
       sx={{
+        borderRadius: '16px',
+        border: '1px solid rgba(15,23,42,0.08)',
         overflow: 'hidden',
         bgcolor: '#fff',
       }}
     >
       <ListHeader />
       {accounts.map((account) => (
-        <AdminAccountRow
-          key={account.id}
-          account={account}
-          onEdit={onEdit}
-          onView={onView}
-          onToggleStatus={onToggleStatus}
-        />
+        <AdminAccountRow key={account.id} account={account} onEdit={onEdit} onView={onView} />
       ))}
     </Box>
   );

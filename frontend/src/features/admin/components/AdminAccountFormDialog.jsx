@@ -96,7 +96,7 @@ function AdminAccountSummaryCard({ account }) {
         <SummaryField label="Ngày sinh" value={formatAccountDateOfBirth(account.dateOfBirth)} />
         {account.role === 'Student' && (
           <>
-            <SummaryField label="Chuỗi ngày học" value={account.streak ? `${account.streak} ngày` : '0 ngày'} />
+            <SummaryField label="Chuỗi ngày học (Streak)" value={account.streak ? `${account.streak} ngày` : '0 ngày'} />
             <SummaryField label="Điểm kinh nghiệm (XP)" value={account.xp ? `${account.xp} XP` : '0 XP'} />
           </>
         )}
@@ -162,7 +162,7 @@ export default function AdminAccountFormDialog({
     }
 
     if (!hasChanges) {
-      toast.info('Không có thay đổi nào được phát hiện');
+      toast.info('Không có thay đổi nào để lưu');
       return;
     }
 
@@ -192,12 +192,12 @@ export default function AdminAccountFormDialog({
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 800, pb: 0.5 }}>
-          {isView ? 'Chi tiết tài khoản' : 'Chỉnh sửa thiết lập tài khoản'}
+        <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>
+          {isView ? 'Chi tiết tài khoản' : 'Chỉnh sửa trạng thái tài khoản'}
         </DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           <Typography sx={{ fontSize: 13, color: MUTED, mb: 2, lineHeight: 1.5 }}>
-            {isView ? 'Xem chi tiết thông tin tài khoản hồ sơ.' : 'Chỉ có thể điều chỉnh trạng thái khóa của tài khoản.'}
+            {isView ? 'Xem chi tiết thông tin tài khoản.' : 'Chỉ có thể thay đổi trạng thái của tài khoản.'}
           </Typography>
 
           <AdminAccountSummaryCard account={account} />
@@ -276,15 +276,15 @@ export default function AdminAccountFormDialog({
         onConfirm={handleConfirmSave}
         loading={saving}
         title={
-          status === 'LOCKED' && account.status !== 'LOCKED'
-            ? "Xác nhận khóa tài khoản?"
-            : "Xác nhận cập nhật thiết lập?"
+          status === 'BLOCKED' && account.status !== 'BLOCKED'
+            ? "Xác nhận block tài khoản?"
+            : "Lưu thay đổi tài khoản?"
         }
         message={
-          status === 'LOCKED' && account.status !== 'LOCKED'
-            ? `Bạn có chắc chắn muốn khóa tài khoản của ${account.fullName}?`
+          status === 'BLOCKED' && account.status !== 'BLOCKED'
+            ? `Bạn có chắc muốn block ${account.fullName} không?`
             : [
-                `Bạn sắp cập nhật thông tin thiết lập tài khoản cho ${account.fullName}.`,
+                `Bạn sắp cập nhật tài khoản ${account.fullName}.`,
                 ...changeSummary,
               ].join(' ')
         }

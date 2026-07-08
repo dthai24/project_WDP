@@ -2,14 +2,40 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   GraduationCap,
+  House,
+  BookOpen,
   User,
   Gear,
   SignOut,
-  Bell,
+  List,
+  X,
   CaretDown,
+  ChartLine,
+  Question,
+  Sparkle,
+  Bell,
 } from "@phosphor-icons/react";
 import { isAdmin, isStudent } from "@/features/auth/utils/authUtils";
 import StreakBadge from "@/shared/ui/StreakBadge";
+import notificationApi from "@/services/notificationApi";
+
+function formatRelativeTime(dateString) {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "Vừa xong";
+  if (minutes < 60) return `${minutes} phút trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  return `${days} ngày trước`;
+}
+
+const NAV_ITEMS = [
+  { label: "Home", path: "/home", icon: House },
+  { label: "Courses", path: "/courses", icon: BookOpen },
+  { label: "My Learning", path: "/my-courses", icon: ChartLine },
+  { label: "Practice", path: "/practice", icon: Question },
+];
 
 export default function Header({ logoTo, profilePath }) {
   const navigate = useNavigate();
@@ -18,11 +44,7 @@ export default function Header({ logoTo, profilePath }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "📝 AI đã chấm bài viết luận của bạn!", desc: "Bài viết Node 2 thuộc lộ trình \"Ôn thi TOEIC 2026\" đạt 85/100 điểm.", time: "5 phút trước", read: false },
-    { id: 2, text: "🔥 Đạt chuỗi học tập (Streak)!", desc: "Chúc mừng bạn đã duy trì học liên tiếp 5 ngày.", time: "2 giờ trước", read: false },
-    { id: 3, text: "📚 Khóa học có chương mới", desc: "Khóa học \"TOEIC Nâng Cao\" vừa cập nhật Chương 3.", time: "1 ngày trước", read: false }
-  ]);
+  const [notifications, setNotifications] = useState([]);
   const [notiTab, setNotiTab] = useState("all");
   const [scrolled, setScrolled] = useState(false);
   const profileRef = useRef(null);
@@ -30,12 +52,40 @@ export default function Header({ logoTo, profilePath }) {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleNotiClick = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const mapNotification = (n) => ({
+    id: n._id,
+    text: n.title,
+    desc: n.message,
+    time: formatRelativeTime(n.createdAt),
+    read: n.isRead,
+    link: n.link,
+  });
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await notificationApi.getNotifications();
+      setNotifications((data.notifications || []).map(mapNotification));
+    } catch {
+      // Bỏ qua lỗi tải thông báo, giữ danh sách hiện tại
+    }
+  };
+
+  useEffect(() => {
+    if (user) fetchNotifications();
+  }, [user]);
+
+  const handleNotiClick = (n) => {
+    setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+    if (!n.read) {
+      notificationApi.markAsRead(n.id).catch(() => {});
+    }
+    setNotiOpen(false);
+    if (n.link) navigate(n.link);
   };
 
   const handleMarkAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    notificationApi.markAllAsRead().catch(() => {});
   };
 
   const filteredNotis = notifications.filter(n => {
@@ -82,6 +132,14 @@ export default function Header({ logoTo, profilePath }) {
     navigate("/login");
   };
 
+  const isActive = (path) => {
+    if (path === "/home") return location.pathname === "/home";
+    if (path === "/courses") return location.pathname.startsWith("/courses");
+    if (path === "/my-courses") return location.pathname.startsWith("/my-courses");
+    if (path === "/practice") return location.pathname.startsWith("/practice");
+    return false;
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -105,6 +163,29 @@ export default function Header({ logoTo, profilePath }) {
             </span>
           </Link>
 
+          {/* Desktop Nav */}
+          {!isAdmin(user) && (
+            <nav className="hidden md:flex items-center gap-1">
+              {NAV_ITEMS.map((item) => {
+                const active = isActive(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                      active
+                        ? "bg-brand-50 text-brand-700"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <item.icon size={16} weight={active ? "fill" : "regular"} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+
           {/* Right Side */}
           <div className="flex items-center gap-2">
             {user && isStudent(user) && (
@@ -114,7 +195,10 @@ export default function Header({ logoTo, profilePath }) {
               <div className="relative mr-1" ref={notiRef}>
                 <button
                   type="button"
-                  onClick={() => setNotiOpen(!notiOpen)}
+                  onClick={() => {
+                    setNotiOpen(!notiOpen);
+                    if (!notiOpen) fetchNotifications();
+                  }}
                   className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-50 relative transition-colors text-slate-500 hover:text-slate-800"
                 >
                   <Bell size={20} weight="regular" />
@@ -178,7 +262,7 @@ export default function Header({ logoTo, profilePath }) {
                         filteredNotis.map((n) => (
                           <div
                             key={n.id}
-                            onClick={() => handleNotiClick(n.id)}
+                            onClick={() => handleNotiClick(n)}
                             className={`px-4 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer relative ${
                               !n.read ? "bg-cyan-50/10" : ""
                             }`}
@@ -303,9 +387,47 @@ export default function Header({ logoTo, profilePath }) {
               </div>
             )}
 
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-slate-50 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? (
+                <X size={20} weight="bold" className="text-slate-600" />
+              ) : (
+                <List size={20} weight="bold" className="text-slate-600" />
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Nav */}
+      {mobileOpen && !isAdmin(user) && (
+        <div className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-xl">
+          <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                    active
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <item.icon size={18} weight={active ? "fill" : "regular"} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

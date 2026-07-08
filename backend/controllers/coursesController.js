@@ -10,7 +10,6 @@ const CourseComment = require('../models/MongoDB/CourseComment');
 const User = require('../models/MongoDB/User');
 const Category = require('../models/MongoDB/Category');
 const Level = require('../models/MongoDB/Level');
-const Certificate = require('../models/MongoDB/Certificate');
 const streakService = require("../services/streakService");
 const { validateCourseThumbnailDataUrl, saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
@@ -557,33 +556,6 @@ const getLearningPath = async (req, res) => {
   }
 };
 
-// Helper to check and generate certificate
-const checkAndGenerateCertificate = async (userId, courseId) => {
-  try {
-    const userObjId = new mongoose.Types.ObjectId(userId);
-    const courseObjId = new mongoose.Types.ObjectId(courseId);
-
-    // Check if certificate already exists
-    let cert = await Certificate.findOne({ userId: userObjId, courseId: courseObjId });
-    if (!cert) {
-      // Generate a unique certificate code (e.g. CERT-U8A91B)
-      const certificateCode = 'CERT-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-      cert = await Certificate.create({
-        userId: userObjId,
-        courseId: courseObjId,
-        certificateCode,
-        issuedAt: new Date(),
-        grade: 95 + Math.floor(Math.random() * 6) // random realistic grade 95-100%
-      });
-      console.log(`Certificate auto-generated for user ${userId} on course ${courseId}: ${certificateCode}`);
-    }
-    return cert;
-  } catch (error) {
-    console.error('Error generating certificate:', error);
-    return null;
-  }
-};
-
 const updateProgress = async (req, res) => {
   try {
     const courseId = req.params.id;
@@ -635,11 +607,6 @@ const updateProgress = async (req, res) => {
       { progressPercentage: newProgress },
       { upsert: true }
     );
-
-    // Auto generate certificate if progress reaches 100%
-    if (newProgress === 100) {
-      await checkAndGenerateCertificate(userId, courseId);
-    }
 
     res.json({ success: true, newProgress });
   } catch (err) {
@@ -1056,108 +1023,6 @@ const deleteCourseMentor = async (req, res) => {
   }
 };
 
-// ──────────────────────────────────────────────────────────────
-// POST /api/courses/:id/complete  — Xác nhận hoàn thành khoá học
-// ──────────────────────────────────────────────────────────────
-const completeCourse = async (req, res) => {
-  try {
-    const courseId = req.params.id;
-    const userId = req.headers['x-user-id'];
-
-    if (!userId || !courseId) {
-      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc courseId' });
-    }
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
-    }
-
-    const userObjId = new mongoose.Types.ObjectId(userId);
-    const courseObjId = new mongoose.Types.ObjectId(courseId);
-
-    // Đánh dấu tất cả node của khoá học này là hoàn thành cho user
-    const paths = await Path.find({ courseId: courseObjId }).select('_id').lean();
-    const pathIds = paths.map(p => p._id);
-    const nodes = await PathNode.find({ pathId: { $in: pathIds } }).select('_id').lean();
-
-    const bulkOps = nodes.map(node => ({
-      updateOne: {
-        filter: { userId: userObjId, nodeId: node._id },
-        update: { $set: { userId: userObjId, nodeId: node._id, isCompleted: true, completedAt: new Date() } },
-        upsert: true,
-      },
-    }));
-    if (bulkOps.length > 0) await UserNode.bulkWrite(bulkOps);
-
-    // Set progressPercentage = 100 trong UserCourse
-    await UserCourse.findOneAndUpdate(
-      { userId: userObjId, courseId: courseObjId },
-      { progressPercentage: 100 },
-      { upsert: true }
-    );
-
-    // Auto generate certificate
-    await checkAndGenerateCertificate(userId, courseId);
-
-    return res.json({ success: true, message: 'Hoàn thành khoá học thành công', newProgress: 100 });
-  } catch (err) {
-    console.error('completeCourse error:', err);
-    return res.status(500).json({ success: false, message: 'Lỗi Server' });
-  }
-};
-
-// GET /api/courses/certificates/user/:userId
-const getUserCertificates = async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ success: false, message: 'userId không hợp lệ' });
-    }
-
-    const certs = await Certificate.find({ userId })
-      .populate('courseId', 'courseName thumbnail rating totalLessons')
-      .lean();
-
-    return res.status(200).json({ success: true, certificates: certs });
-  } catch (error) {
-    console.error('getUserCertificates error:', error);
-    return res.status(500).json({ success: false, message: 'Lỗi server khi lấy chứng chỉ' });
-  }
-};
-
-// GET /api/courses/certificates/verify/:code
-const verifyCertificate = async (req, res) => {
-  try {
-    const code = req.params.code;
-    if (!code) {
-      return res.status(400).json({ success: false, message: 'Thiếu mã chứng chỉ' });
-    }
-
-    const cert = await Certificate.findOne({ certificateCode: code })
-      .populate('userId', 'fullName')
-      .populate('courseId', 'courseName description thumbnail instructorId totalLessons')
-      .lean();
-
-    if (!cert) {
-      return res.status(404).json({ success: false, message: 'Chứng chỉ không tồn tại hoặc mã xác minh không hợp lệ' });
-    }
-
-    // Populate instructor details manually
-    if (cert.courseId && cert.courseId.instructorId) {
-      const instructor = await User.findById(cert.courseId.instructorId).select('fullName').lean();
-      cert.courseId.instructorName = instructor ? instructor.fullName : 'Giảng viên';
-    } else {
-      if (cert.courseId) {
-        cert.courseId.instructorName = 'Giảng viên';
-      }
-    }
-
-    return res.status(200).json({ success: true, certificate: cert });
-  } catch (error) {
-    console.error('verifyCertificate error:', error);
-    return res.status(500).json({ success: false, message: 'Lỗi server khi xác minh chứng chỉ' });
-  }
-};
-
 module.exports = {
   getMyCourses,
   getInformationCourse,
@@ -1175,7 +1040,4 @@ module.exports = {
   getCourseComments,
   createCourseComment,
   deleteCourseMentor,
-  completeCourse,
-  getUserCertificates,
-  verifyCertificate,
 };

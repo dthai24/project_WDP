@@ -52,7 +52,6 @@ export default function AdminLevelList({
   hasAnyLevels,
   isFiltered,
   onEdit,
-  onDelete,
   onClearFilters,
 }) {
   if (loading) {
@@ -104,7 +103,7 @@ export default function AdminLevelList({
     >
       <ListHeader />
       {levels.map((level) => (
-        <AdminLevelRow key={level.id} level={level} onEdit={onEdit} onDelete={onDelete} />
+        <AdminLevelRow key={level.id} level={level} onEdit={onEdit} />
       ))}
     </Box>
   );

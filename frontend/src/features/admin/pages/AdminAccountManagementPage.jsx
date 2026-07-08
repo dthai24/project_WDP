@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useCallback, useMemo } from 'react';
-import { Box } from '@mui/material';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Box, Typography } from '@mui/material';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { toast } from '@/shared/ui/Toast';
+import AppButton from '@/shared/ui/AppButton';
 import AppPagination from '@/shared/ui/AppPagination';
 import AdminAccountsToolbar from '@/features/admin/components/AdminAccountsToolbar';
 import AdminAccountList from '@/features/admin/components/AdminAccountList';
 import AdminAccountFormDialog from '@/features/admin/components/AdminAccountFormDialog';
-import { createAccount, getAccounts, updateAccount, toggleAccountStatus } from '@/features/admin/services/adminAccountService';
+import AdminAccountCreateDialog from '@/features/admin/components/AdminAccountCreateDialog';
+import { createAccount, getAccounts, updateAccount } from '@/features/admin/services/adminAccountService';
 import {
   ADMIN_ACCOUNT_ROLE_OPTIONS,
   ADMIN_ACCOUNT_STATUS_OPTIONS,
@@ -33,8 +35,10 @@ export default function AdminAccountManagementPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const queryState = useMemo(
     () => parseAdminAccountListParams(searchParams),
@@ -56,10 +60,9 @@ export default function AdminAccountManagementPage() {
     setLoading(true);
     setLoadError(false);
     try {
-      const response = await getAccounts();
-      console.log("=== MINH CHECK ATLAS DATA ===", response.data);
-      if (response.ok) {
-        setAccounts(response.accounts ?? []);
+      const res = await getAccounts();
+      if (res.ok) {
+        setAccounts(res.accounts ?? []);
       } else {
         setAccounts([]);
         setLoadError(true);
@@ -138,11 +141,11 @@ export default function AdminAccountManagementPage() {
       const res = await updateAccount(editingAccount.id, values);
 
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật thiết lập tài khoản');
+        toast.error(res.message ?? 'Khong the cap nhat tai khoan');
         return;
       }
 
-      toast.success('Đã cập nhật trạng thái tài khoản thành công');
+      toast.success('Da cap nhat vai tro va trang thai tai khoan');
       setFormOpen(false);
       setEditingAccount(null);
       await loadAccounts();
@@ -151,35 +154,37 @@ export default function AdminAccountManagementPage() {
     }
   };
 
-  const handleToggleStatus = async (account) => {
+  const handleCreateSubmit = async (values) => {
+    setCreating(true);
     try {
-      const res = await toggleAccountStatus(account.id, account.status);
-      if (res.ok) {
-        toast.success(res.message);
-        setAccounts((prev) =>
-          prev.map((acc) => (acc.id === account.id ? res.account : acc))
-        );
-      } else {
-        toast.error(res.message);
+      const res = await createAccount(values);
+
+      if (!res.ok) {
+        toast.error(res.message ?? 'Khong the tao tai khoan');
+        return;
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Lỗi kết nối khi thay đổi trạng thái tài khoản');
+
+      toast.success('Da tao tai khoan moi');
+      setCreateOpen(false);
+      await loadAccounts();
+    } finally {
+      setCreating(false);
     }
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-1">
+    <div className="w-full max-w-7xl mx-auto">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight flex items-center gap-2" style={{ color: TEXT }}>
-            Quản lý tài khoản
+          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
+            Quan ly tai khoan
           </h1>
-          <p className="text-[14px] mt-1 text-slate-500 max-w-2xl leading-relaxed">
-            Theo dõi và quản lý phân quyền vai trò, trạng thái chặn khóa và thông tin chi tiết của Admin, Mentor và Student.
+          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
+            Theo doi va quan ly tai khoan Admin, Mentor va Hoc vien trong he thong.
           </p>
         </div>
+
       </div>
 
       <AdminAccountsToolbar
@@ -206,7 +211,6 @@ export default function AdminAccountManagementPage() {
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={openEditDialog}
         onView={openViewDialog}
-        onToggleStatus={handleToggleStatus}
         onClearFilters={handleReset}
       />
 
@@ -228,6 +232,8 @@ export default function AdminAccountManagementPage() {
         saving={saving}
         mode={dialogMode}
       />
+
+
     </div>
   );
 }

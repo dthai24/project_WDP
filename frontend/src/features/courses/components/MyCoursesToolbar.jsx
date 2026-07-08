@@ -22,6 +22,12 @@ const MUTED = "#64748B";
 const ICON = "#94A3B8";
 const PRIMARY = "#0891B2";
 
+const STATUS_TABS = [
+  { value: "all", label: "Tất cả" },
+  { value: "learning", label: "Đang học" },
+  { value: "completed", label: "Hoàn thành" },
+];
+
 function getMenuPaperSx(theme) {
   return {
     mt: 0.75,
@@ -94,7 +100,7 @@ function FilterTrigger({ icon: Icon, label, hasValue, onClick, open, iconColor =
   );
 }
 
-function FilterMenuItem({ selected, label, count, onClick }) {
+function FilterMenuItem({ selected, label, onClick }) {
   const theme = useTheme();
   return (
     <MenuItem
@@ -121,34 +127,14 @@ function FilterMenuItem({ selected, label, count, onClick }) {
       <Typography component="span" sx={{ flex: 1, fontSize: 13, fontWeight: "inherit" }}>
         {label}
       </Typography>
-      {count !== undefined && (
-        <Typography
-          component="span"
-          sx={{
-            ml: 1,
-            fontSize: 11,
-            fontWeight: 700,
-            color: selected ? theme.palette.primary.main : "#94A3B8",
-            bgcolor: selected ? alpha(theme.palette.primary.main, 0.12) : "rgba(148,163,184,0.12)",
-            borderRadius: "99px",
-            px: 0.75,
-            py: 0.125,
-            minWidth: 20,
-            textAlign: "center",
-          }}
-        >
-          {count}
-        </Typography>
-      )}
       {selected ? (
-        <CheckRoundedIcon sx={{ fontSize: 16, color: "primary.main", ml: 0.5 }} />
+        <CheckRoundedIcon sx={{ fontSize: 16, color: "primary.main", ml: 1 }} />
       ) : (
-        <Box sx={{ width: 16, ml: 0.5, flexShrink: 0 }} />
+        <Box sx={{ width: 16, ml: 1, flexShrink: 0 }} />
       )}
     </MenuItem>
   );
 }
-
 
 function CompactMultiSelect({ icon, value = [], onChange, options, placeholder, iconColor = ICON, countMap = {} }) {
   const theme = useTheme();
@@ -186,6 +172,7 @@ function CompactMultiSelect({ icon, value = [], onChange, options, placeholder, 
         onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
+        // Fix: Sử dụng PaperProps và MenuListProps thay cho slotProps để tương thích tốt với MUI v5
         PaperProps={{ sx: getMenuPaperSx(theme) }}
         MenuListProps={{ dense: true, sx: { py: 0.5 } }}
       >
@@ -194,7 +181,6 @@ function CompactMultiSelect({ icon, value = [], onChange, options, placeholder, 
             key={opt.value}
             selected={value.includes(opt.value)}
             label={opt.label}
-            count={countMap[opt.value]}
             onClick={() => toggleValue(opt.value)}
           />
         ))}
@@ -202,7 +188,6 @@ function CompactMultiSelect({ icon, value = [], onChange, options, placeholder, 
     </>
   );
 }
-
 
 function CompactSelect({ icon, value, onChange, options, iconColor = ICON }) {
   const theme = useTheme();
@@ -276,11 +261,9 @@ export default function MyCoursesToolbar({
   categories = [],
   onCategoriesChange,
   categoryOptions = [],
-  categoryCountMap = {},
   levels = [],
   onLevelsChange,
   levelOptions = [],
-  levelCountMap = {},
   sortBy,
   onSortChange,
   sortOptions = [],
@@ -300,7 +283,33 @@ export default function MyCoursesToolbar({
         borderBottom: "1px solid rgba(15,23,42,0.08)",
       }}
     >
+      {/* Status tabs — ưu tiên */}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1.5 }}>
+        {STATUS_TABS.map((tab) => {
+          const active = statusTab === tab.value;
 
+          return (
+            <Chip
+              key={tab.value}
+              label={tab.label}
+              onClick={() => onStatusTabChange?.(tab.value)}
+              sx={{
+                height: 32,
+                fontSize: 13,
+                fontWeight: 600,
+                borderRadius: "99px",
+                cursor: "pointer",
+                bgcolor: active ? alpha(PRIMARY, 0.12) : "transparent",
+                color: active ? PRIMARY : MUTED,
+                border: `1px solid ${active ? alpha(PRIMARY, 0.28) : "rgba(100,116,139,0.2)"}`,
+                "&:hover": {
+                  bgcolor: active ? alpha(PRIMARY, 0.16) : alpha(PRIMARY, 0.06),
+                },
+              }}
+            />
+          );
+        })}
+      </Box>
 
       {/* Secondary filters */}
       <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
@@ -312,7 +321,6 @@ export default function MyCoursesToolbar({
             options={categoryOptions}
             placeholder="Danh mục"
             iconColor="#EA580C"
-            countMap={categoryCountMap}
           />
           <CompactMultiSelect
             icon={SchoolOutlinedIcon}
@@ -321,7 +329,6 @@ export default function MyCoursesToolbar({
             options={levelOptions}
             placeholder="Trình độ"
             iconColor="#2563EB"
-            countMap={levelCountMap}
           />
         </Box>
 
