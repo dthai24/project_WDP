@@ -181,10 +181,11 @@ const createCategory = async (data) => {
   const request = new sql.Request();
   request.input('CategoryName', sql.NVarChar(50), data.CategoryName);
   request.input('DisplayName', sql.NVarChar(100), data.DisplayName);
+  request.input('IsActive', sql.Bit, data.IsActive !== undefined ? data.IsActive : true);
   const result = await request.query(`
-    INSERT INTO Categories (CategoryName, DisplayName, CreatedAt)
+    INSERT INTO Categories (CategoryName, DisplayName, IsActive, CreatedAt)
     OUTPUT INSERTED.*
-    VALUES (@CategoryName, @DisplayName, GETDATE())
+    VALUES (@CategoryName, @DisplayName, @IsActive, GETDATE())
   `);
   return result.recordset[0];
 };
@@ -194,9 +195,10 @@ const updateCategory = async (categoryId, data) => {
   request.input('CategoryId', sql.Int, categoryId);
   request.input('CategoryName', sql.NVarChar(50), data.CategoryName);
   request.input('DisplayName', sql.NVarChar(100), data.DisplayName);
+  request.input('IsActive', sql.Bit, data.IsActive);
   await request.query(`
     UPDATE Categories
-    SET CategoryName = @CategoryName, DisplayName = @DisplayName
+    SET CategoryName = @CategoryName, DisplayName = @DisplayName, IsActive = @IsActive
     WHERE CategoryId = @CategoryId
   `);
 };

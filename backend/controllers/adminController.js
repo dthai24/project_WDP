@@ -150,11 +150,11 @@ const getCategories = async (req, res) => {
 
 const createCategory = async (req, res) => {
   try {
-    const { CategoryName, DisplayName } = req.body;
+    const { CategoryName, DisplayName, IsActive } = req.body;
     if (!CategoryName || !DisplayName) {
       return res.status(400).json({ success: false, message: 'Thiếu CategoryName hoặc DisplayName' });
     }
-    const result = await adminModel.createCategory({ CategoryName, DisplayName });
+    const result = await adminModel.createCategory({ CategoryName, DisplayName, IsActive });
     return res.status(201).json({ success: true, message: 'Tạo danh mục thành công', data: result });
   } catch (err) {
     console.error('[Admin CreateCategory Error]', err.message);
@@ -165,11 +165,16 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const categoryId = Number(req.params.categoryId);
-    const { CategoryName, DisplayName } = req.body;
-    if (!CategoryName || !DisplayName) {
-      return res.status(400).json({ success: false, message: 'Thiếu CategoryName hoặc DisplayName' });
+    const { CategoryName, DisplayName, IsActive } = req.body;
+
+    // Chỉ validate CategoryName/DisplayName nếu có trong request body
+    if (CategoryName !== undefined || DisplayName !== undefined) {
+      if (!CategoryName || !DisplayName) {
+        return res.status(400).json({ success: false, message: 'Thiếu CategoryName hoặc DisplayName' });
+      }
     }
-    await adminModel.updateCategory(categoryId, { CategoryName, DisplayName });
+
+    await adminModel.updateCategory(categoryId, { CategoryName, DisplayName, IsActive });
     return res.json({ success: true, message: 'Cập nhật danh mục thành công' });
   } catch (err) {
     console.error('[Admin UpdateCategory Error]', err.message);
