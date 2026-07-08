@@ -35,13 +35,14 @@ const PaymentPage = () => {
     }
   }, [courseId]);
 
-  const handlePayment = async () => {
+  const handlePayment = async (bankCode) => {
     try {
       setLoading(true);
       const response = await paymentApi.createPayment(
         courseId,
         paymentType,
-        paymentType === 'subscription' ? subscriptionMonths : 1
+        paymentType === 'subscription' ? subscriptionMonths : 1,
+        bankCode
       );
 
       if (response.paymentUrl) {
@@ -223,10 +224,17 @@ const PaymentPage = () => {
               <div className="action-buttons">
                 <button
                   className="btn btn-primary btn-pay"
-                  onClick={handlePayment}
+                  onClick={() => handlePayment()}
                   disabled={loading}
                 >
                   {loading ? 'Processing...' : 'Proceed to Payment'}
+                </button>
+                <button
+                  className="btn btn-outline btn-pay-qr"
+                  onClick={() => handlePayment('VNPAYQR')}
+                  disabled={loading}
+                >
+                  {loading ? 'Processing...' : '📱 Thanh toán bằng QR'}
                 </button>
                 <button
                   className="btn btn-outline"

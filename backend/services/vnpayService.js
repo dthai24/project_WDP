@@ -40,7 +40,8 @@ class VNPayService {
         description,
         userId,
         courseId,
-        ipAddress = '127.0.0.1'
+        ipAddress = '127.0.0.1',
+        bankCode
       } = orderData;
 
       if (!orderId || !amount) {
@@ -65,14 +66,20 @@ class VNPayService {
       vnp_Params['vnp_IpAddr'] = ipAddress;
       vnp_Params['vnp_CreateDate'] = this.getVnpCreateDate();
 
-      // Sort params and create signature
+      // bankCode = 'VNPAYQR' bỏ qua trang chọn ngân hàng, hiển thị thẳng mã QR
+      // để quét bằng app ngân hàng bất kỳ (chuẩn VietQR/NAPAS 247)
+      if (bankCode) {
+        vnp_Params['vnp_BankCode'] = bankCode;
+      }
+
+      // Sort + encode params theo đúng chuẩn VNPay rồi tính chữ ký
       const sortedParams = this.sortObject(vnp_Params);
       const signData = this.buildSignData(sortedParams);
-      vnp_Params['vnp_SecureHash'] = this.hmacSHA512(this.vnp_HashSecret, signData);
+      sortedParams['vnp_SecureHash'] = this.hmacSHA512(this.vnp_HashSecret, signData);
 
-      // Build payment URL
-      const paymentUrl = `${this.vnp_Url}?${this.buildQueryString(vnp_Params)}`;
-      
+      // Build payment URL từ chính các value đã encode dùng để ký (không encode lại lần 2)
+      const paymentUrl = `${this.vnp_Url}?${this.buildQueryString(sortedParams)}`;
+
       return paymentUrl;
     } catch (error) {
       console.error('Error creating payment URL:', error);
@@ -92,8 +99,9 @@ class VNPayService {
       // Copy params, loại bỏ secure hash
       const vnp_Params = { ...queryParams };
       delete vnp_Params['vnp_SecureHash'];
+      delete vnp_Params['vnp_SecureHashType'];
 
-      // Sort và build sign data
+      // Sort + encode lại (giống hệt lúc ký) rồi build sign data
       const sortedParams = this.sortObject(vnp_Params);
       const signData = this.buildSignData(sortedParams);
       const checksum = this.hmacSHA512(this.vnp_HashSecret, signData);
@@ -157,19 +165,21 @@ class VNPayService {
   }
 
   /**
-   * Sort object by keys
+   * Sort theo key (thứ tự bảng chữ cái) và encode value đúng chuẩn VNPay:
+   * encodeURIComponent rồi đổi %20 -> + (application/x-www-form-urlencoded).
+   * Đây là bước bắt buộc để chữ ký khớp với VNPay — không được bỏ qua.
    */
   sortObject(obj) {
     const sorted = {};
     const keys = Object.keys(obj).sort();
     keys.forEach(key => {
-      sorted[key] = obj[key];
+      sorted[key] = encodeURIComponent(String(obj[key])).replace(/%20/g, '+');
     });
     return sorted;
   }
 
   /**
-   * Build sign data string from sorted params
+   * Build sign data string from sorted+encoded params
    */
   buildSignData(sortedParams) {
     return Object.keys(sortedParams)
@@ -178,11 +188,11 @@ class VNPayService {
   }
 
   /**
-   * Build query string for URL
+   * Build query string for URL từ params đã encode sẵn (không encode lại lần 2)
    */
-  buildQueryString(params) {
-    return Object.keys(params)
-      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+  buildQueryString(sortedParams) {
+    return Object.keys(sortedParams)
+      .map(key => `${key}=${sortedParams[key]}`)
       .join('&');
   }
 
