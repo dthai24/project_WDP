@@ -144,11 +144,9 @@ async function softDeleteQuestions(transaction, deletes = []) {
   }
 }
 
-async function insertQuestionRow(transaction, { sectionId, questionPathId, typeId, order, data }) {
+async function insertQuestionRow(transaction, { sectionId, order, data }) {
   const request = new sql.Request(transaction);
   request.input('sectionId', sql.Int, sectionId);
-  request.input('questionPathId', sql.Int, questionPathId);
-  request.input('typeId', sql.Int, typeId);
   request.input('title', sql.NVarChar(sql.MAX), String(data.Title ?? '').trim() || 'Câu hỏi');
   request.input('isActive', sql.Bit, data.IsActive !== false ? 1 : 0);
   request.input('isUseForTest', sql.Bit, data.IsUseForTest !== false ? 1 : 0);
@@ -156,11 +154,11 @@ async function insertQuestionRow(transaction, { sectionId, questionPathId, typeI
 
   const result = await request.query(`
     INSERT INTO dbo.Questions (
-      SectionId, Title, Question_Path_Id, IsActive, IsUseForTest, TypeId, [Order]
+      SectionId, Title, IsActive, IsUseForTest, [Order]
     )
     OUTPUT INSERTED.QuestionId
     VALUES (
-      @sectionId, @title, @questionPathId, @isActive, @isUseForTest, @typeId, @order
+      @sectionId, @title, @isActive, @isUseForTest, @order
     )
   `);
   return result.recordset[0].QuestionId;
@@ -460,24 +458,16 @@ async function removeQuestionChoice(choiceId, questionId, { sectionId, courseId,
 
 async function createSectionQuestion(
   sectionId,
-  { data = {}, order = 1, choices = [], courseId, pathId, questionPathId = null, skillType = null, clientRef = null } = {},
+  { data = {}, order = 1, choices = [], courseId, pathId, clientRef = null } = {},
 ) {
   const parsedSectionId = Number(sectionId);
   await assertSectionAccess(parsedSectionId, courseId, pathId);
-  const resolvedQuestionPathId = await questionBankSaveModel.resolveQuestionPathId({
-    courseId,
-    pathId,
-    questionPathId,
-  });
-  const typeId = mapSkillTypeToTypeId(skillType);
 
   const transaction = new sql.Transaction();
   await transaction.begin();
   try {
     const questionId = await insertQuestionRow(transaction, {
       sectionId: parsedSectionId,
-      questionPathId: resolvedQuestionPathId,
-      typeId,
       order,
       data,
     });
@@ -601,8 +591,6 @@ async function saveQuestionBankSectionPayload(payload, { requireExistingSection 
       for (const question of payload.sectionInsert.questions ?? []) {
         const questionId = await insertQuestionRow(transaction, {
           sectionId,
-          questionPathId,
-          typeId,
           order: question.Order ?? question.order,
           data: question.data ?? {},
         });

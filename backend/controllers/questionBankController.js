@@ -615,8 +615,6 @@ const createSectionQuestionById = async (req, res) => {
             choices: body.choicesInsert ?? body.choices ?? [],
             courseId,
             pathId,
-            questionPathId: body.questionPathId ?? body.context?.questionPathId ?? null,
-            skillType: body.skillType ?? body.context?.skillType ?? null,
             clientRef: body.clientRef ?? null,
         });
 

@@ -21,7 +21,8 @@ const getAllListQuestionBankByMentorId = async (mentorId) => {
             FROM dbo.Question_Bank qb
             INNER JOIN dbo.Courses c ON c.CourseId = qb.CourseId
             LEFT JOIN dbo.Questions_Path qp ON qp.BankId = qb.BankId
-            LEFT JOIN dbo.Questions q ON q.Question_Path_Id = qp.Question_Path_Id
+            LEFT JOIN dbo.Question_Sections qs ON qs.Question_Path_Id = qp.Question_Path_Id
+            LEFT JOIN dbo.Questions q ON q.SectionId = qs.SectionId
             WHERE qb.InstructorId = @mentorId
             GROUP BY
                 c.CourseId,
@@ -54,7 +55,7 @@ const getSectionsByPath = async (courseId, pathId) => {
             qs.SectionName,
             qs.Title,
             qs.TypeId,
-            RTRIM(qt.Name) AS SkillType,
+            RTRIM(st.Name) AS SkillType,
             qs.[Order] AS SectionOrder,
             qs.SourceUrl,
             qs.IsUseForTest,
@@ -65,8 +66,8 @@ const getSectionsByPath = async (courseId, pathId) => {
             ON qb.BankId = qp.BankId
         INNER JOIN dbo.Question_Sections qs
             ON qs.Question_Path_Id = qp.Question_Path_Id
-        INNER JOIN dbo.QuestionType qt
-            ON qt.TypeId = qs.TypeId
+        INNER JOIN dbo.Section_Type st
+            ON st.TypeId = qs.TypeId
         LEFT JOIN dbo.Questions q
             ON q.SectionId = qs.SectionId
            AND q.IsActive = 1
@@ -78,7 +79,7 @@ const getSectionsByPath = async (courseId, pathId) => {
             qs.SectionName,
             qs.Title,
             qs.TypeId,
-            qt.Name,
+            st.Name,
             qs.[Order],
             qs.SourceUrl,
             qs.IsUseForTest
@@ -97,8 +98,8 @@ const getQuestionsBySection = async (sectionId) => {
             q.QuestionId,
             q.SectionId,
             q.Title,
-            q.TypeId,
-            RTRIM(qt.Name) AS SkillType,
+            qs.TypeId,
+            RTRIM(st.Name) AS SkillType,
             qs.SourceUrl AS SourceUrl,
             q.[Order] AS QuestionOrder,
             q.IsActive,
@@ -111,8 +112,8 @@ const getQuestionsBySection = async (sectionId) => {
         FROM dbo.Questions q
         INNER JOIN dbo.Question_Sections qs
             ON qs.SectionId = q.SectionId
-        INNER JOIN dbo.QuestionType qt
-            ON qt.TypeId = q.TypeId
+        INNER JOIN dbo.Section_Type st
+            ON st.TypeId = qs.TypeId
         LEFT JOIN dbo.Question_Choices qc
             ON qc.QuestionId = q.QuestionId
         WHERE q.SectionId = @sectionId

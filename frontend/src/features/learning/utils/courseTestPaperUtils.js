@@ -40,7 +40,7 @@ function resolveSectionAudio(section) {
   return url || null;
 }
 
-function toStudentQuestion(question, order, shuffleAnswers) {
+function toStudentQuestion(question, order, shuffleAnswers, sourceSection = null) {
   let options = (question.Options ?? []).map((option) => ({
     tempId: option.tempId,
     optionText: option.OptionText,
@@ -51,7 +51,8 @@ function toStudentQuestion(question, order, shuffleAnswers) {
 
   return {
     tempId: question.tempId,
-    questionType: question.QuestionType ?? 'MULTIPLE_CHOICE',
+    questionType: 'MULTIPLE_CHOICE',
+    skillType: question.SkillType ?? sourceSection?.SkillType ?? null,
     questionText: question.QuestionText,
     score: Number(question.Score) || 1,
     order,
@@ -107,7 +108,7 @@ function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, start
   let order = startOrder;
   const questionGroups = [...groupsMap.values()].map((group, index) => {
     const questions = group.items.map(({ question, section }) => {
-      const studentQ = toStudentQuestion(question, order, shuffleAnswers);
+      const studentQ = toStudentQuestion(question, order, shuffleAnswers, section);
       studentQ.audioUrl =
         skillType === TEST_SKILL_LISTENING ? resolveSectionAudio(section) : null;
       order += 1;

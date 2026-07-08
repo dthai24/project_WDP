@@ -1,5 +1,4 @@
 import {
-  QUESTION_TYPE_MULTIPLE_CHOICE,
   READING_SOURCE_COMPOSE,
   READING_SOURCE_UPLOAD,
   TEST_SKILL_LISTENING,
@@ -15,17 +14,9 @@ import {
   getListeningSectionFields,
   getReadingSectionFields,
   normalizeQuestionBankSectionForSave,
-  normalizeTestQuestion,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { fetchTextMaterialHtml } from '@/features/mentor/services/materialUploadService';
-
-function mapSkillType(rawSkillType) {
-  const name = String(rawSkillType ?? '').trim().toUpperCase();
-  if (name === TEST_SKILL_LISTENING) return TEST_SKILL_LISTENING;
-  if (name === TEST_SKILL_READING) return TEST_SKILL_READING;
-  return TEST_SKILL_WRITING;
-}
 
 function toBooleanDefaultTrue(value) {
   if (value == null) return true;
@@ -59,7 +50,7 @@ function buildQuestionSaveSnapshot(question) {
 }
 
 export function mapApiSectionToEditorSection(apiSection) {
-  const skillType = mapSkillType(apiSection.skillType);
+  const skillType = apiSection.skillType ?? TEST_SKILL_WRITING;
   const sectionName = String(apiSection.sectionName ?? '').trim();
   const displayName = String(apiSection.displayName ?? sectionName);
   const sourceUrl = resolveSectionSourceUrlFromApi(apiSection);
@@ -70,6 +61,7 @@ export function mapApiSectionToEditorSection(apiSection) {
     DisplayName: sectionName,
     SectionTitle: displayName || sectionName,
     SkillType: skillType,
+    typeId: apiSection.typeId ?? null,
     Description: '',
     Questions: [],
     questionsLoaded: false,
@@ -118,7 +110,7 @@ export async function hydrateReadingSectionFromSourceUrl(section) {
   }
 }
 
-export function mapApiQuestionToEditorQuestion(apiQuestion) {
+export function mapApiQuestionToEditorQuestion(apiQuestion, section = {}) {
   const choices = (apiQuestion.choices ?? []).map((choice) => ({
     tempId: `choice_${choice.choiceId}`,
     ChoiceId: choice.choiceId,
@@ -126,22 +118,25 @@ export function mapApiQuestionToEditorQuestion(apiQuestion) {
     IsCorrect: Boolean(choice.isTrue),
   }));
 
-  return normalizeTestQuestion({
+  return {
     tempId: `question_${apiQuestion.questionId}`,
     QuestionId: apiQuestion.questionId,
-    QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
+    // typeId / SkillType lấy từ section (API join Question_Sections + Section_Type)
+    typeId: apiQuestion.typeId ?? section.typeId ?? null,
+    SkillType: apiQuestion.skillType ?? section.SkillType ?? null,
     QuestionText: apiQuestion.title ?? '',
     Score: 1,
+    order: Number(apiQuestion.order) || 0,
+    sourceUrl: apiQuestion.sourceUrl ?? null,
     isActive: toBooleanDefaultTrue(apiQuestion.isActive),
     isUseForTest: toBooleanDefaultTrue(apiQuestion.isUseForTest),
     Options: choices,
-    AudioUrl: '',
-  });
+  };
 }
 
 export function mergeQuestionsIntoSection(section, apiQuestions = []) {
   const activeQuestions = (apiQuestions ?? []).filter((item) => item.isActive !== false);
-  const questions = activeQuestions.map(mapApiQuestionToEditorQuestion);
+  const questions = activeQuestions.map((item) => mapApiQuestionToEditorQuestion(item, section));
   const nextSection = {
     ...section,
     Questions: questions,
@@ -536,6 +531,7 @@ function buildSectionApiData(normalized, sectionPayload = {}) {
     SectionName: sectionName,
     Title: title,
     SkillType: sectionPayload.SkillType ?? null,
+    TypeId: sectionPayload.typeId ?? null,
     IsUseForTest: sectionPayload.isUseForTest !== false,
     SourceUrl: resolveSectionSourceUrlForSave({
       SkillType: normalized.SkillType,

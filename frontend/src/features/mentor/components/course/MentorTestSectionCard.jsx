@@ -290,7 +290,10 @@ export default function MentorTestSectionCard({
   };
 
   const handleAddQuestion = () => {
-    updateQuestions([...questions, createEmptyTestQuestion()]);
+    updateQuestions([
+      ...questions,
+      createEmptyTestQuestion({ SkillType: skillType }),
+    ]);
   };
 
   const handleQuestionChange = (questionTempId, nextQuestion) => {
