@@ -68,7 +68,14 @@ export function getStudentMenuItems(user) {
       Icon: MenuBookOutlinedIcon,
       disabled: !student,
     },
-
+    {
+      id: "my-courses",
+      label: "Khóa học của tôi",
+      to: "/my-courses",
+      Icon: SchoolOutlinedIcon,
+      disabled: !student,
+      isActiveMatch: (pathname) => pathname.startsWith("/my-courses"),
+    },
     {
       id: "placement-test",
       label: "Xếp lớp đầu vào",
