@@ -11,10 +11,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  FormControlLabel,
-  Checkbox,
-  FormGroup,
-  Link,
   alpha
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
@@ -28,11 +24,11 @@ import { formatAccountDate, getAccountInitials } from '@/features/admin/utils/ad
 import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 const REJECTION_TAG_OPTIONS = [
-  'sai chứng chỉ',
-  'thiếu chứng chỉ',
-  'chứng chỉ lỗi',
-  'không đạt yêu cầu trình độ',
-  'thông tin không trùng khớp'
+  'chứng chỉ không hợp lệ',
+  'thiếu tài liệu chứng chỉ',
+  'tệp tin bị lỗi',
+  'trình độ năng lực chưa đạt',
+  'thông tin cá nhân không khớp'
 ];
 
 export default function AdminApplicationsPage() {
@@ -42,6 +38,7 @@ export default function AdminApplicationsPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [rejectFormOpen, setRejectFormOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   
   // Rejection state
   const [selectedTags, setSelectedTags] = useState([]);
@@ -62,7 +59,7 @@ export default function AdminApplicationsPage() {
       if (data.success) {
         setApplications(data.data || []);
       } else {
-        toast.error(data.message || 'Không thể tải danh sách ứng tuyển');
+        toast.error(data.message || 'Không thể tải danh sách đơn ứng tuyển Mentor');
       }
     } catch (err) {
       console.error(err);
@@ -100,7 +97,7 @@ export default function AdminApplicationsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Đã phê duyệt ${selectedApp.name} làm Mentor`);
+        toast.success(`Đã phê duyệt ${selectedApp.name} thành Mentor thành công`);
         setApproveConfirmOpen(false);
         setDetailsOpen(false);
         setSelectedApp(null);
@@ -110,7 +107,7 @@ export default function AdminApplicationsPage() {
       }
     } catch (err) {
       console.error(err);
-      toast.error('Lỗi phê duyệt');
+      toast.error('Lỗi trong quá trình phê duyệt');
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +138,7 @@ export default function AdminApplicationsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Đã từ chối đơn ứng tuyển của ${selectedApp.name}`);
+        toast.success(`Đã từ chối hồ sơ ứng tuyển của ${selectedApp.name}`);
         setRejectFormOpen(false);
         setDetailsOpen(false);
         setSelectedApp(null);
@@ -151,7 +148,7 @@ export default function AdminApplicationsPage() {
       }
     } catch (err) {
       console.error(err);
-      toast.error('Lỗi từ chối');
+      toast.error('Lỗi trong quá trình từ chối');
     } finally {
       setSubmitting(false);
     }
@@ -164,37 +161,37 @@ export default function AdminApplicationsPage() {
   };
 
   const getStatusLabel = (status) => {
-    if (status === 'approved') return 'Đã phê duyệt';
+    if (status === 'approved') return 'Đã duyệt';
     if (status === 'rejected') return 'Đã từ chối';
-    return 'Chờ phê duyệt';
+    return 'Chờ duyệt';
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto px-1">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
-          Phê duyệt Mentor ứng tuyển
+        <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight flex items-center gap-2" style={{ color: TEXT }}>
+          <AssignmentIndOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} /> Đơn ứng tuyển Mentor
         </h1>
-        <p className="text-[14px] mt-1 leading-[1.55]" style={{ color: MUTED }}>
-          Xem xét thông tin cá nhân và tài liệu minh chứng của học viên xin nâng cấp làm giảng viên/mentor.
+        <p className="text-[14px] mt-1 text-slate-500 leading-relaxed max-w-2xl">
+          Xem xét thông tin ứng viên, cấp độ tiếng Anh đăng ký dạy và các tài liệu chứng chỉ tiếng Anh minh chứng đi kèm.
         </p>
       </div>
 
       {loading ? (
-        <Typography sx={{ color: MUTED, py: 4, textAlign: 'center' }}>Đang tải danh sách đơn ứng tuyển...</Typography>
+        <Typography sx={{ color: MUTED, py: 4, textAlign: 'center' }}>Đang tải danh sách hồ sơ ứng tuyển...</Typography>
       ) : applications.length === 0 ? (
-        <Typography sx={{ color: MUTED, py: 4, textAlign: 'center' }}>Không có đơn ứng tuyển nào.</Typography>
+        <Typography sx={{ color: MUTED, py: 4, textAlign: 'center' }}>Không tìm thấy đơn ứng tuyển nào.</Typography>
       ) : (
-        <Box sx={{ bgcolor: '#fff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: '16px', overflow: 'hidden' }}>
+        <Box className="rounded-xl shadow-sm border border-slate-100/80" sx={{ bgcolor: '#fff', overflow: 'hidden' }}>
           {/* Table Headers */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 2fr 1.5fr 1fr', gap: 2, px: 3, py: 1.5, bgcolor: 'rgba(15,23,42,0.02)', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Tên học viên</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Email</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Tuổi</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Cấp độ giảng dạy</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Trạng thái</Typography>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED, textAlign: 'right' }}>Xem</Typography>
+          <Box className="bg-slate-50/50" sx={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 2fr 1.5fr 1fr', gap: 2, px: 3, py: 1.5, borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>HỌ TÊN ỨNG VIÊN</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>ĐỊA CHỈ EMAIL</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>TUỔI</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>CẤP ĐỘ ĐĂNG KÝ</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED }}>TRẠNG THÁI</Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: MUTED, textAlign: 'right' }}>THAO TÁC</Typography>
           </Box>
 
           {/* Table Content */}
@@ -224,7 +221,7 @@ export default function AdminApplicationsPage() {
                     height: 22,
                     fontSize: 11,
                     fontWeight: 700,
-                    borderRadius: '999px',
+                    borderRadius: '6px',
                     ...getStatusChipStyles(app.status)
                   }}
                 />
@@ -263,7 +260,7 @@ export default function AdminApplicationsPage() {
           backdrop: { sx: { backdropFilter: 'blur(8px)', backgroundColor: alpha('#0F172A', 0.35) } }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>Chi tiết đơn ứng tuyển Mentor</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800, pb: 0.5 }}>Chi tiết hồ sơ ứng tuyển Mentor</DialogTitle>
         <DialogContent dividers sx={{ pt: 2 }}>
           {selectedApp && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -279,17 +276,17 @@ export default function AdminApplicationsPage() {
 
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <Box>
-                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>Tuổi</Typography>
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>TUỔI</Typography>
                   <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: TEXT }}>{selectedApp.age} tuổi</Typography>
                 </Box>
                 <Box>
-                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>Ngày đăng ký</Typography>
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>NGÀY NỘP ĐƠN</Typography>
                   <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: TEXT }}>{formatAccountDate(selectedApp.createdAt)}</Typography>
                 </Box>
               </Box>
 
               <Box>
-                <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>Cấp độ giảng dạy đăng ký</Typography>
+                <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>CẤP ĐỘ GIẢNG DẠY ĐĂNG KÝ</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {selectedApp.levels?.map((lv) => (
                     <Chip key={lv._id} label={lv.displayName} size="small" sx={{ height: 22, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(124,58,237,0.08)', color: '#7C3AED' }} />
@@ -298,21 +295,48 @@ export default function AdminApplicationsPage() {
               </Box>
 
               <Box>
-                <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>Tài liệu minh chứng</Typography>
+                <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 1 }}>TÀI LIỆU MINH CHỨNG / CHỨNG CHỈ</Typography>
                 {selectedApp.evidence?.startsWith('http') ? (
-                  <Link href={selectedApp.evidence} target="_blank" rel="noopener" sx={{ fontSize: 13.5, fontWeight: 600, color: PRIMARY, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}>
-                    Xem liên kết minh chứng (Google Drive / Dropbox) &rarr;
-                  </Link>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'flex-start' }}>
+                    {/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(selectedApp.evidence) && (
+                      <Box
+                        component="img"
+                        src={selectedApp.evidence}
+                        onClick={() => setLightboxOpen(true)}
+                        sx={{
+                          maxHeight: 140,
+                          maxWidth: '100%',
+                          borderRadius: '8px',
+                          cursor: 'zoom-in',
+                          border: '1px solid rgba(15,23,42,0.1)',
+                          objectFit: 'contain',
+                          '&:hover': { opacity: 0.85, borderColor: '#7C3AED' },
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                      />
+                    )}
+                    <AppButton
+                      component="a"
+                      href={selectedApp.evidence}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="outlined"
+                      size="small"
+                      sx={{ textTransform: 'none', fontWeight: 700, display: 'inline-flex', width: 'auto' }}
+                    >
+                      Mở tài liệu xác minh &rarr;
+                    </AppButton>
+                  </Box>
                 ) : (
                   <Typography sx={{ fontSize: 13, color: TEXT, bgcolor: 'rgba(15,23,42,0.02)', p: 1.5, borderRadius: '8px', border: '1px solid rgba(15,23,42,0.06)', whiteSpace: 'pre-wrap' }}>
-                    {selectedApp.evidence}
+                    {selectedApp.evidence || 'Không có chứng chỉ đính kèm.'}
                   </Typography>
                 )}
               </Box>
 
               {selectedApp.status === 'rejected' && (
                 <Box sx={{ bgcolor: 'rgba(220,38,38,0.03)', border: '1px solid rgba(220,38,38,0.1)', p: 1.75, borderRadius: '8px' }}>
-                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#DC2626', mb: 0.5 }}>Lý do từ chối trước đó</Typography>
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#DC2626', mb: 0.5 }}>LÝ DO TỪ CHỐI TRƯỚC ĐÓ</Typography>
                   {selectedApp.rejectionTags?.length > 0 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
                       {selectedApp.rejectionTags.map((tag) => (
@@ -364,9 +388,9 @@ export default function AdminApplicationsPage() {
         onClose={() => !submitting && setApproveConfirmOpen(false)}
         onConfirm={handleConfirmApprove}
         loading={submitting}
-        title="Duyệt ứng viên làm Mentor?"
-        message={selectedApp ? `Bạn có chắc muốn để ${selectedApp.name} là mentor không?` : ''}
-        confirmLabel="Đồng ý"
+        title="Phê duyệt ứng viên làm Mentor?"
+        message={selectedApp ? `Bạn có chắc chắn muốn nâng cấp ${selectedApp.name} lên vai trò Mentor không?` : ''}
+        confirmLabel="Xác nhận"
         cancelLabel="Hủy"
       />
 
@@ -380,14 +404,14 @@ export default function AdminApplicationsPage() {
           backdrop: { sx: { backdropFilter: 'blur(8px)', backgroundColor: alpha('#0F172A', 0.35) } }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>Lý do từ chối ứng tuyển</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800 }}>Từ chối đơn ứng tuyển Mentor</DialogTitle>
         <DialogContent dividers>
           <Typography sx={{ fontSize: 13, color: MUTED, mb: 2 }}>
-            Vui lòng chọn các lí do từ chối hoặc thêm góp ý phản hồi cho ứng viên.
+            Vui lòng chọn lý do từ chối phê duyệt và cung cấp thêm hướng dẫn phản hồi cho ứng viên.
           </Typography>
 
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1 }}>
-            Lí do từ chối chính (nhấp chọn)
+            Lý do chính (nhấp chọn)
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 3.5 }}>
             {REJECTION_TAG_OPTIONS.map((tag) => {
@@ -407,7 +431,7 @@ export default function AdminApplicationsPage() {
                     height: 28,
                     fontSize: 12,
                     fontWeight: 600,
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     bgcolor: selected ? 'rgba(220,38,38,0.1)' : 'rgba(15,23,42,0.03)',
                     color: selected ? '#DC2626' : MUTED,
                     border: `1px solid ${selected ? 'rgba(220,38,38,0.2)' : 'rgba(15,23,42,0.06)'}`,
@@ -419,14 +443,14 @@ export default function AdminApplicationsPage() {
           </Box>
 
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1 }}>
-            Góp ý phản hồi (tùy chọn)
+            Ý kiến phản hồi bổ sung (tùy chọn)
           </Typography>
           <TextField
             fullWidth
             size="small"
             multiline
             rows={3}
-            placeholder="Nhập chi tiết hướng dẫn học viên cần làm gì..."
+            placeholder="Mô tả cụ thể những điểm cần chỉnh sửa hoặc hoàn thiện thêm..."
             value={rejectComment}
             onChange={(e) => setRejectComment(e.target.value)}
           />
@@ -442,9 +466,42 @@ export default function AdminApplicationsPage() {
             loading={submitting}
             sx={{ bgcolor: '#DC2626', '&:hover': { bgcolor: '#B91C1C' } }}
           >
-            Từ chối đơn ứng tuyển
+            Từ chối hồ sơ
           </AppButton>
         </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        slotProps={{
+          backdrop: {
+            sx: {
+              backdropFilter: 'blur(8px)',
+              backgroundColor: alpha('#0F172A', 0.85),
+            },
+          },
+        }}
+      >
+        <DialogContent sx={{ p: 0.5, bgcolor: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative' }}>
+          <IconButton
+            onClick={() => setLightboxOpen(false)}
+            sx={{ position: 'absolute', top: 10, right: 10, color: '#fff', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' }, zIndex: 10 }}
+          >
+            <CloseRoundedIcon />
+          </IconButton>
+          <Box
+            component="img"
+            src={selectedApp?.evidence}
+            sx={{
+              maxWidth: '100%',
+              maxHeight: '85vh',
+              objectFit: 'contain',
+            }}
+          />
+        </DialogContent>
       </Dialog>
     </div>
   );

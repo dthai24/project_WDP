@@ -16,17 +16,24 @@ function mapLevel(raw) {
     displayName: raw.DisplayName || raw.displayName || '',
     sortOrder: Number(raw.SortOrder || raw.sortOrder) || 0,
     colorCode: raw.ColorCode || raw.colorCode || resolveSeedColorCode('level', id) || null,
-    status: raw.Status || raw.status || 'ACTIVE',
+    status: raw.isActive === false ? 'INACTIVE' : 'ACTIVE',
     createdAt: raw.CreatedAt || raw.createdAt || null,
     categoryId: raw.CategoryId || raw.categoryId || null,
   };
 }
 
-export async function getLevels() {
-  const res = await apiGet('/levels');
-  if (!res.ok) return { ok: false, levels: [] };
+export async function getLevels({ page = 1, limit = 10, q = '', status = '', sort = '' } = {}) {
+  const params = new URLSearchParams();
+  params.set('page', page);
+  params.set('limit', limit);
+  if (q) params.set('q', q);
+  if (status && status !== 'all') params.set('status', status);
+  if (sort) params.set('sort', sort);
+
+  const res = await apiGet(`/levels?${params.toString()}`);
+  if (!res.ok) return { ok: false, levels: [], totalPages: 1 };
   const levels = (res.data || []).map(mapLevel);
-  return { ok: true, levels };
+  return { ok: true, levels, totalPages: res.totalPages || 1 };
 }
 
 export async function createLevel(payload) {
@@ -48,12 +55,13 @@ export async function updateLevel(id, payload) {
     DisplayName: payload.displayName,
     SortOrder: payload.sortOrder || 1,
     CategoryId: payload.CategoryId || null,
+    IsActive: payload.status !== undefined ? payload.status === 'ACTIVE' : undefined,
   });
   if (!res.ok) {
     return { ok: false, message: res.message || 'Không thể cập nhật trình độ' };
   }
   // Re-fetch to get updated data
-  const fetchRes = await getLevels();
+  const fetchRes = await getLevels(1, 100);
   const updated = (fetchRes.levels || []).find((l) => String(l.id) === String(id));
   return { ok: true, level: updated || null };
 }

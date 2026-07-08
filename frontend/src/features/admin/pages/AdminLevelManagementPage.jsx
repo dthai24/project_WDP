@@ -1,15 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Typography } from '@mui/material';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Box } from '@mui/material';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
-import { useSearchParams } from 'react-router-dom';
 import { toast } from '@/shared/ui/Toast';
-import AppButton from '@/shared/ui/AppButton';
 import AppPagination from '@/shared/ui/AppPagination';
 import AdminCatalogToolbar from '@/features/admin/components/AdminCatalogToolbar';
 import AdminLevelList from '@/features/admin/components/AdminLevelList';
 import AdminLevelCreateDialog from '@/features/admin/components/AdminLevelCreateDialog';
 import AdminLevelEditDialog from '@/features/admin/components/AdminLevelEditDialog';
+import { useSearchParams } from 'react-router-dom';
 import {
   ADMIN_CATALOG_STATUS_FILTER_OPTIONS,
   ADMIN_LEVEL_SORT_OPTIONS,
@@ -18,6 +16,7 @@ import {
   createLevel,
   getLevels,
   updateLevel,
+  deleteLevel,
 } from '@/features/admin/services/adminLevelService';
 import { filterAndSortLevels } from '@/features/admin/utils/adminLevelUtils';
 import {
@@ -26,24 +25,26 @@ import {
   buildAdminLevelActiveChips,
   buildAdminLevelListSearchParams,
   hasActiveAdminLevelFilters,
-  paginateLevels,
   parseAdminLevelListParams,
   resetAdminLevelListParams,
 } from '@/features/admin/utils/adminLevelUtils';
-import { TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 const PAGE_SIZE = ADMIN_LEVEL_LIST_PAGE_SIZE;
 
 export default function AdminLevelManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [levels, setLevels] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+
+  // Dialog States
   const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingLevel, setEditingLevel] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   const queryState = useMemo(
     () => parseAdminLevelListParams(searchParams),
@@ -53,7 +54,10 @@ export default function AdminLevelManagementPage() {
   const showReset = hasActiveAdminLevelFilters(queryState);
 
   const activeFilterChips = useMemo(
-    () => buildAdminLevelActiveChips(queryState, ADMIN_CATALOG_STATUS_FILTER_OPTIONS),
+    () =>
+      buildAdminLevelActiveChips(queryState, {
+        statusOptions: ADMIN_CATALOG_STATUS_FILTER_OPTIONS,
+      }),
     [queryState],
   );
 
@@ -61,20 +65,29 @@ export default function AdminLevelManagementPage() {
     setLoading(true);
     setLoadError(false);
     try {
-      const res = await getLevels();
+      const res = await getLevels({
+        page: queryState.page,
+        limit: PAGE_SIZE,
+        q: queryState.q,
+        status: queryState.status,
+        sort: queryState.sort,
+      });
+
       if (res.ok) {
         setLevels(res.levels ?? []);
+        setTotalPages(res.totalPages ?? 1);
       } else {
         setLevels([]);
         setLoadError(true);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       setLevels([]);
       setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [queryState.page, queryState.q, queryState.status, queryState.sort]);
 
   useEffect(() => {
     loadLevels();
@@ -87,38 +100,13 @@ export default function AdminLevelManagementPage() {
     );
   };
 
-  const filteredLevels = useMemo(
-    () => filterAndSortLevels(levels, queryState),
-    [levels, queryState],
-  );
-
-  const pagination = useMemo(
-    () => paginateLevels(filteredLevels, queryState.page, PAGE_SIZE),
-    [filteredLevels, queryState.page],
-  );
-
-  useEffect(() => {
-    if (!loading && queryState.page !== pagination.page) {
-      updateQuery({ page: pagination.page });
-    }
-  }, [loading, queryState.page, pagination.page]);
-
-  const existingNames = useMemo(
-    () =>
-      levels
-        .filter((item) => item.id !== editingLevel?.id)
-        .map((item) => item.displayName.trim().toLowerCase()),
-    [levels, editingLevel],
-  );
-
   const handleStatusChange = (value) => updateQuery({ status: value, page: 1 });
   const handleSortChange = (value) => updateQuery({ sort: value, page: 1 });
   const handlePageChange = (page) => {
     updateQuery({ page });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handleReset = () =>
-    setSearchParams(resetAdminLevelListParams(searchParams), { replace: true });
+  const handleReset = () => setSearchParams(resetAdminLevelListParams(searchParams), { replace: true });
   const handleRemoveChip = ({ type }) => {
     const defaults = {
       q: '',
@@ -132,15 +120,42 @@ export default function AdminLevelManagementPage() {
     setEditOpen(true);
   };
 
+  const handleDeleteLevel = async (level) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa trình độ "${level.displayName}" không?`)) {
+      setSaving(true);
+      try {
+        const res = await deleteLevel(level.id);
+        if (!res.ok) {
+          toast.error(res.message ?? 'Không thể xóa trình độ');
+          return;
+        }
+        toast.success('Đã xóa trình độ thành công');
+        await loadLevels();
+      } catch (err) {
+        console.error(err);
+        toast.error('Lỗi kết nối khi xóa trình độ');
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const existingNames = useMemo(() => {
+    if (!editingLevel) return [];
+    return levels
+      .filter((item) => item.id !== editingLevel.id)
+      .map((item) => item.displayName.trim().toLowerCase());
+  }, [levels, editingLevel]);
+
   const handleCreateSubmit = async (values) => {
     setCreating(true);
     try {
       const res = await createLevel(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Khong the tao trinh do');
+        toast.error(res.message ?? 'Không thể tạo trình độ');
         return;
       }
-      toast.success('Da tao trinh do moi');
+      toast.success('Đã tạo trình độ mới');
       setCreateOpen(false);
       await loadLevels();
     } finally {
@@ -155,10 +170,10 @@ export default function AdminLevelManagementPage() {
     try {
       const res = await updateLevel(editingLevel.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Khong the cap nhat trinh do');
+        toast.error(res.message ?? 'Không thể cập nhật trình độ');
         return;
       }
-      toast.success('Da cap nhat trinh do');
+      toast.success('Đã cập nhật trình độ');
       setEditOpen(false);
       setEditingLevel(null);
       await loadLevels();
@@ -167,40 +182,32 @@ export default function AdminLevelManagementPage() {
     }
   };
 
+  const filteredLevels = levels;
+
   return (
-    <div className="w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <div className="w-full max-w-7xl mx-auto px-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
-            Quan ly trinh do
+          <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight" style={{ color: TEXT }}>
+            Quản lý trình độ
           </h1>
-          <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
-            Them, chinh sua va sap xep trinh do khoa hoc (Co ban, Trung cap, Nang cao...).
+          <p className="text-[14px] mt-1 text-slate-500 max-w-2xl leading-relaxed">
+            Thêm, chỉnh sửa và cấu hình trình độ (IELTS 5.0, CEFR A1, CEFR B2...).
           </p>
         </div>
 
-        <AppButton
-          startIcon={<AddRoundedIcon />}
+        <button
           onClick={() => setCreateOpen(true)}
-          sx={{
-            height: 44,
-            px: 2.5,
-            fontSize: 14,
-            fontWeight: 700,
-            borderRadius: '999px',
-            bgcolor: '#0891B2',
-            color: '#fff',
-            flexShrink: 0,
-            width: { xs: '100%', sm: 'auto' },
-            boxShadow: 'none',
-            '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
-          }}
+          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-[13px] font-bold text-white rounded-lg transition-all duration-200 hover:shadow-md hover:brightness-105 active:scale-95"
+          style={{ backgroundColor: PRIMARY }}
         >
-          Tao trinh do
-        </AppButton>
+          Thêm trình độ
+        </button>
       </div>
 
       <AdminCatalogToolbar
+        keyword={queryState.q || ''}
+        onKeywordChange={(val) => updateQuery({ q: val, page: 1 })}
         statusFilter={queryState.status}
         onStatusChange={handleStatusChange}
         sortBy={queryState.sort}
@@ -208,7 +215,7 @@ export default function AdminLevelManagementPage() {
         showReset={showReset}
         onReset={handleReset}
         totalCount={filteredLevels.length}
-        countLabel="trinh do"
+        countLabel="trình độ"
         CountIcon={LayersOutlinedIcon}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
@@ -216,18 +223,19 @@ export default function AdminLevelManagementPage() {
       />
 
       <AdminLevelList
-        levels={pagination.items}
+        levels={filteredLevels}
         loading={loading}
         error={loadError}
         hasAnyLevels={levels.length > 0}
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={openEditDialog}
+        onDelete={handleDeleteLevel}
         onClearFilters={handleReset}
       />
 
       <AppPagination
-        page={pagination.page}
-        totalPages={pagination.totalPages}
+        page={queryState.page}
+        totalPages={totalPages}
         onPageChange={handlePageChange}
       />
 

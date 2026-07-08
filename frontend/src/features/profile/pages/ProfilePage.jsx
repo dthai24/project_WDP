@@ -905,66 +905,68 @@ export default function ProfilePage() {
           </SectionCard>
 
           {/* Mục tiêu học tập */}
-          <SectionCard>
-            <SectionHead
-              title="Mục tiêu học tập"
-              icon={RocketLaunchIcon}
-              iconColor={ACCENT}
-              action={
-                <AppButton
-                  size="small"
-                  variant="text"
-                  onClick={handleOpenPopup}
-                  sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
-                >
-                  Cập nhật
-                </AppButton>
-              }
-            />
-            <div className="flex flex-wrap gap-[10px]">
-              {profile?.goals?.map((goal) => (
+          {profile.role?.toLowerCase() !== 'admin' && (
+            <SectionCard>
+              <SectionHead
+                title="Mục tiêu học tập"
+                icon={RocketLaunchIcon}
+                iconColor={ACCENT}
+                action={
+                  <AppButton
+                    size="small"
+                    variant="text"
+                    onClick={handleOpenPopup}
+                    sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
+                  >
+                    Cập nhật
+                  </AppButton>
+                }
+              />
+              <div className="flex flex-wrap gap-[10px]">
+                {profile?.goals?.map((goal) => (
+                  <Chip
+                    key={goal}
+                    icon={
+                      <AutoAwesomeIcon
+                        sx={{
+                          fontSize: "14px !important",
+                          color: `${ACCENT} !important`,
+                        }}
+                      />
+                    }
+                    label={goal}
+                    size="small"
+                    sx={{
+                      height: 28,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      borderRadius: "99px",
+                      bgcolor: alpha(ACCENT, 0.06),
+                      border: `1px solid ${alpha(ACCENT, 0.18)}`,
+                      color: TEXT,
+                    }}
+                  />
+                ))}
                 <Chip
-                  key={goal}
-                  icon={
-                    <AutoAwesomeIcon
-                      sx={{
-                        fontSize: "14px !important",
-                        color: `${ACCENT} !important`,
-                      }}
-                    />
-                  }
-                  label={goal}
+                  label="+ Thêm mục tiêu"
+                  onClick={handleOpenPopup}
                   size="small"
                   sx={{
                     height: 28,
                     fontSize: 12,
                     fontWeight: 600,
                     borderRadius: "99px",
-                    bgcolor: alpha(ACCENT, 0.06),
-                    border: `1px solid ${alpha(ACCENT, 0.18)}`,
-                    color: TEXT,
+                    bgcolor: "transparent",
+                    border: `1px dashed ${alpha(MUTED, 0.4)}`,
+                    color: MUTED,
+                    cursor: "pointer",
+                    "&:hover": { borderColor: PRIMARY, color: PRIMARY },
+                    transition: "border-color 0.2s, color 0.2s",
                   }}
                 />
-              ))}
-              <Chip
-                label="+ Thêm mục tiêu"
-                onClick={handleOpenPopup}
-                size="small"
-                sx={{
-                  height: 28,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  borderRadius: "99px",
-                  bgcolor: "transparent",
-                  border: `1px dashed ${alpha(MUTED, 0.4)}`,
-                  color: MUTED,
-                  cursor: "pointer",
-                  "&:hover": { borderColor: PRIMARY, color: PRIMARY },
-                  transition: "border-color 0.2s, color 0.2s",
-                }}
-              />
-            </div>
-          </SectionCard>
+              </div>
+            </SectionCard>
+          )}
 
 
         </div>
@@ -975,136 +977,138 @@ export default function ProfilePage() {
         >
           <div className="lg:sticky" style={{ top: 84 }}>
             {/* Tổng quan học tập */}
-            <SectionCard>
-              <SectionHead
-                title="Tổng quan học tập"
-                icon={MenuBookOutlinedIcon}
-                iconColor={PRIMARY}
-              />
-              <StatRow
-                icon={MenuBookOutlinedIcon}
-                iconColor={PRIMARY}
-                label="Khóa đang học"
-                value={`${profile?.stats?.learning || 0} khóa`}
-                expandable={profile?.stats?.learning > 0}
-                expanded={expandedStat === "learning"}
-                onClick={() => setExpandedStat(prev => prev === "learning" ? null : "learning")}
-              >
-                {coursesList.filter(c => !c.isCompleted).length === 0 ? (
-                  <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
-                ) : (
+            {profile.role?.toLowerCase() !== 'admin' && (
+              <SectionCard>
+                <SectionHead
+                  title="Tổng quan học tập"
+                  icon={MenuBookOutlinedIcon}
+                  iconColor={PRIMARY}
+                />
+                <StatRow
+                  icon={MenuBookOutlinedIcon}
+                  iconColor={PRIMARY}
+                  label="Khóa đang học"
+                  value={`${profile?.stats?.learning || 0} khóa`}
+                  expandable={profile?.stats?.learning > 0}
+                  expanded={expandedStat === "learning"}
+                  onClick={() => setExpandedStat(prev => prev === "learning" ? null : "learning")}
+                >
+                  {coursesList.filter(c => !c.isCompleted).length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {coursesList.filter(c => !c.isCompleted).map(course => (
+                        <Link
+                          key={course.courseId}
+                          to={`/my-courses/${course.courseId}/learn`}
+                          className="flex flex-col gap-1 p-2 rounded-xl border border-slate-100 hover:border-cyan-500/30 hover:bg-cyan-50/10 transition-all font-sans text-left decoration-none block"
+                        >
+                          <span className="text-[12px] font-bold text-slate-700 truncate block">
+                            {course.courseName}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-cyan-500" style={{ width: `${course.progress}%` }} />
+                            </div>
+                            <span className="text-[10px] font-bold text-cyan-600">{course.progress}%</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </StatRow>
+                <StatRow
+                  icon={CheckCircleRoundedIcon}
+                  iconColor={SUCCESS}
+                  label="Khóa hoàn thành"
+                  value={`${profile?.stats?.completed || 0} khóa`}
+                  expandable={profile?.stats?.completed > 0}
+                  expanded={expandedStat === "completed"}
+                  onClick={() => setExpandedStat(prev => prev === "completed" ? null : "completed")}
+                >
+                  {coursesList.filter(c => c.isCompleted).length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {coursesList.filter(c => c.isCompleted).map(course => {
+                        const cert = certificatesList.find(
+                          c => (c.courseId?._id || c.courseId) === course.courseId
+                        );
+
+                        return (
+                          <div
+                            key={course.courseId}
+                            className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
+                          >
+                            <Link
+                              to={`/my-courses/${course.courseId}/learn`}
+                              className="text-[12px] font-bold text-slate-700 hover:text-emerald-600 transition-colors truncate block decoration-none"
+                            >
+                              {course.courseName}
+                            </Link>
+
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                                ✓ Đã hoàn thành
+                              </span>
+                              {cert && (
+                                <Link
+                                  to={`/certificate/${cert.certificateCode}`}
+                                  target="_blank"
+                                  className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
+                                >
+                                  <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
+                                  Xem chứng chỉ
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </StatRow>
+
+                <StatRow
+                  icon={WorkspacePremiumIcon}
+                  iconColor="#d97706"
+                  label="Chứng chỉ của tôi"
+                  value={`${certificatesList.length} chứng chỉ`}
+                  expandable={certificatesList.length > 0}
+                  expanded={expandedStat === "certificates"}
+                  onClick={() => setExpandedStat(prev => prev === "certificates" ? null : "certificates")}
+                  last
+                >
                   <div className="space-y-2">
-                    {coursesList.filter(c => !c.isCompleted).map(course => (
-                      <Link
-                        key={course.courseId}
-                        to={`/my-courses/${course.courseId}/learn`}
-                        className="flex flex-col gap-1 p-2 rounded-xl border border-slate-100 hover:border-cyan-500/30 hover:bg-cyan-50/10 transition-all font-sans text-left decoration-none block"
+                    {certificatesList.map(cert => (
+                      <div
+                        key={cert._id}
+                        className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
                       >
                         <span className="text-[12px] font-bold text-slate-700 truncate block">
-                          {course.courseName}
+                          {cert.courseId?.courseName || 'Khóa học của StarLearning'}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyan-500" style={{ width: `${course.progress}%` }} />
-                          </div>
-                          <span className="text-[10px] font-bold text-cyan-600">{course.progress}%</span>
+
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[9px] text-slate-400 font-medium">
+                            Cấp ngày: {new Date(cert.issuedAt).toLocaleDateString('vi-VN')}
+                          </span>
+
+                          <Link
+                            to={`/certificate/${cert.certificateCode}`}
+                            target="_blank"
+                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
+                          >
+                            <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
+                            Xem chứng chỉ
+                          </Link>
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
-                )}
-              </StatRow>
-              <StatRow
-                icon={CheckCircleRoundedIcon}
-                iconColor={SUCCESS}
-                label="Khóa hoàn thành"
-                value={`${profile?.stats?.completed || 0} khóa`}
-                expandable={profile?.stats?.completed > 0}
-                expanded={expandedStat === "completed"}
-                onClick={() => setExpandedStat(prev => prev === "completed" ? null : "completed")}
-              >
-                {coursesList.filter(c => c.isCompleted).length === 0 ? (
-                  <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {coursesList.filter(c => c.isCompleted).map(course => {
-                      const cert = certificatesList.find(
-                        c => (c.courseId?._id || c.courseId) === course.courseId
-                      );
-
-                      return (
-                        <div
-                          key={course.courseId}
-                          className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
-                        >
-                          <Link
-                            to={`/my-courses/${course.courseId}/learn`}
-                            className="text-[12px] font-bold text-slate-700 hover:text-emerald-600 transition-colors truncate block decoration-none"
-                          >
-                            {course.courseName}
-                          </Link>
-
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
-                              ✓ Đã hoàn thành
-                            </span>
-                            {cert && (
-                              <Link
-                                to={`/certificate/${cert.certificateCode}`}
-                                target="_blank"
-                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
-                              >
-                                <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
-                                Xem chứng chỉ
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </StatRow>
-
-              <StatRow
-                icon={WorkspacePremiumIcon}
-                iconColor="#d97706"
-                label="Chứng chỉ của tôi"
-                value={`${certificatesList.length} chứng chỉ`}
-                expandable={certificatesList.length > 0}
-                expanded={expandedStat === "certificates"}
-                onClick={() => setExpandedStat(prev => prev === "certificates" ? null : "certificates")}
-                last
-              >
-                <div className="space-y-2">
-                  {certificatesList.map(cert => (
-                    <div
-                      key={cert._id}
-                      className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
-                    >
-                      <span className="text-[12px] font-bold text-slate-700 truncate block">
-                        {cert.courseId?.courseName || 'Khóa học của StarLearning'}
-                      </span>
-
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-[9px] text-slate-400 font-medium">
-                          Cấp ngày: {new Date(cert.issuedAt).toLocaleDateString('vi-VN')}
-                        </span>
-
-                        <Link
-                          to={`/certificate/${cert.certificateCode}`}
-                          target="_blank"
-                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
-                        >
-                          <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
-                          Xem chứng chỉ
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </StatRow>
-            </SectionCard>
+                </StatRow>
+              </SectionCard>
+            )}
 
             {/* Cài đặt tài khoản */}
             <SectionCard>

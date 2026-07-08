@@ -6,6 +6,7 @@ import {
   Tooltip,
   Typography,
   alpha,
+  Switch,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
@@ -21,7 +22,7 @@ import {
 import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 const PILL_CHIP_SX = {
-  borderRadius: '999px',
+  borderRadius: '6px',
   height: 24,
   fontSize: 12,
   fontWeight: 700,
@@ -53,7 +54,7 @@ function DesktopValue({ value }) {
   );
 }
 
-export default function AdminAccountRow({ account, onEdit, onView }) {
+export default function AdminAccountRow({ account, onEdit, onView, onToggleStatus }) {
   const roleSx = ADMIN_ACCOUNT_ROLE_CHIP_SX[account.role] ?? ADMIN_ACCOUNT_ROLE_CHIP_SX.Student;
   const statusSx = ADMIN_ACCOUNT_STATUS_CHIP_SX[account.status] ?? ADMIN_ACCOUNT_STATUS_CHIP_SX.ACTIVE;
 
@@ -64,7 +65,7 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
         gridTemplateColumns: { xs: '1fr', md: ADMIN_ACCOUNT_TABLE_LAYOUT_SX.gridTemplateColumns },
         columnGap: { xs: 0, md: ADMIN_ACCOUNT_TABLE_LAYOUT_SX.columnGap },
         px: { xs: 2, md: ADMIN_ACCOUNT_TABLE_LAYOUT_SX.px },
-        alignItems: { xs: 'stretch', md: ADMIN_ACCOUNT_TABLE_LAYOUT_SX.alignItems },
+        alignItems: { xs: 'center', md: ADMIN_ACCOUNT_TABLE_LAYOUT_SX.alignItems },
         width: '100%',
         boxSizing: 'border-box',
         rowGap: { xs: 1.25, md: 0 },
@@ -128,7 +129,7 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
         />
       </Box>
 
-      <Box sx={{ justifySelf: 'start' }}>
+      <Box sx={{ justifySelf: 'start', display: 'flex', alignItems: 'center', gap: 1 }}>
         <MobileField
           label="Trạng thái"
           value={ADMIN_ACCOUNT_STATUS_LABELS[account.status] ?? account.status}
@@ -142,6 +143,15 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
             display: { xs: 'none', md: 'inline-flex' },
           }}
         />
+        <Switch
+          size="small"
+          checked={account.status === 'ACTIVE'}
+          onChange={() => onToggleStatus?.(account)}
+          sx={{
+            '& .MuiSwitch-switchBase.Mui-checked': { color: '#047857' },
+            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#047857' }
+          }}
+        />
       </Box>
 
       <Box sx={{ minWidth: 0, justifySelf: 'start' }}>
@@ -150,10 +160,10 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, justifySelf: 'end', gap: 1 }}>
-        <Tooltip title="Xem chi tiết tài khoản">
+        <Tooltip title="Xem chi tiết">
           <IconButton
             size="small"
-            aria-label="Xem tài khoản"
+            aria-label="Xem chi tiết"
             onClick={() => onView?.(account)}
             sx={{
               width: 34,
@@ -171,10 +181,10 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
             <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
-        <Tooltip title="Chỉnh sửa trạng thái">
+        <Tooltip title="Chỉnh sửa thiết lập">
           <IconButton
             size="small"
-            aria-label="Chỉnh sửa tài khoản"
+            aria-label="Chỉnh sửa thiết lập"
             onClick={() => onEdit?.(account)}
             sx={{
               width: 34,

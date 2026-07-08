@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Box, Typography, Chip, Menu, MenuItem, IconButton, alpha } from '@mui/material';
+import { Box, Typography, Chip, Menu, MenuItem, IconButton, alpha, Tooltip } from '@mui/material';
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import SearchOffOutlinedIcon from '@mui/icons-material/SearchOffOutlined';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import FilterAltOutlinedIcon from '@mui/icons-material/FilterAltOutlined';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import EmptyState from '@/shared/ui/EmptyState';
 import Loading from '@/shared/ui/Loading';
 import AdminCategoryRow from './AdminCategoryRow';
@@ -185,6 +186,7 @@ export default function AdminCategoryList({
   hasAnyCategories,
   isFiltered,
   onEdit,
+  onDelete,
   onClearFilters,
   viewMode = 'list',
   sortBy = 'newest',
@@ -276,11 +278,34 @@ export default function AdminCategoryList({
                 <Typography sx={{ fontSize: 12, color: MUTED }}>
                   Ngày tạo: {formatCategoryDate(category.createdAt)}
                 </Typography>
-                <AdminCatalogEditButton
-                  ariaLabel="Chỉnh sửa danh mục"
-                  title="Chỉnh sửa"
-                  onClick={() => onEdit?.(category)}
-                />
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <AdminCatalogEditButton
+                    ariaLabel="Chỉnh sửa danh mục"
+                    title="Chỉnh sửa"
+                    onClick={() => onEdit?.(category)}
+                  />
+                  <Tooltip title="Xóa danh mục">
+                    <IconButton
+                      size="small"
+                      aria-label="Xóa danh mục"
+                      onClick={() => onDelete?.(category)}
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: '10px',
+                        border: '1px solid rgba(220,38,38,0.08)',
+                        color: '#DC2626',
+                        '&:hover': {
+                          color: '#B91C1C',
+                          bgcolor: 'rgba(220,38,38,0.06)',
+                          borderColor: 'rgba(220,38,38,0.2)',
+                        },
+                      }}
+                    >
+                      <DeleteOutlinedIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
             </Box>
           );
@@ -305,7 +330,7 @@ export default function AdminCategoryList({
         onStatusChange={onStatusChange}
       />
       {categories.map((category) => (
-        <AdminCategoryRow key={category.id} category={category} onEdit={onEdit} />
+        <AdminCategoryRow key={category.id} category={category} onEdit={onEdit} onDelete={onDelete} />
       ))}
     </Box>
   );

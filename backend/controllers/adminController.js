@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/MongoDB/User');
+const Payment = require('../models/MongoDB/Payment');
 const Role = require('../models/MongoDB/Role');
 const UserRole = require('../models/MongoDB/UserRole');
 const Category = require('../models/MongoDB/Category');
@@ -27,6 +28,13 @@ const getDashboard = async (req, res) => {
     const pendingCourses = await Course.countDocuments({ status: 'pending' });
     const pendingApplications = await MentorApplication.countDocuments({ status: 'pending' });
 
+    // Aggregate system revenue from successful payments
+    const revenueResult = await Payment.aggregate([
+      { $match: { status: 'success' } },
+      { $group: { _id: null, totalRevenue: { $sum: '$finalAmount' } } }
+    ]);
+    const totalRevenue = revenueResult.length > 0 ? (revenueResult[0].totalRevenue || 0) : 0;
+
     return res.json({
       success: true,
       data: {
@@ -36,6 +44,7 @@ const getDashboard = async (req, res) => {
         publishedCourses,
         pendingCourses,
         pendingApplications,
+        totalRevenue
       }
     });
   } catch (err) {
@@ -222,6 +231,35 @@ const updateUser = async (req, res) => {
   }
 };
 
+const toggleUserStatus = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: 'userId không hợp lệ' });
+    }
+    const { IsActive } = req.body;
+    if (IsActive === undefined) {
+      return res.status(400).json({ success: false, message: 'Thiếu trạng thái IsActive' });
+    }
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isActive: Boolean(IsActive), updatedAt: new Date() },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    return res.json({
+      success: true,
+      message: IsActive ? 'Đã kích hoạt tài khoản thành công' : 'Đã khóa tài khoản thành công',
+      data: user
+    });
+  } catch (err) {
+    console.error('[Admin ToggleUserStatus Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 const deleteUser = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -286,8 +324,42 @@ const getRoles = async (req, res) => {
 // ==========================================
 const getCategories = async (req, res) => {
   try {
-    const data = await Category.find({ isActive: true }).sort({ categoryName: 1 }).lean();
-    return res.json({ success: true, data });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const { q, status, sort } = req.query;
+    const filter = { isActive: true };
+
+    if (q) {
+      filter.$or = [
+        { categoryName: { $regex: q, $options: 'i' } },
+        { displayName: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    let sortObj = { categoryName: 1 };
+    if (sort === 'newest') sortObj = { createdAt: -1 };
+    else if (sort === 'oldest') sortObj = { createdAt: 1 };
+    else if (sort === 'name_asc') sortObj = { displayName: 1 };
+    else if (sort === 'name_desc') sortObj = { displayName: -1 };
+
+    const totalCount = await Category.countDocuments(filter);
+    const data = await Category.find(filter)
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return res.json({
+      success: true,
+      data,
+      page,
+      totalPages,
+      totalCount
+    });
   } catch (err) {
     console.error('[Admin GetCategories Error]', err.message);
     return res.status(500).json({ success: false, message: 'Lỗi server' });
@@ -393,11 +465,54 @@ const deleteCategory = async (req, res) => {
 // ==========================================
 const getLevels = async (req, res) => {
   try {
-    const data = await Level.find({ isActive: true })
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const { q, status, sort } = req.query;
+    const filter = {};
+
+    if (status === 'ACTIVE') {
+      filter.isActive = true;
+    } else if (status === 'INACTIVE') {
+      filter.isActive = false;
+    } else if (status === 'all') {
+      // Show all, no isActive filter
+    } else {
+      // Mặc định ẩn INACTIVE nếu không lọc
+      filter.isActive = true;
+    }
+
+    if (q) {
+      filter.$or = [
+        { levelName: { $regex: q, $options: 'i' } },
+        { displayName: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    let sortObj = { sortOrder: 1 };
+    if (sort === 'newest') sortObj = { createdAt: -1 };
+    else if (sort === 'oldest') sortObj = { createdAt: 1 };
+    else if (sort === 'name_asc') sortObj = { displayName: 1 };
+    else if (sort === 'name_desc') sortObj = { displayName: -1 };
+
+    const totalCount = await Level.countDocuments(filter);
+    const data = await Level.find(filter)
       .populate('categoryId', 'displayName')
-      .sort({ sortOrder: 1 })
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limit)
       .lean();
-    return res.json({ success: true, data });
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return res.json({
+      success: true,
+      data,
+      page,
+      totalPages,
+      totalCount
+    });
   } catch (err) {
     console.error('[Admin GetLevels Error]', err.message);
     return res.status(500).json({ success: false, message: 'Lỗi server' });
@@ -434,17 +549,23 @@ const updateLevel = async (req, res) => {
       return res.status(400).json({ success: false, message: 'levelId không hợp lệ' });
     }
 
-    const { LevelName, DisplayName, SortOrder, CategoryId } = req.body;
+    const { LevelName, DisplayName, SortOrder, CategoryId, IsActive } = req.body;
     if (!LevelName || !DisplayName || SortOrder === undefined) {
       return res.status(400).json({ success: false, message: 'Thiếu thông tin trình độ' });
     }
 
-    await Level.findByIdAndUpdate(levelId, {
+    const updateData = {
       levelName: LevelName,
       displayName: DisplayName,
       sortOrder: Number(SortOrder),
       categoryId: CategoryId || null,
-    });
+    };
+
+    if (IsActive !== undefined) {
+      updateData.isActive = Boolean(IsActive);
+    }
+
+    await Level.findByIdAndUpdate(levelId, updateData);
 
     return res.json({ success: true, message: 'Cập nhật trình độ thành công' });
   } catch (err) {
@@ -728,8 +849,10 @@ const rejectApplication = async (req, res) => {
     await app.save();
 
     const user = await User.findById(app.userId);
-    if (user && user.email) {
-      await sendApplicationResultEmail(user.email, user.fullName, 'rejected', tags, comment);
+    const email = (user && user.email) ? user.email : app.email;
+    const name = (user && user.fullName) ? user.fullName : (app.fullName || app.name || '');
+    if (email) {
+      await sendApplicationResultEmail(email, name, 'rejected', tags, comment);
     }
 
     return res.json({ success: true, message: 'Đã từ chối đơn ứng tuyển' });
@@ -1096,6 +1219,7 @@ module.exports = {
   createUser,
   getUserDetail,
   updateUser,
+  toggleUserStatus,
   deleteUser,
   updateUserRoles,
   getRoles,

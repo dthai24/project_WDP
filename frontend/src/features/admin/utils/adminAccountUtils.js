@@ -10,7 +10,7 @@ export const ADMIN_ACCOUNT_TABLE_HEADERS = [
   'Hành động',
 ];
 
-/** Layout dùng chung cho header + row — tránh lệch cột. */
+/** Shared grid template layout */
 export const ADMIN_ACCOUNT_TABLE_LAYOUT_SX = {
   gridTemplateColumns: ADMIN_ACCOUNT_TABLE_GRID_COLUMNS,
   columnGap: 2,
