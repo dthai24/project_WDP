@@ -74,6 +74,17 @@ export const TEST_SKILL_CHIP_COLORS = {
   [TEST_SKILL_WRITING]: { color: '#EA580C', bg: 'rgba(234,88,12,0.12)' },
 };
 
+/** Khớp dbo.Section_Type.TypeId */
+export const SKILL_TO_TYPE_ID = {
+  [TEST_SKILL_LISTENING]: 1,
+  [TEST_SKILL_READING]: 2,
+  [TEST_SKILL_WRITING]: 3,
+};
+
+export function mapSkillTypeToTypeId(skillType) {
+  return SKILL_TO_TYPE_ID[String(skillType ?? '').trim().toUpperCase()] ?? SKILL_TO_TYPE_ID[TEST_SKILL_WRITING];
+}
+
 export const LISTENING_SOURCE_UPLOAD = 'UPLOAD';
 export const LISTENING_SOURCE_LINK = 'LINK';
 
@@ -187,10 +198,7 @@ export const TEST_QUESTION_TEXT_MIN = 3;
 export const TEST_QUESTION_OPTION_TEXT_MAX = 250;
 
 export function isMultipleChoiceQuestion(question) {
-  const type = question?.QuestionType;
-  return (
-    type === QUESTION_TYPE_MULTIPLE_CHOICE || type === LEGACY_QUESTION_TYPE_SINGLE_CHOICE
-  );
+  return Array.isArray(question?.Options);
 }
 
 function toBooleanDefaultTrue(value) {
@@ -201,14 +209,6 @@ function toBooleanDefaultTrue(value) {
 export function normalizeTestQuestion(question) {
   if (!question) return createEmptyTestQuestion();
 
-  const legacySingle = question.QuestionType === LEGACY_QUESTION_TYPE_SINGLE_CHOICE;
-  const isMc =
-    question.QuestionType === QUESTION_TYPE_MULTIPLE_CHOICE || legacySingle;
-
-  if (!isMc) {
-    return createEmptyTestQuestion();
-  }
-
   const options =
     (question.Options ?? []).length >= 2
       ? question.Options
@@ -216,7 +216,6 @@ export function normalizeTestQuestion(question) {
 
   return {
     ...question,
-    QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     isActive: toBooleanDefaultTrue(question.isActive),
     isUseForTest: toBooleanDefaultTrue(question.isUseForTest),
     Options: options,
@@ -694,6 +693,7 @@ export function createEmptyTestSection(skillType = TEST_SKILL_READING) {
     SectionTitle: '',
     DisplayName: '',
     SkillType: skillType,
+    typeId: mapSkillTypeToTypeId(skillType),
     Description: '',
     isUseForTest: true,
     Questions: [],
@@ -984,10 +984,12 @@ export function createDefaultMultipleChoiceOptions() {
   }));
 }
 
-export function createEmptyTestQuestion() {
+export function createEmptyTestQuestion(context = {}) {
+  const skillType = context.SkillType ?? context.skillType ?? null;
+
   return {
     tempId: createTestTempId('question'),
-    QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
+    SkillType: skillType,
     QuestionText: '',
     Score: 1,
     isActive: true,
@@ -1415,7 +1417,6 @@ export function buildTestQuestionPayload(question) {
 
   return {
     tempId,
-    QuestionType: QUESTION_TYPE_MULTIPLE_CHOICE,
     QuestionText: String(QuestionText ?? '').trim(),
     Score: 1,
     isActive: toBooleanDefaultTrue(normalized.isActive),
@@ -1433,6 +1434,7 @@ export function buildTestSectionPayload(section, sectionOrder) {
     SectionTitle: section.SectionTitle == null ? null : String(section.SectionTitle),
     DisplayName: displayName || getSectionDisplayTitle(section),
     SkillType: skillType,
+    typeId: section.typeId ?? mapSkillTypeToTypeId(skillType),
     isUseForTest: section.isUseForTest !== false,
     Description: String(section.Description ?? '').trim() || null,
     SectionOrder: sectionOrder,

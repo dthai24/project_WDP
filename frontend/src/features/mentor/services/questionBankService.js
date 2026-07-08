@@ -370,8 +370,6 @@ export async function saveQuestionBankSection(savePayload) {
         {
           courseId,
           pathId,
-          questionPathId: resolvedQuestionPathId,
-          skillType: context.skillType ?? null,
           order: item.Order ?? item.order ?? 1,
           data: item.data ?? {},
           choicesInsert: item.choicesInsert ?? [],
