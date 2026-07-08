@@ -43,7 +43,9 @@ const getProfile = async (req, res) => {
     const statsResult = await statsReq.query(`
       SELECT 
         COUNT(CASE WHEN uc.ProgressPercentage < 100 THEN 1 END) AS learning,
-        COUNT(CASE WHEN uc.ProgressPercentage = 100 THEN 1 END) AS completed
+        COUNT(CASE WHEN uc.ProgressPercentage = 100 THEN 1 END) AS completed,
+        (SELECT COUNT(*) FROM Courses WHERE InstructorId = @userId AND IsPublished = 0) AS draftCourses,
+        (SELECT COUNT(*) FROM Courses WHERE InstructorId = @userId AND IsPublished = 1) AS publishedCourses
       FROM User_Courses uc
       WHERE uc.UserId = @userId
     `);
@@ -60,7 +62,12 @@ const getProfile = async (req, res) => {
         learningGoal: user.LearningGoal,
         avatarUrl: user.AvatarUrl || null,
         categories: interestedCategories,
-        stats: { learning: stats.learning || 0, completed: stats.completed || 0 }
+        stats: {
+          learning: stats.learning || 0,
+          completed: stats.completed || 0,
+          draftCourses: stats.draftCourses || 0,
+          publishedCourses: stats.publishedCourses || 0
+        }
       }
     });
   } catch (err) {

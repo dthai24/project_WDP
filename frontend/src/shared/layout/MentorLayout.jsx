@@ -19,7 +19,7 @@ export default function MentorLayout() {
             bgcolor: '#FFFFFF',
           }}
         >
-          <Header logoTo="/mentor/courses" profilePath="/mentor/courses" showMyCoursesButton={false} />
+          <Header logoTo="/mentor/courses" profilePath="/mentor/profile" showMyCoursesButton={false} />
           <Sidebar variant="mentor" />
 
           <Box

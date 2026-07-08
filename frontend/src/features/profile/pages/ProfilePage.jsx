@@ -675,7 +675,7 @@ export default function ProfilePage() {
               {profile.name}
             </Typography>
             <Chip
-              label={profile.role}
+               label={currentUser?.roles?.includes('Mentor') ? 'Giảng viên' : 'Học viên'}
               size="small"
               sx={{
                 height: 22,
@@ -791,84 +791,86 @@ export default function ProfilePage() {
           </SectionCard>
 
           {/* Mục tiêu học tập */}
-          <SectionCard>
-            <SectionHead
-              title="Mục tiêu học tập"
-              icon={RocketLaunchIcon}
-              iconColor={ACCENT}
-              action={
-                <AppButton
-                  size="small"
-                  variant="text"
-                  onClick={handleOpenPopup}
-                  sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
-                >
-                  Cập nhật
-                </AppButton>
-              }
-            />
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.875 }}>
-              {profile?.goals?.map((goal) => (
+          {currentUser?.roles?.includes('Student') && (
+            <SectionCard>
+              <SectionHead
+                title="Mục tiêu học tập"
+                icon={RocketLaunchIcon}
+                iconColor={ACCENT}
+                action={
+                  <AppButton
+                    size="small"
+                    variant="text"
+                    onClick={handleOpenPopup}
+                    sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
+                  >
+                    Cập nhật
+                  </AppButton>
+                }
+              />
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.875 }}>
+                {profile?.goals?.map((goal) => (
+                  <Chip
+                    key={goal}
+                    icon={<AutoAwesomeIcon sx={{ fontSize: "14px !important", color: `${ACCENT} !important` }} />}
+                    label={goal}
+                    size="small"
+                    sx={{
+                      height: 28,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      borderRadius: "99px",
+                      bgcolor: alpha(ACCENT, 0.06),
+                      border: `1px solid ${alpha(ACCENT, 0.18)}`,
+                      color: TEXT,
+                    }}
+                  />
+                ))}
                 <Chip
-                  key={goal}
-                  icon={<AutoAwesomeIcon sx={{ fontSize: "14px !important", color: `${ACCENT} !important` }} />}
-                  label={goal}
+                  label="+ Thêm mục tiêu"
+                  onClick={handleOpenPopup}
                   size="small"
                   sx={{
                     height: 28,
                     fontSize: 12,
                     fontWeight: 600,
                     borderRadius: "99px",
-                    bgcolor: alpha(ACCENT, 0.06),
-                    border: `1px solid ${alpha(ACCENT, 0.18)}`,
-                    color: TEXT,
+                    bgcolor: "transparent",
+                    border: `1px dashed ${alpha(MUTED, 0.4)}`,
+                    color: MUTED,
+                    cursor: "pointer",
+                    "&:hover": { borderColor: PRIMARY, color: PRIMARY },
+                    transition: "border-color 0.2s, color 0.2s",
+
                   }}
                 />
-              ))}
-              <Chip
-                label="+ Thêm mục tiêu"
-                onClick={handleOpenPopup}
-                size="small"
-                sx={{
-                  height: 28,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  borderRadius: "99px",
-                  bgcolor: "transparent",
-                  border: `1px dashed ${alpha(MUTED, 0.4)}`,
-                  color: MUTED,
-                  cursor: "pointer",
-                  "&:hover": { borderColor: PRIMARY, color: PRIMARY },
-                  transition: "border-color 0.2s, color 0.2s",
-
-                }}
-              />
-            </Box>
-          </SectionCard>
+              </Box>
+            </SectionCard>
+          )}
         </Box>
 
         {/* ── Right column ── */}
         <Box sx={{ flex: "0 0 35%", width: "100%", maxWidth: { lg: 420 } }}>
           <Box sx={{ position: { lg: "sticky" }, top: 84 }}>
 
-            {/* Tổng quan học tập */}
+            {/* Tổng quan học tập (Student) / Tổng quan giảng dạy (Mentor) */}
             <SectionCard>
               <SectionHead
-                title="Tổng quan học tập"
+                title={currentUser?.roles?.includes('Mentor') ? "Tổng quan giảng dạy" : "Tổng quan học tập"}
                 icon={MenuBookOutlinedIcon}
                 iconColor={PRIMARY}
               />
               <StatRow
                 icon={MenuBookOutlinedIcon}
                 iconColor={PRIMARY}
-                label="Khóa đang học"
-                value={`${profile?.stats?.learning || 0} khóa`}
+                label={currentUser?.roles?.includes('Mentor') ? "Khóa học nháp" : "Khóa đang học"}
+                value={`${currentUser?.roles?.includes('Mentor') ? (profile?.stats?.draftCourses || 0) : (profile?.stats?.learning || 0)} khóa`}
               />
               <StatRow
                 icon={CheckCircleRoundedIcon}
                 iconColor={SUCCESS}
-                label="Khóa hoàn thành"
-                value={`${profile?.stats?.completed || 0} khóa`}
+                label={currentUser?.roles?.includes('Mentor') ? "Khóa đã xuất bản" : "Khóa hoàn thành"}
+                value={`${currentUser?.roles?.includes('Mentor') ? (profile?.stats?.publishedCourses || 0) : (profile?.stats?.completed || 0)} khóa`}
                 last
               />
             </SectionCard>
@@ -920,7 +922,7 @@ export default function ProfilePage() {
         ref={fileInputRef}
         onChange={handleAvatarSelected}
       />
-      {/* 🚀 Popup cắt ảnh chuẩn form Mentor 🚀 */}
+      {/*  Popup cắt ảnh chuẩn form Mentor */}
       <ProfileImageCropDialog
         open={cropperOpen}
         imageSrc={tempImageSrc || localStorage.getItem('rawAvatar') || ''}

@@ -233,6 +233,8 @@ export default function App() {
         <Route path="student-progress" element={<MentorStudentProgressPage />} />
         <Route path="paths" element={<MentorShellFallbackRedirect />} />
         <Route path="*" element={<MentorShellFallbackRedirect />} />
+        <Route path="profile" element={<ProfilePage />} />
+
       </Route>
 
       <Route
