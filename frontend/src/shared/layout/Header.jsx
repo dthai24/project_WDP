@@ -7,6 +7,7 @@ import {
   SignOut,
   Bell,
   CaretDown,
+  Sparkle,
 } from "@phosphor-icons/react";
 import { isAdmin, isStudent } from "@/features/auth/utils/authUtils";
 import StreakBadge from "@/shared/ui/StreakBadge";
