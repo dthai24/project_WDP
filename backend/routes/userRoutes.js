@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/authMiddleware');
-const { getProfile, updateProfile, changePassword, updateGoals, applyMentor } = require('../controllers/userController');
+const { getProfile, updateProfile, changePassword, updateGoals, applyMentor, getMyCoursesList } = require('../controllers/userController');
 const { uploadAvatar, avatarUploadMiddleware } = require('../controllers/avatarController');
 
 // All routes require authentication
@@ -17,6 +17,9 @@ router.put('/goals', protect, updateGoals);
 
 // POST /api/users/apply-mentor
 router.post('/apply-mentor', protect, applyMentor);
+
+// GET /api/users/courses — Danh sách khoá học của học viên (dùng token)
+router.get('/courses', protect, getMyCoursesList);
 
 module.exports = router;
 
