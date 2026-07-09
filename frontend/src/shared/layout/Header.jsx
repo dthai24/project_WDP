@@ -2,18 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   GraduationCap,
-  House,
-  BookOpen,
   User,
   Gear,
   SignOut,
-  List,
-  X,
-  CaretDown,
-  ChartLine,
-  Question,
-  Sparkle,
   Bell,
+  CaretDown,
 } from "@phosphor-icons/react";
 import { isAdmin, isStudent } from "@/features/auth/utils/authUtils";
 import StreakBadge from "@/shared/ui/StreakBadge";
@@ -29,13 +22,6 @@ function formatRelativeTime(dateString) {
   const days = Math.floor(hours / 24);
   return `${days} ngày trước`;
 }
-
-const NAV_ITEMS = [
-  { label: "Home", path: "/home", icon: House },
-  { label: "Courses", path: "/courses", icon: BookOpen },
-  { label: "My Learning", path: "/my-courses", icon: ChartLine },
-  { label: "Practice", path: "/practice", icon: Question },
-];
 
 export default function Header({ logoTo, profilePath }) {
   const navigate = useNavigate();
@@ -132,14 +118,6 @@ export default function Header({ logoTo, profilePath }) {
     navigate("/login");
   };
 
-  const isActive = (path) => {
-    if (path === "/home") return location.pathname === "/home";
-    if (path === "/courses") return location.pathname.startsWith("/courses");
-    if (path === "/my-courses") return location.pathname.startsWith("/my-courses");
-    if (path === "/practice") return location.pathname.startsWith("/practice");
-    return false;
-  };
-
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -162,29 +140,6 @@ export default function Header({ logoTo, profilePath }) {
               English Master
             </span>
           </Link>
-
-          {/* Desktop Nav */}
-          {!isAdmin(user) && (
-            <nav className="hidden md:flex items-center gap-1">
-              {NAV_ITEMS.map((item) => {
-                const active = isActive(item.path);
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                      active
-                        ? "bg-brand-50 text-brand-700"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                    }`}
-                  >
-                    <item.icon size={16} weight={active ? "fill" : "regular"} />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
 
           {/* Right Side */}
           <div className="flex items-center gap-2">
@@ -387,47 +342,9 @@ export default function Header({ logoTo, profilePath }) {
               </div>
             )}
 
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-slate-50 transition-colors"
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? (
-                <X size={20} weight="bold" className="text-slate-600" />
-              ) : (
-                <List size={20} weight="bold" className="text-slate-600" />
-              )}
-            </button>
           </div>
         </div>
       </div>
-
-      {/* Mobile Nav */}
-      {mobileOpen && !isAdmin(user) && (
-        <div className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-xl">
-          <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const active = isActive(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                    active
-                      ? "bg-brand-50 text-brand-700"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <item.icon size={18} weight={active ? "fill" : "regular"} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      )}
     </header>
   );
 }

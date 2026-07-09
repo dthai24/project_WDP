@@ -70,10 +70,11 @@ export function getStudentMenuItems(user) {
     },
     {
       id: "my-courses",
-      label: "Khóa của tôi",
+      label: "Khóa học của tôi",
       to: "/my-courses",
       Icon: SchoolOutlinedIcon,
       disabled: !student,
+      isActiveMatch: (pathname) => pathname.startsWith("/my-courses"),
     },
     {
       id: "placement-test",
