@@ -2,8 +2,7 @@
  * Editor câu hỏi — cột giữa workspace question bank.
  */
 import { useEffect, useState } from 'react';
-import { Box, Typography, alpha } from '@mui/material';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import { Box, Typography, alpha } from '@mui/material';import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
@@ -19,8 +18,8 @@ import {
   getSectionDeletedQuestions,
   isQuestionBankWritingSkill,
   restoreDeletedQuestionToSection,
-} from '@/features/mentor/utils/mentorTestContentUtils';
-import {
+  SECTION_USE_FOR_TEST_FILTER,
+} from '@/features/mentor/utils/mentorTestContentUtils';import {
   getSectionDisplayQuestionCount,
   hasSectionUnsavedChanges,
 } from '@/features/mentor/utils/questionBankApiMappers';
@@ -87,6 +86,68 @@ function BaiTab({ label, selected, disabled, accentColor, hasContent = false, is
   );
 }
 
+const SECTION_USE_FOR_TEST_FILTER_OPTIONS = [
+  { value: SECTION_USE_FOR_TEST_FILTER.ALL, label: 'Tất cả', countKey: 'all' },
+  { value: SECTION_USE_FOR_TEST_FILTER.IN_TEST, label: 'Dùng trong test', countKey: 'inTest' },
+  { value: SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST, label: 'Không dùng trong test', countKey: 'notInTest' },
+];
+
+function SectionUseForTestFilterRow({ value, counts, onChange }) {
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+      {SECTION_USE_FOR_TEST_FILTER_OPTIONS.map((option) => {
+        const selected = value === option.value;
+        const count = counts?.[option.countKey] ?? 0;
+
+        return (
+          <Box
+            key={option.value}
+            component="button"
+            type="button"
+            onClick={() => onChange?.(option.value)}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.5,
+              height: 32,
+              px: 1.1,
+              borderRadius: '999px',
+              border: `1px solid ${selected ? alpha(PRIMARY, 0.35) : alpha('#0F172A', 0.08)}`,
+              bgcolor: selected ? alpha(PRIMARY, 0.1) : '#fff',
+              color: selected ? PRIMARY : TEXT,
+              fontSize: 12,
+              fontWeight: selected ? 700 : 500,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              '&:hover': { borderColor: alpha(PRIMARY, 0.3) },
+            }}
+          >
+            <Box component="span">{option.label}</Box>
+            <Box
+              component="span"
+              sx={{
+                minWidth: 18,
+                height: 18,
+                px: 0.5,
+                borderRadius: '999px',
+                bgcolor: selected ? alpha(PRIMARY, 0.16) : alpha('#0F172A', 0.06),
+                color: selected ? PRIMARY : MUTED,
+                fontSize: 11,
+                fontWeight: 700,
+                lineHeight: '18px',
+                textAlign: 'center',
+              }}
+            >
+              {count}
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
 export default function MentorQuestionBankBuilderPanel({
   sections = [],
   activeSkill,
@@ -94,6 +155,10 @@ export default function MentorQuestionBankBuilderPanel({
   activeSectionIndex = 0,
   activeSectionId = '',
   skillSections = [],
+  skillSectionsAllCount = 0,
+  sectionUseForTestFilter = SECTION_USE_FOR_TEST_FILTER.ALL,
+  sectionUseForTestCounts = { all: 0, inTest: 0, notInTest: 0 },
+  onSectionUseForTestFilterChange,
   sectionErrors = {},
   sectionBaselines = {},
   sectionSourceBaselines = {},
@@ -180,6 +245,32 @@ export default function MentorQuestionBankBuilderPanel({
 
         <Box id="qb-questions" sx={{ opacity: disabled ? 0.6 : 1, scrollMarginTop: 24 }}>
           <Box sx={{ pointerEvents: disabled ? 'none' : 'auto' }}>
+            {skillSectionsAllCount > 0 ? (
+              <SectionUseForTestFilterRow
+                value={sectionUseForTestFilter}
+                counts={sectionUseForTestCounts}
+                onChange={onSectionUseForTestFilterChange}
+              />
+            ) : null}
+
+            {skillSections.length === 0 && skillSectionsAllCount > 0 ? (
+              <Box
+                sx={{
+                  py: 3,
+                  px: 2,
+                  mb: 2,
+                  textAlign: 'center',
+                  borderRadius: '12px',
+                  bgcolor: 'rgba(15,23,42,0.03)',
+                  border: '1px dashed rgba(15,23,42,0.12)',
+                }}
+              >
+                <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+                  Không có section nào khớp bộ lọc hiện tại.
+                </Typography>
+              </Box>
+            ) : null}
+
             {activeSection ? (
               <>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mb: 2 }}>

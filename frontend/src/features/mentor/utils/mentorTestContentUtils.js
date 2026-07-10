@@ -226,6 +226,38 @@ export function isQuestionActive(question) {
   return question?.isUseForTest !== false;
 }
 
+export const SECTION_USE_FOR_TEST_FILTER = {
+  ALL: 'all',
+  IN_TEST: 'in_test',
+  NOT_IN_TEST: 'not_in_test',
+};
+
+export function isSectionUseForTest(section) {
+  return section?.isUseForTest !== false;
+}
+
+export function countSectionsByUseForTest(sections = []) {
+  const inTest = sections.filter(isSectionUseForTest).length;
+  return {
+    all: sections.length,
+    inTest,
+    notInTest: sections.length - inTest,
+  };
+}
+
+export function filterSectionsByUseForTest(
+  sections = [],
+  filter = SECTION_USE_FOR_TEST_FILTER.ALL,
+) {
+  if (filter === SECTION_USE_FOR_TEST_FILTER.IN_TEST) {
+    return sections.filter(isSectionUseForTest);
+  }
+  if (filter === SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST) {
+    return sections.filter((section) => !isSectionUseForTest(section));
+  }
+  return sections;
+}
+
 export function isPersistedQuestionLocked(question, persistedQuestionIds, coursePublished) {
   if (!coursePublished || !question?.tempId) return false;
   const ids = persistedQuestionIds instanceof Set
@@ -1488,7 +1520,7 @@ export function scrollToQuestionBankItem(target, { delayMs = 180 } = {}) {
     if (target?.type === 'question' && target.questionTempId) {
       document.getElementById(`qb-question-${target.questionTempId}`)?.scrollIntoView({
         behavior: 'smooth',
-        block: 'center',
+        block: 'nearest',
       });
       return;
     }

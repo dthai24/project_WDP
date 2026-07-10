@@ -1,7 +1,7 @@
 /**
  * Mục lục nội dung + mục lục khóa học — cột phải workspace question bank.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Collapse, Typography, alpha } from '@mui/material';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
@@ -36,6 +36,8 @@ import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
   TEST_SKILL_WRITING,
+  filterSectionsByUseForTest,
+  SECTION_USE_FOR_TEST_FILTER,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const OUTLINE_SKILL_ITEMS = [
@@ -369,6 +371,7 @@ export default function MentorQuestionBankOutlinePanel({
   sections = [],
   activeSkill,
   activeSectionId = '',
+  sectionUseForTestFilter = SECTION_USE_FOR_TEST_FILTER.ALL,
   onNavigateToItem,
   courseName = '',
   courseCategory = '',
@@ -390,6 +393,13 @@ export default function MentorQuestionBankOutlinePanel({
 
   const filledSections = getNonEmptyQuestionBankSections(sections);
   const hasContentOutline = filledSections.length > 0;
+  const hasFilteredOutline = useMemo(
+    () => OUTLINE_SKILL_ITEMS.some(({ skill }) =>
+      getNonEmptyQuestionBankSections(
+        filterSectionsByUseForTest(getSectionsBySkill(sections, skill), sectionUseForTestFilter),
+      ).length > 0),
+    [sections, sectionUseForTestFilter],
+  );
 
   useEffect(() => {
     if (!activeSkill) return;
@@ -467,6 +477,10 @@ export default function MentorQuestionBankOutlinePanel({
           <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
             Thêm câu hỏi để xem mục lục và điều hướng nhanh.
           </Typography>
+        ) : !hasFilteredOutline ? (
+          <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
+            Không có section nào khớp bộ lọc hiện tại.
+          </Typography>
         ) : (
           <Box
             sx={{
@@ -481,7 +495,9 @@ export default function MentorQuestionBankOutlinePanel({
             }}
           >
             {OUTLINE_SKILL_ITEMS.map(({ skill, icon: Icon }) => {
-              const skillSectionsOutline = getNonEmptyQuestionBankSections(getSectionsBySkill(sections, skill));
+              const skillSectionsOutline = getNonEmptyQuestionBankSections(
+                filterSectionsByUseForTest(getSectionsBySkill(sections, skill), sectionUseForTestFilter),
+              );
               if (skillSectionsOutline.length === 0) return null;
 
               const theme = TEST_SKILL_CHIP_COLORS[skill];
@@ -520,6 +536,13 @@ export default function MentorQuestionBankOutlinePanel({
                         active={isSectionActive}
                         onToggle={() => toggleSectionExpanded(section.tempId)}
                       >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.2,
+                          }}
+                        >
                         {questions.map((question, questionIndex) => {
                           const questionTitle = truncateQuestionLabel(question.QuestionText, 64);
                           const isQuestionSelected = selectedQuestionId === question.tempId;
@@ -543,6 +566,7 @@ export default function MentorQuestionBankOutlinePanel({
                             />
                           );
                         })}
+                        </Box>
                       </SectionOutlineCard>
                     );
                   })}

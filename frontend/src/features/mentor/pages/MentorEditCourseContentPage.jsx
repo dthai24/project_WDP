@@ -8,6 +8,7 @@ import { toast } from '@/shared/ui/Toast';
 import MentorCourseContentBuilder from '@/features/mentor/components/course/MentorCourseContentBuilder';
 import MentorCourseContentSidebar from '@/features/mentor/components/course/MentorCourseContentSidebar';
 import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
+import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
 import { saveCoursePath, deleteCoursePath } from '@/features/mentor/services/courseContentService';
@@ -169,7 +170,9 @@ export default function MentorEditCourseContentPage() {
   const pathsRef = useRef(paths);
   const savedPathSnapshotsRef = useRef(savedPathSnapshots);
   const pendingNavigationRef = useRef(null);
+  const requestNavigationRef = useRef(null);
   const confirmSaveInFlightRef = useRef(false);
+  const { registerNavigationGuard } = useNavigationGuard() ?? {};
 
   useEffect(() => {
     pathsRef.current = paths;
@@ -246,7 +249,7 @@ export default function MentorEditCourseContentPage() {
     setValidationErrors({ root: [], paths: {} });
   }, []);
 
-  const handleAddPath = () => {
+  const performAddPath = useCallback(() => {
     const newPath = createEmptyPath();
     applyPaths((prev) => [...prev, newPath]);
     setExpandedPaths((prev) => ({ ...prev, [newPath.tempId]: true }));
@@ -256,7 +259,7 @@ export default function MentorEditCourseContentPage() {
     }));
     setActiveChapterId(newPath.tempId);
     setFocusTarget({ type: 'chapter-edit', pathTempId: newPath.tempId });
-  };
+  }, [applyPaths]);
 
   const handlePathChange = (pathTempId, patch) =>
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
@@ -394,7 +397,7 @@ export default function MentorEditCourseContentPage() {
     setDeleteConfirm(null);
   };
 
-  const handleAddNode = (pathTempId) => {
+  const performAddNode = useCallback((pathTempId) => {
     const newNode = createEmptyNode();
     applyPaths((prev) =>
       prev.map((p) =>
@@ -410,12 +413,12 @@ export default function MentorEditCourseContentPage() {
       pathTempId,
       nodeTempId: newNode.tempId,
     });
-  };
+  }, [applyPaths]);
 
   const handleNodeChange = (pathTempId, nodeTempId, patch) =>
     applyPaths((prev) => updateNodeInPath(prev, pathTempId, nodeTempId, patch));
 
-  const handleAddMaterial = (pathTempId, nodeTempId) => {
+  const performAddMaterial = useCallback((pathTempId, nodeTempId) => {
     const newMaterial = createEmptyMaterial();
     applyPaths((prev) =>
       prev.map((p) => {
@@ -430,7 +433,15 @@ export default function MentorEditCourseContentPage() {
         };
       }),
     );
-  };
+    setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
+    setActiveChapterId(pathTempId);
+    setFocusTarget({
+      type: 'material',
+      pathTempId,
+      nodeTempId,
+      materialTempId: newMaterial.tempId,
+    });
+  }, [applyPaths]);
 
   const handleMaterialChange = (pathTempId, nodeTempId, materialTempId, patch) =>
     applyPaths((prev) => updateMaterialInPath(prev, pathTempId, nodeTempId, materialTempId, patch));
@@ -768,7 +779,7 @@ export default function MentorEditCourseContentPage() {
     }));
   }, []);
 
-  const requestPathNavigation = useCallback((navigateFn) => {
+  const requestContentNavigation = useCallback((navigateFn) => {
     const currentPathId = activeChapterId;
     if (!currentPathId) {
       navigateFn();
@@ -776,8 +787,8 @@ export default function MentorEditCourseContentPage() {
     }
 
     const path = pathsRef.current.find((item) => item.tempId === currentPathId);
-    const isDirty = path
-      && !isPathSnapshotSaved(path, savedPathSnapshotsRef.current[currentPathId]);
+    const snapshot = savedPathSnapshotsRef.current[currentPathId];
+    const isDirty = Boolean(path && !isPathSnapshotSaved(path, snapshot));
 
     if (!isDirty) {
       navigateFn();
@@ -788,14 +799,43 @@ export default function MentorEditCourseContentPage() {
     setUnsavedNavDialogOpen(true);
   }, [activeChapterId]);
 
+  requestNavigationRef.current = requestContentNavigation;
+
+  useEffect(() => {
+    if (!registerNavigationGuard) return undefined;
+    return registerNavigationGuard((navigateFn) => {
+      requestNavigationRef.current?.(navigateFn);
+    });
+  }, [registerNavigationGuard]);
+
+  const handleGuardedLinkNavigate = useCallback((to) => (event) => {
+    event.preventDefault();
+    requestContentNavigation(() => navigate(to));
+  }, [navigate, requestContentNavigation]);
+
+  const handleAddPath = useCallback(() => {
+    requestContentNavigation(performAddPath);
+  }, [performAddPath, requestContentNavigation]);
+
+  const handleAddNode = useCallback((pathTempId) => {
+    requestContentNavigation(() => performAddNode(pathTempId));
+  }, [performAddNode, requestContentNavigation]);
+
+  const handleAddMaterial = useCallback((pathTempId, nodeTempId) => {
+    requestContentNavigation(() => performAddMaterial(pathTempId, nodeTempId));
+  }, [performAddMaterial, requestContentNavigation]);
+
   const handleRequestChapterChange = useCallback((nextChapterId) => {
     if (nextChapterId === activeChapterId) return;
     if (!nextChapterId) {
-      setActiveChapterId(null);
+      requestContentNavigation(() => setActiveChapterId(null));
       return;
     }
-    requestPathNavigation(() => setActiveChapterId(nextChapterId));
-  }, [activeChapterId, requestPathNavigation]);
+    requestContentNavigation(() => {
+      setActiveChapterId(nextChapterId);
+      setFocusTarget(null);
+    });
+  }, [activeChapterId, requestContentNavigation]);
 
   const handleUnsavedNavCancel = () => {
     pendingNavigationRef.current = null;
@@ -816,13 +856,13 @@ export default function MentorEditCourseContentPage() {
       setFocusTarget(null);
     };
 
-    if (pathTempId === activeChapterId) {
+    if (pathTempId === activeChapterId && !focusTarget) {
       navigate();
       return;
     }
 
-    requestPathNavigation(navigate);
-  }, [activeChapterId, requestPathNavigation]);
+    requestContentNavigation(navigate);
+  }, [activeChapterId, focusTarget, requestContentNavigation]);
 
   const handleEditChapter = useCallback((pathTempId) => {
     const navigate = () => {
@@ -830,13 +870,17 @@ export default function MentorEditCourseContentPage() {
       setFocusTarget({ type: 'chapter-edit', pathTempId });
     };
 
-    if (pathTempId === activeChapterId) {
+    if (
+      pathTempId === activeChapterId
+      && focusTarget?.type === 'chapter-edit'
+      && focusTarget?.pathTempId === pathTempId
+    ) {
       navigate();
       return;
     }
 
-    requestPathNavigation(navigate);
-  }, [activeChapterId, requestPathNavigation]);
+    requestContentNavigation(navigate);
+  }, [activeChapterId, focusTarget, requestContentNavigation]);
 
   const handleSelectNode = useCallback((pathTempId, nodeTempId) => {
     const navigate = () => {
@@ -845,13 +889,17 @@ export default function MentorEditCourseContentPage() {
       setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
     };
 
-    if (pathTempId === activeChapterId) {
+    if (
+      pathTempId === activeChapterId
+      && focusTarget?.type === 'lesson'
+      && focusTarget?.nodeTempId === nodeTempId
+    ) {
       navigate();
       return;
     }
 
-    requestPathNavigation(navigate);
-  }, [activeChapterId, requestPathNavigation]);
+    requestContentNavigation(navigate);
+  }, [activeChapterId, focusTarget, requestContentNavigation]);
 
   const handleSelectMaterial = useCallback((pathTempId, nodeTempId, materialTempId) => {
     const navigate = () => {
@@ -860,16 +908,21 @@ export default function MentorEditCourseContentPage() {
       setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
     };
 
-    if (pathTempId === activeChapterId) {
+    if (
+      pathTempId === activeChapterId
+      && focusTarget?.type === 'material'
+      && focusTarget?.nodeTempId === nodeTempId
+      && focusTarget?.materialTempId === materialTempId
+    ) {
       navigate();
       return;
     }
 
-    requestPathNavigation(navigate);
-  }, [activeChapterId, requestPathNavigation]);
+    requestContentNavigation(navigate);
+  }, [activeChapterId, focusTarget, requestContentNavigation]);
 
   const handleBack = () => {
-    navigate(`/mentor/courses/${courseId}?tab=content`);
+    requestContentNavigation(() => navigate(`/mentor/courses/${courseId}?tab=content`));
   };
 
   if (!ready || !coursePascal) {
@@ -908,13 +961,13 @@ export default function MentorEditCourseContentPage() {
         separator="/"
         sx={{ mb: 1.5, '& .MuiBreadcrumbs-separator': { color: MUTED, mx: 0.5 } }}
       >
-        <MuiLink component={Link} to="/home" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+        <MuiLink component={Link} to="/home" underline="hover" onClick={handleGuardedLinkNavigate('/home')} sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
           Trang chủ
         </MuiLink>
-        <MuiLink component={Link} to="/mentor/courses" underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+        <MuiLink component={Link} to="/mentor/courses" underline="hover" onClick={handleGuardedLinkNavigate('/mentor/courses')} sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
           Khóa học của tôi
         </MuiLink>
-        <MuiLink component={Link} to={`/mentor/courses/${courseId}`} underline="hover" sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
+        <MuiLink component={Link} to={`/mentor/courses/${courseId}`} underline="hover" onClick={handleGuardedLinkNavigate(`/mentor/courses/${courseId}`)} sx={{ fontSize: 13, color: MUTED, fontWeight: 500 }}>
           Chi tiết khóa học
         </MuiLink>
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
@@ -957,6 +1010,7 @@ export default function MentorEditCourseContentPage() {
           onSelectMaterial={handleSelectMaterial}
           onAddChapter={handleAddPath}
           onAddNode={handleAddNode}
+          onAddMaterial={handleAddMaterial}
           onDeleteNewPath={handleDeleteNewPath}
           disabled={busy}
           footer={backButton}
@@ -999,6 +1053,7 @@ export default function MentorEditCourseContentPage() {
           onUpdateMaterial={handleUpdateMaterial}
           activeChapterId={activeChapterId}
           onActiveChapterChange={handleRequestChapterChange}
+          onRequestContentNavigation={requestContentNavigation}
           focusTarget={focusTarget}
           sidebarLayout
         />

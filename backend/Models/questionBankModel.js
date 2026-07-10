@@ -12,9 +12,27 @@ const getAllListQuestionBankByMentorId = async (mentorId) => {
                 qb.BankId,
                 c.CourseName,
                 c.Description AS CourseDescription,
-                COUNT(DISTINCT q.QuestionId) AS TotalQuestion,
-                COUNT(DISTINCT CASE WHEN q.IsActive = 1 THEN q.QuestionId END) AS TotalQuestionIsPublic,
-                COUNT(DISTINCT CASE WHEN q.QuestionId IS NOT NULL THEN qp.PathId END) AS PathHasQuestion,
+                COUNT(DISTINCT CASE WHEN q.IsActive = 1 THEN q.QuestionId END) AS TotalQuestion,
+                COUNT(DISTINCT CASE
+                    WHEN q.IsActive = 1
+                     AND ISNULL(qs.IsUseForTest, 1) = 1
+                     AND ISNULL(q.IsUseForTest, 1) = 1
+                    THEN q.QuestionId
+                END) AS TotalQuestionIsPublic,
+                COUNT(DISTINCT CASE
+                    WHEN q.IsActive = 1
+                     AND (
+                        ISNULL(qs.IsUseForTest, 1) = 0
+                        OR ISNULL(q.IsUseForTest, 1) = 0
+                     )
+                    THEN q.QuestionId
+                END) AS TotalDraftQuestion,
+                COUNT(DISTINCT CASE WHEN q.IsActive = 1 THEN qp.PathId END) AS PathHasQuestion,
+                (
+                    SELECT COUNT(*)
+                    FROM dbo.Paths p
+                    WHERE p.CourseId = c.CourseId
+                ) AS TotalPath,
                 qb.UpdatedAt,
                 c.IsPublished,
                 c.Thumbnail

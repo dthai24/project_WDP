@@ -121,6 +121,7 @@ export default function MentorChapterCard({
   showChapterEdit = true,
   showNodeContent = true,
   showMaterialContent = true,
+  onRequestContentNavigation = null,
 }) {
   const nodesNormal = path.nodes ?? path.Nodes ?? [];
   const lessonCount = nodesNormal.length;
@@ -434,6 +435,34 @@ export default function MentorChapterCard({
     onAddMaterial(path.tempId, activeLesson.tempId);
   };
 
+  const guardedTabChange = useCallback((navigateFn, nextId, currentId) => {
+    if (!nextId || nextId === currentId) return;
+    if (onRequestContentNavigation) {
+      onRequestContentNavigation(navigateFn);
+      return;
+    }
+    navigateFn();
+  }, [onRequestContentNavigation]);
+
+  const handleLessonTabChange = useCallback((nextLessonId) => {
+    guardedTabChange(
+      () => {
+        setActiveLessonId(nextLessonId);
+        setActiveMaterialId(null);
+      },
+      nextLessonId,
+      activeLessonId,
+    );
+  }, [activeLessonId, guardedTabChange]);
+
+  const handleMaterialTabChange = useCallback((nextMaterialId) => {
+    guardedTabChange(
+      () => setActiveMaterialId(nextMaterialId),
+      nextMaterialId,
+      activeMaterialId,
+    );
+  }, [activeMaterialId, guardedTabChange]);
+
   const renderMaterialsTabPanel = () => {
     if (!activeLesson) return null;
 
@@ -564,7 +593,7 @@ export default function MentorChapterCard({
           <MentorMaterialTabs
             materials={activeMaterials}
             activeId={activeMaterialId}
-            onChange={setActiveMaterialId}
+            onChange={handleMaterialTabChange}
             onAdd={handleAddMaterial}
             disabled={disabled}
             hasErrorById={hasMaterialErrorById}
@@ -657,7 +686,7 @@ export default function MentorChapterCard({
         <MentorMaterialTabs
           materials={activeMaterials}
           activeId={activeMaterialId}
-          onChange={setActiveMaterialId}
+          onChange={handleMaterialTabChange}
           onAdd={handleAddMaterial}
           disabled={disabled}
           hasErrorById={hasMaterialErrorById}
@@ -730,7 +759,7 @@ export default function MentorChapterCard({
       <MentorLessonTabs
         nodes={nodesNormal}
         activeId={activeLessonId}
-        onChange={setActiveLessonId}
+        onChange={handleLessonTabChange}
         onAdd={handleAddLesson}
         disabled={disabled}
         hasErrorById={hasLessonErrorById}

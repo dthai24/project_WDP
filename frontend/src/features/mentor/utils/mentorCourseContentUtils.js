@@ -419,6 +419,35 @@ export function isNodeSnapshotSaved(path, nodeTempId, savedSnapshot) {
   return serializeNodeSnapshot(currentNode) === serializeNodeSnapshot(baselineNode);
 }
 
+/** Có thay đổi chưa lưu trong phạm vi đang chỉnh sửa (path / node / material). */
+export function hasUnsavedEditScopeChanges(path, savedSnapshot, focusTarget) {
+  if (!path) return false;
+
+  const focusPathId = focusTarget?.pathTempId;
+  if (focusPathId && focusPathId !== path.tempId) {
+    return !isPathSnapshotSaved(path, savedSnapshot);
+  }
+
+  if (focusTarget?.type === 'material' && focusTarget.nodeTempId && focusTarget.materialTempId) {
+    return !isMaterialSnapshotSaved(
+      path,
+      focusTarget.nodeTempId,
+      focusTarget.materialTempId,
+      savedSnapshot,
+    );
+  }
+
+  if (focusTarget?.type === 'lesson' && focusTarget.nodeTempId) {
+    return !isNodeFieldsSnapshotSaved(path, focusTarget.nodeTempId, savedSnapshot);
+  }
+
+  if (focusTarget?.type === 'chapter-edit') {
+    return !isPathFieldsSnapshotSaved(path, savedSnapshot);
+  }
+
+  return false;
+}
+
 export function validatePathFieldsForSave(path) {
   const errors = {};
 

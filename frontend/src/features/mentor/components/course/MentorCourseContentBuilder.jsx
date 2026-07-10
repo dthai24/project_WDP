@@ -7,7 +7,7 @@ import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCard from './MentorChapterCard';
 import MentorChapterTabs from './MentorChapterTabs';
 import MentorSectionTabToggle from './MentorSectionTabToggle';
-import { MUTED, TEXT } from './mentorCourseCreateStyles';
+import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import { BUILDER_PANEL_SX, scopedEditorBarSx, scopedUpdateButtonSx } from './mentorCourseContentStyles';
 import { PathPublishToggle, NodePublishToggle } from './MentorPublishToggles';
 import { filterLearningMaterials, isPathFieldsSnapshotSaved, isNodeFieldsSnapshotSaved, isMaterialSnapshotSaved, resolveChapterId, chapterHasContent } from '@/features/mentor/utils/mentorCourseContentUtils';
@@ -45,6 +45,7 @@ export default function MentorCourseContentBuilder({
   onUpdateMaterial,
   activeChapterId: controlledActiveChapterId,
   onActiveChapterChange,
+  onRequestContentNavigation,
   courseId = null,
   courseTitle = '',
   focusTarget = null,
@@ -431,6 +432,7 @@ export default function MentorCourseContentBuilder({
                   showChapterEdit={showChapterEdit}
                   showNodeContent={showNodeContent}
                   showMaterialContent={showMaterialContent}
+                  onRequestContentNavigation={onRequestContentNavigation}
                 />
                 ) : (
                   <Box

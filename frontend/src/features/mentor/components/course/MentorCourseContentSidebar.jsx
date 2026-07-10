@@ -265,6 +265,8 @@ function NodeSidebarItem({
   onToggle,
   onSelect,
   onSelectMaterial,
+  onAddMaterial,
+  disabled = false,
 }) {
   const materials = filterLearningMaterials(node.materials ?? node.Materials ?? []);
 
@@ -355,6 +357,24 @@ function NodeSidebarItem({
               );
             })
           )}
+          <AppButton
+            variant="text"
+            startIcon={<AddRoundedIcon sx={{ fontSize: 16 }} />}
+            onClick={() => onAddMaterial?.(pathTempId, node.tempId)}
+            disabled={disabled}
+            sx={{
+              mt: 0.25,
+              ml: 0.25,
+              height: 28,
+              fontSize: 11.5,
+              fontWeight: 600,
+              color: PRIMARY,
+              justifyContent: 'flex-start',
+              px: 0.75,
+            }}
+          >
+            Thêm học liệu
+          </AppButton>
         </Box>
       </Collapse>
     </Box>
@@ -514,6 +534,7 @@ export default function MentorCourseContentSidebar({
   onSelectMaterial,
   onAddChapter,
   onAddNode,
+  onAddMaterial,
   onDeleteNewPath,
   disabled = false,
   footer = null,
@@ -740,6 +761,8 @@ export default function MentorCourseContentSidebar({
                           onToggle={(event) => handleToggleNode(event, path.tempId, node.tempId)}
                           onSelect={() => handleNodeClick(path.tempId, node.tempId)}
                           onSelectMaterial={onSelectMaterial}
+                          onAddMaterial={onAddMaterial}
+                          disabled={disabled}
                         />
                       ))
                     )}

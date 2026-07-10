@@ -8,7 +8,6 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
-import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
@@ -17,6 +16,7 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import { useNavigate } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
+import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 import { toast } from '@/shared/ui/Toast';
 import {
   formatMentorCourseDate,
@@ -66,39 +66,6 @@ function getStatusChip(IsPublished) {
     },
   };
 }
-function CourseThumbnail({ courseName, thumbnail }) {
-  return (
-    <Box
-      sx={{
-        width: { xs: '100%', sm: 112 },
-        height: { xs: 140, sm: 72 },
-        borderRadius: '14px',
-        flexShrink: 0,
-        overflow: 'hidden',
-        bgcolor: alpha(PRIMARY, 0.1),
-        display: 'grid',
-        placeItems: 'center',
-      }}
-    >
-      {thumbnail ?
-        <Box
-          component="img"
-          src={`http://localhost:5000${thumbnail}`}
-          alt={courseName || 'Course thumbnail'}
-          sx={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-          }}
-        />
-        :
-        <MenuBookOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
-      }
-      {courseName && <Typography sx={{ display: 'none' }}>{courseName}</Typography>}
-    </Box>
-  );
-}
 function MetricItem({ icon: Icon, label, value, iconColor }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
@@ -135,7 +102,18 @@ export default function MentorQuestionBankRow({ bankItem }) {
         gap: { xs: 1.75, md: 2.5 },
       }}
     >
-      <CourseThumbnail courseName={bankItem.CourseName} thumbnail={bankItem.Thumbnail} />
+      <ThumbnailImage
+        src={bankItem.Thumbnail}
+        label={bankItem.CourseName}
+        alt={bankItem.CourseName}
+        iconSize={28}
+        sx={{
+          width: { xs: '100%', sm: 112 },
+          height: { xs: 140, sm: 72 },
+          borderRadius: '14px',
+          flexShrink: 0,
+        }}
+      />
       <Box sx={{ flex: 1, minWidth: 0, pr: { xs: 10, md: 0 } }}>
         <Typography
           sx={{
@@ -172,20 +150,23 @@ export default function MentorQuestionBankRow({ bankItem }) {
           />
           <MetricItem
             icon={CheckCircleOutlineRoundedIcon}
-            label="Đã xuất bản: "
+            label="Dùng trong test: "
             value={bankItem.TotalQuestionIsPublic ?? 0}
             iconColor={METRIC_COLORS.published}
           />
           <MetricItem
             icon={EditNoteRoundedIcon}
             label="Bản nháp"
-            value={Number(bankItem.TotalQuestion) - Number(bankItem.TotalQuestionIsPublic)}
+            value={bankItem.TotalDraftQuestion ?? Math.max(
+              0,
+              Number(bankItem.TotalQuestion) - Number(bankItem.TotalQuestionIsPublic),
+            )}
             iconColor={METRIC_COLORS.draft}
           />
           <MetricItem
             icon={RouteOutlinedIcon}
             label="Chương có câu hỏi"
-            value={bankItem.PathHasQuestion ?? 0}
+            value={`${bankItem.PathHasQuestion ?? 0}/${bankItem.TotalPath ?? 0}`}
             iconColor={METRIC_COLORS.chapters}
           />
           <MetricItem

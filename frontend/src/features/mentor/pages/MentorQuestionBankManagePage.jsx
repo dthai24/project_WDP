@@ -32,6 +32,9 @@ import {
   validateQuestionBankSection,
   getQuestionBankSectionValidationToast,
   hasPendingPersistedQuestionDeletes,
+  SECTION_USE_FOR_TEST_FILTER,
+  countSectionsByUseForTest,
+  filterSectionsByUseForTest,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
   buildSectionBaselinesMap,
@@ -88,6 +91,9 @@ export default function MentorQuestionBankManagePage() {
   const [updatingSectionId, setUpdatingSectionId] = useState('');
   const [activeSkill, setActiveSkill] = useState(TEST_SKILL_LISTENING);
   const [activeSectionId, setActiveSectionId] = useState('');
+  const [sectionUseForTestFilter, setSectionUseForTestFilter] = useState(
+    SECTION_USE_FOR_TEST_FILTER.ALL,
+  );
   const {
     bindSectionControls,
     flushActiveSection,
@@ -267,10 +273,27 @@ export default function MentorQuestionBankManagePage() {
     };
   }, [activeSkill]);
 
-  const skillSections = useMemo(
+  const skillSectionsAll = useMemo(
     () => getVisibleSectionsBySkill(sections, activeSkill),
     [sections, activeSkill],
   );
+
+  const skillSections = useMemo(
+    () => filterSectionsByUseForTest(skillSectionsAll, sectionUseForTestFilter),
+    [skillSectionsAll, sectionUseForTestFilter],
+  );
+
+  const sectionUseForTestCounts = useMemo(
+    () => countSectionsByUseForTest(skillSectionsAll),
+    [skillSectionsAll],
+  );
+
+  useEffect(() => {
+    if (skillSections.length === 0) return;
+    if (!skillSections.some((section) => section.tempId === activeSectionId)) {
+      setActiveSectionId(skillSections[0].tempId);
+    }
+  }, [skillSections, activeSectionId]);
 
   const visibleSections = sections;
 
@@ -816,6 +839,10 @@ export default function MentorQuestionBankManagePage() {
             activeSectionIndex={activeSectionIndex}
             activeSectionId={activeSectionId}
             skillSections={skillSections}
+            skillSectionsAllCount={skillSectionsAll.length}
+            sectionUseForTestFilter={sectionUseForTestFilter}
+            sectionUseForTestCounts={sectionUseForTestCounts}
+            onSectionUseForTestFilterChange={setSectionUseForTestFilter}
             sectionErrors={sectionErrors}
             sectionBaselines={sectionBaselines}
             sectionSourceBaselines={sectionSourceBaselines}
@@ -835,6 +862,7 @@ export default function MentorQuestionBankManagePage() {
             sections={visibleSections}
             activeSkill={activeSkill}
             activeSectionId={activeSectionId}
+            sectionUseForTestFilter={sectionUseForTestFilter}
             onNavigateToItem={handleOutlineNavigate}
             courseName={course?.CourseName ?? `Khóa học #${courseId}`}
             courseCategory={courseCategory}

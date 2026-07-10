@@ -216,6 +216,8 @@ export default function MentorTestSectionCard({
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [changedQuestionDialog, setChangedQuestionDialog] = useState(null);
   const childControlsRef = useRef(null);
+  const questionsListRef = useRef(null);
+  const pendingScrollQuestionIdRef = useRef(null);
 
   const handleRegisterChildControls = useCallback((controls) => {
     childControlsRef.current = controls;
@@ -229,6 +231,7 @@ export default function MentorTestSectionCard({
     });
     return () => onRegisterSectionControls(null);
   }, [onRegisterSectionControls]);
+
   const questions = section.Questions ?? [];
   const sectionScoreLabel = getSectionScoreLabel(section, scoringMode, totalScore, questionCountAll);
   const skillType = section.SkillType ?? TEST_SKILL_READING;
@@ -290,11 +293,33 @@ export default function MentorTestSectionCard({
   };
 
   const handleAddQuestion = () => {
-    updateQuestions([
-      ...questions,
-      createEmptyTestQuestion({ SkillType: skillType }),
-    ]);
+    const newQuestion = createEmptyTestQuestion({ SkillType: skillType });
+    pendingScrollQuestionIdRef.current = newQuestion.tempId;
+    updateQuestions([...questions, newQuestion]);
   };
+
+  useEffect(() => {
+    const tempId = pendingScrollQuestionIdRef.current;
+    if (!tempId) return undefined;
+
+    pendingScrollQuestionIdRef.current = null;
+
+    const scrollToNewQuestion = () => {
+      const questionEl = document.getElementById(`qb-question-${tempId}`);
+      if (questionEl) {
+        questionEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        return;
+      }
+
+      const listEl = questionsListRef.current;
+      if (listEl && listEl.scrollHeight > listEl.clientHeight) {
+        listEl.scrollTo({ top: listEl.scrollHeight, behavior: 'smooth' });
+      }
+    };
+
+    const frameId = window.requestAnimationFrame(scrollToNewQuestion);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [questions]);
 
   const handleQuestionChange = (questionTempId, nextQuestion) => {
     const prev = questions.find((question) => question.tempId === questionTempId);
@@ -394,7 +419,7 @@ export default function MentorTestSectionCard({
           border: '1px solid rgba(15,23,42,0.08)',
           borderLeft: `3px solid ${skillAccent}`,
           bgcolor: '#fff',
-          overflow: 'hidden',
+          overflow: questionBankMode && questions.length > 2 ? 'visible' : 'hidden',
           boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
         }}
       >
@@ -702,7 +727,7 @@ export default function MentorTestSectionCard({
           ) : null}
 
           {/* ── Questions header ── */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 0.75, flexWrap: 'wrap' }}>
             <Typography
               sx={{
                 fontSize: 11,
@@ -711,28 +736,37 @@ export default function MentorTestSectionCard({
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 flex: 1,
+                minWidth: 0,
               }}
             >
               Câu hỏi
             </Typography>
             {questions.length > 0 ? (
-              <Tooltip title="Xáo trộn đáp án toàn bài" arrow>
-                <span>
-                  <IconButton
-                    size="small"
-                    onClick={handleShuffleAllOptions}
-                    disabled={disabled || !canShuffleSectionOptions}
-                    aria-label="Xáo trộn đáp án toàn bài"
-                    sx={{
-                      p: 0.45,
-                      color: MUTED,
-                      '&:hover': { color: TEXT, bgcolor: 'rgba(15,23,42,0.06)' },
-                    }}
-                  >
-                    <ShuffleRoundedIcon sx={{ fontSize: 17 }} />
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <>
+                <AddQuestionButton
+                  onClick={handleAddQuestion}
+                  disabled={disabled}
+                  label="Thêm câu hỏi"
+                  variant="inline"
+                />
+                <Tooltip title="Xáo trộn đáp án toàn bài" arrow>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleShuffleAllOptions}
+                      disabled={disabled || !canShuffleSectionOptions}
+                      aria-label="Xáo trộn đáp án toàn bài"
+                      sx={{
+                        p: 0.45,
+                        color: MUTED,
+                        '&:hover': { color: TEXT, bgcolor: 'rgba(15,23,42,0.06)' },
+                      }}
+                    >
+                      <ShuffleRoundedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </>
             ) : null}
           </Box>
 
@@ -760,7 +794,26 @@ export default function MentorTestSectionCard({
               />
             </Box>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+            <Box
+              ref={questionsListRef}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1.25,
+                ...(questionBankMode && questions.length > 2
+                  ? {
+                      maxHeight: { xs: 360, sm: 420 },
+                      minHeight: 0,
+                      overflowY: 'auto',
+                      overscrollBehavior: 'contain',
+                      pr: 0.5,
+                      scrollPaddingTop: 12,
+                      WebkitOverflowScrolling: 'touch',
+                      '& > *': { flexShrink: 0 },
+                    }
+                  : null),
+              }}
+            >
               {questions.map((question, questionIndex) => {
                 const contentLocked = isPersistedQuestionLocked(
                   question,
@@ -776,42 +829,35 @@ export default function MentorTestSectionCard({
                   ? validateTestQuestion(question)
                   : (errors.Questions?.[question.tempId] ?? {});
                 return (
-                <MentorTestQuestionCard
-                  key={question.tempId}
-                  question={question}
-                  index={questionIndex}
-                  errors={questionErrors}
-                  accentColor={skillAccent}
-                  disabled={disabled}
-                  contentLocked={contentLocked}
-                  showActiveToggle={questionBankMode || (coursePublished && contentLocked)}
-                  collapsibleChoices={questionBankMode}
-                  contentChanged={contentChanged}
-                  onViewContentChanges={() =>
-                    setChangedQuestionDialog({
-                      current: question,
-                      initial: initialQuestion,
-                      index: questionIndex,
-                    })
-                  }
-                  onChange={(nextQuestion) => handleQuestionChange(question.tempId, nextQuestion)}
-                  onDelete={() =>
-                    setDeleteConfirm({
-                      type: 'question',
-                      tempId: question.tempId,
-                      index: questionIndex,
-                    })
-                  }
-                />
+                  <MentorTestQuestionCard
+                    key={question.tempId}
+                    question={question}
+                    index={questionIndex}
+                    errors={questionErrors}
+                    accentColor={skillAccent}
+                    disabled={disabled}
+                    contentLocked={contentLocked}
+                    showActiveToggle={questionBankMode || (coursePublished && contentLocked)}
+                    collapsibleChoices={questionBankMode}
+                    contentChanged={contentChanged}
+                    onViewContentChanges={() =>
+                      setChangedQuestionDialog({
+                        current: question,
+                        initial: initialQuestion,
+                        index: questionIndex,
+                      })
+                    }
+                    onChange={(nextQuestion) => handleQuestionChange(question.tempId, nextQuestion)}
+                    onDelete={() =>
+                      setDeleteConfirm({
+                        type: 'question',
+                        tempId: question.tempId,
+                        index: questionIndex,
+                      })
+                    }
+                  />
                 );
               })}
-
-              <AddQuestionButton
-                onClick={handleAddQuestion}
-                disabled={disabled}
-                label="Thêm câu hỏi"
-                variant="inline"
-              />
             </Box>
           )}
         </Box>
