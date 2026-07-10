@@ -23,7 +23,7 @@ function mapUserToAccount(user) {
     phone: user.Phone || '',
     dateOfBirth: user.DateOfBirth || '',
     role,
-    status: 'ACTIVE',
+    status: user.IsActive ? 'ACTIVE' : 'LOCKED',
     createdAt: user.CreatedAt || null,
     lastLoginAt: user.UpdatedAt || null,
   };
@@ -69,17 +69,12 @@ export async function updateAccount(id, payload) {
     }
   }
 
-  // Update user basic info
-  const updateData = {};
-  if (payload.fullName) updateData.FullName = payload.fullName;
-  if (payload.email) updateData.Email = payload.email;
-  if (payload.phone !== undefined) updateData.Phone = payload.phone;
-  if (payload.dateOfBirth !== undefined) updateData.DateOfBirth = payload.dateOfBirth;
-
-  if (Object.keys(updateData).length > 0) {
-    const userRes = await apiPut(`/users/${userId}`, updateData);
-    if (!userRes.ok) {
-      return { ok: false, message: userRes.message || 'Không thể cập nhật tài khoản' };
+  // Update status using dedicated API if only status changed
+  if (payload.status) {
+    const isActive = payload.status === 'ACTIVE';
+    const statusRes = await apiPut(`/users/${userId}/active`, { IsActive: isActive });
+    if (!statusRes.ok) {
+      return { ok: false, message: statusRes.message || 'Không thể cập nhật trạng thái' };
     }
   }
 
@@ -90,7 +85,12 @@ export async function updateAccount(id, payload) {
   return { ok: true, account };
 }
 
-export async function toggleAccountStatus(id) {
+export async function toggleAccountStatus(id, isActive) {
+  const userId = Number(id);
+  const res = await apiPut(`/users/${userId}/active`, { IsActive: isActive });
+  if (!res.ok) {
+    return { ok: false, message: res.message || 'Không thể cập nhật trạng thái' };
+  }
   return { ok: true, message: 'Đã cập nhật trạng thái tài khoản' };
 }
 

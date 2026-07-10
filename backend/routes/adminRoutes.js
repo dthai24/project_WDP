@@ -8,6 +8,7 @@ const {
   getUserDetail,
   updateUser,
   deleteUser,
+  toggleUserActive,
   updateUserRoles,
   getRoles,
   getCategories,
@@ -66,7 +67,7 @@ router.get('/users/:userId', protect, adminOnly, getUserDetail);
 router.put('/users/:userId', protect, adminOnly, updateUser);
 router.delete('/users/:userId', protect, adminOnly, deleteUser);
 router.put('/users/:userId/roles', protect, adminOnly, updateUserRoles);
-
+router.put('/users/:userId/active', protect, adminOnly, toggleUserActive);
 
 // ========== ROLES ==========
 router.get('/roles', protect, adminOnly, getRoles);

@@ -60,11 +60,16 @@ const getUserDetail = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const userId = Number(req.params.userId);
-    const { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId } = req.body;
-    if (!FullName || !Email) {
-      return res.status(400).json({ success: false, message: 'Thiếu họ tên hoặc email' });
+    const { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId, IsActive } = req.body;
+
+    // Chỉ validate FullName/Email nếu có trong request body
+    if (FullName !== undefined || Email !== undefined) {
+      if (!FullName || !Email) {
+        return res.status(400).json({ success: false, message: 'Thiếu họ tên hoặc email' });
+      }
     }
-    await adminModel.updateUser(userId, { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId });
+
+    await adminModel.updateUser(userId, { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId, IsActive });
     return res.json({ success: true, message: 'Cập nhật user thành công' });
   } catch (err) {
     console.error('[Admin UpdateUser Error]', err.message);
@@ -83,8 +88,24 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const toggleUserActive = async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    const { IsActive } = req.body;
+    if (IsActive === undefined) {
+      return res.status(400).json({ success: false, message: 'Thiếu trạng thái IsActive' });
+    }
+    await adminModel.toggleUserActive(userId, IsActive);
+    return res.json({ success: true, message: 'Cập nhật trạng thái tài khoản thành công' });
+  } catch (err) {
+    console.error('[Admin ToggleActive Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 // ==========================================
 // USER ROLES
+
 // ==========================================
 const updateUserRoles = async (req, res) => {
   try {
@@ -129,11 +150,11 @@ const getCategories = async (req, res) => {
 
 const createCategory = async (req, res) => {
   try {
-    const { CategoryName, DisplayName } = req.body;
+    const { CategoryName, DisplayName, IsActive } = req.body;
     if (!CategoryName || !DisplayName) {
       return res.status(400).json({ success: false, message: 'Thiếu CategoryName hoặc DisplayName' });
     }
-    const result = await adminModel.createCategory({ CategoryName, DisplayName });
+    const result = await adminModel.createCategory({ CategoryName, DisplayName, IsActive });
     return res.status(201).json({ success: true, message: 'Tạo danh mục thành công', data: result });
   } catch (err) {
     console.error('[Admin CreateCategory Error]', err.message);
@@ -144,11 +165,16 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const categoryId = Number(req.params.categoryId);
-    const { CategoryName, DisplayName } = req.body;
-    if (!CategoryName || !DisplayName) {
-      return res.status(400).json({ success: false, message: 'Thiếu CategoryName hoặc DisplayName' });
+    const { CategoryName, DisplayName, IsActive } = req.body;
+
+    // Chỉ validate CategoryName/DisplayName nếu có trong request body
+    if (CategoryName !== undefined || DisplayName !== undefined) {
+      if (!CategoryName || !DisplayName) {
+        return res.status(400).json({ success: false, message: 'Thiếu CategoryName hoặc DisplayName' });
+      }
     }
-    await adminModel.updateCategory(categoryId, { CategoryName, DisplayName });
+
+    await adminModel.updateCategory(categoryId, { CategoryName, DisplayName, IsActive });
     return res.json({ success: true, message: 'Cập nhật danh mục thành công' });
   } catch (err) {
     console.error('[Admin UpdateCategory Error]', err.message);
@@ -182,11 +208,11 @@ const getLevels = async (req, res) => {
 
 const createLevel = async (req, res) => {
   try {
-    const { LevelName, DisplayName, SortOrder } = req.body;
+    const { LevelName, DisplayName, SortOrder, IsActive } = req.body;
     if (!LevelName || !DisplayName || SortOrder === undefined) {
       return res.status(400).json({ success: false, message: 'Thiếu thông tin trình độ' });
     }
-    const result = await adminModel.createLevel({ LevelName, DisplayName, SortOrder: Number(SortOrder) });
+    const result = await adminModel.createLevel({ LevelName, DisplayName, SortOrder: Number(SortOrder), IsActive });
     return res.status(201).json({ success: true, message: 'Tạo trình độ thành công', data: result });
   } catch (err) {
     console.error('[Admin CreateLevel Error]', err.message);
@@ -197,11 +223,16 @@ const createLevel = async (req, res) => {
 const updateLevel = async (req, res) => {
   try {
     const levelId = Number(req.params.levelId);
-    const { LevelName, DisplayName, SortOrder } = req.body;
-    if (!LevelName || !DisplayName || SortOrder === undefined) {
-      return res.status(400).json({ success: false, message: 'Thiếu thông tin trình độ' });
+    const { LevelName, DisplayName, SortOrder, IsActive } = req.body;
+
+    // Chỉ validate nếu có trong request body
+    if (LevelName !== undefined || DisplayName !== undefined || SortOrder !== undefined) {
+      if (!LevelName || !DisplayName || SortOrder === undefined) {
+        return res.status(400).json({ success: false, message: 'Thiếu thông tin trình độ' });
+      }
     }
-    await adminModel.updateLevel(levelId, { LevelName, DisplayName, SortOrder: Number(SortOrder) });
+
+    await adminModel.updateLevel(levelId, { LevelName, DisplayName, SortOrder: Number(SortOrder), IsActive });
     return res.json({ success: true, message: 'Cập nhật trình độ thành công' });
   } catch (err) {
     console.error('[Admin UpdateLevel Error]', err.message);
@@ -268,6 +299,7 @@ module.exports = {
   getUserDetail,
   updateUser,
   deleteUser,
+  toggleUserActive,
   updateUserRoles,
   getRoles,
   getCategories,
