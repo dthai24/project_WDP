@@ -19,6 +19,8 @@ const {
     updateChoiceById,
     createQuestionChoiceById,
     deleteChoiceById,
+    getChapterQuestionBankActiveStatsController,
+    getCourseQuestionBankActiveStatsController,
 } = require('../controllers/questionBankController');
 
 
@@ -37,6 +39,8 @@ questionBankRoutes.get('/getBankPaths/:bankId', optionalAuth, getQuestionBankPat
 questionBankRoutes.get('/getBankById/:bankId', optionalAuth, getQuestionBankByIdController);
 questionBankRoutes.get('/getAllBankOfMentor', optionalAuth, getAllBankOfMentor);
 questionBankRoutes.get('/courses/:courseId/paths/:pathId/sections', optionalAuth, getChapterSections);
+questionBankRoutes.get('/courses/:courseId/paths/:pathId/active-stats', optionalAuth, getChapterQuestionBankActiveStatsController);
+questionBankRoutes.get('/courses/:courseId/active-stats', optionalAuth, getCourseQuestionBankActiveStatsController);
 questionBankRoutes.post('/courses/:courseId/paths/:pathId/question-path/ensure', optionalAuth, ensureQuestionPath);
 questionBankRoutes.post('/courses/:courseId/paths/:pathId/sections', optionalAuth, createSectionSave);
 questionBankRoutes.get('/sections/:sectionId/questions', optionalAuth, getSectionQuestions);

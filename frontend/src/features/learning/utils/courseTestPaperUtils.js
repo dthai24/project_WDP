@@ -161,8 +161,7 @@ function pickWritingQuestions(config, bankSections, shuffleAnswers) {
 }
 
 function buildPaperFromBanks(config, bankList, options = {}) {
-  const shuffleQuestions = config.shuffleQuestions !== false;
-  const shuffleAnswers = config.shuffleAnswers !== false;
+  const shuffleAnswers = false;
   const allSections = bankList.flatMap((bank) => bank.sections ?? []);
 
   const pickedBySkill = {
@@ -176,12 +175,6 @@ function buildPaperFromBanks(config, bankList, options = {}) {
     ),
     [TEST_SKILL_WRITING]: pickWritingQuestions(config, allSections, shuffleAnswers),
   };
-
-  if (shuffleQuestions) {
-    [TEST_SKILL_LISTENING, TEST_SKILL_READING, TEST_SKILL_WRITING].forEach((skill) => {
-      pickedBySkill[skill] = shuffleArray(pickedBySkill[skill]);
-    });
-  }
 
   let order = 1;
   const paperSections = [];

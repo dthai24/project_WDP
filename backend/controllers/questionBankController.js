@@ -733,6 +733,58 @@ const deleteChoiceById = async (req, res) => {
     }
 };
 
+const getChapterQuestionBankActiveStatsController = async (req, res) => {
+    try {
+        const courseId = Number(req.params.courseId);
+        const pathId = Number(req.params.pathId);
+
+        if (!Number.isInteger(courseId) || courseId <= 0) {
+            return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+        }
+        if (!Number.isInteger(pathId) || pathId <= 0) {
+            return res.status(400).json({ success: false, message: 'pathId không hợp lệ' });
+        }
+
+        const stats = await questionBankModel.getChapterQuestionBankActiveStats(courseId, pathId);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Lấy thống kê ngân hàng câu hỏi thành công',
+            data: stats,
+        });
+    } catch (error) {
+        console.error('getChapterQuestionBankActiveStatsController error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Không thể lấy thống kê ngân hàng câu hỏi',
+        });
+    }
+};
+
+const getCourseQuestionBankActiveStatsController = async (req, res) => {
+    try {
+        const courseId = Number(req.params.courseId);
+
+        if (!Number.isInteger(courseId) || courseId <= 0) {
+            return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
+        }
+
+        const stats = await questionBankModel.getCourseQuestionBankActiveStats(courseId);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Lấy thống kê ngân hàng câu hỏi toàn khóa thành công',
+            data: stats,
+        });
+    } catch (error) {
+        console.error('getCourseQuestionBankActiveStatsController error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Không thể lấy thống kê ngân hàng câu hỏi toàn khóa',
+        });
+    }
+};
+
 module.exports = {
     getAllBankOfMentor,
     getChapterSections,
@@ -750,5 +802,7 @@ module.exports = {
     updateChoiceById,
     createQuestionChoiceById,
     deleteChoiceById,
+    getChapterQuestionBankActiveStatsController,
+    getCourseQuestionBankActiveStatsController,
 };
 

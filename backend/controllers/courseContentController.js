@@ -1,5 +1,9 @@
 const coursesModel = require('../Models/coursesModel');
 const courseContentSaveModel = require('../Models/courseContentSaveModel');
+const {
+  fetchCloudinaryAssetBuffer,
+  isCloudinaryDeliveryUrl,
+} = require('../services/cloudinaryService');
 
 async function assertMentorOwnsCourse(courseId, instructorId) {
   const ownerId = await coursesModel.getCourseInstructorId(courseId);
@@ -297,14 +301,153 @@ const deleteMaterialById = async (req, res) => {
   }
 };
 
+const getPathById = async (req, res) => {
+  try {
+    const pathId = parseId(req.params.pathId, 'pathId');
+    const instructorId = req.user?.userId ?? null;
+    const access = await assertPathAccess(pathId, instructorId);
+    if (!access.ok) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const path = await courseContentSaveModel.getPathById(pathId);
+    if (!path) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy path.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy path thành công.',
+      data: {
+        PathId: path.PathId,
+        CourseId: path.CourseId,
+        PathName: path.PathName,
+        Description: path.Description,
+        Order: path.Order,
+        IsActive: path.IsActive,
+        courseId: access.courseId,
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, 'getPathById error:');
+  }
+};
+
+const getNodeById = async (req, res) => {
+  try {
+    const nodeId = parseId(req.params.nodeId, 'nodeId');
+    const instructorId = req.user?.userId ?? null;
+    const access = await assertNodeAccess(nodeId, instructorId);
+    if (!access.ok) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const node = await courseContentSaveModel.getNodeById(nodeId);
+    if (!node) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài học.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy bài học thành công.',
+      data: {
+        NodeId: node.NodeId,
+        PathId: node.PathId,
+        NodeName: node.NodeName,
+        NodeOrder: node.NodeOrder,
+        Description: node.Description,
+        IsActive: node.IsActive,
+        courseId: access.courseId,
+        pathId: access.pathId,
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, 'getNodeById error:');
+  }
+};
+
+const getMaterialById = async (req, res) => {
+  try {
+    const materialId = parseId(req.params.materialId, 'materialId');
+    const instructorId = req.user?.userId ?? null;
+    const access = await assertMaterialAccess(materialId, instructorId);
+    if (!access.ok) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const material = await courseContentSaveModel.getMaterialById(materialId);
+    if (!material) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy học liệu.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Lấy học liệu thành công.',
+      data: {
+        MaterialId: material.MaterialId,
+        NodeId: material.NodeId,
+        MaterialType: material.MaterialType,
+        Title: material.Title,
+        MaterialUrl: material.MaterialUrl,
+        MaterialOrder: material.MaterialOrder,
+        SourceType: material.SourceType,
+        FileName: material.FileName,
+        FileSize: material.FileSize,
+        courseId: access.courseId,
+        nodeId: access.nodeId,
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, 'getMaterialById error:');
+  }
+};
+
+const downloadMaterialFile = async (req, res) => {
+  try {
+    const rawUrl = String(req.query?.url ?? '').trim();
+    const fileName = String(req.query?.fileName ?? 'tai-lieu').trim() || 'tai-lieu';
+
+    if (!rawUrl) {
+      return res.status(400).json({ success: false, message: 'Thiếu url.' });
+    }
+
+    if (!isCloudinaryDeliveryUrl(rawUrl)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ hỗ trợ tải tài liệu từ Cloudinary.',
+      });
+    }
+
+    const { buffer, contentType } = await fetchCloudinaryAssetBuffer(rawUrl, fileName);
+
+    const safeFileName = fileName.replace(/[^\w.\-() ]+/g, '_').slice(0, 120) || 'tai-lieu';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
+    return res.send(buffer);
+  } catch (error) {
+    const statusCode = error.statusCode === 400 ? 400 : error.statusCode === 502 ? 502 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Không thể tải tài liệu.',
+    });
+  }
+};
+
 module.exports = {
   createPath,
   updatePathById,
   deletePathById,
+  getPathById,
   createNodeByPathId,
   updateNodeById,
   deleteNodeById,
+  getNodeById,
   createMaterialByNodeId,
   updateMaterialById,
   deleteMaterialById,
+  getMaterialById,
+  downloadMaterialFile,
 };

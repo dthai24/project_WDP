@@ -87,17 +87,33 @@ function FormField({
       )}
 
       {showCharCount && maxLength && (
-        <Typography
+        <Box
           sx={{
-            fontSize: 11,
-            color: charCount >= maxLength ? '#DC2626' : MUTED,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 1,
             mt: 0.5,
-            lineHeight: 1.3,
-            textAlign: 'right',
           }}
         >
-          {charCount}/{maxLength}
-        </Typography>
+          {charCount >= maxLength ? (
+            <Typography sx={{ fontSize: 11, color: '#DC2626', lineHeight: 1.3, flex: 1 }}>
+              Đã đạt giới hạn tối đa {maxLength} ký tự.
+            </Typography>
+          ) : (
+            <Box sx={{ flex: 1 }} />
+          )}
+          <Typography
+            sx={{
+              fontSize: 11,
+              color: charCount >= maxLength ? '#DC2626' : MUTED,
+              lineHeight: 1.3,
+              flexShrink: 0,
+            }}
+          >
+            {charCount}/{maxLength}
+          </Typography>
+        </Box>
       )}
 
       {error && (
@@ -139,6 +155,7 @@ export default function MentorCourseBasicInfoForm({
         onChange={onChange}
         disabled={disabled}
         maxLength={MENTOR_COURSE_NAME_MAX}
+        showCharCount
         placeholder="Ví dụ: Tiếng Anh Giao Tiếp Đời Sống Hàng Ngày"
       />
 

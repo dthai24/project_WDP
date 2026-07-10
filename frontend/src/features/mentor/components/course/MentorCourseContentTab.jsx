@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import AutoStoriesOutlinedIcon from '@mui/icons-material/AutoStoriesOutlined';
 import { useNavigate } from 'react-router-dom';
@@ -5,22 +6,47 @@ import AppButton from '@/shared/ui/AppButton';
 import EmptyState from '@/shared/ui/EmptyState';
 import MentorCourseContentOutline from './MentorCourseContentOutline';
 import MentorCardSectionTitle from './MentorCardSectionTitle';
+import MentorChapterCardMenu from './MentorChapterCardMenu';
+import MentorChapterQuizSetupDialog from './MentorChapterQuizSetupDialog';
 import {
   CARD_SECTION_META_SX,
   CREATE_CARD_SX,
   DETAIL_SECTION_HEADER_SX,
+  DETAIL_TOOLBAR_WRAP_SX,
+  MUTED,
 } from './mentorCourseCreateStyles';
 import { countMaterialsInPath, getCoursePaths } from '../../utils/mentorCourseContentUtils';
+import {
+  QUIZ_SETUP_SCOPE_CHAPTER,
+  QUIZ_SETUP_SCOPE_COURSE,
+} from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 
 export default function MentorCourseContentTab({ course }) {
   const navigate = useNavigate();
+  const [quizDialog, setQuizDialog] = useState(null);
 
   const paths = getCoursePaths(course);
   const courseId = course.CourseId;
+  const courseName = course.CourseName ?? '';
 
-  const materialCount = paths.reduce((sum, path) => {
-    return sum + countMaterialsInPath(path);
-  }, 0);
+  const materialCount = paths.reduce((sum, path) => sum + countMaterialsInPath(path), 0);
+
+  const handleCourseQuizSetup = useCallback(() => {
+    setQuizDialog({ scope: QUIZ_SETUP_SCOPE_COURSE });
+  }, []);
+
+  const handleChapterQuizSetup = useCallback((path, pathIndex) => {
+    setQuizDialog({
+      scope: QUIZ_SETUP_SCOPE_CHAPTER,
+      chapterId: path.pathId ?? path.PathId,
+      chapterTitle: path.PathName ?? path.pathName ?? '',
+      chapterIndex: pathIndex,
+    });
+  }, []);
+
+  const handleCloseQuizDialog = useCallback(() => {
+    setQuizDialog(null);
+  }, []);
 
   return (
     <Box sx={CREATE_CARD_SX}>
@@ -28,7 +54,7 @@ export default function MentorCourseContentTab({ course }) {
         <MentorCardSectionTitle
           title="Nội dung khóa học"
           mb={0.35}
-          action={
+          action={(
             <AppButton
               variant="contained"
               onClick={() => navigate(`/mentor/courses/${courseId}/content/edit`)}
@@ -44,7 +70,7 @@ export default function MentorCourseContentTab({ course }) {
             >
               Xây nội dung
             </AppButton>
-          }
+          )}
         />
 
         <Typography sx={CARD_SECTION_META_SX}>
@@ -63,8 +89,35 @@ export default function MentorCourseContentTab({ course }) {
           onAction={() => navigate(`/mentor/courses/${courseId}/content/edit`)}
         />
       ) : (
-        <MentorCourseContentOutline paths={paths} />
+        <>
+          <Box sx={{ ...DETAIL_TOOLBAR_WRAP_SX, mb: 2 }}>
+            <MentorChapterCardMenu
+              variant="courseButton"
+              onQuizSetup={handleCourseQuizSetup}
+            />
+            <Typography sx={{ fontSize: 12, color: MUTED, mt: 1.15, lineHeight: 1.55 }}>
+              Random câu hỏi từ ngân hàng các chương để tạo bài kiểm tra tổng kết toàn khóa.
+            </Typography>
+          </Box>
+
+          <MentorCourseContentOutline
+            paths={paths}
+            onChapterQuizSetup={handleChapterQuizSetup}
+          />
+        </>
       )}
+
+      <MentorChapterQuizSetupDialog
+        open={Boolean(quizDialog)}
+        onClose={handleCloseQuizDialog}
+        scope={quizDialog?.scope ?? QUIZ_SETUP_SCOPE_CHAPTER}
+        courseId={courseId}
+        courseTitle={courseName}
+        chapterId={quizDialog?.chapterId}
+        chapterTitle={quizDialog?.chapterTitle ?? ''}
+        chapterIndex={quizDialog?.chapterIndex ?? 0}
+        paths={paths}
+      />
     </Box>
   );
 }

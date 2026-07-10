@@ -23,9 +23,10 @@ import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import {
   chapterHasContent,
   filterLearningMaterials,
+  isEditDirty,
   isNewUnsavedPath,
-  isNodeFieldsSnapshotSaved,
   lessonHasContent,
+  makeNodeDirtyKey,
   materialHasContent,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 import {
@@ -104,7 +105,7 @@ export default function MentorChapterCard({
   onSave,
   showSave = true,
   showNodeUpdate = false,
-  savedPathSnapshot = null,
+  dirtyKeys = {},
   updatingNodeKey = null,
   onUpdateNode,
   courseId = null,
@@ -252,7 +253,7 @@ export default function MentorChapterCard({
   const activeNodeDirty = Boolean(
     showNodeUpdate
     && activeLesson
-    && !isNodeFieldsSnapshotSaved(path, activeLesson.tempId, savedPathSnapshot),
+    && isEditDirty(dirtyKeys, makeNodeDirtyKey(path.tempId, activeLesson.tempId)),
   );
   const updatingActiveNode = Boolean(
     activeLesson && updatingNodeKey === `${path.tempId}:${activeLesson.tempId}`,

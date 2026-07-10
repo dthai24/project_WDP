@@ -5,6 +5,7 @@ import {
   MATERIAL_UPLOAD_MAX_SIZE_MESSAGE,
   getFileExtension,
   isAllowedListeningAudioExtension,
+  validateVideoFile,
 } from '@/shared/utils/materialUploadValidation';
 
 function getCloudinaryConfig() {
@@ -73,12 +74,7 @@ function postFormWithProgress(url, formData, { onProgress } = {}) {
   });
 }
 
-/**
- * Upload audio trực tiếp lên Cloudinary (unsigned preset).
- * Cần VITE_CLOUDINARY_CLOUD_NAME và VITE_CLOUDINARY_UPLOAD_PRESET.
- */
-export async function uploadListeningAudioToCloudinary(file, { onProgress } = {}) {
-  assertAudioFileForCloudinary(file);
+async function uploadMediaFileToCloudinary(file, { onProgress } = {}) {
   const { cloudName, uploadPreset } = assertDirectUploadConfig();
 
   onProgress?.(0);
@@ -109,4 +105,24 @@ export async function uploadListeningAudioToCloudinary(file, { onProgress } = {}
     fileSize: data.bytes ?? file.size,
     format: data.format ?? getFileExtension(file.name),
   };
+}
+
+/**
+ * Upload audio trực tiếp lên Cloudinary (unsigned preset).
+ * Cần VITE_CLOUDINARY_CLOUD_NAME và VITE_CLOUDINARY_UPLOAD_PRESET.
+ */
+export async function uploadListeningAudioToCloudinary(file, { onProgress } = {}) {
+  assertAudioFileForCloudinary(file);
+  return uploadMediaFileToCloudinary(file, { onProgress });
+}
+
+/**
+ * Upload video học liệu trực tiếp lên Cloudinary (≤10MB).
+ */
+export async function uploadVideoToCloudinary(file, { onProgress } = {}) {
+  const validation = validateVideoFile(file);
+  if (!validation.ok) {
+    throw new Error(validation.message);
+  }
+  return uploadMediaFileToCloudinary(file, { onProgress });
 }

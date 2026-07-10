@@ -210,7 +210,255 @@ const updateQuestionUseForTestById = async (questionId, isUseForTest) => {
           AND IsActive = 1
     `);
     return Number(result.rowsAffected?.[0] || 0) > 0;
-}
+};
+
+const ACTIVE_QUESTION_WHERE = `
+    q.IsActive = 1
+    AND ISNULL(q.IsUseForTest, 1) = 1
+    AND ISNULL(qs.IsUseForTest, 1) = 1
+    AND LTRIM(RTRIM(ISNULL(q.Title, ''))) <> ''
+`;
+
+const getChapterQuestionPathId = async (courseId, pathId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    request.input('pathId', sql.Int, Number(pathId));
+    const result = await request.query(`
+        SELECT TOP 1 qp.Question_Path_Id AS QuestionPathId
+        FROM dbo.Questions_Path qp
+        INNER JOIN dbo.Question_Bank qb
+            ON qb.BankId = qp.BankId
+        WHERE qp.PathId = @pathId
+          AND qb.CourseId = @courseId
+        ORDER BY qp.Question_Path_Id
+    `);
+    return result.recordset[0]?.QuestionPathId ?? null;
+};
+
+const getActiveQuestionCountsByPath = async (courseId, pathId = null) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    let pathFilter = '';
+    if (pathId != null) {
+        request.input('pathId', sql.Int, Number(pathId));
+        pathFilter = 'AND qp.PathId = @pathId';
+    }
+
+    const result = await request.query(`
+        SELECT
+            qp.PathId,
+            RTRIM(st.Name) AS SkillType,
+            COUNT(*) AS ActiveCount
+        FROM dbo.Questions q
+        INNER JOIN dbo.Question_Sections qs
+            ON qs.SectionId = q.SectionId
+        INNER JOIN dbo.Questions_Path qp
+            ON qp.Question_Path_Id = qs.Question_Path_Id
+        INNER JOIN dbo.Question_Bank qb
+            ON qb.BankId = qp.BankId
+        INNER JOIN dbo.Section_Type st
+            ON st.TypeId = qs.TypeId
+        WHERE qb.CourseId = @courseId
+          ${pathFilter}
+          AND ${ACTIVE_QUESTION_WHERE}
+        GROUP BY qp.PathId, RTRIM(st.Name)
+    `);
+
+    return result.recordset;
+};
+
+const mapWritingSectionGroupRow = (row) => {
+    const sectionTitle = String(row.Title ?? row.SectionName ?? '').trim() || 'Section';
+    return {
+        sectionTempId: `section_${row.SectionId}`,
+        sectionTitle,
+        availableCount: Number(row.ActiveCount) || 0,
+        isUseForTest: row.IsUseForTest == null ? true : Boolean(row.IsUseForTest),
+    };
+};
+
+const getActiveWritingSectionCounts = async (courseId, pathId = null) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    let pathFilter = '';
+    if (pathId != null) {
+        request.input('pathId', sql.Int, Number(pathId));
+        pathFilter = 'AND qp.PathId = @pathId';
+    }
+
+    const result = await request.query(`
+        SELECT
+            qp.PathId,
+            qs.SectionId,
+            qs.SectionName,
+            qs.Title,
+            qs.[Order] AS SectionOrder,
+            qs.IsUseForTest,
+            COUNT(
+                CASE
+                    WHEN q.QuestionId IS NOT NULL
+                     AND q.IsActive = 1
+                     AND ISNULL(q.IsUseForTest, 1) = 1
+                     AND ISNULL(qs.IsUseForTest, 1) = 1
+                     AND LTRIM(RTRIM(ISNULL(q.Title, ''))) <> ''
+                    THEN 1
+                END
+            ) AS ActiveCount
+        FROM dbo.Question_Sections qs
+        INNER JOIN dbo.Questions_Path qp
+            ON qp.Question_Path_Id = qs.Question_Path_Id
+        INNER JOIN dbo.Question_Bank qb
+            ON qb.BankId = qp.BankId
+        INNER JOIN dbo.Section_Type st
+            ON st.TypeId = qs.TypeId
+        LEFT JOIN dbo.Questions q
+            ON q.SectionId = qs.SectionId
+        WHERE qb.CourseId = @courseId
+          ${pathFilter}
+          AND UPPER(RTRIM(st.Name)) = 'WRITING'
+        GROUP BY
+            qp.PathId,
+            qs.SectionId,
+            qs.SectionName,
+            qs.Title,
+            qs.[Order],
+            qs.IsUseForTest
+        ORDER BY qp.PathId, qs.[Order], qs.SectionId
+    `);
+
+    return result.recordset;
+};
+
+const getChapterQuestionBankActiveStats = async (courseId, pathId) => {
+    const questionPathId = await getChapterQuestionPathId(courseId, pathId);
+    const [countRows, writingRows] = await Promise.all([
+        getActiveQuestionCountsByPath(courseId, pathId),
+        getActiveWritingSectionCounts(courseId, pathId),
+    ]);
+
+    const questionCountBySkill = {
+        LISTENING: 0,
+        READING: 0,
+        WRITING: 0,
+    };
+
+    countRows.forEach((row) => {
+        const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        if (skill in questionCountBySkill) {
+            questionCountBySkill[skill] += Number(row.ActiveCount) || 0;
+        } else {
+            questionCountBySkill.WRITING += Number(row.ActiveCount) || 0;
+        }
+    });
+
+    const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
+    const writingSectionGroups = writingRows.map(mapWritingSectionGroupRow);
+
+    return {
+        questionPathId,
+        hasBank: questionPathId != null || totalActive > 0,
+        questionCountBySkill,
+        writingSectionGroups,
+        totalActive,
+    };
+};
+
+const getCourseQuestionBankActiveStats = async (courseId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    const pathsResult = await request.query(`
+        SELECT
+            p.PathId,
+            p.PathName,
+            p.[Order] AS PathOrder,
+            qp.Question_Path_Id AS QuestionPathId
+        FROM dbo.Paths p
+        LEFT JOIN dbo.Question_Bank qb
+            ON qb.CourseId = @courseId
+        LEFT JOIN dbo.Questions_Path qp
+            ON qp.BankId = qb.BankId
+           AND qp.PathId = p.PathId
+        WHERE p.CourseId = @courseId
+        ORDER BY p.[Order], p.PathId
+    `);
+
+    const [countRows, writingRows] = await Promise.all([
+        getActiveQuestionCountsByPath(courseId),
+        getActiveWritingSectionCounts(courseId),
+    ]);
+    const countsByPath = new Map();
+
+    countRows.forEach((row) => {
+        const pathKey = String(row.PathId);
+        if (!countsByPath.has(pathKey)) {
+            countsByPath.set(pathKey, {
+                LISTENING: 0,
+                READING: 0,
+                WRITING: 0,
+            });
+        }
+        const bucket = countsByPath.get(pathKey);
+        const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        if (skill in bucket) {
+            bucket[skill] += Number(row.ActiveCount) || 0;
+        } else {
+            bucket.WRITING += Number(row.ActiveCount) || 0;
+        }
+    });
+
+    const writingGroupsByPath = new Map();
+    writingRows.forEach((row) => {
+        const pathKey = String(row.PathId);
+        if (!writingGroupsByPath.has(pathKey)) {
+            writingGroupsByPath.set(pathKey, []);
+        }
+        writingGroupsByPath.get(pathKey).push(mapWritingSectionGroupRow(row));
+    });
+
+    const chapters = pathsResult.recordset.map((row) => {
+        const pathKey = String(row.PathId);
+        const questionCountBySkill = countsByPath.get(pathKey) ?? {
+            LISTENING: 0,
+            READING: 0,
+            WRITING: 0,
+        };
+        const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
+        const hasBank = row.QuestionPathId != null || totalActive > 0;
+
+        return {
+            PathId: row.PathId,
+            PathName: row.PathName,
+            Order: row.PathOrder,
+            hasBank,
+            questionCountBySkill,
+            writingSectionGroups: writingGroupsByPath.get(pathKey) ?? [],
+            totalActive,
+        };
+    });
+
+    const bankCount = chapters.filter((chapter) => chapter.hasBank).length;
+    const aggregatedSkill = {
+        LISTENING: 0,
+        READING: 0,
+        WRITING: 0,
+    };
+
+    chapters.forEach((chapter) => {
+        Object.keys(aggregatedSkill).forEach((skill) => {
+            aggregatedSkill[skill] += chapter.questionCountBySkill?.[skill] ?? 0;
+        });
+    });
+
+    const totalActive = Object.values(aggregatedSkill).reduce((sum, count) => sum + count, 0);
+
+    return {
+        hasBank: bankCount > 0,
+        bankCount,
+        chapters,
+        questionCountBySkill: aggregatedSkill,
+        totalActive,
+    };
+};
 
 module.exports = {
     getAllListQuestionBankByMentorId,
@@ -219,6 +467,8 @@ module.exports = {
     sectionBelongsToCoursePath,
     getQuestionBankByIdModel,
     getQuestionBankPathsByBankIdModel,
-    updateQuestionUseForTestById
+    updateQuestionUseForTestById,
+    getChapterQuestionBankActiveStats,
+    getCourseQuestionBankActiveStats,
 };
 

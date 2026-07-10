@@ -14,6 +14,12 @@ export default function MentorCourseLeaveDialog({
   onDiscard,
   onSaveDraft,
   saving = false,
+  title = 'Rời khỏi trang?',
+  message = 'Thay đổi của bạn chưa được lưu. Bạn có thể hủy bỏ hoặc lưu bản nháp trước khi rời đi.',
+  stayLabel = 'Ở lại',
+  discardLabel = 'Hủy',
+  saveDraftLabel = 'Lưu nháp',
+  showSaveDraft = true,
 }) {
   return (
     <Dialog
@@ -30,26 +36,31 @@ export default function MentorCourseLeaveDialog({
         },
       }}
     >
-      <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Rời khỏi trang?</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{title}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary">
-          Thay đổi của bạn chưa được lưu. Bạn có thể hủy bỏ hoặc lưu bản nháp trước khi rời đi.
+          {message}
         </Typography>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: 'wrap' }}>
+        <AppButton variant="text" onClick={onStay} disabled={saving}>
+          {stayLabel}
+        </AppButton>
         <AppButton variant="outlined" onClick={onDiscard} disabled={saving}>
-          Hủy
+          {discardLabel}
         </AppButton>
-        <AppButton
-          loading={saving}
-          onClick={onSaveDraft}
-          sx={{
-            bgcolor: '#0891B2',
-            '&:hover': { bgcolor: '#0E7490' },
-          }}
-        >
-          Lưu nháp
-        </AppButton>
+        {showSaveDraft ? (
+          <AppButton
+            loading={saving}
+            onClick={onSaveDraft}
+            sx={{
+              bgcolor: '#0891B2',
+              '&:hover': { bgcolor: '#0E7490' },
+            }}
+          >
+            {saveDraftLabel}
+          </AppButton>
+        ) : null}
       </DialogActions>
     </Dialog>
   );

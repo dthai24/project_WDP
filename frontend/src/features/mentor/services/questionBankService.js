@@ -73,7 +73,6 @@ export async function fetchSectionQuestions(sectionId, { courseId, pathId } = {}
 const emptyStats = {
   ok: true,
   hasBank: false,
-  message: TODO,
   questionCountBySkill: {
     LISTENING: 0,
     READING: 0,
@@ -83,19 +82,126 @@ const emptyStats = {
   totalActive: 0,
 };
 
-export function invalidateQuestionBankListCache() {}
+function mapChapterActiveStatsPayload(payload = {}) {
+  const questionCountBySkill = {
+    LISTENING: Number(payload.questionCountBySkill?.LISTENING) || 0,
+    READING: Number(payload.questionCountBySkill?.READING) || 0,
+    WRITING: Number(payload.questionCountBySkill?.WRITING) || 0,
+  };
+  const totalActive = Number(payload.totalActive);
+  const resolvedTotal = Number.isFinite(totalActive)
+    ? totalActive
+    : Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
 
-export async function getChapterQuestionBankActiveStats() {
-  return { ...emptyStats };
-}
-
-export async function getCourseQuestionBankActiveStats() {
   return {
     ok: true,
-    chapters: [],
-    questionCountBySkill: emptyStats.questionCountBySkill,
-    totalActive: 0,
+    hasBank: Boolean(payload.hasBank),
+    questionCountBySkill,
+    writingSectionGroups: (payload.writingSectionGroups ?? []).map((group) => ({
+      sectionTempId: group.sectionTempId,
+      sectionTitle: group.sectionTitle ?? 'Section',
+      availableCount: Math.max(0, Number(group.availableCount ?? 0)),
+      isUseForTest: group.isUseForTest !== false,
+    })),
+    totalActive: resolvedTotal,
+    questionPathId: payload.questionPathId ?? null,
   };
+}
+
+function mapCourseActiveStatsPayload(payload = {}) {
+  const chapters = (payload.chapters ?? []).map((chapter) => ({
+    PathId: chapter.PathId,
+    PathName: chapter.PathName,
+    Order: chapter.Order,
+    hasBank: Boolean(chapter.hasBank),
+    questionCountBySkill: {
+      LISTENING: Number(chapter.questionCountBySkill?.LISTENING) || 0,
+      READING: Number(chapter.questionCountBySkill?.READING) || 0,
+      WRITING: Number(chapter.questionCountBySkill?.WRITING) || 0,
+    },
+    totalActive: Number(chapter.totalActive) || 0,
+    writingSectionGroups: (chapter.writingSectionGroups ?? []).map((group) => ({
+      sectionTempId: group.sectionTempId,
+      sectionTitle: group.sectionTitle ?? 'Section',
+      availableCount: Math.max(0, Number(group.availableCount ?? 0)),
+      isUseForTest: group.isUseForTest !== false,
+    })),
+  }));
+
+  const questionCountBySkill = {
+    LISTENING: Number(payload.questionCountBySkill?.LISTENING) || 0,
+    READING: Number(payload.questionCountBySkill?.READING) || 0,
+    WRITING: Number(payload.questionCountBySkill?.WRITING) || 0,
+  };
+
+  return {
+    ok: true,
+    hasBank: Boolean(payload.hasBank),
+    bankCount: Number(payload.bankCount) || chapters.filter((chapter) => chapter.hasBank).length,
+    chapters,
+    questionCountBySkill,
+    totalActive: Number(payload.totalActive) || 0,
+  };
+}
+
+export function invalidateQuestionBankListCache() {}
+
+export async function getChapterQuestionBankActiveStats(courseId, pathId) {
+  try {
+    const { data: payload } = await axios.get(
+      `${API_BASE}/question-bank/courses/${encodeURIComponent(courseId)}/paths/${encodeURIComponent(pathId)}/active-stats`,
+    );
+
+    if (payload.success === false) {
+      return {
+        ...emptyStats,
+        ok: false,
+        message: payload.message ?? 'Không tải được thống kê ngân hàng câu hỏi.',
+      };
+    }
+
+    return mapChapterActiveStatsPayload(payload.data ?? {});
+  } catch (error) {
+    console.error('getChapterQuestionBankActiveStats error:', error);
+    return {
+      ...emptyStats,
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải thống kê ngân hàng câu hỏi.',
+    };
+  }
+}
+
+export async function getCourseQuestionBankActiveStats(courseId) {
+  try {
+    const { data: payload } = await axios.get(
+      `${API_BASE}/question-bank/courses/${encodeURIComponent(courseId)}/active-stats`,
+    );
+
+    if (payload.success === false) {
+      return {
+        ok: false,
+        message: payload.message ?? 'Không tải được thống kê ngân hàng câu hỏi toàn khóa.',
+        hasBank: false,
+        bankCount: 0,
+        chapters: [],
+        questionCountBySkill: emptyStats.questionCountBySkill,
+        totalActive: 0,
+      };
+    }
+
+    return mapCourseActiveStatsPayload(payload.data ?? {});
+  } catch (error) {
+    console.error('getCourseQuestionBankActiveStats error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải thống kê ngân hàng câu hỏi toàn khóa.',
+      hasBank: false,
+      bankCount: 0,
+      chapters: [],
+      questionCountBySkill: emptyStats.questionCountBySkill,
+      totalActive: 0,
+    };
+  }
 }
 
 export async function getQuestionBanks() {

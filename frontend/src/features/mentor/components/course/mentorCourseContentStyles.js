@@ -402,6 +402,30 @@ export function scopedEditorBarSx(dirty = false) {
   };
 }
 
+export function scopedRestoreButtonSx(dirty = false) {
+  return {
+    height: 36,
+    px: 2,
+    fontSize: 13,
+    fontWeight: 700,
+    borderRadius: '999px',
+    boxShadow: 'none',
+    flexShrink: 0,
+    bgcolor: 'transparent',
+    color: dirty ? '#92400E' : MUTED,
+    border: `1px solid ${dirty ? 'rgba(245,158,11,0.35)' : 'rgba(15,23,42,0.08)'}`,
+    '&:hover': dirty
+      ? { bgcolor: 'rgba(245,158,11,0.10)', boxShadow: 'none' }
+      : { bgcolor: 'rgba(15,23,42,0.04)', boxShadow: 'none' },
+    '&.Mui-disabled': {
+      bgcolor: 'transparent',
+      color: MUTED,
+      borderColor: 'rgba(15,23,42,0.06)',
+      opacity: 0.72,
+    },
+  };
+}
+
 export function scopedUpdateButtonSx(dirty = false) {
   return {
     height: 36,

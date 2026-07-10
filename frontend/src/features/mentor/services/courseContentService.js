@@ -39,6 +39,51 @@ export async function deleteCoursePath(pathId) {
   }
 }
 
+export async function fetchMaterialById(materialId) {
+  try {
+    const { data } = await axios.get(
+      `${API_BASE}/mentor/materials/${encodeURIComponent(materialId)}`,
+      { headers: getMentorAuthHeaders() },
+    );
+    return ensureSuccess(data, 'Không thể tải học liệu.');
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? error.message ?? 'Không thể tải học liệu.',
+    };
+  }
+}
+
+export async function fetchPathById(pathId) {
+  try {
+    const { data } = await axios.get(
+      `${API_BASE}/mentor/paths/${encodeURIComponent(pathId)}`,
+      { headers: getMentorAuthHeaders() },
+    );
+    return ensureSuccess(data, 'Không thể tải chương.');
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? error.message ?? 'Không thể tải chương.',
+    };
+  }
+}
+
+export async function fetchNodeById(nodeId) {
+  try {
+    const { data } = await axios.get(
+      `${API_BASE}/mentor/nodes/${encodeURIComponent(nodeId)}`,
+      { headers: getMentorAuthHeaders() },
+    );
+    return ensureSuccess(data, 'Không thể tải bài học.');
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? error.message ?? 'Không thể tải bài học.',
+    };
+  }
+}
+
 export async function saveCoursePath(body = {}) {
   const headers = getMentorAuthHeaders();
   const courseId = body.context?.courseId;

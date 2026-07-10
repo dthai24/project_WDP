@@ -1,7 +1,7 @@
 import {
   createTempId,
   filterLearningMaterials,
-  sanitizePathsForStorage,
+  getMaterialPersistentId,
   stripNonLearningMaterials,
   toPathIsActiveValue,
 } from './mentorCourseContentUtils';
@@ -31,7 +31,7 @@ export function mapDetailPathsToEditPaths(detailPaths = []) {
         tempId: createTempId('node'),
         materials: filterLearningMaterials(node.materials ?? node.Materials ?? []).map(
           (material) => ({
-            MaterialId: material.MaterialId ?? material.materialId ?? null,
+            MaterialId: getMaterialPersistentId(material),
             MaterialType: material.MaterialType ?? material.materialType ?? 'VIDEO',
             Title: material.Title ?? material.title ?? '',
             MaterialUrl: material.MaterialUrl ?? material.materialUrl ?? '',
@@ -106,31 +106,4 @@ export function loadEditCourseDraft(courseId) {
 
 export function clearEditCourseDraft(courseId) {
   sessionStorage.removeItem(editKey(courseId));
-}
-
-/**
- * Persist basic-info changes into edit storage; keep existing paths.
- */
-export function persistEditStep1(courseId, coursePascal, paths) {
-  const prev = loadEditCourseDraft(courseId) ?? {};
-  saveEditCourseDraft(courseId, {
-    ...prev,
-    courseId: Number(courseId),
-    course: coursePascal,
-    paths: sanitizePathsForStorage(paths ?? prev.paths ?? []),
-  });
-}
-
-/**
- * Persist content paths into edit storage; keep existing course.
- */
-export function persistEditContent(courseId, coursePascal, paths) {
-  const prev = loadEditCourseDraft(courseId) ?? {};
-  saveEditCourseDraft(courseId, {
-    ...prev,
-    courseId: Number(courseId),
-    course: coursePascal ?? prev.course,
-    paths: sanitizePathsForStorage(paths),
-    meta: { ...(prev.meta ?? {}), contentSaved: true, profileOnly: false },
-  });
 }

@@ -1,9 +1,7 @@
 import { isValidThumbnailValue, validateThumbnailDataUrl } from './mentorCourseImageUtils';
 
-//Max char user can input in course's description
+export const MENTOR_COURSE_NAME_MAX = 150;
 export const MENTOR_COURSE_DESCRIPTION_MAX = 250;
-export const MENTOR_COURSE_NAME_MAX = 250;
-
 
 // FORM INITTIAL
 export const MENTOR_COURSE_FORM_INITIAL = {
@@ -37,24 +35,20 @@ export function validateMentorCourseForm(form, options = {}) {
   const description = String(form.Description ?? '').trim();
   const thumbnail = String(form.Thumbnail ?? '').trim();
 
-  // Course's Name 
-  //(Not empty and have at least 3 chars, max: is setting 250 <depend on type of course name in database (nvarchar250)>)
   if (!courseName) {
     errors.CourseName = 'Tên khóa học không được để trống';
   } else if (courseName.length < 3) {
     errors.CourseName = 'Tên khóa học phải nhiều hơn 3 ký tự';
-  } else if (courseName.length > 250) {
-    errors.CourseName = 'Tên khóa học không được vượt quá 250 ký tự';
+  } else if (courseName.length > MENTOR_COURSE_NAME_MAX) {
+    errors.CourseName = `Tên khóa học không được vượt quá ${MENTOR_COURSE_NAME_MAX} ký tự`;
   }
 
-  // Course's Description
   if (!description) {
-    errors.Description = '(Description)-Mô tả khóa học không được để trống.';
-  } else if (description.length > MENTOR_COURSE_DESCRIPTION_MAX) {
-    // must be < 250 chars
-    errors.Description = `(Description)-Mô tả khóa học không được vượt quá ${MENTOR_COURSE_DESCRIPTION_MAX} ký tự.`;
+    errors.Description = 'Mô tả khóa học không được để trống.';
   } else if (description.length < 3) {
-    errors.Description = '(Description)-Mô tả khóa học không được nhỏ hơn 3 ký tự'
+    errors.Description = 'Mô tả khóa học không được nhỏ hơn 3 ký tự';
+  } else if (description.length > MENTOR_COURSE_DESCRIPTION_MAX) {
+    errors.Description = `Mô tả khóa học không được vượt quá ${MENTOR_COURSE_DESCRIPTION_MAX} ký tự.`;
   }
 
   // Danh mục
@@ -82,6 +76,37 @@ export function validateMentorCourseForm(form, options = {}) {
   }
 
   return errors;
+}
+
+/**
+ * Tìm khóa học của mentor trùng bộ (tên + thể loại + trình độ).
+ * @returns {object|null} khóa học trùng, hoặc null nếu không trùng
+ */
+export function findDuplicateMentorCourse(form, existingCourses = [], { excludeCourseId = null } = {}) {
+  const name = String(form.CourseName ?? '').trim().toLowerCase();
+  const categoryId = Number(form.CategoryId);
+  const levelId = Number(form.LevelId);
+
+  if (!name || !Number.isInteger(categoryId) || !Number.isInteger(levelId)) {
+    return null;
+  }
+
+  return (existingCourses ?? []).find((course) => {
+    const courseId = course.CourseId ?? course.courseId ?? null;
+    if (excludeCourseId != null && Number(courseId) === Number(excludeCourseId)) {
+      return false;
+    }
+
+    const courseName = String(course.CourseName ?? course.courseName ?? '').trim().toLowerCase();
+    const courseCategoryId = Number(course.CategoryId ?? course.categoryId);
+    const courseLevelId = Number(course.LevelId ?? course.levelId);
+
+    return (
+      courseName === name
+      && courseCategoryId === categoryId
+      && courseLevelId === levelId
+    );
+  }) ?? null;
 }
 
 export function buildCreateCourseStep1Payload(form, instructorId) {

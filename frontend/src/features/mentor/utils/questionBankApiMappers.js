@@ -9,6 +9,7 @@ import {
   buildTestSectionPayload,
   cloneSectionQuestions,
   getFilledTestQuestions,
+  hasPendingPersistedQuestionDeletes,
   isFilledTestQuestion,
   LISTENING_SOURCE_LINK,
   getListeningSectionFields,
@@ -282,7 +283,8 @@ export function isSectionSaveDirty(section, baselines = {}, sourceBaselines = {}
 /** Section khớp baseline (kể cả sau khi khôi phục câu hỏi đã xóa). */
 export function isSectionSyncedWithBaseline(section, baselines = {}, sourceBaselines = {}) {
   if (!section?.tempId) return true;
-  if ((section.DeletedQuestions ?? []).length > 0) return false;
+  // Chỉ câu đã lưu DB bị xóa mới cần Cập nhật; câu mới local vẫn hiện trong danh sách đã xóa.
+  if (hasPendingPersistedQuestionDeletes(section)) return false;
   return !isSectionSaveDirty(section, baselines, sourceBaselines);
 }
 

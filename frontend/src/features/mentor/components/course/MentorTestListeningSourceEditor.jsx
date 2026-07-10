@@ -20,6 +20,11 @@ import {
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { uploadAudioMaterial } from '@/features/mentor/services/materialUploadService';
 import {
+  isMaterialFileUploadBlocked,
+  releaseMaterialFileUploadLock,
+  tryAcquireMaterialFileUploadLock,
+} from '@/features/mentor/utils/mentorMaterialFileUploadLock';
+import {
   LISTENING_PREVIEW_HEIGHT,
   resolveListeningPreview,
 } from '@/shared/utils/mediaPreviewUtils';
@@ -115,16 +120,42 @@ export default function MentorTestListeningSourceEditor({
     setRemovedFileSnapshot(null);
   }, [section.tempId]);
 
+  useEffect(() => () => {
+    releaseMaterialFileUploadLock(section.tempId);
+  }, [section.tempId]);
+
   const applyFile = useCallback(
     async (file) => {
-      if (!file || uploading) return;
+      if (!file || disabled || uploadingRef.current || uploading) return;
+
+      if (isMaterialFileUploadBlocked(section.tempId)) {
+        setFileTypeError('Đang có học liệu khác tải file lên. Vui lòng đợi hoàn tất.');
+        return;
+      }
+
+      const hasCompletedUpload = Boolean(
+        String(section.AudioUrl ?? '').trim()
+        && section.FileName
+        && !section.File,
+      );
+      if (hasCompletedUpload) {
+        setFileTypeError('Vui lòng xóa file hiện tại trước khi tải file mới.');
+        return;
+      }
+
       const fileCheck = validateListeningAudioFile(file);
       if (!fileCheck.ok) {
         setFileTypeError(fileCheck.message);
         return;
       }
 
+      if (!tryAcquireMaterialFileUploadLock(section.tempId)) {
+        setFileTypeError('Đang có học liệu khác tải file lên. Vui lòng đợi hoàn tất.');
+        return;
+      }
+
       const seq = ++uploadSeqRef.current;
+      uploadingRef.current = true;
       setFileTypeError('');
       setUploadError('');
       setUploading(true);
@@ -165,16 +196,24 @@ export default function MentorTestListeningSourceEditor({
         });
       } finally {
         if (seq === uploadSeqRef.current) {
+          uploadingRef.current = false;
+          releaseMaterialFileUploadLock(section.tempId);
           setUploading(false);
           setUploadProgress(0);
         }
       }
     },
-    [onChange, uploading],
+    [disabled, onChange, section.AudioUrl, section.File, section.FileName, section.tempId, uploading],
   );
 
   const handleFileInputChange = (event) => {
-    const file = event.target.files?.[0];
+    const files = event.target.files;
+    if (files && files.length > 1) {
+      setFileTypeError('Chỉ được tải lên 1 file mỗi lần.');
+      event.target.value = '';
+      return;
+    }
+    const file = files?.[0];
     if (file) applyFile(file);
     event.target.value = '';
   };
@@ -183,8 +222,13 @@ export default function MentorTestListeningSourceEditor({
     event.preventDefault();
     setDragOver(false);
     if (isBusy) return;
-    const file = event.dataTransfer.files?.[0];
-    if (file) applyFile(file);
+    const files = event.dataTransfer.files;
+    if (!files?.length) return;
+    if (files.length > 1) {
+      setFileTypeError('Chỉ được tải lên 1 file mỗi lần.');
+      return;
+    }
+    applyFile(files[0]);
   };
 
   const handleRemoveFile = () => {
@@ -199,6 +243,8 @@ export default function MentorTestListeningSourceEditor({
     }
 
     uploadSeqRef.current += 1;
+    uploadingRef.current = false;
+    releaseMaterialFileUploadLock(section.tempId);
     setFileTypeError('');
     setUploadError('');
     setUploading(false);
@@ -416,7 +462,9 @@ export default function MentorTestListeningSourceEditor({
                 ref={fileInputRef}
                 type="file"
                 hidden
+                multiple={false}
                 accept={LISTENING_AUDIO_FILE_ACCEPT}
+                disabled={isBusy}
                 onChange={handleFileInputChange}
               />
             </Box>

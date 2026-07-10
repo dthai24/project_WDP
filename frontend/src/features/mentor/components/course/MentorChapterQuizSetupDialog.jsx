@@ -24,10 +24,12 @@ import {
   saveChapterQuizConfig,
   getCourseQuizConfig,
   saveCourseQuizConfig,
+  getChapterQuizConfigsByCourse,
 } from '@/features/mentor/services/chapterQuizConfigService';
 import {
   getChapterQuestionBankActiveStats,
   getCourseQuestionBankActiveStats,
+  fetchChapterSections,
 } from '@/features/mentor/services/questionBankService';
 import {
   CHAPTER_QUIZ_SKILLS,
@@ -46,12 +48,27 @@ import {
   getSelectedChapterIdsFromConfig,
   initCourseQuizChapterSelection,
   patchCourseChapterSelection,
+  getWritingSectionGroupsFromConfig,
+  getWritingSectionAvailableCount,
+  patchWritingSectionGroup,
+  mergeWritingSectionGroups,
+  isWritingSectionUseForTest,
+  isFirstChapterQuiz,
+  getRequiredChapterIdsFromConfig,
+  sanitizeChapterPrerequisites,
+  patchRequiredChapterSelection,
+  buildPreviousChapterQuizOptions,
 } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import {
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_QB_LABELS,
   TEST_SKILL_WRITING,
+  SECTION_USE_FOR_TEST_FILTER,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  buildQuestionBankChapterManagePath,
+  buildQuestionBankCoursePath,
+} from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 const countInputSx = (hasError) => ({
   ...contentInputSx(hasError),
@@ -84,6 +101,69 @@ function SectionTitle({ children }) {
     >
       {children}
     </Typography>
+  );
+}
+
+function PrerequisiteTestSelector({
+  options = [],
+  selectedChapterIds = [],
+  disabled = false,
+  saving = false,
+  onToggleChapter,
+}) {
+  const selected = new Set(selectedChapterIds.map(String));
+
+  if (options.length === 0) {
+    return (
+      <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
+        Không có bài kiểm tra chương trước để chọn.
+      </Typography>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+      {options.map((option) => {
+        const chapterId = String(option.chapterId);
+        const isSelected = selected.has(chapterId);
+
+        return (
+          <Box
+            key={chapterId}
+            sx={{
+              p: 1,
+              borderRadius: '10px',
+              bgcolor: isSelected ? 'rgba(124,58,237,0.04)' : '#fff',
+              border: '1px solid rgba(15,23,42,0.08)',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+              <Checkbox
+                size="small"
+                checked={isSelected}
+                disabled={disabled || saving}
+                onChange={(e) => onToggleChapter(option.chapterId, e.target.checked)}
+                sx={{
+                  p: 0.25,
+                  mt: 0.1,
+                  color: MUTED,
+                  '&.Mui-checked': { color: '#7C3AED' },
+                }}
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.4 }}>
+                  Chương {option.chapterIndex + 1}: {option.chapterTitle}
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.2, lineHeight: 1.45 }}>
+                  {option.quizTitle}
+                  {!option.quizEnabled ? ' · Chưa bật kiểm tra' : ''}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
   );
 }
 
@@ -158,6 +238,187 @@ function CourseChapterSelector({
   );
 }
 
+const WRITING_SECTION_FILTER_OPTIONS = [
+  { id: SECTION_USE_FOR_TEST_FILTER.ALL, label: 'Tất cả' },
+  { id: SECTION_USE_FOR_TEST_FILTER.IN_TEST, label: 'Dùng trong bài kiểm tra' },
+  { id: SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST, label: 'Không dùng trong bài kiểm tra' },
+];
+
+function WritingSectionGroupConfigurator({
+  groups = [],
+  statsGroups = [],
+  disabled = false,
+  saving = false,
+  errors = {},
+  onToggleSection,
+  onSectionCountChange,
+}) {
+  const [sectionFilter, setSectionFilter] = useState(SECTION_USE_FOR_TEST_FILTER.ALL);
+
+  if (groups.length === 0) {
+    return (
+      <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5, mt: 0.75 }}>
+        Chưa có section Từ vựng / Ngữ pháp nào trong ngân hàng.
+      </Typography>
+    );
+  }
+
+  const statsLookup = { writingSectionGroups: statsGroups };
+  const filteredGroups = groups.filter((group) => {
+    const isUseForTest = isWritingSectionUseForTest(group.sectionTempId, statsLookup);
+    if (sectionFilter === SECTION_USE_FOR_TEST_FILTER.IN_TEST) return isUseForTest;
+    if (sectionFilter === SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST) return !isUseForTest;
+    return true;
+  });
+
+  const inTestCount = groups.filter(
+    (group) => isWritingSectionUseForTest(group.sectionTempId, statsLookup),
+  ).length;
+  const notInTestCount = groups.length - inTestCount;
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.85, mt: 1 }}>
+      <Typography sx={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>
+        Chọn section và cấu hình số câu random cho từng nhóm Từ vựng / Ngữ pháp.
+      </Typography>
+
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+        {WRITING_SECTION_FILTER_OPTIONS.map((option) => {
+          const isActive = sectionFilter === option.id;
+          const countLabel = option.id === SECTION_USE_FOR_TEST_FILTER.IN_TEST
+            ? inTestCount
+            : option.id === SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST
+              ? notInTestCount
+              : groups.length;
+
+          return (
+            <AppButton
+              key={option.id}
+              size="small"
+              variant={isActive ? 'contained' : 'outlined'}
+              onClick={() => setSectionFilter(option.id)}
+              disabled={saving}
+              sx={{
+                minHeight: 28,
+                px: 1.1,
+                fontSize: 11,
+                fontWeight: 600,
+                borderRadius: '999px',
+                ...(isActive
+                  ? {
+                      bgcolor: '#EA580C',
+                      color: '#fff',
+                      boxShadow: 'none',
+                      '&:hover': { bgcolor: '#C2410C', boxShadow: 'none' },
+                    }
+                  : {
+                      borderColor: 'rgba(15,23,42,0.12)',
+                      color: TEXT,
+                    }),
+              }}
+            >
+              {option.label} ({countLabel})
+            </AppButton>
+          );
+        })}
+      </Box>
+
+      {filteredGroups.length === 0 ? (
+        <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5, py: 0.5 }}>
+          Không có section nào trong nhóm đã chọn.
+        </Typography>
+      ) : null}
+
+      {filteredGroups.map((group) => {
+        const isUseForTest = isWritingSectionUseForTest(group.sectionTempId, statsLookup);
+        const available = getWritingSectionAvailableCount(group.sectionTempId, statsLookup);
+        const errorKey = `${TEST_SKILL_WRITING}.${group.sectionTempId}`;
+        const fieldError = errors[errorKey];
+        const isBlocked = !isUseForTest;
+
+        return (
+          <Box
+            key={group.sectionTempId}
+            sx={{
+              p: 1,
+              borderRadius: '10px',
+              bgcolor: isBlocked
+                ? 'rgba(15,23,42,0.03)'
+                : group.selected
+                  ? 'rgba(234,88,12,0.04)'
+                  : '#fff',
+              border: `1px solid ${
+                fieldError ? 'rgba(220,38,38,0.35)' : 'rgba(15,23,42,0.08)'
+              }`,
+              opacity: isBlocked ? 0.92 : 1,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+              <Checkbox
+                size="small"
+                checked={Boolean(group.selected) && !isBlocked}
+                disabled={disabled || saving || isBlocked || available <= 0}
+                onChange={(e) => onToggleSection(group.sectionTempId, e.target.checked)}
+                sx={{
+                  p: 0.25,
+                  mt: 0.1,
+                  color: MUTED,
+                  '&.Mui-checked': { color: '#EA580C' },
+                }}
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: isBlocked ? MUTED : TEXT,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {group.sectionTitle}
+                </Typography>
+
+                {isBlocked ? (
+                  <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.35, lineHeight: 1.45 }}>
+                    Section này không được dùng trong bài kiểm tra
+                  </Typography>
+                ) : (
+                  <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.2 }}>
+                    {available > 0
+                      ? `Có ${available} câu đang bật`
+                      : 'Section chưa có câu đang bật'}
+                  </Typography>
+                )}
+
+                {group.selected && !isBlocked ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.85 }}>
+                    <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
+                    <InputBase
+                      type="number"
+                      inputProps={{ min: 0, max: available }}
+                      value={group.questionCount ?? 0}
+                      onChange={(e) => onSectionCountChange(group.sectionTempId, e.target.value)}
+                      disabled={disabled || saving}
+                      sx={countInputSx(Boolean(fieldError))}
+                    />
+                    <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu</Typography>
+                  </Box>
+                ) : null}
+
+                {fieldError ? (
+                  <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75, lineHeight: 1.45 }}>
+                    {fieldError}
+                  </Typography>
+                ) : null}
+              </Box>
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
 export default function MentorChapterQuizSetupDialog({
   open,
   onClose,
@@ -167,17 +428,21 @@ export default function MentorChapterQuizSetupDialog({
   chapterId,
   chapterTitle = '',
   chapterIndex = 0,
+  paths = [],
 }) {
   const navigate = useNavigate();
   const [config, setConfig] = useState(null);
   const [chapterStats, setChapterStats] = useState(null);
   const [allCourseStats, setAllCourseStats] = useState(null);
+  const [prerequisiteOptions, setPrerequisiteOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
   const isCourseScope = scope === QUIZ_SETUP_SCOPE_COURSE;
+  const showPrerequisiteConfig = !isCourseScope && !isFirstChapterQuiz(chapterIndex);
   const selectedChapterIds = getSelectedChapterIdsFromConfig(config ?? {});
+  const requiredChapterIds = getRequiredChapterIdsFromConfig(config ?? {});
 
   const stats = useMemo(() => {
     if (isCourseScope) {
@@ -230,20 +495,59 @@ export default function MentorChapterQuizSetupDialog({
         return;
       }
 
-      const [configRes, statsRes] = await Promise.all([
+      const [configRes, statsResRaw, courseConfigsRes] = await Promise.all([
         getChapterQuizConfig(courseId, chapterId, { chapterTitle, chapterIndex }),
         getChapterQuestionBankActiveStats(courseId, chapterId),
+        showPrerequisiteConfig
+          ? getChapterQuizConfigsByCourse(courseId)
+          : Promise.resolve({ ok: true, configs: [] }),
       ]);
 
-      if (configRes.ok && statsRes.ok && statsRes.hasBank) {
-        setConfig(syncChapterQuizConfigWithStats(configRes.config, statsRes));
-      } else if (configRes.ok) {
-        setConfig(configRes.config);
-      } else {
-        setConfig(
-          getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex }),
-        );
+      let statsRes = statsResRaw;
+      if (
+        statsRes.ok
+        && !(statsRes.writingSectionGroups?.length > 0)
+        && statsRes.hasBank
+      ) {
+        const sectionsRes = await fetchChapterSections(courseId, chapterId);
+        if (sectionsRes.ok) {
+          const writingSectionGroups = (sectionsRes.sections ?? [])
+            .filter((section) => section.skillType === TEST_SKILL_WRITING)
+            .map((section) => ({
+              sectionTempId: `section_${section.sectionId}`,
+              sectionTitle: section.displayName || section.sectionName || 'Section',
+              availableCount: Math.max(0, Number(section.questionCount) || 0),
+              isUseForTest: section.isUseForTest !== false,
+            }));
+          if (writingSectionGroups.length > 0) {
+            statsRes = { ...statsRes, writingSectionGroups };
+          }
+        }
       }
+
+      let nextConfig = configRes.ok
+        ? configRes.config
+        : getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex });
+
+      nextConfig = sanitizeChapterPrerequisites(nextConfig, chapterIndex);
+
+      if (showPrerequisiteConfig) {
+        setPrerequisiteOptions(
+          buildPreviousChapterQuizOptions(
+            paths,
+            chapterIndex,
+            courseConfigsRes.ok ? courseConfigsRes.configs : [],
+          ),
+        );
+      } else {
+        setPrerequisiteOptions([]);
+      }
+
+      if (statsRes.ok) {
+        nextConfig = syncChapterQuizConfigWithStats(nextConfig, statsRes);
+      }
+
+      setConfig(nextConfig);
 
       if (statsRes.ok) {
         setChapterStats(statsRes);
@@ -253,7 +557,7 @@ export default function MentorChapterQuizSetupDialog({
     } finally {
       setLoading(false);
     }
-  }, [open, courseId, chapterId, chapterTitle, chapterIndex, courseTitle, isCourseScope]);
+  }, [open, courseId, chapterId, chapterTitle, chapterIndex, courseTitle, isCourseScope, paths, showPrerequisiteConfig]);
 
   useEffect(() => {
     if (open) {
@@ -262,6 +566,7 @@ export default function MentorChapterQuizSetupDialog({
       setConfig(null);
       setChapterStats(null);
       setAllCourseStats(null);
+      setPrerequisiteOptions([]);
       setErrors({});
     }
   }, [open, loadData]);
@@ -319,14 +624,50 @@ export default function MentorChapterQuizSetupDialog({
     });
   };
 
-  const handleCreateQuestionBank = () => {
+  const handleWritingSectionToggle = (sectionTempId, selected) => {
+    setConfig((prev) => patchWritingSectionGroup(
+      prev,
+      sectionTempId,
+      { selected },
+      stats?.writingSectionGroups ?? [],
+    ));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[`${TEST_SKILL_WRITING}.${sectionTempId}`];
+      delete next._total;
+      delete next[TEST_SKILL_WRITING];
+      return next;
+    });
+  };
+
+  const handleWritingSectionCountChange = (sectionTempId, rawValue) => {
+    setConfig((prev) => patchWritingSectionGroup(
+      prev,
+      sectionTempId,
+      { questionCount: rawValue },
+      stats?.writingSectionGroups ?? [],
+    ));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[`${TEST_SKILL_WRITING}.${sectionTempId}`];
+      delete next._total;
+      delete next[TEST_SKILL_WRITING];
+      return next;
+    });
+  };
+
+  const handleRequiredChapterToggle = (requiredChapterId, selected) => {
+    setConfig((prev) => patchRequiredChapterSelection(prev, requiredChapterId, selected));
+  };
+
+  const handleCreateQuestionBank = useCallback(() => {
     onClose?.();
     if (isCourseScope) {
-      navigate(`/mentor/courses/${courseId}/questions`);
+      navigate(buildQuestionBankCoursePath(courseId));
       return;
     }
-    navigate(`/mentor/question-banks/manage?courseId=${courseId}&chapterId=${chapterId}`);
-  };
+    navigate(buildQuestionBankChapterManagePath(courseId, chapterId));
+  }, [chapterId, courseId, isCourseScope, navigate, onClose]);
 
   const handleSave = async () => {
     if (!config) return;
@@ -341,7 +682,7 @@ export default function MentorChapterQuizSetupDialog({
     try {
       const payload = isCourseScope
         ? { ...config, courseId, chapterId: COURSE_QUIZ_CHAPTER_ID }
-        : config;
+        : sanitizeChapterPrerequisites({ ...config, courseId, chapterId }, chapterIndex);
       const saveFn = isCourseScope ? saveCourseQuizConfig : saveChapterQuizConfig;
       const res = await saveFn(payload);
       if (!res.ok) {
@@ -389,8 +730,15 @@ export default function MentorChapterQuizSetupDialog({
         </AppButton>
       </Box>
     ),
-    [courseId, chapterId, isCourseScope, onClose],
+    [handleCreateQuestionBank, isCourseScope],
   );
+
+  const writingStatsGroups = stats?.writingSectionGroups ?? [];
+  const writingSectionGroups = useMemo(() => {
+    const configGroups = getWritingSectionGroupsFromConfig(config ?? {});
+    if (writingStatsGroups.length === 0) return configGroups;
+    return mergeWritingSectionGroups(configGroups, writingStatsGroups);
+  }, [config, writingStatsGroups]);
 
   return (
     <Dialog
@@ -574,6 +922,21 @@ export default function MentorChapterQuizSetupDialog({
               }
             />
 
+            {showPrerequisiteConfig ? (
+              <Box sx={{ mb: 2 }}>
+                <SectionTitle>Điều kiện làm bài kiểm tra</SectionTitle>
+                <Typography sx={{ fontSize: 12, color: MUTED, mb: 1.25, lineHeight: 1.5 }}>
+                  Học viên phải đạt các bài kiểm tra chương được chọn trước khi được làm bài kiểm tra này.
+                </Typography>
+                <PrerequisiteTestSelector
+                  options={prerequisiteOptions}
+                  selectedChapterIds={requiredChapterIds}
+                  saving={saving}
+                  onToggleChapter={handleRequiredChapterToggle}
+                />
+              </Box>
+            ) : null}
+
             {isCourseScope ? (
               <>
                 <SectionTitle>Chọn chương</SectionTitle>
@@ -613,6 +976,8 @@ export default function MentorChapterQuizSetupDialog({
                 const available = stats?.questionCountBySkill?.[part] ?? 0;
                 const count = getQuestionCountForPart(config ?? {}, part);
                 const fieldError = errors[part];
+                const isWritingPart = part === TEST_SKILL_WRITING;
+                const hasWritingSections = isWritingPart && writingSectionGroups.length > 0;
 
                 return (
                   <Box
@@ -622,7 +987,8 @@ export default function MentorChapterQuizSetupDialog({
                       borderRadius: '12px',
                       bgcolor: '#fff',
                       border: `1px solid ${
-                        fieldError || Object.keys(errors).some((key) => key.startsWith(`${part}.`))
+                        fieldError
+                        || Object.keys(errors).some((key) => key.startsWith(`${part}.`))
                           ? 'rgba(220,38,38,0.35)'
                           : 'rgba(15,23,42,0.08)'
                       }`,
@@ -633,21 +999,36 @@ export default function MentorChapterQuizSetupDialog({
                         {TEST_SKILL_QB_LABELS[part]}
                       </Typography>
                       <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>
-                        Có {available} câu đang bật
+                        {hasWritingSections
+                          ? `Đã chọn ${count} câu · Có ${available} câu đang bật`
+                          : `Có ${available} câu đang bật`}
                       </Typography>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                        <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
-                        <InputBase
-                          type="number"
-                          inputProps={{ min: 0, max: available }}
-                          value={count}
-                          onChange={(e) => handleSkillCountChange(part, e.target.value)}
-                          disabled={saving || !config?.enabled || !courseHasSelectedChapters}
-                          sx={countInputSx(Boolean(fieldError))}
+                      {hasWritingSections ? (
+                        <WritingSectionGroupConfigurator
+                          groups={writingSectionGroups}
+                          statsGroups={writingStatsGroups}
+                          disabled={!config?.enabled || !courseHasSelectedChapters}
+                          saving={saving}
+                          errors={errors}
+                          onToggleSection={handleWritingSectionToggle}
+                          onSectionCountChange={handleWritingSectionCountChange}
                         />
-                        <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu</Typography>
-                      </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                          <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
+                          <InputBase
+                            type="number"
+                            inputProps={{ min: 0, max: available }}
+                            value={count}
+                            onChange={(e) => handleSkillCountChange(part, e.target.value)}
+                            disabled={saving || !config?.enabled || !courseHasSelectedChapters}
+                            sx={countInputSx(Boolean(fieldError))}
+                          />
+                          <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu</Typography>
+                        </Box>
+                      )}
+
                       {fieldError && (
                         <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75, lineHeight: 1.45 }}>
                           {fieldError}
@@ -657,38 +1038,6 @@ export default function MentorChapterQuizSetupDialog({
                   </Box>
                 );
               })}
-            </Box>
-
-            <SectionTitle>Cấu hình random</SectionTitle>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
-              <FormControlLabel
-                sx={{ ml: 0 }}
-                control={
-                  <Switch
-                    size="small"
-                    checked={Boolean(config?.shuffleQuestions)}
-                    onChange={(e) => handleFieldChange({ shuffleQuestions: e.target.checked })}
-                    disabled={saving}
-                  />
-                }
-                label={
-                  <Typography sx={{ fontSize: 13, color: TEXT }}>Xáo trộn thứ tự câu hỏi</Typography>
-                }
-              />
-              <FormControlLabel
-                sx={{ ml: 0 }}
-                control={
-                  <Switch
-                    size="small"
-                    checked={Boolean(config?.shuffleAnswers)}
-                    onChange={(e) => handleFieldChange({ shuffleAnswers: e.target.checked })}
-                    disabled={saving}
-                  />
-                }
-                label={
-                  <Typography sx={{ fontSize: 13, color: TEXT }}>Xáo trộn thứ tự đáp án</Typography>
-                }
-              />
             </Box>
 
             <Box

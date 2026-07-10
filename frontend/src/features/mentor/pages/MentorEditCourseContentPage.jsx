@@ -11,8 +11,18 @@ import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
 import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
-import { saveCoursePath, deleteCoursePath } from '@/features/mentor/services/courseContentService';
-import { uploadPendingMaterialInPath, hydrateTextMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
+import {
+  saveCoursePath,
+  deleteCoursePath,
+  fetchMaterialById,
+  fetchPathById,
+  fetchNodeById,
+} from '@/features/mentor/services/courseContentService';
+import {
+  uploadPendingMaterialInPath,
+  hydrateTextMaterialsInPaths,
+  hydrateSingleTextMaterial,
+} from '@/features/mentor/utils/mentorMaterialUploadUtils';
 import {
   applyCoursePathSaveResult,
   buildCoursePathOnlySavePayload,
@@ -24,27 +34,33 @@ import {
 } from '@/features/mentor/utils/courseContentApiMappers';
 import {
   courseDetailToEditCourse,
-  loadEditCourseDraft,
   mapDetailPathsToEditPaths,
-  persistEditContent,
 } from '@/features/mentor/utils/mentorCourseEditStorage';
 import {
   filterLearningMaterials,
   getMaterialContentValidationToast,
+  getMaterialPersistentId,
   createEmptyMaterial,
   createEmptyNode,
   createEmptyPath,
   chapterHasContent,
   lessonHasContent,
   materialHasContent,
-  isPathFieldsSnapshotSaved,
-  isPathSnapshotSaved,
-  isNodeFieldsSnapshotSaved,
-  isMaterialSnapshotSaved,
+  makePathDirtyKey,
+  makeNodeDirtyKey,
+  makeMaterialDirtyKey,
+  isEditDirty,
+  hasUnsavedEditScopeDirty,
+  clearDirtyKeysForPath,
+  isNewUnsavedMaterial,
+  isNewUnsavedNode,
+  isNewUnsavedPath,
+  removeMaterialFromPath,
+  removeNodeFromPath,
+  removePathFromList,
   MATERIAL_TYPE_LABELS,
   reorderMaterials,
-  restorePathFromSnapshot,
-  serializePathSnapshot,
+  applyFetchedMaterialToPath,
   validateMaterialForSave,
   validateNodeFieldsForSave,
   validatePathFieldsForSave,
@@ -136,9 +152,18 @@ function updateMaterialInPath(paths, pathTempId, nodeTempId, materialTempId, pat
         if (node.tempId !== nodeTempId) return node;
         return {
           ...node,
-          materials: (node.materials ?? node.Materials ?? []).map((material) =>
-            material.tempId === materialTempId ? { ...material, ...patch } : material,
-          ),
+          materials: (node.materials ?? node.Materials ?? []).map((material) => {
+            if (material.tempId !== materialTempId) return material;
+            const next = { ...material, ...patch };
+            // Không cho patch vô tình xóa MaterialId → tránh UPDATE thành INSERT.
+            const persistentId = getMaterialPersistentId(material);
+            if (persistentId && !getMaterialPersistentId(next)) {
+              next.MaterialId = persistentId;
+            } else if (getMaterialPersistentId(next)) {
+              next.MaterialId = getMaterialPersistentId(next);
+            }
+            return next;
+          }),
         };
       }),
     };
@@ -157,7 +182,7 @@ export default function MentorEditCourseContentPage() {
   const [validationErrors, setValidationErrors] = useState({ root: [], paths: {} });
   const [expandedPaths, setExpandedPaths] = useState({});
   const [expandedNodes, setExpandedNodes] = useState({});
-  const [savedPathSnapshots, setSavedPathSnapshots] = useState({});
+  const [dirtyKeys, setDirtyKeys] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [saveConfirm, setSaveConfirm] = useState(null);
   const [focusTarget, setFocusTarget] = useState(null);
@@ -168,7 +193,8 @@ export default function MentorEditCourseContentPage() {
   const [updatingMaterialKey, setUpdatingMaterialKey] = useState(null);
 
   const pathsRef = useRef(paths);
-  const savedPathSnapshotsRef = useRef(savedPathSnapshots);
+  const dirtyKeysRef = useRef(dirtyKeys);
+  const focusTargetRef = useRef(focusTarget);
   const pendingNavigationRef = useRef(null);
   const requestNavigationRef = useRef(null);
   const confirmSaveInFlightRef = useRef(false);
@@ -179,15 +205,39 @@ export default function MentorEditCourseContentPage() {
   }, [paths]);
 
   useEffect(() => {
-    savedPathSnapshotsRef.current = savedPathSnapshots;
-  }, [savedPathSnapshots]);
+    dirtyKeysRef.current = dirtyKeys;
+  }, [dirtyKeys]);
+
+  useEffect(() => {
+    focusTargetRef.current = focusTarget;
+  }, [focusTarget]);
 
   const courseName = coursePascal?.CourseName ?? '';
 
-  const buildSnapshots = useCallback((nextPaths) => {
-    const snap = {};
-    nextPaths.forEach((p) => { snap[p.tempId] = serializePathSnapshot(p); });
-    return snap;
+  const markDirty = useCallback((key) => {
+    if (!key) return;
+    setDirtyKeys((prev) => {
+      if (prev[key]) return prev;
+      const next = { ...prev, [key]: true };
+      dirtyKeysRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const clearDirtyKey = useCallback((key) => {
+    if (!key) return;
+    setDirtyKeys((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      dirtyKeysRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const applyFocusTarget = useCallback((next) => {
+    focusTargetRef.current = next;
+    setFocusTarget(next);
   }, []);
 
   // ── initial load ────────────────────────────────────────────────────────────
@@ -196,32 +246,19 @@ export default function MentorEditCourseContentPage() {
     let cancelled = false;
 
     (async () => {
-      // Try edit storage first (basic info may already be filled from step 1)
-      const existingDraft = loadEditCourseDraft(courseId);
+      const result = await fetchMentorCourseDetail(courseId);
+      if (cancelled) return;
 
-      let resolvedCoursePascal = existingDraft?.course ?? null;
-      let resolvedPaths = existingDraft?.paths ?? null;
-
-      if (!resolvedCoursePascal || !resolvedPaths) {
-        // Fetch from server
-        const result = await fetchMentorCourseDetail(courseId);
-        if (cancelled) return;
-
-        if (!result.success) {
-          toast.error('Không thể tải nội dung khóa học.');
-          navigate(`/mentor/courses/${courseId}`, { replace: true });
-          return;
-        }
-
-        if (!resolvedCoursePascal) {
-          resolvedCoursePascal = courseDetailToEditCourse(result.course);
-        }
-        if (!resolvedPaths) {
-          resolvedPaths = mapDetailPathsToEditPaths(
-            result.course.Paths ?? result.course.paths ?? [],
-          );
-        }
+      if (!result.success) {
+        toast.error('Không thể tải nội dung khóa học.');
+        navigate(`/mentor/courses/${courseId}`, { replace: true });
+        return;
       }
+
+      const resolvedCoursePascal = courseDetailToEditCourse(result.course);
+      const resolvedPaths = mapDetailPathsToEditPaths(
+        result.course.Paths ?? result.course.paths ?? [],
+      );
 
       if (cancelled) return;
 
@@ -229,18 +266,18 @@ export default function MentorEditCourseContentPage() {
       if (cancelled) return;
 
       const loaded = withNormalizedOrders(hydratedPaths);
-      const snapshots = buildSnapshots(loaded);
 
       setCoursePascal(resolvedCoursePascal);
       setPaths(loaded);
-      setSavedPathSnapshots(snapshots);
+      setDirtyKeys({});
       setActiveChapterId(loaded[0]?.tempId ?? null);
       setFocusTarget(null);
+      focusTargetRef.current = null;
       setReady(true);
     })();
 
     return () => { cancelled = true; };
-  }, [buildSnapshots, courseId, navigate]);
+  }, [courseId, navigate]);
 
   // ── path / node / material handlers ────────────────────────────────────────
 
@@ -253,16 +290,15 @@ export default function MentorEditCourseContentPage() {
     const newPath = createEmptyPath();
     applyPaths((prev) => [...prev, newPath]);
     setExpandedPaths((prev) => ({ ...prev, [newPath.tempId]: true }));
-    setSavedPathSnapshots((prev) => ({
-      ...prev,
-      [newPath.tempId]: serializePathSnapshot(newPath),
-    }));
+    markDirty(makePathDirtyKey(newPath.tempId));
     setActiveChapterId(newPath.tempId);
-    setFocusTarget({ type: 'chapter-edit', pathTempId: newPath.tempId });
-  }, [applyPaths]);
+    applyFocusTarget({ type: 'chapter-edit', pathTempId: newPath.tempId });
+  }, [applyPaths, applyFocusTarget, markDirty]);
 
-  const handlePathChange = (pathTempId, patch) =>
+  const handlePathChange = (pathTempId, patch) => {
+    markDirty(makePathDirtyKey(pathTempId));
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
+  };
 
   const handleDeleteNewPath = async (pathTempId) => {
     const path = pathsRef.current.find((item) => item.tempId === pathTempId);
@@ -285,14 +321,9 @@ export default function MentorEditCourseContentPage() {
       pathsRef.current.filter((p) => p.tempId !== pathTempId),
     );
 
-    persistEditContent(courseId, coursePascal, nextPaths);
     setPaths(nextPaths);
     setValidationErrors({ root: [], paths: {} });
-    setSavedPathSnapshots((prev) => {
-      const next = { ...prev };
-      delete next[pathTempId];
-      return next;
-    });
+    setDirtyKeys((prev) => clearDirtyKeysForPath(prev, pathTempId));
     setExpandedPaths((prev) => {
       const next = { ...prev };
       delete next[pathTempId];
@@ -301,6 +332,7 @@ export default function MentorEditCourseContentPage() {
     if (activeChapterId === pathTempId) {
       setActiveChapterId(nextPaths[0]?.tempId ?? null);
       setFocusTarget(null);
+      focusTargetRef.current = null;
     }
   };
 
@@ -406,17 +438,20 @@ export default function MentorEditCourseContentPage() {
           : p,
       ),
     );
+    markDirty(makeNodeDirtyKey(pathTempId, newNode.tempId));
     setExpandedNodes((prev) => ({ ...prev, [newNode.tempId]: true }));
     setActiveChapterId(pathTempId);
-    setFocusTarget({
+    applyFocusTarget({
       type: 'lesson',
       pathTempId,
       nodeTempId: newNode.tempId,
     });
-  }, [applyPaths]);
+  }, [applyPaths, applyFocusTarget, markDirty]);
 
-  const handleNodeChange = (pathTempId, nodeTempId, patch) =>
+  const handleNodeChange = (pathTempId, nodeTempId, patch) => {
+    markDirty(makeNodeDirtyKey(pathTempId, nodeTempId));
     applyPaths((prev) => updateNodeInPath(prev, pathTempId, nodeTempId, patch));
+  };
 
   const performAddMaterial = useCallback((pathTempId, nodeTempId) => {
     const newMaterial = createEmptyMaterial();
@@ -433,18 +468,21 @@ export default function MentorEditCourseContentPage() {
         };
       }),
     );
+    markDirty(makeMaterialDirtyKey(pathTempId, nodeTempId, newMaterial.tempId));
     setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
     setActiveChapterId(pathTempId);
-    setFocusTarget({
+    applyFocusTarget({
       type: 'material',
       pathTempId,
       nodeTempId,
       materialTempId: newMaterial.tempId,
     });
-  }, [applyPaths]);
+  }, [applyPaths, applyFocusTarget, markDirty]);
 
-  const handleMaterialChange = (pathTempId, nodeTempId, materialTempId, patch) =>
+  const handleMaterialChange = (pathTempId, nodeTempId, materialTempId, patch) => {
+    markDirty(makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId));
     applyPaths((prev) => updateMaterialInPath(prev, pathTempId, nodeTempId, materialTempId, patch));
+  };
 
   const handleMaterialReorder = (pathTempId, nodeTempId, fromIndex, toIndex) => {
     applyPaths((prev) =>
@@ -452,21 +490,26 @@ export default function MentorEditCourseContentPage() {
         if (p.tempId !== pathTempId) return p;
         return {
           ...p,
-          nodes: (p.nodes ?? p.Nodes ?? []).map((n) =>
-            n.tempId !== nodeTempId
-              ? n
-              : {
-                  ...n,
-                  materials: reorderMaterials(
-                    n.materials ?? n.Materials ?? [],
-                    fromIndex,
-                    toIndex,
-                  ),
-                },
-          ),
+          nodes: (p.nodes ?? p.Nodes ?? []).map((n) => {
+            if (n.tempId !== nodeTempId) return n;
+            return {
+              ...n,
+              materials: reorderMaterials(
+                n.materials ?? n.Materials ?? [],
+                fromIndex,
+                toIndex,
+              ),
+            };
+          }),
         };
       }),
     );
+
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    const node = (path?.nodes ?? path?.Nodes ?? []).find((item) => item.tempId === nodeTempId);
+    filterLearningMaterials(node?.materials ?? node?.Materials ?? []).forEach((material) => {
+      markDirty(makeMaterialDirtyKey(pathTempId, nodeTempId, material.tempId));
+    });
   };
 
   const handleUpdatePath = (pathTempId) => {
@@ -488,18 +531,17 @@ export default function MentorEditCourseContentPage() {
     if (!path || !pathTempId) return;
 
     const pathIndex = pathsRef.current.findIndex((item) => item.tempId === pathTempId);
-    const snapshot = savedPathSnapshotsRef.current[pathTempId];
     const node = (path.nodes ?? []).find((item) => item.tempId === nodeTempId);
     const material = filterLearningMaterials(node?.materials ?? node?.Materials ?? [])
       .find((item) => item.tempId === materialTempId);
 
     if (saveScope === 'path') {
-      if (isPathFieldsSnapshotSaved(path, snapshot)) {
+      if (!isEditDirty(dirtyKeysRef.current, makePathDirtyKey(pathTempId))) {
         toast.info('Không có thay đổi path để lưu.');
         return;
       }
 
-      const pathErrors = validatePathFieldsForSave(path);
+      const pathErrors = validatePathFieldsForSave(path, pathsRef.current);
       if (Object.keys(pathErrors).length > 0) {
         setValidationErrors((prev) => ({
           ...prev,
@@ -521,12 +563,12 @@ export default function MentorEditCourseContentPage() {
         toast.error('Vui lòng cập nhật path trước khi lưu bài học.');
         return;
       }
-      if (isNodeFieldsSnapshotSaved(path, nodeTempId, snapshot)) {
+      if (!isEditDirty(dirtyKeysRef.current, makeNodeDirtyKey(pathTempId, nodeTempId))) {
         toast.info('Không có thay đổi bài học để lưu.');
         return;
       }
 
-      const nodeErrors = validateNodeFieldsForSave(node);
+      const nodeErrors = validateNodeFieldsForSave(node, path.nodes ?? []);
       if (Object.keys(nodeErrors).length > 0) {
         setValidationErrors((prev) => ({
           ...prev,
@@ -556,12 +598,18 @@ export default function MentorEditCourseContentPage() {
         toast.error('Vui lòng cập nhật node trước khi lưu học liệu.');
         return;
       }
-      if (isMaterialSnapshotSaved(path, nodeTempId, materialTempId, snapshot)) {
+      if (!isEditDirty(
+        dirtyKeysRef.current,
+        makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId),
+      )) {
         toast.info('Không có thay đổi học liệu để lưu.');
         return;
       }
 
-      const materialErrors = validateMaterialForSave(material);
+      const materialErrors = validateMaterialForSave(
+        material,
+        filterLearningMaterials(node.materials ?? node.Materials ?? []),
+      );
       if (Object.keys(materialErrors).length > 0) {
         setValidationErrors((prev) => ({
           ...prev,
@@ -613,6 +661,64 @@ export default function MentorEditCourseContentPage() {
     void executeScopedSave(saveScope, pathTempId, nodeTempId, materialTempId);
   };
 
+  const syncMaterialFromServer = useCallback(async (
+    pathTempId,
+    nodeTempId,
+    materialTempId,
+    materialId,
+  ) => {
+    if (!pathTempId || !nodeTempId || !materialTempId || !materialId) {
+      return { ok: false, message: 'Thiếu thông tin học liệu để đồng bộ.' };
+    }
+
+    const result = await fetchMaterialById(materialId);
+    if (!result.ok) {
+      return { ok: false, message: result.message || 'Không thể tải học liệu mới nhất.' };
+    }
+
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    if (!path) {
+      return { ok: false, message: 'Không tìm thấy chương chứa học liệu.' };
+    }
+
+    const currentMaterial = filterLearningMaterials(
+      (path.nodes ?? []).find((item) => item.tempId === nodeTempId)?.materials ?? [],
+    ).find((item) => item.tempId === materialTempId);
+
+    const withApiData = applyFetchedMaterialToPath(
+      path,
+      nodeTempId,
+      materialTempId,
+      result.data,
+    );
+    const fetchedMaterial = filterLearningMaterials(
+      (withApiData.nodes ?? []).find((item) => item.tempId === nodeTempId)?.materials ?? [],
+    ).find((item) => item.tempId === materialTempId);
+
+    const hydratedMaterial = await hydrateSingleTextMaterial(fetchedMaterial ?? {
+      ...(currentMaterial ?? {}),
+      ...result.data,
+      Content: '',
+      File: null,
+      tempId: materialTempId,
+    });
+
+    const syncedPath = applyFetchedMaterialToPath(
+      withApiData,
+      nodeTempId,
+      materialTempId,
+      hydratedMaterial,
+    );
+    const nextPaths = pathsRef.current.map((item) => (
+      item.tempId === pathTempId ? syncedPath : item
+    ));
+    pathsRef.current = nextPaths;
+    setPaths(nextPaths);
+    clearDirtyKey(makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId));
+
+    return { ok: true };
+  }, [clearDirtyKey]);
+
   const executeScopedSave = async (saveScope, pathTempId, nodeTempId, materialTempId) => {
     if (confirmSaveInFlightRef.current) return;
 
@@ -658,7 +764,7 @@ export default function MentorEditCourseContentPage() {
             courseId: Number(courseId),
             pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
           },
-          savedPathSnapshotsRef.current[pathTempId],
+          null,
         )
         : saveScope === 'node'
           ? buildCourseNodeOnlySavePayload(
@@ -668,7 +774,7 @@ export default function MentorEditCourseContentPage() {
               courseId: Number(courseId),
               pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
             },
-            savedPathSnapshotsRef.current[pathTempId],
+            null,
           )
           : buildCourseMaterialSavePayload(
             workingPath,
@@ -678,7 +784,7 @@ export default function MentorEditCourseContentPage() {
               courseId: Number(courseId),
               pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
             },
-            savedPathSnapshotsRef.current[pathTempId],
+            null,
           );
 
       const hasOperations = saveScope === 'path'
@@ -720,22 +826,41 @@ export default function MentorEditCourseContentPage() {
       }
 
       const savedPath = applyCoursePathSaveResult(workingPath, result);
-      const nextPaths = withNormalizedOrders(
+      let nextPaths = withNormalizedOrders(
         nextPathsDraft.map((item) => (item.tempId === pathTempId ? savedPath : item)),
       );
 
       pathsRef.current = nextPaths;
       setPaths(nextPaths);
-      setSavedPathSnapshots((prev) => ({
-        ...prev,
-        [pathTempId]: serializePathSnapshot(savedPath),
-      }));
 
-      queueMicrotask(() => {
-        persistEditContent(courseId, coursePascal, nextPaths);
-      });
+      if (saveScope === 'material' && materialTempId) {
+        const savedMaterial = filterLearningMaterials(
+          (savedPath.nodes ?? []).find((item) => item.tempId === nodeTempId)?.materials ?? [],
+        ).find((item) => item.tempId === materialTempId);
+        const materialId = getMaterialPersistentId(savedMaterial);
+
+        if (materialId) {
+          const syncResult = await syncMaterialFromServer(
+            pathTempId,
+            nodeTempId,
+            materialTempId,
+            materialId,
+          );
+          if (!syncResult.ok) {
+            clearDirtyKey(makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId));
+          }
+          nextPaths = pathsRef.current;
+        } else {
+          clearDirtyKey(makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId));
+        }
+      } else if (saveScope === 'node') {
+        clearDirtyKey(makeNodeDirtyKey(pathTempId, nodeTempId));
+      } else {
+        clearDirtyKey(makePathDirtyKey(pathTempId));
+      }
 
       setSaveConfirm(null);
+
       toast.success(
         saveScope === 'path'
           ? 'Đã cập nhật path.'
@@ -759,45 +884,281 @@ export default function MentorEditCourseContentPage() {
     }
   };
 
-  const revertActivePathChanges = useCallback((pathTempId) => {
+  const handleRestorePath = useCallback(async (pathTempId) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    if (!path?.PathId) {
+      toast.error('Chương chưa được lưu, không thể khôi phục từ máy chủ.');
+      return;
+    }
+
+    setUpdatingPathId(pathTempId);
+    try {
+      const result = await fetchPathById(path.PathId);
+      if (!result.ok) {
+        toast.error(result.message || 'Không thể khôi phục chương.');
+        return;
+      }
+
+      const data = result.data ?? {};
+      setPaths((prev) => prev.map((item) => (
+        item.tempId === pathTempId
+          ? {
+            ...item,
+            PathName: data.PathName ?? data.pathName ?? item.PathName,
+            Description: data.Description ?? data.description ?? item.Description,
+            IsActive: data.IsActive ?? data.isActive ?? item.IsActive,
+          }
+          : item
+      )));
+      clearDirtyKey(makePathDirtyKey(pathTempId));
+      setValidationErrors((prev) => ({
+        ...prev,
+        paths: {
+          ...(prev.paths ?? {}),
+          [pathTempId]: undefined,
+        },
+      }));
+      toast.success('Đã khôi phục thông tin chương.');
+    } catch (error) {
+      toast.error(error?.message || 'Không thể khôi phục chương.');
+    } finally {
+      setUpdatingPathId(null);
+    }
+  }, [clearDirtyKey]);
+
+  const handleRestoreNode = useCallback(async (pathTempId, nodeTempId) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    const node = (path?.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    if (!node?.NodeId) {
+      toast.error('Bài học chưa được lưu, không thể khôi phục từ máy chủ.');
+      return;
+    }
+
+    setUpdatingNodeKey(`${pathTempId}:${nodeTempId}`);
+    try {
+      const result = await fetchNodeById(node.NodeId);
+      if (!result.ok) {
+        toast.error(result.message || 'Không thể khôi phục bài học.');
+        return;
+      }
+
+      const data = result.data ?? {};
+      setPaths((prev) => updateNodeInPath(prev, pathTempId, nodeTempId, {
+        NodeName: data.NodeName ?? data.nodeName ?? node.NodeName,
+        Description: data.Description ?? data.description ?? node.Description,
+        IsActive: data.IsActive ?? data.isActive ?? node.IsActive,
+        NodeOrder: data.NodeOrder ?? data.nodeOrder ?? node.NodeOrder,
+      }));
+      clearDirtyKey(makeNodeDirtyKey(pathTempId, nodeTempId));
+      setValidationErrors((prev) => {
+        const pathErrors = prev.paths?.[pathTempId];
+        if (!pathErrors?.nodes?.[nodeTempId]) return prev;
+        return {
+          ...prev,
+          paths: {
+            ...(prev.paths ?? {}),
+            [pathTempId]: {
+              ...pathErrors,
+              nodes: {
+                ...(pathErrors.nodes ?? {}),
+                [nodeTempId]: undefined,
+              },
+            },
+          },
+        };
+      });
+      toast.success('Đã khôi phục thông tin bài học.');
+    } catch (error) {
+      toast.error(error?.message || 'Không thể khôi phục bài học.');
+    } finally {
+      setUpdatingNodeKey(null);
+    }
+  }, [clearDirtyKey]);
+
+  const handleRestoreMaterial = useCallback(async (pathTempId, nodeTempId, materialTempId) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    const node = (path?.nodes ?? []).find((item) => item.tempId === nodeTempId);
+    const material = filterLearningMaterials(node?.materials ?? [])
+      .find((item) => item.tempId === materialTempId);
+    const materialId = getMaterialPersistentId(material);
+    if (!materialId) {
+      toast.error('Học liệu chưa được lưu, không thể khôi phục từ máy chủ.');
+      return;
+    }
+
+    setUpdatingMaterialKey(`${pathTempId}:${nodeTempId}:${materialTempId}`);
+    try {
+      const result = await syncMaterialFromServer(
+        pathTempId,
+        nodeTempId,
+        materialTempId,
+        materialId,
+      );
+      if (!result.ok) {
+        toast.error(result.message || 'Không thể khôi phục học liệu.');
+        return;
+      }
+
+      setValidationErrors((prev) => {
+        const pathErrors = prev.paths?.[pathTempId];
+        const nodeErrors = pathErrors?.nodes?.[nodeTempId];
+        if (!nodeErrors?.materials?.[materialTempId]) return prev;
+        return {
+          ...prev,
+          paths: {
+            ...(prev.paths ?? {}),
+            [pathTempId]: {
+              ...pathErrors,
+              nodes: {
+                ...(pathErrors.nodes ?? {}),
+                [nodeTempId]: {
+                  ...nodeErrors,
+                  materials: {
+                    ...(nodeErrors.materials ?? {}),
+                    [materialTempId]: undefined,
+                  },
+                },
+              },
+            },
+          },
+        };
+      });
+      toast.success('Đã khôi phục học liệu.');
+    } catch (error) {
+      toast.error(error?.message || 'Không thể khôi phục học liệu.');
+    } finally {
+      setUpdatingMaterialKey(null);
+    }
+  }, [syncMaterialFromServer]);
+
+  const discardUnsavedNewFocusEntity = useCallback((options = {}) => {
+    const { keepParentDraft = false } = options;
+    const focus = focusTargetRef.current;
+    if (!focus?.pathTempId) return;
+
+    const path = pathsRef.current.find((item) => item.tempId === focus.pathTempId);
+    if (!path) return;
+
+    if (focus.type === 'material' && focus.nodeTempId && focus.materialTempId) {
+      const node = (path.nodes ?? []).find((item) => item.tempId === focus.nodeTempId);
+      const material = filterLearningMaterials(node?.materials ?? [])
+        .find((item) => item.tempId === focus.materialTempId);
+      if (!isNewUnsavedMaterial(material)) return;
+
+      const nextPaths = removeMaterialFromPath(
+        pathsRef.current,
+        focus.pathTempId,
+        focus.nodeTempId,
+        focus.materialTempId,
+      );
+      pathsRef.current = nextPaths;
+      setPaths(nextPaths);
+      clearDirtyKey(makeMaterialDirtyKey(focus.pathTempId, focus.nodeTempId, focus.materialTempId));
+      return;
+    }
+
+    if (focus.type === 'lesson' && focus.nodeTempId) {
+      if (keepParentDraft) return;
+
+      const node = (path.nodes ?? []).find((item) => item.tempId === focus.nodeTempId);
+      if (!isNewUnsavedNode(node)) return;
+
+      const nextPaths = removeNodeFromPath(pathsRef.current, focus.pathTempId, focus.nodeTempId);
+      pathsRef.current = nextPaths;
+      setPaths(nextPaths);
+      clearDirtyKey(makeNodeDirtyKey(focus.pathTempId, focus.nodeTempId));
+      setExpandedNodes((prev) => {
+        const next = { ...prev };
+        delete next[focus.nodeTempId];
+        return next;
+      });
+      return;
+    }
+
+    if (focus.type === 'chapter-edit') {
+      if (keepParentDraft) return;
+
+      if (!isNewUnsavedPath(path)) return;
+
+      const nextPaths = removePathFromList(pathsRef.current, focus.pathTempId);
+      pathsRef.current = nextPaths;
+      setPaths(nextPaths);
+      setDirtyKeys((prev) => {
+        const next = clearDirtyKeysForPath(prev, focus.pathTempId);
+        dirtyKeysRef.current = next;
+        return next;
+      });
+      setExpandedPaths((prev) => {
+        const next = { ...prev };
+        delete next[focus.pathTempId];
+        return next;
+      });
+    }
+  }, [clearDirtyKey]);
+
+  const revertActivePathChanges = useCallback(async (pathTempId) => {
     if (!pathTempId) return;
 
-    const snapshot = savedPathSnapshotsRef.current[pathTempId];
-    if (!snapshot) return;
+    const focus = focusTargetRef.current;
+    if (focus?.type === 'material' && focus.pathTempId === pathTempId) {
+      const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+      const node = (path?.nodes ?? []).find((item) => item.tempId === focus.nodeTempId);
+      const material = filterLearningMaterials(node?.materials ?? [])
+        .find((item) => item.tempId === focus.materialTempId);
+      if (getMaterialPersistentId(material)) {
+        await handleRestoreMaterial(focus.pathTempId, focus.nodeTempId, focus.materialTempId);
+      } else {
+        discardUnsavedNewFocusEntity();
+      }
+      return;
+    }
+    if (focus?.type === 'lesson' && focus.pathTempId === pathTempId) {
+      const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+      const node = (path?.nodes ?? []).find((item) => item.tempId === focus.nodeTempId);
+      if (node?.NodeId) {
+        await handleRestoreNode(focus.pathTempId, focus.nodeTempId);
+      } else {
+        discardUnsavedNewFocusEntity();
+      }
+      return;
+    }
+    if (focus?.type === 'chapter-edit' && focus.pathTempId === pathTempId) {
+      const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+      if (path?.PathId) {
+        await handleRestorePath(focus.pathTempId);
+      } else {
+        discardUnsavedNewFocusEntity();
+      }
+      return;
+    }
 
-    setPaths((prev) => prev.map((path) => (
-      path.tempId === pathTempId
-        ? restorePathFromSnapshot(path, snapshot)
-        : path
-    )));
-    setValidationErrors((prev) => ({
-      ...prev,
-      paths: {
-        ...(prev.paths ?? {}),
-        [pathTempId]: undefined,
-      },
-    }));
-  }, []);
+    setDirtyKeys((prev) => {
+      const next = clearDirtyKeysForPath(prev, pathTempId);
+      dirtyKeysRef.current = next;
+      return next;
+    });
+  }, [clearDirtyKey, discardUnsavedNewFocusEntity, handleRestoreMaterial, handleRestoreNode, handleRestorePath]);
 
-  const requestContentNavigation = useCallback((navigateFn) => {
+  const requestContentNavigation = useCallback((navigateFn, options = {}) => {
     const currentPathId = activeChapterId;
     if (!currentPathId) {
+      discardUnsavedNewFocusEntity(options);
       navigateFn();
       return;
     }
 
-    const path = pathsRef.current.find((item) => item.tempId === currentPathId);
-    const snapshot = savedPathSnapshotsRef.current[currentPathId];
-    const isDirty = Boolean(path && !isPathSnapshotSaved(path, snapshot));
+    const focus = focusTargetRef.current;
+    const isDirty = hasUnsavedEditScopeDirty(dirtyKeysRef.current, focus, currentPathId);
 
     if (!isDirty) {
+      discardUnsavedNewFocusEntity(options);
       navigateFn();
       return;
     }
 
-    pendingNavigationRef.current = navigateFn;
+    pendingNavigationRef.current = { navigateFn, options };
     setUnsavedNavDialogOpen(true);
-  }, [activeChapterId]);
+  }, [activeChapterId, discardUnsavedNewFocusEntity]);
 
   requestNavigationRef.current = requestContentNavigation;
 
@@ -818,11 +1179,19 @@ export default function MentorEditCourseContentPage() {
   }, [performAddPath, requestContentNavigation]);
 
   const handleAddNode = useCallback((pathTempId) => {
-    requestContentNavigation(() => performAddNode(pathTempId));
+    requestContentNavigation(() => performAddNode(pathTempId), {
+      keepParentDraft: (
+        focusTargetRef.current?.type === 'chapter-edit'
+        && focusTargetRef.current?.pathTempId === pathTempId
+      ),
+    });
   }, [performAddNode, requestContentNavigation]);
 
   const handleAddMaterial = useCallback((pathTempId, nodeTempId) => {
-    requestContentNavigation(() => performAddMaterial(pathTempId, nodeTempId));
+    requestContentNavigation(
+      () => performAddMaterial(pathTempId, nodeTempId),
+      { keepParentDraft: true },
+    );
   }, [performAddMaterial, requestContentNavigation]);
 
   const handleRequestChapterChange = useCallback((nextChapterId) => {
@@ -833,9 +1202,9 @@ export default function MentorEditCourseContentPage() {
     }
     requestContentNavigation(() => {
       setActiveChapterId(nextChapterId);
-      setFocusTarget(null);
+      applyFocusTarget(null);
     });
-  }, [activeChapterId, requestContentNavigation]);
+  }, [activeChapterId, applyFocusTarget, requestContentNavigation]);
 
   const handleUnsavedNavCancel = () => {
     pendingNavigationRef.current = null;
@@ -843,17 +1212,19 @@ export default function MentorEditCourseContentPage() {
   };
 
   const handleUnsavedNavContinue = () => {
-    const navigateFn = pendingNavigationRef.current;
+    const pending = pendingNavigationRef.current;
     pendingNavigationRef.current = null;
     setUnsavedNavDialogOpen(false);
-    revertActivePathChanges(activeChapterId);
-    navigateFn?.();
+    void (async () => {
+      await revertActivePathChanges(activeChapterId);
+      pending?.navigateFn?.();
+    })();
   };
 
   const handleSelectChapter = useCallback((pathTempId) => {
     const navigate = () => {
       setActiveChapterId(pathTempId);
-      setFocusTarget(null);
+      applyFocusTarget(null);
     };
 
     if (pathTempId === activeChapterId && !focusTarget) {
@@ -862,12 +1233,12 @@ export default function MentorEditCourseContentPage() {
     }
 
     requestContentNavigation(navigate);
-  }, [activeChapterId, focusTarget, requestContentNavigation]);
+  }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
 
   const handleEditChapter = useCallback((pathTempId) => {
     const navigate = () => {
       setActiveChapterId(pathTempId);
-      setFocusTarget({ type: 'chapter-edit', pathTempId });
+      applyFocusTarget({ type: 'chapter-edit', pathTempId });
     };
 
     if (
@@ -880,12 +1251,12 @@ export default function MentorEditCourseContentPage() {
     }
 
     requestContentNavigation(navigate);
-  }, [activeChapterId, focusTarget, requestContentNavigation]);
+  }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
 
   const handleSelectNode = useCallback((pathTempId, nodeTempId) => {
     const navigate = () => {
       setActiveChapterId(pathTempId);
-      setFocusTarget({ type: 'lesson', pathTempId, nodeTempId });
+      applyFocusTarget({ type: 'lesson', pathTempId, nodeTempId });
       setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
     };
 
@@ -899,12 +1270,12 @@ export default function MentorEditCourseContentPage() {
     }
 
     requestContentNavigation(navigate);
-  }, [activeChapterId, focusTarget, requestContentNavigation]);
+  }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
 
   const handleSelectMaterial = useCallback((pathTempId, nodeTempId, materialTempId) => {
     const navigate = () => {
       setActiveChapterId(pathTempId);
-      setFocusTarget({ type: 'material', pathTempId, nodeTempId, materialTempId });
+      applyFocusTarget({ type: 'material', pathTempId, nodeTempId, materialTempId });
       setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
     };
 
@@ -918,8 +1289,14 @@ export default function MentorEditCourseContentPage() {
       return;
     }
 
-    requestContentNavigation(navigate);
-  }, [activeChapterId, focusTarget, requestContentNavigation]);
+    const keepParentDraft = (
+      focusTarget?.type === 'lesson'
+      && focusTarget.pathTempId === pathTempId
+      && focusTarget.nodeTempId === nodeTempId
+    );
+
+    requestContentNavigation(navigate, { keepParentDraft });
+  }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
 
   const handleBack = () => {
     requestContentNavigation(() => navigate(`/mentor/courses/${courseId}?tab=content`));
@@ -1003,7 +1380,7 @@ export default function MentorEditCourseContentPage() {
           activeChapterId={activeChapterId}
           focusTarget={focusTarget}
           errors={validationErrors}
-          savedPathSnapshots={savedPathSnapshots}
+          dirtyKeys={dirtyKeys}
           onSelectChapter={handleSelectChapter}
           onEditChapter={handleEditChapter}
           onSelectNode={handleSelectNode}
@@ -1040,17 +1417,20 @@ export default function MentorEditCourseContentPage() {
           onMaterialDelete={requestDeleteMaterial}
           onMaterialReorder={handleMaterialReorder}
           disabled={busy}
-          savedPathSnapshots={savedPathSnapshots}
+          dirtyKeys={dirtyKeys}
           showChapterSave={false}
           showPathUpdate
           updatingPathId={updatingPathId}
           onUpdatePath={handleUpdatePath}
+          onRestorePath={handleRestorePath}
           showNodeUpdate
           updatingNodeKey={updatingNodeKey}
           onUpdateNode={handleUpdateNode}
+          onRestoreNode={handleRestoreNode}
           showMaterialUpdate
           updatingMaterialKey={updatingMaterialKey}
           onUpdateMaterial={handleUpdateMaterial}
+          onRestoreMaterial={handleRestoreMaterial}
           activeChapterId={activeChapterId}
           onActiveChapterChange={handleRequestChapterChange}
           onRequestContentNavigation={requestContentNavigation}

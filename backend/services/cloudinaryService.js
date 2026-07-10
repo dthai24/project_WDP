@@ -8,7 +8,7 @@ const AUDIO_EXTENSIONS = new Set(['mp3', 'mp4']);
 /** Giới hạn Cloudinary free tier — 10 MB. */
 const MATERIAL_MAX_BYTES = 10 * 1024 * 1024;
 
-const DOC_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'ppt', 'pptx']);
+const DOC_EXTENSIONS = new Set(['pdf', 'doc', 'docx']);
 const READING_DOC_EXTENSIONS = new Set(['pdf', 'doc', 'docx']);
 
 /** MIME hợp lệ theo đuôi file — cho phép octet-stream / rỗng (Windows thường gửi vậy). */
@@ -17,12 +17,6 @@ const EXTENSION_MIME_ALLOWLIST = {
   doc: ['application/msword', 'application/vnd.ms-word'],
   docx: [
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/zip',
-    'application/x-zip-compressed',
-  ],
-  ppt: ['application/vnd.ms-powerpoint'],
-  pptx: [
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'application/zip',
     'application/x-zip-compressed',
   ],
@@ -102,7 +96,7 @@ function assertAllowedDoc(file) {
 
   const ext = getExtensionFromFileName(file.originalname);
   if (!ext || !DOC_EXTENSIONS.has(ext)) {
-    const error = new Error('Chỉ hỗ trợ PDF, DOC, DOCX, PPT, PPTX.');
+    const error = new Error('Chỉ chấp nhận PDF, DOC, DOCX.');
     error.statusCode = 400;
     throw error;
   }
@@ -128,11 +122,32 @@ async function uploadDocumentFile(file) {
 
   const ext = getExtensionFromFileName(file.originalname);
   const safeName = sanitizeFileName(file.originalname).replace(/\.[^.]+$/, '');
+  const publicId = `${safeName}_${Date.now()}`;
+
+  // PDF: upload dạng image/pdf để trình duyệt xem được (raw thường gây "Failed to load PDF").
+  if (ext === 'pdf') {
+    const result = await uploadBuffer(file.buffer, {
+      resource_type: 'image',
+      folder: MATERIALS_FOLDER,
+      public_id: publicId,
+      format: 'pdf',
+    });
+
+    const storageUrl = result.secure_url;
+    return {
+      url: storageUrl,
+      deliveryUrl: storageUrl,
+      publicId: result.public_id,
+      fileName: file.originalname,
+      fileSize: result.bytes ?? file.size,
+      format: result.format ?? 'pdf',
+    };
+  }
 
   const result = await uploadBuffer(file.buffer, {
     resource_type: 'raw',
     folder: MATERIALS_FOLDER,
-    public_id: `${safeName}_${Date.now()}`,
+    public_id: publicId,
     format: ext,
   });
 
@@ -250,6 +265,116 @@ async function uploadTextHtml(html, title = 'text-material') {
   };
 }
 
+function isCloudinaryDeliveryUrl(url) {
+  try {
+    const parsed = new URL(String(url ?? '').trim());
+    return parsed.hostname.endsWith('cloudinary.com');
+  } catch {
+    return false;
+  }
+}
+
+function detectResourceTypeFromUrl(url) {
+  if (/\/raw\//i.test(url)) return 'raw';
+  if (/\/video\//i.test(url)) return 'video';
+  return 'image';
+}
+
+function extractPublicIdFromUrl(secureUrl) {
+  const cleanUrl = String(secureUrl ?? '').trim().split('?')[0];
+  const resourceType = detectResourceTypeFromUrl(cleanUrl);
+  const versionMatch = cleanUrl.match(/\/upload\/v(\d+)\//);
+  const version = versionMatch ? Number(versionMatch[1]) : undefined;
+
+  const afterUpload = cleanUrl.split('/upload/')[1];
+  if (!afterUpload) {
+    throw new Error('Không phân tích được URL Cloudinary.');
+  }
+
+  let publicId = decodeURIComponent(afterUpload.replace(/^v\d+\//, ''));
+  if (!publicId) {
+    throw new Error('Không phân tích được URL Cloudinary.');
+  }
+
+  const formatFromPath = getExtensionFromFileName(publicId);
+  if (formatFromPath) {
+    publicId = publicId.replace(new RegExp(`\\.${formatFromPath}$`, 'i'), '');
+  }
+
+  return {
+    publicId,
+    resourceType,
+    version,
+    format: formatFromPath || getExtensionFromFileName(cleanUrl),
+  };
+}
+
+function buildPrivateDownloadUrl(secureUrl, fileName = 'tai-lieu') {
+  const { publicId, resourceType, format } = extractPublicIdFromUrl(secureUrl);
+  const downloadFormat = format || getExtensionFromFileName(fileName) || undefined;
+
+  return cloudinary.utils.private_download_url(publicId, downloadFormat, {
+    resource_type: resourceType,
+    type: 'upload',
+    attachment: sanitizeFileName(fileName),
+  });
+}
+
+function buildSignedDownloadUrl(secureUrl, fileName = 'tai-lieu') {
+  const { publicId, resourceType, version, format } = extractPublicIdFromUrl(secureUrl);
+  const safeName = sanitizeFileName(fileName);
+
+  return cloudinary.url(publicId, {
+    resource_type: resourceType,
+    type: 'upload',
+    secure: true,
+    sign_url: true,
+    version,
+    format: format || undefined,
+    flags: `attachment:${safeName}`,
+  });
+}
+
+async function fetchCloudinaryAssetBuffer(secureUrl, fileName = 'tai-lieu') {
+  const raw = String(secureUrl ?? '').trim();
+  if (!isCloudinaryDeliveryUrl(raw)) {
+    const error = new Error('URL tài liệu không hợp lệ.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const { resourceType } = extractPublicIdFromUrl(raw);
+  const attempts = resourceType === 'raw'
+    ? [
+        raw,
+        buildSignedDownloadUrl(raw, fileName),
+        buildPrivateDownloadUrl(raw, fileName),
+      ]
+    : [
+        buildPrivateDownloadUrl(raw, fileName),
+        raw,
+        buildSignedDownloadUrl(raw, fileName),
+      ];
+
+  for (const attemptUrl of attempts) {
+    try {
+      const response = await fetch(attemptUrl);
+      if (!response.ok) continue;
+
+      return {
+        buffer: Buffer.from(await response.arrayBuffer()),
+        contentType: response.headers.get('content-type') || 'application/octet-stream',
+      };
+    } catch {
+      // try next
+    }
+  }
+
+  const error = new Error('Không thể tải file từ Cloudinary.');
+  error.statusCode = 502;
+  throw error;
+}
+
 module.exports = {
   AUDIO_EXTENSIONS,
   DOC_EXTENSIONS,
@@ -257,6 +382,9 @@ module.exports = {
   MATERIAL_MAX_BYTES,
   MATERIAL_MAX_SIZE_MESSAGE,
   buildDeliveryUrl,
+  isCloudinaryDeliveryUrl,
+  buildPrivateDownloadUrl,
+  fetchCloudinaryAssetBuffer,
   uploadAudioFile,
   uploadDocumentFile,
   uploadReadingDocumentFile,

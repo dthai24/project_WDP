@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ import MentorCourseCreateStepIndicator from '@/features/mentor/components/course
 import MentorCourseLeaveDialog from '@/features/mentor/components/course/MentorCourseLeaveDialog';
 import MentorChapterDraftDialog from '@/features/mentor/components/course/MentorChapterDraftDialog';
 import { useMentorCourseLeaveGuard } from '@/features/mentor/hooks/useMentorCourseLeaveGuard';
+import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import { saveCreateCourseContent } from '@/features/mentor/services/mentorCourseService';
 import { uploadPendingMaterialsInPaths } from '@/features/mentor/utils/mentorMaterialUploadUtils';
 import { getUser } from '@/features/auth/utils/authUtils';
@@ -24,19 +25,27 @@ import {
   chapterHasContent,
   lessonHasContent,
   materialHasContent,
+  getMaterialPersistentId,
   hasContentValidationErrors,
   getFirstContentErrorTarget,
   parseContentFocusTarget,
   validateCourseContent,
   validatePathForSave,
-  serializePathSnapshot,
-  isPathSnapshotSaved,
+  makePathDirtyKey,
+  makeNodeDirtyKey,
+  makeMaterialDirtyKey,
+  pathHasAnyDirty,
+  clearDirtyKeysForPath,
   withNormalizedOrders,
   reorderMaterials,
   scrollToContentItem,
   MATERIAL_TYPE_LABELS,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
-import { loadCreateCourseDraft } from '@/features/mentor/utils/mentorCourseCreateStorage';
+import { discardCreateCourseContentFromStorage, loadCreateCourseDraft } from '@/features/mentor/utils/mentorCourseCreateStorage';
+
+const CREATE_CONTENT_UNSAVED_TITLE = 'Chưa lưu nháp';
+const CREATE_CONTENT_UNSAVED_MESSAGE =
+  'Bạn chưa nhấn Lưu nháp nên phần nội dung này chưa được lưu nháp. Bạn có muốn tiếp tục chuyển mục không?';
 
 function getDeleteDialogContent(deleteConfirm) {
   if (!deleteConfirm) {
@@ -111,9 +120,17 @@ function updateMaterialInPath(paths, pathTempId, nodeTempId, materialTempId, pat
         if (node.tempId !== nodeTempId) return node;
         return {
           ...node,
-          materials: (node.materials ?? node.Materials ?? []).map((material) =>
-            material.tempId === materialTempId ? { ...material, ...patch } : material,
-          ),
+          materials: (node.materials ?? node.Materials ?? []).map((material) => {
+            if (material.tempId !== materialTempId) return material;
+            const next = { ...material, ...patch };
+            const persistentId = getMaterialPersistentId(material);
+            if (persistentId && !getMaterialPersistentId(next)) {
+              next.MaterialId = persistentId;
+            } else if (getMaterialPersistentId(next)) {
+              next.MaterialId = getMaterialPersistentId(next);
+            }
+            return next;
+          }),
         };
       }),
     };
@@ -128,7 +145,7 @@ export default function MentorCreateCourseContentPage() {
   const [validationErrors, setValidationErrors] = useState({ root: [], paths: {} });
   const [expandedPaths, setExpandedPaths] = useState({});
   const [expandedNodes, setExpandedNodes] = useState({});
-  const [savedPathSnapshots, setSavedPathSnapshots] = useState({});
+  const [dirtyKeys, setDirtyKeys] = useState({});
   const [isCourseContentDraftSaved, setIsCourseContentDraftSaved] = useState(false);
   const [savingChapterId, setSavingChapterId] = useState(null);
   const [chapterDraftDialogOpen, setChapterDraftDialogOpen] = useState(false);
@@ -137,21 +154,26 @@ export default function MentorCreateCourseContentPage() {
   const [focusTarget, setFocusTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [sessionNavDialogOpen, setSessionNavDialogOpen] = useState(false);
+  const [savingSessionNav, setSavingSessionNav] = useState(false);
+  const [externalNavDialogOpen, setExternalNavDialogOpen] = useState(false);
+  const [savingExternalNav, setSavingExternalNav] = useState(false);
+  const pendingSessionNavRef = useRef(null);
+  const pendingExternalNavRef = useRef(null);
+
+  const { registerNavigationGuard } = useNavigationGuard() ?? {};
 
   const instructorId = getUser()?.userId ?? null;
   const courseName = course?.CourseName ?? '';
 
   const isDirty = useMemo(
-    () => paths.some((path) => !isPathSnapshotSaved(path, savedPathSnapshots[path.tempId])),
-    [paths, savedPathSnapshots],
+    () => paths.some((path) => pathHasAnyDirty(dirtyKeys, path.tempId)),
+    [paths, dirtyKeys],
   );
 
-  const buildPathSnapshots = useCallback((nextPaths) => {
-    const snapshots = {};
-    nextPaths.forEach((path) => {
-      snapshots[path.tempId] = serializePathSnapshot(path);
-    });
-    return snapshots;
+  const markDirty = useCallback((key) => {
+    if (!key) return;
+    setDirtyKeys((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
   }, []);
 
   const persistDraft = useCallback(async ({ markAllSaved = true } = {}) => {
@@ -159,9 +181,91 @@ export default function MentorCreateCourseContentPage() {
     await saveCreateCourseContent(course, paths);
     setIsCourseContentDraftSaved(true);
     if (markAllSaved) {
-      setSavedPathSnapshots(buildPathSnapshots(paths));
+      setDirtyKeys({});
     }
-  }, [buildPathSnapshots, course, paths]);
+  }, [course, paths]);
+
+  const requestContentNavigation = useCallback((navigateFn) => {
+    if (!navigateFn) return;
+    if (!isDirty) {
+      navigateFn();
+      return;
+    }
+    pendingSessionNavRef.current = navigateFn;
+    setSessionNavDialogOpen(true);
+  }, [isDirty]);
+
+  const handleSessionNavStay = useCallback(() => {
+    pendingSessionNavRef.current = null;
+    setSessionNavDialogOpen(false);
+  }, []);
+
+  const handleSessionNavSkip = useCallback(() => {
+    const navigateFn = pendingSessionNavRef.current;
+    pendingSessionNavRef.current = null;
+    setSessionNavDialogOpen(false);
+    navigateFn?.();
+  }, []);
+
+  const handleSessionNavSaveDraft = useCallback(async () => {
+    const navigateFn = pendingSessionNavRef.current;
+    setSavingSessionNav(true);
+    try {
+      await persistDraft();
+      toast.success('Đã lưu bản nháp trong phiên làm việc.');
+      pendingSessionNavRef.current = null;
+      setSessionNavDialogOpen(false);
+      navigateFn?.();
+    } finally {
+      setSavingSessionNav(false);
+    }
+  }, [persistDraft]);
+
+  const discardContentSessionSnapshot = useCallback(() => {
+    discardCreateCourseContentFromStorage();
+  }, []);
+
+  const requestExternalNavigation = useCallback((navigateFn) => {
+    if (!navigateFn) return;
+    if (!isDirty) {
+      navigateFn();
+      return;
+    }
+    pendingExternalNavRef.current = navigateFn;
+    setExternalNavDialogOpen(true);
+  }, [isDirty]);
+
+  const handleExternalNavStay = useCallback(() => {
+    pendingExternalNavRef.current = null;
+    setExternalNavDialogOpen(false);
+  }, []);
+
+  const handleExternalNavDiscard = useCallback(() => {
+    const navigateFn = pendingExternalNavRef.current;
+    discardContentSessionSnapshot();
+    pendingExternalNavRef.current = null;
+    setExternalNavDialogOpen(false);
+    navigateFn?.();
+  }, [discardContentSessionSnapshot]);
+
+  const handleExternalNavSaveDraft = useCallback(async () => {
+    const navigateFn = pendingExternalNavRef.current;
+    setSavingExternalNav(true);
+    try {
+      await persistDraft();
+      toast.success('Đã lưu bản nháp trong phiên làm việc.');
+      pendingExternalNavRef.current = null;
+      setExternalNavDialogOpen(false);
+      navigateFn?.();
+    } finally {
+      setSavingExternalNav(false);
+    }
+  }, [persistDraft]);
+
+  useEffect(() => {
+    if (!registerNavigationGuard) return undefined;
+    return registerNavigationGuard(requestExternalNavigation);
+  }, [registerNavigationGuard, requestExternalNavigation]);
 
   const {
     dialogOpen,
@@ -175,6 +279,7 @@ export default function MentorCreateCourseContentPage() {
     form: {},
     instructorId,
     onPersistDraft: persistDraft,
+    onDiscard: discardContentSessionSnapshot,
   });
 
   useEffect(() => {
@@ -186,14 +291,10 @@ export default function MentorCreateCourseContentPage() {
     }
 
     const loadedPaths = withNormalizedOrders(draft.paths ?? []);
-    const snapshots = {};
-    loadedPaths.forEach((path) => {
-      snapshots[path.tempId] = serializePathSnapshot(path);
-    });
 
     setCourse(draft.course);
     setPaths(loadedPaths);
-    setSavedPathSnapshots(snapshots);
+    setDirtyKeys({});
     setIsCourseContentDraftSaved(
       Boolean(draft.meta?.contentDraftSaved) || loadedPaths.length > 0,
     );
@@ -218,21 +319,21 @@ export default function MentorCreateCourseContentPage() {
   }, []);
 
   const handleNavigateToContent = useCallback((target) => {
-    setFocusTarget(target);
-    scrollToContentItem(target, { setExpandedPaths, setExpandedNodes });
-  }, []);
+    requestContentNavigation(() => {
+      setFocusTarget(target);
+      scrollToContentItem(target, { setExpandedPaths, setExpandedNodes });
+    });
+  }, [requestContentNavigation]);
 
   const handleAddPath = () => {
     const newPath = createEmptyPath();
+    markDirty(makePathDirtyKey(newPath.tempId));
     applyPaths((prev) => [...prev, newPath]);
     setExpandedPaths((prev) => ({ ...prev, [newPath.tempId]: true }));
-    setSavedPathSnapshots((prev) => ({
-      ...prev,
-      [newPath.tempId]: serializePathSnapshot(newPath),
-    }));
   };
 
   const handlePathChange = (pathTempId, patch) => {
+    markDirty(makePathDirtyKey(pathTempId));
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
   };
 
@@ -241,11 +342,7 @@ export default function MentorCreateCourseContentPage() {
     if (!path || path.PathId) return;
 
     applyPaths((prev) => prev.filter((p) => p.tempId !== pathTempId));
-    setSavedPathSnapshots((prev) => {
-      const next = { ...prev };
-      delete next[pathTempId];
-      return next;
-    });
+    setDirtyKeys((prev) => clearDirtyKeysForPath(prev, pathTempId));
     setExpandedPaths((prev) => {
       const next = { ...prev };
       delete next[pathTempId];
@@ -322,6 +419,7 @@ export default function MentorCreateCourseContentPage() {
 
   const handleAddNode = (pathTempId) => {
     const newNode = createEmptyNode();
+    markDirty(makeNodeDirtyKey(pathTempId, newNode.tempId));
     applyPaths((prev) =>
       prev.map((path) =>
         path.tempId === pathTempId
@@ -333,6 +431,7 @@ export default function MentorCreateCourseContentPage() {
   };
 
   const handleNodeChange = (pathTempId, nodeTempId, patch) => {
+    markDirty(makeNodeDirtyKey(pathTempId, nodeTempId));
     applyPaths((prev) => updateNodeInPath(prev, pathTempId, nodeTempId, patch));
   };
 
@@ -353,6 +452,7 @@ export default function MentorCreateCourseContentPage() {
 
   const handleAddMaterial = (pathTempId, nodeTempId) => {
     const newMaterial = createEmptyMaterial();
+    markDirty(makeMaterialDirtyKey(pathTempId, nodeTempId, newMaterial.tempId));
     applyPaths((prev) =>
       prev.map((path) => {
         if (path.tempId !== pathTempId) return path;
@@ -369,6 +469,7 @@ export default function MentorCreateCourseContentPage() {
   };
 
   const handleMaterialChange = (pathTempId, nodeTempId, materialTempId, patch) => {
+    markDirty(makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId));
     applyPaths((prev) =>
       updateMaterialInPath(prev, pathTempId, nodeTempId, materialTempId, patch),
     );
@@ -417,7 +518,7 @@ export default function MentorCreateCourseContentPage() {
     const path = paths.find((item) => item.tempId === pathTempId);
     if (!path) return false;
 
-    const pathErrors = validatePathForSave(path);
+    const pathErrors = validatePathForSave(path, paths);
     if (Object.keys(pathErrors).length > 0) {
       setValidationErrors((prev) => ({
         ...prev,
@@ -431,10 +532,13 @@ export default function MentorCreateCourseContentPage() {
       }));
 
       const firstNodeError = Object.values(pathErrors.nodes ?? {})[0];
+      const firstMaterialError = Object.values(firstNodeError?.materials ?? {})[0];
       const toastMessage = pathErrors.PathName
         ?? pathErrors._nodes
         ?? firstNodeError?.NodeName
         ?? firstNodeError?._materials
+        ?? firstMaterialError?.Title
+        ?? Object.values(firstMaterialError ?? {}).find(Boolean)
         ?? 'Vui lòng kiểm tra lại thông tin chương.';
       toast.error(toastMessage);
       return false;
@@ -443,10 +547,7 @@ export default function MentorCreateCourseContentPage() {
     setSavingChapterId(pathTempId);
     try {
       await persistDraft({ markAllSaved: false });
-      setSavedPathSnapshots((prev) => ({
-        ...prev,
-        [pathTempId]: serializePathSnapshot(path),
-      }));
+      setDirtyKeys((prev) => clearDirtyKeysForPath(prev, pathTempId));
       toast.success('Đã lưu chương.');
       return true;
     } finally {
@@ -553,7 +654,7 @@ export default function MentorCreateCourseContentPage() {
 
   const footerActions = (
     <MentorCourseContentFooterActions
-      onBack={() => navigate('/mentor/courses/create')}
+      onBack={() => requestLeave('/mentor/courses/create')}
       onSaveDraft={handleSaveDraftClick}
       onPrimary={handleNext}
       primaryLabel="Tiếp theo"
@@ -637,10 +738,11 @@ export default function MentorCreateCourseContentPage() {
           onMaterialDelete={requestDeleteMaterial}
           onMaterialReorder={handleMaterialReorder}
           disabled={submitting || savingDraft || Boolean(savingChapterId)}
-          savedPathSnapshots={savedPathSnapshots}
+          dirtyKeys={dirtyKeys}
           savingChapterId={savingChapterId}
           onSaveChapter={handleSaveChapter}
           focusTarget={focusTarget}
+          onRequestContentNavigation={requestContentNavigation}
         />
 
         <MentorContentOverview
@@ -680,6 +782,31 @@ export default function MentorCreateCourseContentPage() {
         onDiscard={handleDiscard}
         onSaveDraft={handleSaveDraft}
         saving={saving}
+        title={CREATE_CONTENT_UNSAVED_TITLE}
+        message={CREATE_CONTENT_UNSAVED_MESSAGE}
+        discardLabel="Tiếp tục"
+      />
+
+      <MentorCourseLeaveDialog
+        open={externalNavDialogOpen}
+        onStay={handleExternalNavStay}
+        onDiscard={handleExternalNavDiscard}
+        onSaveDraft={handleExternalNavSaveDraft}
+        saving={savingExternalNav}
+        title={CREATE_CONTENT_UNSAVED_TITLE}
+        message={CREATE_CONTENT_UNSAVED_MESSAGE}
+        discardLabel="Tiếp tục"
+      />
+
+      <MentorCourseLeaveDialog
+        open={sessionNavDialogOpen}
+        onStay={handleSessionNavStay}
+        onDiscard={handleSessionNavSkip}
+        onSaveDraft={handleSessionNavSaveDraft}
+        saving={savingSessionNav}
+        title={CREATE_CONTENT_UNSAVED_TITLE}
+        message={CREATE_CONTENT_UNSAVED_MESSAGE}
+        discardLabel="Tiếp tục"
       />
 
       <MentorChapterDraftDialog

@@ -14,6 +14,14 @@ export const READING_DOC_INVALID_TYPE_MESSAGE = 'Chỉ chấp nhận PDF, DOC, D
 
 export const AUDIO_EXTENSION_NAMES = ['mp3', 'mp4'];
 
+export const VIDEO_EXTENSION_NAMES = ['mp4', 'webm', 'mov'];
+
+export const VIDEO_FILE_ACCEPT =
+  'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov';
+
+export const VIDEO_INVALID_TYPE_MESSAGE =
+  'Chỉ hỗ trợ file video .mp4, .webm hoặc .mov.';
+
 export const LISTENING_AUDIO_FILE_ACCEPT =
   'audio/mpeg,audio/mp3,audio/mp4,video/mp4,.mp3,.mp4';
 
@@ -26,14 +34,28 @@ export const LISTENING_LINK_INVALID_MESSAGE =
 export const LISTENING_UPLOAD_FAILED_MESSAGE =
   'Lỗi trong quá trình tải file, hãy thử lại';
 
-/** Lấy đuôi file — ưu tiên docx trước doc. */
+/** Lấy đuôi file — ưu tiên docx trước doc. Hỗ trợ URL (bỏ query/hash). */
 export function getFileExtension(fileName = '') {
-  const lower = String(fileName ?? '').trim().toLowerCase();
+  let lower = String(fileName ?? '').trim().toLowerCase();
+  if (!lower) return null;
+
+  try {
+    if (/^https?:\/\//i.test(lower)) {
+      lower = decodeURIComponent(new URL(lower).pathname);
+    } else {
+      lower = lower.split(/[?#]/)[0];
+    }
+  } catch {
+    lower = lower.split(/[?#]/)[0];
+  }
+
   if (lower.endsWith('.docx')) return 'docx';
   if (lower.endsWith('.doc')) return 'doc';
   if (lower.endsWith('.pdf')) return 'pdf';
   if (lower.endsWith('.mp4')) return 'mp4';
   if (lower.endsWith('.mp3')) return 'mp3';
+  if (lower.endsWith('.webm')) return 'webm';
+  if (lower.endsWith('.mov')) return 'mov';
   if (lower.endsWith('.pptx')) return 'pptx';
   if (lower.endsWith('.ppt')) return 'ppt';
   const match = lower.match(/\.([a-z0-9]+)$/);
@@ -46,6 +68,10 @@ export function isAllowedReadingDocExtension(ext) {
 
 export function isAllowedListeningAudioExtension(ext) {
   return AUDIO_EXTENSION_NAMES.includes(String(ext ?? '').trim().toLowerCase());
+}
+
+export function isAllowedVideoExtension(ext) {
+  return VIDEO_EXTENSION_NAMES.includes(String(ext ?? '').trim().toLowerCase());
 }
 
 export function isAllowedReadingDocFile(file) {
@@ -62,6 +88,17 @@ export function isAllowedListeningAudioFile(file) {
     || mime === 'audio/mp3'
     || mime === 'audio/mp4'
     || mime === 'video/mp4'
+  );
+}
+
+export function isAllowedVideoFile(file) {
+  if (!file?.name) return false;
+  if (isAllowedVideoExtension(getFileExtension(file.name))) return true;
+  const mime = String(file.type ?? '').toLowerCase();
+  return (
+    mime === 'video/mp4'
+    || mime === 'video/webm'
+    || mime === 'video/quicktime'
   );
 }
 
@@ -84,6 +121,19 @@ export function validateListeningAudioFile(file) {
   }
   if (!isAllowedListeningAudioFile(file)) {
     return { ok: false, message: LISTENING_AUDIO_INVALID_TYPE_MESSAGE };
+  }
+  if (Number(file.size) > MATERIAL_UPLOAD_MAX_BYTES) {
+    return { ok: false, message: MATERIAL_UPLOAD_MAX_SIZE_MESSAGE };
+  }
+  return { ok: true };
+}
+
+export function validateVideoFile(file) {
+  if (!file) {
+    return { ok: false, message: 'Vui lòng chọn file video.' };
+  }
+  if (!isAllowedVideoFile(file)) {
+    return { ok: false, message: VIDEO_INVALID_TYPE_MESSAGE };
   }
   if (Number(file.size) > MATERIAL_UPLOAD_MAX_BYTES) {
     return { ok: false, message: MATERIAL_UPLOAD_MAX_SIZE_MESSAGE };

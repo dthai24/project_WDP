@@ -28,8 +28,6 @@ import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, TEXT } from './mentorCourseCreateStyles';
 import { MATERIAL_TYPE_THEME } from './mentorCourseContentStyles';
 
-// TODO: backend should support Content for TEXT material
-
 const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32];
 const DEFAULT_FONT_SIZE = 14;
 const INPUT_SYNC_MS = 300;
@@ -493,13 +491,13 @@ export default function MentorTextMaterialEditor({
 
     initEditorContent();
     return () => { cancelled = true; };
-    // Chỉ khởi tạo lại khi đổi học liệu — không phụ thuộc Content để tránh reset khi gõ.
+    // Chỉ khởi tạo lại khi đổi học liệu / khôi phục — không phụ thuộc Content để tránh reset khi gõ.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [material.tempId]);
+  }, [material.tempId, material._restoreAt]);
 
   useEffect(() => {
     setShowPreview(defaultShowPreview);
-  }, [material.tempId, defaultShowPreview]);
+  }, [material.tempId, material._restoreAt, defaultShowPreview]);
 
   useEffect(() => {
     if (editorFocused || isComposingRef.current) return;
@@ -637,205 +635,205 @@ export default function MentorTextMaterialEditor({
             border: '1px solid rgba(15,23,42,0.08)',
           }}
         >
-            <ToolbarBtn
-              title="Hoàn tác (Ctrl+Z)"
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('undo'))}
-            >
-              <UndoRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Làm lại (Ctrl+Y)"
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('redo'))}
-            >
-              <RedoRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
+          <ToolbarBtn
+            title="Hoàn tác (Ctrl+Z)"
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('undo'))}
+          >
+            <UndoRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Làm lại (Ctrl+Y)"
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('redo'))}
+          >
+            <RedoRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
 
-            <Select
-              value={formats.fontSize}
-              onMouseDown={captureSelection}
-              onChange={handleFontSizeChange}
-              disabled={disabled}
-              size="small"
-              renderValue={(v) => v}
-              sx={{
-                height: 30,
-                minWidth: 56,
-                fontSize: 13,
-                fontWeight: 600,
-                borderRadius: '8px',
-                bgcolor: '#F8FAFC',
-                mr: 0.25,
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(15,23,42,0.10)' },
-                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.color },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.color },
-                '& .MuiSelect-select': { py: 0, px: 1, display: 'flex', alignItems: 'center' },
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: { maxHeight: 280, '& .MuiMenuItem-root': { fontSize: 13, minHeight: 32 } },
-                },
-              }}
-            >
-              {FONT_SIZES.map((size) => (
-                <MenuItem key={size} value={size}>
-                  {size}
-                </MenuItem>
-              ))}
-            </Select>
+          <Select
+            value={formats.fontSize}
+            onMouseDown={captureSelection}
+            onChange={handleFontSizeChange}
+            disabled={disabled}
+            size="small"
+            renderValue={(v) => v}
+            sx={{
+              height: 30,
+              minWidth: 56,
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: '8px',
+              bgcolor: '#F8FAFC',
+              mr: 0.25,
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(15,23,42,0.10)' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.color },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.color },
+              '& .MuiSelect-select': { py: 0, px: 1, display: 'flex', alignItems: 'center' },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: { maxHeight: 280, '& .MuiMenuItem-root': { fontSize: 13, minHeight: 32 } },
+              },
+            }}
+          >
+            {FONT_SIZES.map((size) => (
+              <MenuItem key={size} value={size}>
+                {size}
+              </MenuItem>
+            ))}
+          </Select>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
 
-            <ToolbarBtn
-              title="In đậm (Ctrl+B)"
-              active={formats.bold}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('bold'))}
-            >
-              <FormatBoldRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="In nghiêng (Ctrl+I)"
-              active={formats.italic}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('italic'))}
-            >
-              <FormatItalicRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Gạch chân (Ctrl+U)"
-              active={formats.underline}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('underline'))}
-            >
-              <FormatUnderlinedRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
+          <ToolbarBtn
+            title="In đậm (Ctrl+B)"
+            active={formats.bold}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('bold'))}
+          >
+            <FormatBoldRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="In nghiêng (Ctrl+I)"
+            active={formats.italic}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('italic'))}
+          >
+            <FormatItalicRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Gạch chân (Ctrl+U)"
+            active={formats.underline}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('underline'))}
+          >
+            <FormatUnderlinedRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
 
-            <ToolbarBtn
-              title="Gạch đầu dòng"
-              active={formats.unorderedList}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('insertUnorderedList'))}
-            >
-              <FormatListBulletedRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Đánh số"
-              active={formats.orderedList}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('insertOrderedList'))}
-            >
-              <FormatListNumberedRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
+          <ToolbarBtn
+            title="Gạch đầu dòng"
+            active={formats.unorderedList}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('insertUnorderedList'))}
+          >
+            <FormatListBulletedRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Đánh số"
+            active={formats.orderedList}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('insertOrderedList'))}
+          >
+            <FormatListNumberedRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
 
-            <ToolbarBtn
-              title="Căn trái"
-              active={formats.align === 'left'}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('justifyLeft'))}
-            >
-              <FormatAlignLeftRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Căn giữa"
-              active={formats.align === 'center'}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('justifyCenter'))}
-            >
-              <FormatAlignCenterRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Căn phải"
-              active={formats.align === 'right'}
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('justifyRight'))}
-            >
-              <FormatAlignRightRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
+          <ToolbarBtn
+            title="Căn trái"
+            active={formats.align === 'left'}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('justifyLeft'))}
+          >
+            <FormatAlignLeftRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Căn giữa"
+            active={formats.align === 'center'}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('justifyCenter'))}
+          >
+            <FormatAlignCenterRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Căn phải"
+            active={formats.align === 'right'}
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('justifyRight'))}
+          >
+            <FormatAlignRightRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.25, my: 0.5 }} />
 
-            <ToolbarBtn
-              title="Xóa định dạng"
-              disabled={disabled}
-              onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('removeFormat'))}
-            >
-              <FormatClearRoundedIcon sx={{ fontSize: 18 }} />
-            </ToolbarBtn>
-          </Box>
+          <ToolbarBtn
+            title="Xóa định dạng"
+            disabled={disabled}
+            onMouseDown={(e) => preventToolbarFocusLoss(e, () => handleExec('removeFormat'))}
+          >
+            <FormatClearRoundedIcon sx={{ fontSize: 18 }} />
+          </ToolbarBtn>
+        </Box>
 
-          <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
-            Nội dung văn bản
-          </ContentFieldLabel>
+        <ContentFieldLabel sx={{ mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' }}>
+          Nội dung văn bản
+        </ContentFieldLabel>
 
-          <Box sx={{ position: 'relative' }}>
-            {loadingRemote && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  zIndex: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: 'rgba(255,255,255,0.72)',
-                  borderRadius: '14px',
-                }}
-              >
-                <CircularProgress size={28} sx={{ color: theme.color }} />
-              </Box>
-            )}
-            {editorEmpty && !disabled && !editorFocused && !loadingRemote && (
-              <Typography
-                sx={{
-                  position: 'absolute',
-                  top: 16,
-                  left: 18,
-                  color: '#94A3B8',
-                  fontSize: DEFAULT_FONT_SIZE,
-                  lineHeight: 1.65,
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                  zIndex: 1,
-                }}
-              >
-                Nhập nội dung văn bản tại đây...
-              </Typography>
-            )}
+        <Box sx={{ position: 'relative' }}>
+          {loadingRemote && (
             <Box
-              ref={editorRef}
-              component="div"
-              contentEditable={!disabled && !loadingRemote}
-              suppressContentEditableWarning
-              lang="vi"
-              role="textbox"
-              aria-multiline="true"
-              spellCheck={false}
-              autoCorrect="off"
-              autoCapitalize="off"
-              onInput={handleEditorInput}
-              onCompositionStart={handleCompositionStart}
-              onCompositionEnd={handleCompositionEnd}
-              onFocus={handleEditorFocus}
-              onBlur={handleEditorBlur}
-              onMouseUp={handleEditorMouseUp}
-              onPaste={handlePaste}
-              sx={editorSx}
-            />
-          </Box>
-
-          {errors.Content && (
-            <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
-              {errors.Content}
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255,255,255,0.72)',
+                borderRadius: '14px',
+              }}
+            >
+              <CircularProgress size={28} sx={{ color: theme.color }} />
+            </Box>
+          )}
+          {editorEmpty && !disabled && !editorFocused && !loadingRemote && (
+            <Typography
+              sx={{
+                position: 'absolute',
+                top: 16,
+                left: 18,
+                color: '#94A3B8',
+                fontSize: DEFAULT_FONT_SIZE,
+                lineHeight: 1.65,
+                pointerEvents: 'none',
+                userSelect: 'none',
+                zIndex: 1,
+              }}
+            >
+              Nhập nội dung văn bản tại đây...
             </Typography>
           )}
+          <Box
+            ref={editorRef}
+            component="div"
+            contentEditable={!disabled && !loadingRemote}
+            suppressContentEditableWarning
+            lang="vi"
+            role="textbox"
+            aria-multiline="true"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
+            onInput={handleEditorInput}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            onFocus={handleEditorFocus}
+            onBlur={handleEditorBlur}
+            onMouseUp={handleEditorMouseUp}
+            onPaste={handlePaste}
+            sx={editorSx}
+          />
+        </Box>
+
+        {errors.Content && (
+          <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.35 }}>
+            {errors.Content}
+          </Typography>
+        )}
       </Box>
 
       {errors.Content && showPreview ? (

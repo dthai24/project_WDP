@@ -205,12 +205,14 @@ async function deleteNodeById(nodeId, transaction = null) {
 async function insertMaterialRow(nodeId, data = {}, transaction = null) {
   const request = transaction ? new sql.Request(transaction) : new sql.Request();
   const materialUrl = data.MaterialUrl ?? data.Content ?? null;
+  const requestedOrder = Number(data.MaterialOrder ?? data.Order);
+  const hasRequestedOrder = Number.isInteger(requestedOrder) && requestedOrder > 0;
 
   request.input('NodeId', sql.Int, Number(nodeId));
   request.input('MaterialType', sql.NVarChar(20), data.MaterialType);
   request.input('Title', sql.NVarChar(255), data.Title ?? '');
   request.input('MaterialUrl', sql.NVarChar(sql.MAX), materialUrl);
-  request.input('MaterialOrder', sql.Int, Number(data.MaterialOrder ?? data.Order ?? 1));
+  request.input('RequestedOrder', sql.Int, hasRequestedOrder ? requestedOrder : null);
   request.input('SourceType', sql.NVarChar(20), data.SourceType ?? null);
   request.input('FileName', sql.NVarChar(255), data.FileName ?? null);
   request.input(
@@ -219,11 +221,34 @@ async function insertMaterialRow(nodeId, data = {}, transaction = null) {
     data.FileSize != null ? Number(data.FileSize) : null,
   );
 
+  // Tránh trùng UQ_NodeMaterials_Order (NodeId, MaterialOrder):
+  // dùng order client nếu còn trống, không thì MAX+1.
   const result = await request.query(`
+    DECLARE @nextOrder INT;
+    DECLARE @maxOrder INT;
+
+    SELECT @maxOrder = ISNULL(MAX(MaterialOrder), 0)
+    FROM dbo.Node_Materials
+    WHERE NodeId = @NodeId;
+
+    IF @RequestedOrder IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM dbo.Node_Materials
+        WHERE NodeId = @NodeId AND MaterialOrder = @RequestedOrder
+      )
+    BEGIN
+      SET @nextOrder = @RequestedOrder;
+    END
+    ELSE
+    BEGIN
+      SET @nextOrder = @maxOrder + 1;
+    END
+
     INSERT INTO dbo.Node_Materials
       (NodeId, MaterialType, Title, MaterialUrl, MaterialOrder, SourceType, FileName, FileSize)
-    OUTPUT INSERTED.MaterialId AS MaterialId
-    VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @MaterialOrder, @SourceType, @FileName, @FileSize)
+    OUTPUT INSERTED.MaterialId AS MaterialId, INSERTED.MaterialOrder AS MaterialOrder
+    VALUES (@NodeId, @MaterialType, @Title, @MaterialUrl, @nextOrder, @SourceType, @FileName, @FileSize)
   `);
   return result.recordset[0]?.MaterialId ?? null;
 }

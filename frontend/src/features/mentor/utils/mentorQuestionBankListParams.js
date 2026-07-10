@@ -163,3 +163,17 @@ export function buildQuestionBankChapterPath(
   const query = params.toString();
   return `/mentor/question-banks/${bankId}${query ? `?${query}` : ''}`;
 }
+
+/** Route danh sách ngân hàng câu hỏi theo khóa học. */
+export function buildQuestionBankCoursePath(courseId) {
+  if (courseId == null || courseId === '') return '/mentor/question-banks';
+  return `/mentor/question-banks/${courseId}`;
+}
+
+/** Route workspace ngân hàng câu hỏi theo chương (PathId). */
+export function buildQuestionBankChapterManagePath(courseId, pathId) {
+  if (courseId == null || courseId === '' || pathId == null || pathId === '') {
+    return buildQuestionBankCoursePath(courseId);
+  }
+  return `/mentor/question-banks/${courseId}/${pathId}`;
+}

@@ -29,11 +29,13 @@ export default function MentorChapterCardMenu({
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const isCourseVariant = variant === 'course';
-  const isButtonVariant = variant === 'button' || variant === 'courseButton';
+  const isButtonVariant = variant === 'button' || variant === 'courseButton' || variant === 'chapterButton';
   const buttonLabel =
     variant === 'courseButton'
-      ? 'Thiết lập bài kiểm tra toàn khóa học'
-      : 'Thêm bài test';
+      ? 'Thiết lập bài kiểm tra toàn khóa'
+      : variant === 'chapterButton'
+        ? 'Thiết lập bài kiểm tra chương'
+        : 'Thêm bài test';
   const menuLabel = isCourseVariant ? 'Thiết lập kiểm tra toàn khóa' : 'Thiết lập kiểm tra';
   const ariaLabel = isCourseVariant ? 'Tùy chọn khóa học' : 'Tùy chọn chương';
 
@@ -85,7 +87,26 @@ export default function MentorChapterCardMenu({
                   ml: 0,
                 },
               }
-            : {
+            : variant === 'chapterButton'
+              ? {
+                  flexShrink: 0,
+                  width: { xs: '100%', sm: 'auto' },
+                  height: 32,
+                  minHeight: 32,
+                  px: 1.25,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  borderRadius: '999px',
+                  borderColor: 'rgba(124,58,237,0.28)',
+                  color: '#7C3AED',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.25,
+                  '&:hover': {
+                    borderColor: '#7C3AED',
+                    bgcolor: 'rgba(124,58,237,0.06)',
+                  },
+                }
+              : {
                 flexShrink: 0,
                 height: 28,
                 minHeight: 28,

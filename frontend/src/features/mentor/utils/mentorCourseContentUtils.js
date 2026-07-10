@@ -3,6 +3,10 @@ import {
   getFileExtension,
   MATERIAL_UPLOAD_MAX_BYTES,
   MATERIAL_UPLOAD_MAX_SIZE_MESSAGE,
+  validateVideoFile as sharedValidateVideoFile,
+  READING_DOC_EXTENSIONS,
+  READING_DOC_EXTENSION_NAMES,
+  READING_DOC_INVALID_TYPE_MESSAGE,
 } from '@/shared/utils/materialUploadValidation';
 import { getTestDefaultFields } from './mentorTestContentUtils';
 
@@ -17,6 +21,14 @@ export function normalizeMaterialType(type) {
   return String(type ?? '').trim().toUpperCase();
 }
 
+/** ID học liệu đã lưu DB (Pascal/camel). Dùng để phân biệt UPDATE vs INSERT. */
+export function getMaterialPersistentId(material = {}) {
+  const raw = material.MaterialId ?? material.materialId;
+  if (raw == null || raw === '') return null;
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 export function normalizeMaterialForDisplay(material = {}) {
   const MaterialType = normalizeMaterialType(material.MaterialType ?? material.materialType);
 
@@ -29,7 +41,7 @@ export function normalizeMaterialForDisplay(material = {}) {
     FileName: material.FileName ?? material.fileName ?? '',
     FileSize: material.FileSize ?? material.fileSize ?? null,
     SourceType: material.SourceType ?? material.sourceType ?? null,
-    MaterialId: material.MaterialId ?? material.materialId ?? null,
+    MaterialId: getMaterialPersistentId(material),
   };
 }
 
@@ -90,6 +102,14 @@ export function materialHasContent(material = {}) {
   return false;
 }
 
+/** File DOC/VIDEO đang upload (đã chọn file, chưa có URL). */
+export function isMaterialFileUploadPending(material) {
+  if (!material) return false;
+  const type = normalizeMaterialType(material.MaterialType ?? material.materialType);
+  if (type !== 'DOC' && type !== 'VIDEO') return false;
+  return Boolean(material.File) && !String(material.MaterialUrl ?? material.materialUrl ?? '').trim();
+}
+
 export const CONTENT_SHORT_DESCRIPTION_MAX = 150;
 
 export function trimShortDescription(value) {
@@ -148,16 +168,53 @@ export const MATERIAL_URL_LABELS = {
 
 export const DOC_SOURCE_UPLOAD = 'UPLOAD';
 export const DOC_SOURCE_LINK = 'LINK';
+
+export function resolveDocSourceType(material = {}) {
+  if (material.SourceType === DOC_SOURCE_LINK) return DOC_SOURCE_LINK;
+  if (material.SourceType === DOC_SOURCE_UPLOAD) return DOC_SOURCE_UPLOAD;
+  const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
+  const hasFileMeta = Boolean(material.File || material.FileName);
+  if (hasUrl && !hasFileMeta) return DOC_SOURCE_LINK;
+  return DOC_SOURCE_UPLOAD;
+}
+
+export const VIDEO_SOURCE_UPLOAD = 'UPLOAD';
 export const VIDEO_SOURCE_LINK = 'LINK';
+
+export const VIDEO_ALLOWED_EXTENSIONS = ['.mp4', '.webm', '.mov'];
+
+export function resolveVideoSourceType(material = {}) {
+  if (material.SourceType === VIDEO_SOURCE_LINK) return VIDEO_SOURCE_LINK;
+  if (material.SourceType === VIDEO_SOURCE_UPLOAD) return VIDEO_SOURCE_UPLOAD;
+  const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
+  const hasFileMeta = Boolean(material.File || material.FileName);
+  if (hasUrl && !hasFileMeta) return VIDEO_SOURCE_LINK;
+  return VIDEO_SOURCE_UPLOAD;
+}
 
 export function getVideoDefaultFields() {
   return {
-    SourceType: VIDEO_SOURCE_LINK,
+    SourceType: VIDEO_SOURCE_UPLOAD,
+    File: null,
+    FileName: null,
+    FileSize: null,
     MaterialUrl: '',
   };
 }
 
-export const DOC_ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+export function validateVideoFile(file) {
+  return sharedValidateVideoFile(file);
+}
+
+export function getVideoFileTypeLabel(fileName) {
+  const ext = getFileExtension(fileName);
+  if (ext === 'mp4') return 'MP4';
+  if (ext === 'webm') return 'WEBM';
+  if (ext === 'mov') return 'MOV';
+  return 'Video';
+}
+
+export const DOC_ALLOWED_EXTENSIONS = READING_DOC_EXTENSIONS;
 
 /** Khớp giới hạn Cloudinary free tier. */
 export const DOC_MAX_BYTES = MATERIAL_UPLOAD_MAX_BYTES;
@@ -170,7 +227,7 @@ export function getMaterialMaxFileSizeLabel() {
 export function isAllowedDocFile(file) {
   if (!file?.name) return false;
   const ext = getFileExtension(file.name);
-  return ['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(ext ?? '');
+  return READING_DOC_EXTENSION_NAMES.includes(ext ?? '');
 }
 
 export function validateDocFile(file) {
@@ -178,7 +235,7 @@ export function validateDocFile(file) {
     return { ok: false, message: 'Vui lòng chọn file tài liệu.' };
   }
   if (!isAllowedDocFile(file)) {
-    return { ok: false, message: 'Chỉ hỗ trợ PDF, DOC, DOCX, PPT, PPTX.' };
+    return { ok: false, message: READING_DOC_INVALID_TYPE_MESSAGE };
   }
   if (file.size > DOC_MAX_BYTES) {
     return {
@@ -204,8 +261,6 @@ export function getDocFileTypeLabel(fileName) {
   if (lower.endsWith('.pdf')) return 'PDF';
   if (lower.endsWith('.doc')) return 'DOC';
   if (lower.endsWith('.docx')) return 'DOCX';
-  if (lower.endsWith('.ppt')) return 'PPT';
-  if (lower.endsWith('.pptx')) return 'PPTX';
   return 'Tài liệu';
 }
 
@@ -234,7 +289,11 @@ export function formatFileSize(bytes) {
 
 export function serializePathSnapshot(path) {
   const [normalized] = withNormalizedOrders([path]);
-  return JSON.stringify(normalized);
+  return JSON.stringify(normalized, (key, value) => (
+    key === 'File' || key === '_restoreAt' || key === 'UploadedContentHash'
+      ? undefined
+      : value
+  ));
 }
 
 export function restorePathFromSnapshot(path, savedSnapshot) {
@@ -362,6 +421,77 @@ export function isNodeFieldsSnapshotSaved(path, nodeTempId, savedSnapshot) {
   return serializeNodeFieldsSnapshot(node) === serializeNodeFieldsSnapshot(baselineNode);
 }
 
+/** Khôi phục metadata chương về snapshot đã lưu (không đụng nodes/materials). */
+export function restorePathFieldsFromSnapshot(path, savedSnapshot) {
+  if (!path?.tempId || !savedSnapshot) return path;
+  try {
+    const baseline = JSON.parse(savedSnapshot);
+    return {
+      ...path,
+      PathName: baseline.PathName ?? '',
+      Description: baseline.Description ?? null,
+      IsActive: baseline.IsActive ?? baseline.isActive ?? path.IsActive,
+      PathOrder: baseline.PathOrder ?? path.PathOrder,
+    };
+  } catch {
+    return path;
+  }
+}
+
+/** Khôi phục metadata bài học về snapshot (không đụng materials). */
+export function restoreNodeFieldsFromSnapshot(path, nodeTempId, savedSnapshot) {
+  if (!path?.tempId || !nodeTempId || !savedSnapshot) return path;
+  const baselineNode = getNodeFromSnapshot(savedSnapshot, nodeTempId);
+  if (!baselineNode) return path;
+
+  return {
+    ...path,
+    nodes: (path.nodes ?? path.Nodes ?? []).map((node) => {
+      if (node.tempId !== nodeTempId) return node;
+      return {
+        ...node,
+        NodeName: baselineNode.NodeName ?? baselineNode.nodeName ?? '',
+        Description: baselineNode.Description ?? null,
+        IsActive: baselineNode.IsActive ?? baselineNode.isActive ?? node.IsActive,
+        NodeOrder: baselineNode.NodeOrder ?? node.NodeOrder,
+      };
+    }),
+  };
+}
+
+/** Áp dụng dữ liệu học liệu từ API vào path (giữ tempId hiện tại). */
+export function applyFetchedMaterialToPath(path, nodeTempId, materialTempId, apiMaterial) {
+  if (!path?.tempId || !nodeTempId || !materialTempId || !apiMaterial) return path;
+
+  return {
+    ...path,
+    nodes: (path.nodes ?? path.Nodes ?? []).map((item) => {
+      if (item.tempId !== nodeTempId) return item;
+      return {
+        ...item,
+        materials: filterLearningMaterials(item.materials ?? item.Materials ?? []).map((entry) => {
+          if (entry.tempId !== materialTempId) return entry;
+          return {
+            ...entry,
+            MaterialId: getMaterialPersistentId(apiMaterial) ?? getMaterialPersistentId(entry),
+            MaterialType: apiMaterial.MaterialType ?? apiMaterial.materialType ?? entry.MaterialType,
+            Title: apiMaterial.Title ?? apiMaterial.title ?? '',
+            MaterialUrl: apiMaterial.MaterialUrl ?? apiMaterial.materialUrl ?? '',
+            MaterialOrder: apiMaterial.MaterialOrder ?? apiMaterial.materialOrder ?? entry.MaterialOrder ?? 1,
+            SourceType: apiMaterial.SourceType ?? apiMaterial.sourceType ?? null,
+            FileName: apiMaterial.FileName ?? apiMaterial.fileName ?? null,
+            FileSize: apiMaterial.FileSize ?? apiMaterial.fileSize ?? null,
+            Content: apiMaterial.Content ?? apiMaterial.content ?? '',
+            File: null,
+            _restoreAt: Date.now(),
+            tempId: entry.tempId,
+          };
+        }),
+      };
+    }),
+  };
+}
+
 /** So sánh một học liệu với snapshot đã lưu của path. */
 export function isMaterialSnapshotSaved(path, nodeTempId, materialTempId, savedSnapshot) {
   if (!savedSnapshot || !nodeTempId || !materialTempId) return false;
@@ -448,21 +578,143 @@ export function hasUnsavedEditScopeChanges(path, savedSnapshot, focusTarget) {
   return false;
 }
 
-export function validatePathFieldsForSave(path) {
+export function makePathDirtyKey(pathTempId) {
+  return `path:${pathTempId}`;
+}
+
+export function makeNodeDirtyKey(pathTempId, nodeTempId) {
+  return `node:${pathTempId}:${nodeTempId}`;
+}
+
+export function makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId) {
+  return `material:${pathTempId}:${nodeTempId}:${materialTempId}`;
+}
+
+export function isEditDirty(dirtyKeys, key) {
+  return Boolean(key && dirtyKeys?.[key]);
+}
+
+export function hasUnsavedEditScopeDirty(dirtyKeys, focusTarget, activePathTempId) {
+  if (!focusTarget) {
+    return activePathTempId ? pathHasAnyDirty(dirtyKeys, activePathTempId) : false;
+  }
+
+  if (focusTarget.type === 'material' && focusTarget.pathTempId && focusTarget.nodeTempId && focusTarget.materialTempId) {
+    return isEditDirty(
+      dirtyKeys,
+      makeMaterialDirtyKey(focusTarget.pathTempId, focusTarget.nodeTempId, focusTarget.materialTempId),
+    );
+  }
+
+  if (focusTarget.type === 'lesson' && focusTarget.pathTempId && focusTarget.nodeTempId) {
+    return isEditDirty(dirtyKeys, makeNodeDirtyKey(focusTarget.pathTempId, focusTarget.nodeTempId));
+  }
+
+  if (focusTarget.type === 'chapter-edit' && focusTarget.pathTempId) {
+    return isEditDirty(dirtyKeys, makePathDirtyKey(focusTarget.pathTempId));
+  }
+
+  if (focusTarget.pathTempId) {
+    return pathHasAnyDirty(dirtyKeys, focusTarget.pathTempId);
+  }
+
+  return false;
+}
+
+export function pathHasAnyDirty(dirtyKeys = {}, pathTempId) {
+  if (!pathTempId) return false;
+  return Object.keys(dirtyKeys).some((key) => (
+    key === makePathDirtyKey(pathTempId)
+    || key.startsWith(`node:${pathTempId}:`)
+    || key.startsWith(`material:${pathTempId}:`)
+  ));
+}
+
+export function clearDirtyKeysForPath(dirtyKeys = {}, pathTempId) {
+  const next = { ...dirtyKeys };
+  Object.keys(next).forEach((key) => {
+    if (
+      key === makePathDirtyKey(pathTempId)
+      || key.startsWith(`node:${pathTempId}:`)
+      || key.startsWith(`material:${pathTempId}:`)
+    ) {
+      delete next[key];
+    }
+  });
+  return next;
+}
+
+export function hasOtherUnsavedDirtyPaths(pathTempId, paths = [], dirtyKeys = {}) {
+  return paths.some(
+    (path) => path.tempId !== pathTempId && pathHasAnyDirty(dirtyKeys, path.tempId),
+  );
+}
+
+function normalizeUniqueNameKey(value) {
+  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Khóa trùng học liệu trong cùng bài: loại + tiêu đề (chuẩn hóa). */
+function normalizeMaterialDuplicateKey(material) {
+  const type = normalizeMaterialType(material?.MaterialType ?? material?.materialType);
+  const titleKey = normalizeUniqueNameKey(material?.Title ?? material?.title);
+  if (!type || !titleKey) return null;
+  return `${type}::${titleKey}`;
+}
+
+function buildMaterialDuplicateTitleGroups(materials = []) {
+  const groups = new Map();
+  filterLearningMaterials(materials).forEach((material) => {
+    const key = normalizeMaterialDuplicateKey(material);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(material.tempId);
+  });
+  return groups;
+}
+
+/** Đánh dấu lỗi trùng tên theo nhóm (key → danh sách tempId). */
+function applyDuplicateNameErrors(groups, assignError) {
+  groups.forEach((tempIds) => {
+    if (tempIds.length < 2) return;
+    tempIds.forEach((tempId) => assignError(tempId));
+  });
+}
+
+export function validatePathFieldsForSave(path, allPaths = []) {
   const errors = {};
 
   if (!String(path.PathName ?? '').trim()) {
     errors.PathName = 'Vui lòng nhập tên chương trước khi lưu.';
+    return errors;
+  }
+
+  const nameKey = normalizeUniqueNameKey(path.PathName);
+  const hasDuplicate = (allPaths.length > 0 ? allPaths : [path]).some(
+    (item) => item.tempId !== path.tempId && normalizeUniqueNameKey(item.PathName) === nameKey,
+  );
+  if (hasDuplicate) {
+    errors.PathName = 'Tên chương bị trùng.';
   }
 
   return errors;
 }
 
-export function validateNodeFieldsForSave(node) {
+export function validateNodeFieldsForSave(node, siblingNodes = []) {
   const errors = {};
 
   if (!String(node.NodeName ?? node.nodeName ?? '').trim()) {
     errors.NodeName = 'Vui lòng nhập tên bài học.';
+    return errors;
+  }
+
+  const nameKey = normalizeUniqueNameKey(node.NodeName ?? node.nodeName);
+  const hasDuplicate = (siblingNodes.length > 0 ? siblingNodes : [node]).some(
+    (item) => item.tempId !== node.tempId
+      && normalizeUniqueNameKey(item.NodeName ?? item.nodeName) === nameKey,
+  );
+  if (hasDuplicate) {
+    errors.NodeName = 'Tên bài học bị trùng.';
   }
 
   return errors;
@@ -478,11 +730,11 @@ export function validateNodeForSave(node) {
   return errors.paths?.['_validate_node']?.nodes?.[node.tempId] ?? {};
 }
 
-export function validateMaterialForSave(material) {
+export function validateMaterialForSave(material, siblingMaterials = []) {
   const fakeNode = {
     tempId: '_validate_material',
     NodeName: 'placeholder',
-    materials: [material],
+    materials: siblingMaterials.length > 0 ? siblingMaterials : [material],
   };
   const fakePath = {
     tempId: '_validate_material_path',
@@ -514,17 +766,34 @@ export function getNodeContentValidationToast(nodeErrors = {}, node) {
   return 'Vui lòng kiểm tra lại thông tin bài học.';
 }
 
-export function validatePathForSave(path) {
+export function validatePathForSave(path, allPaths = []) {
   const errors = {};
 
   if (!String(path.PathName ?? '').trim()) {
     errors.PathName = 'Vui lòng nhập tên chương trước khi lưu.';
+  } else {
+    const nameKey = normalizeUniqueNameKey(path.PathName);
+    const pathsToCompare = allPaths.length > 0 ? allPaths : [path];
+    const hasDuplicateChapter = pathsToCompare.some(
+      (item) => item.tempId !== path.tempId && normalizeUniqueNameKey(item.PathName) === nameKey,
+    );
+    if (hasDuplicateChapter) {
+      errors.PathName = 'Tên chương bị trùng.';
+    }
   }
 
   const nodes = path.nodes ?? path.Nodes ?? [];
   if (nodes.length === 0) {
     errors._nodes = 'Mỗi chương cần ít nhất 1 bài học.';
   }
+
+  const nodeNameGroups = new Map();
+  nodes.forEach((node) => {
+    const key = normalizeUniqueNameKey(node.NodeName ?? node.nodeName);
+    if (!key) return;
+    if (!nodeNameGroups.has(key)) nodeNameGroups.set(key, []);
+    nodeNameGroups.get(key).push(node.tempId);
+  });
 
   const nodeErrors = {};
   nodes.forEach((node) => {
@@ -538,9 +807,29 @@ export function validatePathForSave(path) {
       currentNodeErrors._materials = 'Mỗi bài học cần ít nhất 1 học liệu.';
     }
 
+    const materials = filterLearningMaterials(node.materials ?? node.Materials ?? []);
+    const materialErrorsMap = {};
+    applyDuplicateNameErrors(buildMaterialDuplicateTitleGroups(materials), (materialTempId) => {
+      materialErrorsMap[materialTempId] = {
+        ...(materialErrorsMap[materialTempId] ?? {}),
+        Title: 'Tiêu đề học liệu bị trùng với học liệu cùng loại.',
+      };
+    });
+
+    if (Object.keys(materialErrorsMap).length > 0) {
+      currentNodeErrors.materials = materialErrorsMap;
+    }
+
     if (Object.keys(currentNodeErrors).length > 0) {
       nodeErrors[node.tempId] = currentNodeErrors;
     }
+  });
+
+  applyDuplicateNameErrors(nodeNameGroups, (nodeTempId) => {
+    nodeErrors[nodeTempId] = {
+      ...(nodeErrors[nodeTempId] ?? {}),
+      NodeName: 'Tên bài học bị trùng.',
+    };
   });
 
   if (Object.keys(nodeErrors).length > 0) {
@@ -587,6 +876,54 @@ export function isNewUnsavedPath(path = {}) {
   return path.PathId == null;
 }
 
+export function isNewUnsavedNode(node = {}) {
+  return node.NodeId == null;
+}
+
+export function isNewUnsavedMaterial(material = {}) {
+  return !getMaterialPersistentId(material);
+}
+
+/** Bài học có học liệu mới chưa lưu DB. */
+export function nodeHasNewUnsavedMaterials(node = {}) {
+  return filterLearningMaterials(getNodeMaterials(node)).some(isNewUnsavedMaterial);
+}
+
+export function removeMaterialFromPath(paths, pathTempId, nodeTempId, materialTempId) {
+  return withNormalizedOrders(
+    (paths ?? []).map((path) => {
+      if (path.tempId !== pathTempId) return path;
+      return {
+        ...path,
+        nodes: (path.nodes ?? path.Nodes ?? []).map((node) => {
+          if (node.tempId !== nodeTempId) return node;
+          return {
+            ...node,
+            materials: filterLearningMaterials(node.materials ?? node.Materials ?? [])
+              .filter((material) => material.tempId !== materialTempId),
+          };
+        }),
+      };
+    }),
+  );
+}
+
+export function removeNodeFromPath(paths, pathTempId, nodeTempId) {
+  return withNormalizedOrders(
+    (paths ?? []).map((path) => {
+      if (path.tempId !== pathTempId) return path;
+      return {
+        ...path,
+        nodes: (path.nodes ?? path.Nodes ?? []).filter((node) => node.tempId !== nodeTempId),
+      };
+    }),
+  );
+}
+
+export function removePathFromList(paths, pathTempId) {
+  return withNormalizedOrders((paths ?? []).filter((path) => path.tempId !== pathTempId));
+}
+
 export function isPathActive(path = {}) {
   return toPathIsActiveValue(path.IsActive ?? path.isActive, 1) === 1;
 }
@@ -624,11 +961,12 @@ export function createEmptyNode() {
 export function createEmptyMaterial() {
   return {
     tempId: createTempId('material'),
+    MaterialId: null,
     MaterialType: 'VIDEO',
     Title: '',
-    MaterialUrl: '',
     Content: '',
     MaterialOrder: 1,
+    ...getVideoDefaultFields(),
   };
 }
 
@@ -755,19 +1093,14 @@ export function validateCourseContent(paths, options = {}) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề tài liệu';
           }
 
-          const sourceType =
-            material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+          const sourceType = resolveDocSourceType(material);
 
           if (sourceType === DOC_SOURCE_UPLOAD) {
-            const hasFile = Boolean(material.File);
             const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
-            if (!hasFile && !hasUrl) {
-              materialErrors.File = 'Vui lòng chọn file tài liệu';
-            } else if (hasFile) {
-              const fileCheck = validateDocFile(material.File);
-              if (!fileCheck.ok) {
-                materialErrors.File = fileCheck.message;
-              }
+            if (!hasUrl) {
+              materialErrors.File = material.File
+                ? 'Đang tải file lên, vui lòng đợi hoàn tất.'
+                : 'Vui lòng chọn file tài liệu';
             }
           } else {
             const materialUrl = String(material.MaterialUrl ?? '').trim();
@@ -780,9 +1113,22 @@ export function validateCourseContent(paths, options = {}) {
             materialErrors.Title = 'Vui lòng nhập tiêu đề học liệu.';
           }
 
-          const materialUrl = String(material.MaterialUrl ?? '').trim();
-          if (materialUrl && !isSimpleUrl(materialUrl)) {
-            materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
+          const sourceType = resolveVideoSourceType(material);
+
+          if (sourceType === VIDEO_SOURCE_UPLOAD) {
+            const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
+            if (!hasUrl) {
+              materialErrors.File = material.File
+                ? 'Đang tải video lên, vui lòng đợi hoàn tất.'
+                : 'Vui lòng chọn file video';
+            }
+          } else {
+            const materialUrl = String(material.MaterialUrl ?? '').trim();
+            if (!materialUrl) {
+              materialErrors.MaterialUrl = 'Vui lòng nhập link video';
+            } else if (!isSimpleUrl(materialUrl)) {
+              materialErrors.MaterialUrl = 'Link không hợp lệ. Vui lòng dùng http:// hoặc https://';
+            }
           }
         } else {
           if (!String(material.Title ?? '').trim()) {
@@ -812,6 +1158,60 @@ export function validateCourseContent(paths, options = {}) {
     ) {
       errors.paths[path.tempId] = pathErrors;
     }
+  });
+
+  // Trùng tên chương trong khóa học
+  const chapterNameGroups = new Map();
+  normalized.forEach((path) => {
+    const key = normalizeUniqueNameKey(path.PathName);
+    if (!key) return;
+    if (!chapterNameGroups.has(key)) chapterNameGroups.set(key, []);
+    chapterNameGroups.get(key).push(path.tempId);
+  });
+  applyDuplicateNameErrors(chapterNameGroups, (pathTempId) => {
+    if (!errors.paths[pathTempId]) errors.paths[pathTempId] = { nodes: {} };
+    errors.paths[pathTempId].PathName = 'Tên chương bị trùng.';
+  });
+
+  // Trùng tên bài học trong từng chương + trùng tiêu đề học liệu trong từng bài
+  normalized.forEach((path) => {
+    const nodes = path.nodes ?? [];
+    const nodeNameGroups = new Map();
+    nodes.forEach((node) => {
+      const key = normalizeUniqueNameKey(node.NodeName ?? node.nodeName);
+      if (!key) return;
+      if (!nodeNameGroups.has(key)) nodeNameGroups.set(key, []);
+      nodeNameGroups.get(key).push(node.tempId);
+    });
+
+    applyDuplicateNameErrors(nodeNameGroups, (nodeTempId) => {
+      if (!errors.paths[path.tempId]) errors.paths[path.tempId] = { nodes: {} };
+      const pathErrors = errors.paths[path.tempId];
+      if (!pathErrors.nodes) pathErrors.nodes = {};
+      pathErrors.nodes[nodeTempId] = {
+        ...(pathErrors.nodes[nodeTempId] ?? {}),
+        materials: pathErrors.nodes[nodeTempId]?.materials ?? {},
+        NodeName: 'Tên bài học bị trùng.',
+      };
+    });
+
+    nodes.forEach((node) => {
+      applyDuplicateNameErrors(buildMaterialDuplicateTitleGroups(node.materials ?? node.Materials ?? []), (materialTempId) => {
+        if (!errors.paths[path.tempId]) errors.paths[path.tempId] = { nodes: {} };
+        const pathErrors = errors.paths[path.tempId];
+        if (!pathErrors.nodes) pathErrors.nodes = {};
+        if (!pathErrors.nodes[node.tempId]) {
+          pathErrors.nodes[node.tempId] = { materials: {} };
+        }
+        if (!pathErrors.nodes[node.tempId].materials) {
+          pathErrors.nodes[node.tempId].materials = {};
+        }
+        pathErrors.nodes[node.tempId].materials[materialTempId] = {
+          ...(pathErrors.nodes[node.tempId].materials[materialTempId] ?? {}),
+          Title: 'Tiêu đề học liệu bị trùng với học liệu cùng loại.',
+        };
+      });
+    });
   });
 
   return errors;
@@ -1011,8 +1411,7 @@ export function buildCourseContentPayload(paths) {
             }
 
             if (material.MaterialType === 'DOC') {
-              const sourceType =
-                material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+              const sourceType = resolveDocSourceType(material);
 
               return {
                 ...base,
@@ -1024,10 +1423,14 @@ export function buildCourseContentPayload(paths) {
             }
 
             if (material.MaterialType === 'VIDEO') {
+              const sourceType = resolveVideoSourceType(material);
+
               return {
                 ...base,
-                SourceType: VIDEO_SOURCE_LINK,
+                SourceType: sourceType,
                 MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+                FileName: material.FileName ?? null,
+                FileSize: material.FileSize ?? null,
               };
             }
 

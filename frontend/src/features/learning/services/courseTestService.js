@@ -10,9 +10,14 @@ import { getUser } from '@/features/auth/utils/authUtils';
 import {
   getChapterQuizConfig,
   getCourseQuizConfig,
+  getChapterQuizConfigsByCourse,
 } from '@/features/mentor/services/chapterQuizConfigService';
-import { COURSE_QUIZ_CHAPTER_ID } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
-import { getChapterQuizConfigTotal } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
+import {
+  COURSE_QUIZ_CHAPTER_ID,
+  getChapterQuizConfigTotal,
+  getRequiredChapterIdsFromConfig,
+  evaluateQuizPrerequisites,
+} from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import {
   buildTestPaper,
   gradeTestAnswers,
@@ -122,6 +127,36 @@ async function loadQuizConfig(courseId, scope, chapterId, meta = {}) {
   });
 }
 
+function hasPassedChapterQuiz(userId, courseId, chapterId) {
+  const history = getAttemptHistory(userId, courseId, 'chapter', chapterId);
+  return history.some((item) => item.status === 'submitted' && item.passed);
+}
+
+async function resolvePrerequisiteStatus(courseId, config) {
+  const requiredChapterIds = getRequiredChapterIdsFromConfig(config);
+  if (requiredChapterIds.length === 0) {
+    return { ok: true, blockers: [] };
+  }
+
+  const userId = getUser()?.userId;
+  const configsRes = await getChapterQuizConfigsByCourse(courseId);
+  const configByChapterId = new Map(
+    (configsRes.ok ? configsRes.configs : [])
+      .filter((item) => String(item?.chapterId) !== COURSE_QUIZ_CHAPTER_ID)
+      .map((item) => [String(item.chapterId), item]),
+  );
+
+  return evaluateQuizPrerequisites(requiredChapterIds, (requiredChapterId) => {
+    const chapterConfig = configByChapterId.get(String(requiredChapterId)) ?? {};
+    return {
+      chapterTitle: chapterConfig.title ?? `Chương ${requiredChapterId}`,
+      quizTitle: chapterConfig.title ?? 'Bài kiểm tra chương',
+      quizEnabled: Boolean(chapterConfig.enabled),
+      passed: userId ? hasPassedChapterQuiz(userId, courseId, requiredChapterId) : false,
+    };
+  });
+}
+
 /**
  * Tổng hợp và chuẩn hóa thông tin thô thành một đối tượng Metadata chứa các quy chế thi chuẩn để hiển thị lên UI.
  */
@@ -151,8 +186,6 @@ function buildMetaFromConfig(config, scope, extras = {}) {
     attemptsUsed: submittedCount,
     remainingAttempts: Math.max(0, maxAttempts - submittedCount),
     enabled: Boolean(config.enabled),
-    shuffleQuestions: config.shuffleQuestions !== false,
-    shuffleAnswers: config.shuffleAnswers !== false,
     isDemo: Boolean(extras.isDemo),
   };
 }
@@ -184,14 +217,22 @@ export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   if (config?.enabled && getChapterQuizConfigTotal(config) > 0) {
     const paperRes = buildTestPaper(courseId, scope, chapterId, config);
     const totalQuestions = paperRes.ok ? paperRes.paper.totalQuestions : getChapterQuizConfigTotal(config);
+    const prerequisiteStatus = scope === 'final'
+      ? { ok: true, blockers: [] }
+      : await resolvePrerequisiteStatus(courseId, config);
+
     return {
       ok: true,
-      meta: buildMetaFromConfig(config, scope, {
-        courseId,
-        chapterId,
-        chapterTitle: meta.chapterTitle,
-        totalQuestions,
-      }),
+      meta: {
+        ...buildMetaFromConfig(config, scope, {
+          courseId,
+          chapterId,
+          chapterTitle: meta.chapterTitle,
+          totalQuestions,
+        }),
+        prerequisitesMet: prerequisiteStatus.ok,
+        prerequisiteBlockers: prerequisiteStatus.blockers,
+      },
     };
   }
 
@@ -221,6 +262,18 @@ export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
   let gradingQuestions = [];
 
   if (config?.enabled && getChapterQuizConfigTotal(config) > 0) {
+    const prerequisiteStatus = scope === 'final'
+      ? { ok: true, blockers: [] }
+      : await resolvePrerequisiteStatus(courseId, config);
+
+    if (!prerequisiteStatus.ok) {
+      return {
+        ok: false,
+        message: 'Bạn chưa đủ điều kiện làm bài kiểm tra này.',
+        prerequisiteBlockers: prerequisiteStatus.blockers,
+      };
+    }
+
     const paperRes = buildTestPaper(courseId, scope, chapterId, config);
     if (!paperRes.ok) {
       paper = createDemoTestPaper();

@@ -45,6 +45,7 @@ import { useMentorCourseLeaveGuard } from '@/features/mentor/hooks/useMentorCour
 import {
   fetchCourseCategories,
   fetchCourseLevels,
+  fetchMentorCourses,
   saveCreateCourseStep1,
 } from '@/features/mentor/services/mentorCourseService';
 import { getUser } from '@/features/auth/utils/authUtils';
@@ -54,6 +55,7 @@ import {
 } from '@/features/mentor/utils/mentorCourseCreateStorage';
 import {
   MENTOR_COURSE_FORM_INITIAL,
+  findDuplicateMentorCourse,
   isMentorCourseFormDirty,
   validateMentorCourseForm,
 } from '@/features/mentor/utils/mentorCourseFormUtils';
@@ -155,20 +157,25 @@ export default function MentorCreateCoursePage() {
       [name]: name === 'IsPublished' ? Boolean(value) : value,
     }));
 
-    if (errors[name]) {
+    if (errors[name] || (
+      (name === 'CourseName' || name === 'CategoryId' || name === 'LevelId')
+      && (errors.CourseName || errors.CategoryId || errors.LevelId)
+    )) {
       setErrors((prev) => {
         const next = { ...prev };
         delete next[name];
+        if (name === 'CourseName' || name === 'CategoryId' || name === 'LevelId') {
+          delete next.CourseName;
+          delete next.CategoryId;
+          delete next.LevelId;
+        }
         return next;
       });
     }
   };
 
   const handleNext = async () => {
-    // console.log(form);
     const validationErrors = validateMentorCourseForm(form);
-    // console.log("cccc" + Object.keys(validationErrors).length)
-    // console.table(validationErrors)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -181,14 +188,28 @@ export default function MentorCreateCoursePage() {
 
     setSubmitting(true);
     try {
-      //* TO DO Fetch Api to save draft
-      // Hiện tại đang lưu step 1 vào session 
-      // (thực tế là lưu all bước vào session, tới lúc tạo và public thì mới xóa sesion và lưu vào database)
+      const coursesResult = await fetchMentorCourses();
+      if (!coursesResult.ok) {
+        toast.error(coursesResult.message || 'Không thể kiểm tra khóa học hiện có.');
+        return;
+      }
+
+      const duplicate = findDuplicateMentorCourse(form, coursesResult.courses ?? []);
+      if (duplicate) {
+        const message = 'Bạn đã có khóa học trùng tên, thể loại và trình độ.';
+        setErrors({
+          CourseName: message,
+          CategoryId: message,
+          LevelId: message,
+        });
+        toast.error(message);
+        return;
+      }
+
       const result = await saveCreateCourseStep1(form, instructorId);
       if (!result.ok) {
-        return
-      };
-      // console.log(result);
+        return;
+      }
       navigate('/mentor/courses/create/content');
     } finally {
       setSubmitting(false);

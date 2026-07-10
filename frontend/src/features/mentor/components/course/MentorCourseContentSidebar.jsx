@@ -15,12 +15,13 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import {
   filterLearningMaterials,
-  isMaterialSnapshotSaved,
+  isEditDirty,
   isNewUnsavedPath,
   isNodeActive,
-  isNodeFieldsSnapshotSaved,
   isPathActive,
-  isPathFieldsSnapshotSaved,
+  makePathDirtyKey,
+  makeNodeDirtyKey,
+  makeMaterialDirtyKey,
   MATERIAL_TYPE_LABELS,
   materialHasContent,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
@@ -527,7 +528,7 @@ export default function MentorCourseContentSidebar({
   activeChapterId = null,
   focusTarget = null,
   errors = {},
-  savedPathSnapshots = {},
+  dirtyKeys = {},
   onSelectChapter,
   onEditChapter,
   onSelectNode,
@@ -611,26 +612,24 @@ export default function MentorCourseContentSidebar({
   const chapterDirtyById = useMemo(() => {
     const map = {};
     paths.forEach((path) => {
-      map[path.tempId] = !isPathFieldsSnapshotSaved(path, savedPathSnapshots[path.tempId]);
+      map[path.tempId] = isEditDirty(dirtyKeys, makePathDirtyKey(path.tempId));
     });
     return map;
-  }, [paths, savedPathSnapshots]);
+  }, [paths, dirtyKeys]);
 
   const nodeDirtyById = useMemo(() => {
     const map = {};
     paths.forEach((path) => {
       (path.nodes ?? []).forEach((node) => {
-        map[node.tempId] = !isNodeFieldsSnapshotSaved(path, node.tempId, savedPathSnapshots[path.tempId]);
+        map[node.tempId] = isEditDirty(dirtyKeys, makeNodeDirtyKey(path.tempId, node.tempId));
       });
     });
     return map;
-  }, [paths, savedPathSnapshots]);
+  }, [paths, dirtyKeys]);
 
-  const isMaterialDirty = useCallback((pathTempId, nodeTempId, materialTempId) => {
-    const path = paths.find((item) => item.tempId === pathTempId);
-    if (!path) return false;
-    return !isMaterialSnapshotSaved(path, nodeTempId, materialTempId, savedPathSnapshots[pathTempId]);
-  }, [paths, savedPathSnapshots]);
+  const isMaterialDirty = useCallback((pathTempId, nodeTempId, materialTempId) => (
+    isEditDirty(dirtyKeys, makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId))
+  ), [dirtyKeys]);
 
   const isNodeSelected = useCallback((pathTempId, nodeTempId) => (
     (focusTarget?.type === 'lesson' || focusTarget?.type === 'material')

@@ -196,6 +196,7 @@ export const ANSWER_MODE_LABELS = {
 export const TEST_QUESTION_TEXT_MAX = 250;
 export const TEST_QUESTION_TEXT_MIN = 3;
 export const TEST_QUESTION_OPTION_TEXT_MAX = 250;
+const QUESTION_BANK_DUPLICATE_OPTION_ERROR = 'Trùng lặp';
 
 export function isMultipleChoiceQuestion(question) {
   return Array.isArray(question?.Options);
@@ -575,6 +576,13 @@ export function appendDeletedQuestionToSection(
 ) {
   if (!question?.tempId) return deletedQuestions;
 
+  // Câu mới chưa từng lưu DB: xóa hẳn, không đưa vào danh sách đã xóa.
+  const isPersisted = Boolean(question.QuestionId);
+  const wasInInitial = (initialQuestions ?? []).some((item) => item.tempId === question.tempId);
+  if (!isPersisted && !wasInInitial) {
+    return deletedQuestions;
+  }
+
   const hasContent =
     Boolean(question.QuestionId) || Boolean(String(question.QuestionText ?? '').trim());
   if (!hasContent) return deletedQuestions;
@@ -931,12 +939,36 @@ function formatQuestionBankMissingAnswersToast(section, errors = {}) {
     const qErrors = errors?.Questions?.[question.tempId];
     if (!qErrors) return;
     if (qErrors._options || (qErrors.Options && Object.keys(qErrors.Options).length > 0)) {
+      const onlyDuplicateChoices = Object.values(qErrors.Options ?? {}).length > 0
+        && Object.values(qErrors.Options ?? {}).every(
+          (optionError) => optionError?.OptionText === QUESTION_BANK_DUPLICATE_OPTION_ERROR,
+        )
+        && !qErrors._options;
+      if (onlyDuplicateChoices) return;
       indexes.push(index + 1);
     }
   });
 
   if (indexes.length === 0) return null;
   return `Câu chưa có đáp án — Câu ${indexes.join(', ')}`;
+}
+
+function formatQuestionBankDuplicateOptionsToast(section, errors = {}) {
+  const parts = [];
+
+  (section?.Questions ?? []).forEach((question, index) => {
+    const qErrors = errors?.Questions?.[question.tempId];
+    if (!qErrors) return;
+    const hasDuplicate = Object.values(qErrors.Options ?? {}).some(
+      (optionError) => optionError?.OptionText === QUESTION_BANK_DUPLICATE_OPTION_ERROR,
+    );
+    if (hasDuplicate) {
+      parts.push(`Câu ${index + 1} có lựa chọn trùng nhau`);
+    }
+  });
+
+  if (parts.length === 0) return null;
+  return parts.join(' · ');
 }
 
 function formatQuestionBankDuplicateQuestionsToast(section) {
@@ -1082,6 +1114,23 @@ export function validateTestQuestion(question, { validateScore = true } = {}) {
       };
     }
   });
+
+  const optionTextGroups = new Map();
+  options.forEach((option) => {
+    const key = normalizeQuestionBankCompareKey(option?.OptionText);
+    if (!key) return;
+    if (!optionTextGroups.has(key)) optionTextGroups.set(key, []);
+    optionTextGroups.get(key).push(option);
+  });
+  // Trong 1 câu hỏi: không cho 2 lựa chọn (choice) giống nhau.
+  optionTextGroups.forEach((group) => {
+    if (group.length < 2) return;
+    group.forEach((option) => {
+      if (optionErrors[option.tempId]?.OptionText) return;
+      optionErrors[option.tempId] = { OptionText: QUESTION_BANK_DUPLICATE_OPTION_ERROR };
+    });
+  });
+
   if (Object.keys(optionErrors).length > 0) {
     qErrors.Options = optionErrors;
   }
@@ -1303,6 +1352,9 @@ export function getQuestionBankSectionValidationToasts(errors = {}, section = nu
 
   const missingAnswersToast = formatQuestionBankMissingAnswersToast(section, errors);
   if (missingAnswersToast) messages.push(missingAnswersToast);
+
+  const duplicateOptionsToast = formatQuestionBankDuplicateOptionsToast(section, errors);
+  if (duplicateOptionsToast) messages.push(duplicateOptionsToast);
 
   const duplicateToast = formatQuestionBankDuplicateQuestionsToast(section);
   if (duplicateToast) messages.push(duplicateToast);

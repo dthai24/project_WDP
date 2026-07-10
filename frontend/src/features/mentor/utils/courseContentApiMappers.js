@@ -1,9 +1,9 @@
 import {
-  DOC_SOURCE_LINK,
-  DOC_SOURCE_UPLOAD,
-  VIDEO_SOURCE_LINK,
+  resolveDocSourceType,
+  resolveVideoSourceType,
   filterLearningMaterials,
-  isPathSnapshotSaved,
+  getMaterialPersistentId,
+  pathHasAnyDirty,
   trimShortDescription,
   toPathIsActiveValue,
   withNormalizedOrders,
@@ -52,7 +52,7 @@ function buildMaterialApiData(material = {}) {
   }
 
   if (material.MaterialType === 'DOC') {
-    const sourceType = material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+    const sourceType = resolveDocSourceType(material);
     return {
       ...base,
       SourceType: sourceType,
@@ -63,10 +63,13 @@ function buildMaterialApiData(material = {}) {
   }
 
   if (material.MaterialType === 'VIDEO') {
+    const sourceType = resolveVideoSourceType(material);
     return {
       ...base,
-      SourceType: VIDEO_SOURCE_LINK,
+      SourceType: sourceType,
       MaterialUrl: String(material.MaterialUrl ?? '').trim() || null,
+      FileName: material.FileName ?? null,
+      FileSize: material.FileSize ?? null,
     };
   }
 
@@ -134,19 +137,23 @@ function diffNodeMaterials(currentNode, baselineNode, nodeId, payload) {
   const baselineMaterials = filterLearningMaterials(baselineNode?.materials ?? baselineNode?.Materials ?? []);
   const currentMaterials = filterLearningMaterials(currentNode?.materials ?? currentNode?.Materials ?? []);
   const currentMaterialIds = new Set(
-    currentMaterials.filter((item) => item.MaterialId).map((item) => item.MaterialId),
+    currentMaterials
+      .map((item) => getMaterialPersistentId(item))
+      .filter(Boolean),
   );
 
   baselineMaterials.forEach((material) => {
-    if (material.MaterialId && !currentMaterialIds.has(material.MaterialId)) {
-      payload.materialsDelete.push({ materialId: material.MaterialId, nodeId });
+    const materialId = getMaterialPersistentId(material);
+    if (materialId && !currentMaterialIds.has(materialId)) {
+      payload.materialsDelete.push({ materialId, nodeId });
       payload.summary.materialsDelete += 1;
     }
   });
 
   currentMaterials.forEach((material, materialIndex) => {
     const materialOrder = materialIndex + 1;
-    if (!material.MaterialId) {
+    const materialId = getMaterialPersistentId(material);
+    if (!materialId) {
       payload.materialsInsert.push({
         nodeId,
         clientRef: material.tempId,
@@ -157,17 +164,18 @@ function diffNodeMaterials(currentNode, baselineNode, nodeId, payload) {
       return;
     }
 
-    const baselineMaterial = baselineMaterials.find((item) => item.MaterialId === material.MaterialId)
-      ?? baselineMaterials.find((item) => item.tempId === material.tempId);
+    const baselineMaterial = baselineMaterials.find(
+      (item) => getMaterialPersistentId(item) === materialId,
+    ) ?? baselineMaterials.find((item) => item.tempId === material.tempId);
     const materialSet = buildMaterialContentSet(
-      { ...material, MaterialOrder: materialOrder },
+      { ...material, MaterialId: materialId, MaterialOrder: materialOrder },
       baselineMaterial ?? {},
     );
     const orderChanged = materialOrder !== Number(baselineMaterial?.MaterialOrder ?? materialOrder);
 
     if (Object.keys(materialSet).length > 0 || orderChanged) {
       payload.materialsUpdate.push({
-        materialId: material.MaterialId,
+        materialId,
         nodeId,
         ...(Object.keys(materialSet).length > 0 ? { set: materialSet } : {}),
         ...(orderChanged ? { MaterialOrder: materialOrder } : {}),
@@ -600,10 +608,11 @@ export function buildCourseMaterialSavePayload(
 
   const nodeId = node.NodeId ?? null;
   const materialOrder = materialIndex + 1;
+  const materialId = getMaterialPersistentId(material);
   const baselineNode = (baseline?.nodes ?? []).find((item) => item.NodeId === node.NodeId)
     ?? (baseline?.nodes ?? []).find((item) => item.tempId === nodeTempId);
   const baselineMaterials = filterLearningMaterials(baselineNode?.materials ?? baselineNode?.Materials ?? []);
-  const baselineMaterial = baselineMaterials.find((item) => item.MaterialId === material.MaterialId)
+  const baselineMaterial = baselineMaterials.find((item) => getMaterialPersistentId(item) === materialId)
     ?? baselineMaterials.find((item) => item.tempId === materialTempId);
 
   const payload = {
@@ -617,7 +626,7 @@ export function buildCourseMaterialSavePayload(
       nodeId,
       nodeName: normalizeNodeFields(node).NodeName || null,
       materialTempId,
-      materialId: material.MaterialId ?? null,
+      materialId,
       materialTitle: String(material.Title ?? '').trim() || null,
     },
     summary: {
@@ -642,7 +651,8 @@ export function buildCourseMaterialSavePayload(
 
   if (!nodeId) return payload;
 
-  if (!material.MaterialId) {
+  // Học liệu đã có ID → luôn UPDATE (PUT), không INSERT.
+  if (!materialId) {
     payload.materialsInsert.push({
       nodeId,
       clientRef: materialTempId,
@@ -654,14 +664,16 @@ export function buildCourseMaterialSavePayload(
   }
 
   const materialSet = buildMaterialContentSet(
-    { ...material, MaterialOrder: materialOrder },
+    { ...material, MaterialId: materialId, MaterialOrder: materialOrder },
     baselineMaterial ?? {},
   );
-  const orderChanged = materialOrder !== Number(baselineMaterial?.MaterialOrder ?? materialOrder);
+  const orderChanged = materialOrder !== Number(
+    baselineMaterial?.MaterialOrder ?? material.MaterialOrder ?? materialOrder,
+  );
 
   if (Object.keys(materialSet).length > 0 || orderChanged) {
     payload.materialsUpdate.push({
-      materialId: material.MaterialId,
+      materialId,
       nodeId,
       ...(Object.keys(materialSet).length > 0 ? { set: materialSet } : {}),
       ...(orderChanged ? { MaterialOrder: materialOrder } : {}),
@@ -844,7 +856,7 @@ export function buildCoursePathSavePreviewPayload(
   courseId,
   paths = [],
   pathTempId,
-  savedPathSnapshots = {},
+  dirtyKeys = {},
 ) {
   const pathIndex = paths.findIndex((item) => item.tempId === pathTempId);
   const path = pathIndex >= 0 ? paths[pathIndex] : null;
@@ -856,7 +868,7 @@ export function buildCoursePathSavePreviewPayload(
       courseId: Number(courseId),
       pathOrder: pathIndex + 1,
     },
-    savedPathSnapshots[pathTempId],
+    null,
   );
 
   const fullPayload = {
@@ -869,8 +881,7 @@ export function buildCoursePathSavePreviewPayload(
     summary: {
       ...payload.summary,
       otherUnsavedPaths: paths.filter(
-        (item) => item.tempId !== pathTempId
-          && !isPathSnapshotSaved(item, savedPathSnapshots[item.tempId]),
+        (item) => item.tempId !== pathTempId && pathHasAnyDirty(dirtyKeys, item.tempId),
       ).length,
     },
   };
@@ -886,7 +897,7 @@ export function buildCourseNodeSavePreviewPayload(
   paths = [],
   pathTempId,
   nodeTempId,
-  savedPathSnapshots = {},
+  dirtyKeys = {},
 ) {
   const pathIndex = paths.findIndex((item) => item.tempId === pathTempId);
   const path = pathIndex >= 0 ? paths[pathIndex] : null;
@@ -899,7 +910,7 @@ export function buildCourseNodeSavePreviewPayload(
       courseId: Number(courseId),
       pathOrder: pathIndex + 1,
     },
-    savedPathSnapshots[pathTempId],
+    null,
   );
 
   const fullPayload = {
@@ -923,7 +934,7 @@ export function buildCourseMaterialSavePreviewPayload(
   pathTempId,
   nodeTempId,
   materialTempId,
-  savedPathSnapshots = {},
+  dirtyKeys = {},
 ) {
   const pathIndex = paths.findIndex((item) => item.tempId === pathTempId);
   const path = pathIndex >= 0 ? paths[pathIndex] : null;
@@ -937,7 +948,7 @@ export function buildCourseMaterialSavePreviewPayload(
       courseId: Number(courseId),
       pathOrder: pathIndex + 1,
     },
-    savedPathSnapshots[pathTempId],
+    null,
   );
 
   const fullPayload = {
@@ -970,7 +981,8 @@ export function applyCoursePathSaveResult(path, saveResult = {}) {
         NodeId: nodeIdMap.get(node.tempId) ?? node.NodeId ?? null,
         materials: filterLearningMaterials(node.materials ?? []).map((material) => ({
           ...material,
-          MaterialId: materialIdMap.get(material.tempId) ?? material.MaterialId ?? null,
+          MaterialId: materialIdMap.get(material.tempId)
+            ?? getMaterialPersistentId(material),
         })),
       };
       return nextNode;

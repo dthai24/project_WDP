@@ -87,7 +87,15 @@ export function getMaterialOutlineDetail(material) {
   switch (normalized.MaterialType) {
     case 'VIDEO': {
       if (url) return { type: 'link', href: url, label: linkLabel };
-      return { type: 'text', text: 'Chưa có link video' };
+      const fileName = String(normalized.FileName ?? '').trim();
+      if (fileName) {
+        const sizeLabel = normalized.FileSize ? formatFileSize(normalized.FileSize) : null;
+        return {
+          type: 'text',
+          text: sizeLabel ? `${fileName} · ${sizeLabel}` : fileName,
+        };
+      }
+      return { type: 'text', text: 'Chưa có video' };
     }
     case 'TEXT': {
       const plainText = stripHtmlContent(normalized.Content);
@@ -126,8 +134,18 @@ export function getMaterialReviewDetailSummary(material) {
   switch (normalized.MaterialType) {
     case 'VIDEO': {
       const hasUrl = Boolean(String(normalized.MaterialUrl ?? '').trim());
-      if (hasUrl) return `Link: ${truncatePreview(normalized.MaterialUrl, 120)}`;
-      return 'Chưa có link video';
+      if (hasUrl) {
+        const sourceType = normalized.SourceType === 'UPLOAD' ? 'UPLOAD' : 'LINK';
+        if (sourceType === 'UPLOAD' && normalized.FileName) {
+          const sizeLabel = normalized.FileSize ? formatFileSize(normalized.FileSize) : null;
+          return sizeLabel
+            ? `File: ${normalized.FileName} · ${sizeLabel}`
+            : `File: ${normalized.FileName}`;
+        }
+        return `Link: ${truncatePreview(normalized.MaterialUrl, 120)}`;
+      }
+      if (normalized.FileName) return `File: ${normalized.FileName}`;
+      return 'Chưa có video';
     }
     case 'TEXT': {
       return getTextMaterialPreview(normalized);
@@ -471,8 +489,7 @@ export function validateCourseDraft(draft) {
         }
 
         if (material.MaterialType === 'DOC') {
-          const sourceType =
-            material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+          const sourceType = resolveDocSourceType(material);
           const hasLink = Boolean(String(material.MaterialUrl ?? '').trim());
           const hasFile = Boolean(material.File || material.FileName);
           if (sourceType === DOC_SOURCE_LINK && !hasLink) {
@@ -498,15 +515,35 @@ export function validateCourseDraft(draft) {
         }
 
         if (material.MaterialType === 'VIDEO') {
-          const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
-          if (!hasUrl) {
-            const alreadyReported = errors.some((item) => item.targetId === material.tempId);
-            if (!alreadyReported) {
-              errors.push({
-                type: 'material',
-                message: `${materialLabel}: Video chưa có link.`,
-                targetId: material.tempId,
-              });
+          const sourceType = material.SourceType === 'LINK'
+            || (String(material.MaterialUrl ?? '').trim() && !material.File && !material.FileName)
+            ? 'LINK'
+            : 'UPLOAD';
+          if (sourceType === 'UPLOAD') {
+            const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
+            if (!hasUrl) {
+              const alreadyReported = errors.some((item) => item.targetId === material.tempId);
+              if (!alreadyReported) {
+                errors.push({
+                  type: 'material',
+                  message: material.File
+                    ? `${materialLabel}: Đang tải video lên, vui lòng đợi hoàn tất.`
+                    : `${materialLabel}: Video chưa có file.`,
+                  targetId: material.tempId,
+                });
+              }
+            }
+          } else {
+            const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
+            if (!hasUrl) {
+              const alreadyReported = errors.some((item) => item.targetId === material.tempId);
+              if (!alreadyReported) {
+                errors.push({
+                  type: 'material',
+                  message: `${materialLabel}: Video chưa có link.`,
+                  targetId: material.tempId,
+                });
+              }
             }
           }
         }

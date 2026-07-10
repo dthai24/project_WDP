@@ -28,16 +28,13 @@ export default function TestIntroPanel({
     `Thời gian làm bài: ${formatDurationMinutes(meta?.timeLimitMinutes)}.`,
     `Điểm đạt: ${meta?.passingScore ?? 70}%.`,
     `Số lượt làm bài còn lại: ${meta?.remainingAttempts ?? 0}/${meta?.maxAttempts ?? 3}.`,
-    meta?.shuffleQuestions !== false
-      ? 'Thứ tự câu hỏi có thể được xáo trộn.'
-      : 'Câu hỏi giữ nguyên thứ tự.',
-    meta?.shuffleAnswers !== false
-      ? 'Đáp án có thể được xáo trộn.'
-      : 'Đáp án giữ nguyên thứ tự.',
     'Hết giờ hệ thống sẽ tự nộp bài.',
   ];
 
-  const canStart = BYPASS_ATTEMPT_LIMIT || (meta?.remainingAttempts ?? 0) > 0;
+  const prerequisitesMet = meta?.prerequisitesMet !== false;
+  const canStart =
+    prerequisitesMet && (BYPASS_ATTEMPT_LIMIT || (meta?.remainingAttempts ?? 0) > 0);
+  const prerequisiteBlockers = meta?.prerequisiteBlockers ?? [];
 
   return (
     <Box
@@ -140,7 +137,39 @@ export default function TestIntroPanel({
           </Box>
         </Box>
 
-        {!canStart && (
+        {!prerequisitesMet && prerequisiteBlockers.length > 0 && (
+          <Box
+            sx={{
+              bgcolor: alpha('#DC2626', 0.04),
+              borderRadius: '12px',
+              border: `1px solid ${alpha('#DC2626', 0.15)}`,
+              px: 2,
+              py: 1.75,
+              mb: 2,
+            }}
+          >
+            <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#DC2626', mb: 1 }}>
+              Chưa đủ điều kiện làm bài
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: TEST_MUTED, mb: 1, lineHeight: 1.55 }}>
+              Bạn cần đạt các bài kiểm tra sau trước:
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2.25 }}>
+              {prerequisiteBlockers.map((blocker) => (
+                <Typography
+                  key={blocker.chapterId}
+                  component="li"
+                  sx={{ fontSize: 13.5, color: TEST_MUTED, lineHeight: 1.65, mb: 0.5 }}
+                >
+                  {blocker.quizTitle}
+                  {!blocker.quizEnabled ? ' (chưa được mentor bật)' : ''}
+                </Typography>
+              ))}
+            </Box>
+          </Box>
+        )}
+
+        {!canStart && prerequisitesMet && (
           <Typography sx={{ fontSize: 14, color: '#DC2626', fontWeight: 600, mb: 2 }}>
             Bạn đã hết lượt làm bài kiểm tra.
           </Typography>

@@ -22,7 +22,7 @@ import { ContentFieldLabel } from './MentorContentSectionHeading';
 import MentorMaterialTypeSelect, { MATERIAL_TYPE_SELECT_OPTIONS } from './MentorMaterialTypeSelect';
 import MentorTextMaterialEditor from './MentorTextMaterialEditor';
 import MentorDocumentMaterialEditor from './MentorDocumentMaterialEditor';
-import MentorVideoMaterialEditor, { MentorVideoUrlField } from './MentorVideoMaterialEditor';
+import MentorVideoMaterialEditor from './MentorVideoMaterialEditor';
 
 function getMaterialTypeLabel(type) {
   return MATERIAL_TYPE_SELECT_OPTIONS.find((opt) => opt.value === type)?.label ?? 'Học liệu';
@@ -219,31 +219,10 @@ export default function MentorMaterialRow({
         </Box>
       )}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: isVideo
-            ? '1fr'
-            : tabMode
-              ? '1fr'
-              : { xs: '1fr', sm: 'minmax(140px, 180px) minmax(0, 1fr)' },
-          gap: tabMode || isVideo ? 2 : { xs: 1.25, sm: 1.5 },
-          alignItems: 'start',
-        }}
-      >
+      {titleField}
+
+      <Box sx={{ mt: tabMode ? 2 : 1.5 }}>
         {typeField}
-
-        {isVideo ? (
-          <MentorVideoUrlField
-            material={material}
-            errors={errors}
-            onChange={onChange}
-            disabled={disabled}
-            compact={tabMode}
-          />
-        ) : null}
-
-        {titleField}
       </Box>
 
       {showUrlField && (

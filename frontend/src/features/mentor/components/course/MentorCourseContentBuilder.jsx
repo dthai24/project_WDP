@@ -3,14 +3,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
+import UndoRoundedIcon from '@mui/icons-material/UndoRounded';
 import AppButton from '@/shared/ui/AppButton';
 import MentorChapterCard from './MentorChapterCard';
 import MentorChapterTabs from './MentorChapterTabs';
 import MentorSectionTabToggle from './MentorSectionTabToggle';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
-import { BUILDER_PANEL_SX, scopedEditorBarSx, scopedUpdateButtonSx } from './mentorCourseContentStyles';
+import {
+  BUILDER_PANEL_SX,
+  scopedEditorBarSx,
+  scopedRestoreButtonSx,
+  scopedUpdateButtonSx,
+} from './mentorCourseContentStyles';
 import { PathPublishToggle, NodePublishToggle } from './MentorPublishToggles';
-import { filterLearningMaterials, isPathFieldsSnapshotSaved, isNodeFieldsSnapshotSaved, isMaterialSnapshotSaved, resolveChapterId, chapterHasContent } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { filterLearningMaterials, getMaterialPersistentId, isEditDirty, isMaterialFileUploadPending, makePathDirtyKey, makeNodeDirtyKey, makeMaterialDirtyKey, resolveChapterId, chapterHasContent } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentBuilder({
   paths,
@@ -30,19 +36,22 @@ export default function MentorCourseContentBuilder({
   onMaterialDelete,
   onMaterialReorder,
   disabled = false,
-  savedPathSnapshots = {},
+  dirtyKeys = {},
   savingChapterId = null,
   onSaveChapter,
   showChapterSave = true,
   showPathUpdate = false,
   updatingPathId = null,
   onUpdatePath,
+  onRestorePath,
   showNodeUpdate = false,
   updatingNodeKey = null,
   onUpdateNode,
+  onRestoreNode,
   showMaterialUpdate = false,
   updatingMaterialKey = null,
   onUpdateMaterial,
+  onRestoreMaterial,
   activeChapterId: controlledActiveChapterId,
   onActiveChapterChange,
   onRequestContentNavigation,
@@ -65,8 +74,13 @@ export default function MentorCourseContentBuilder({
 
   const requestActiveChapterChange = useCallback((nextChapterId) => {
     if (!nextChapterId || nextChapterId === activeChapterId) return;
-    setActiveChapterId(nextChapterId);
-  }, [activeChapterId, setActiveChapterId]);
+    const navigate = () => setActiveChapterId(nextChapterId);
+    if (onRequestContentNavigation) {
+      onRequestContentNavigation(navigate);
+      return;
+    }
+    navigate();
+  }, [activeChapterId, onRequestContentNavigation, setActiveChapterId]);
   const [chapterSectionOpen, setChapterSectionOpen] = useState(true);
   const pendingSelectLastRef = useRef(false);
   const activeChapterIndexRef = useRef(0);
@@ -92,14 +106,17 @@ export default function MentorCourseContentBuilder({
       setActiveChapterId(null);
       return;
     }
+    // Chọn chương mới sau khi thêm — effect riêng xử lý, không qua guard.
+    if (pendingSelectLastRef.current) return;
+
     const stillExists = paths.some((p) => p.tempId === activeChapterId);
     if (!stillExists) {
       const nextIdx = Math.max(0, activeChapterIndexRef.current - 1);
-      requestActiveChapterChange(
+      setActiveChapterId(
         paths[Math.min(nextIdx, paths.length - 1)]?.tempId ?? paths[0]?.tempId,
       );
     }
-  }, [paths, activeChapterId, requestActiveChapterChange]);
+  }, [paths, activeChapterId, setActiveChapterId]);
 
   useEffect(() => {
     if (isControlledChapter) return;
@@ -114,15 +131,16 @@ export default function MentorCourseContentBuilder({
 
   useEffect(() => {
     if (pendingSelectLastRef.current && paths.length > 0) {
-      requestActiveChapterChange(paths[paths.length - 1].tempId);
+      // Chọn chương mới sau khi thêm — không hỏi lưu nháp.
+      setActiveChapterId(paths[paths.length - 1].tempId);
       pendingSelectLastRef.current = false;
     }
-  }, [paths, requestActiveChapterChange]);
+  }, [paths, setActiveChapterId]);
 
   const activePathIndex = paths.findIndex((p) => p.tempId === activeChapterId);
   const activePath = activePathIndex >= 0 ? paths[activePathIndex] : null;
   const activePathDirty = Boolean(
-    activePath && !isPathFieldsSnapshotSaved(activePath, savedPathSnapshots[activePath.tempId]),
+    activePath && isEditDirty(dirtyKeys, makePathDirtyKey(activePath.tempId)),
   );
   const updatingPath = updatingPathId === activePath?.tempId;
   const showChapterEdit = !sidebarLayout || (
@@ -156,19 +174,18 @@ export default function MentorCourseContentBuilder({
   const activeNodeDirty = Boolean(
     activePath
     && activeNode
-    && !isNodeFieldsSnapshotSaved(activePath, activeNode.tempId, savedPathSnapshots[activePath.tempId]),
+    && isEditDirty(dirtyKeys, makeNodeDirtyKey(activePath.tempId, activeNode.tempId)),
   );
   const activeMaterialDirty = Boolean(
     activePath
     && activeNode
     && activeMaterial
-    && !isMaterialSnapshotSaved(
-      activePath,
-      activeNode.tempId,
-      activeMaterial.tempId,
-      savedPathSnapshots[activePath.tempId],
+    && isEditDirty(
+      dirtyKeys,
+      makeMaterialDirtyKey(activePath.tempId, activeNode.tempId, activeMaterial.tempId),
     ),
   );
+  const activeMaterialUploadPending = isMaterialFileUploadPending(activeMaterial);
   const updatingActiveNode = Boolean(
     activePath && activeNodeTempId && updatingNodeKey === `${activePath.tempId}:${activeNodeTempId}`,
   );
@@ -291,14 +308,26 @@ export default function MentorCourseContentBuilder({
                         </Typography>
                       ) : null}
                     </Box>
-                    <AppButton
-                      startIcon={<SaveOutlinedIcon />}
-                      onClick={() => onUpdatePath?.(activePath.tempId)}
-                      disabled={disabled || updatingPath || !activePathDirty}
-                      sx={scopedUpdateButtonSx(activePathDirty)}
-                    >
-                      {updatingPath ? 'Đang cập nhật...' : 'Cập nhật path'}
-                    </AppButton>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, flexShrink: 0 }}>
+                      {activePath.PathId ? (
+                        <AppButton
+                          startIcon={<UndoRoundedIcon />}
+                          onClick={() => onRestorePath?.(activePath.tempId)}
+                          disabled={disabled || updatingPath || !activePathDirty}
+                          sx={scopedRestoreButtonSx(activePathDirty)}
+                        >
+                          Khôi phục
+                        </AppButton>
+                      ) : null}
+                      <AppButton
+                        startIcon={<SaveOutlinedIcon />}
+                        onClick={() => onUpdatePath?.(activePath.tempId)}
+                        disabled={disabled || updatingPath || !activePathDirty}
+                        sx={scopedUpdateButtonSx(activePathDirty)}
+                      >
+                        {updatingPath ? 'Đang cập nhật...' : 'Cập nhật path'}
+                      </AppButton>
+                    </Box>
                   </Box>
                 ) : null}
                 {showNodeUpdate && showNodeContent && activeNode ? (
@@ -321,19 +350,36 @@ export default function MentorCourseContentBuilder({
                         </Typography>
                       ) : null}
                     </Box>
-                    <AppButton
-                      startIcon={<SaveOutlinedIcon />}
-                      onClick={() => onUpdateNode?.(activePath.tempId, activeNode.tempId)}
-                      disabled={
-                        disabled
-                        || updatingActiveNode
-                        || !activeNodeDirty
-                        || activeNodeNeedsPathFirst
-                      }
-                      sx={scopedUpdateButtonSx(activeNodeDirty && !activeNodeNeedsPathFirst)}
-                    >
-                      {updatingActiveNode ? 'Đang cập nhật...' : 'Cập nhật Node'}
-                    </AppButton>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, flexShrink: 0 }}>
+                      {activeNode.NodeId ? (
+                        <AppButton
+                          startIcon={<UndoRoundedIcon />}
+                          onClick={() => onRestoreNode?.(activePath.tempId, activeNode.tempId)}
+                          disabled={
+                            disabled
+                            || updatingActiveNode
+                            || !activeNodeDirty
+                            || activeNodeNeedsPathFirst
+                          }
+                          sx={scopedRestoreButtonSx(activeNodeDirty && !activeNodeNeedsPathFirst)}
+                        >
+                          Khôi phục
+                        </AppButton>
+                      ) : null}
+                      <AppButton
+                        startIcon={<SaveOutlinedIcon />}
+                        onClick={() => onUpdateNode?.(activePath.tempId, activeNode.tempId)}
+                        disabled={
+                          disabled
+                          || updatingActiveNode
+                          || !activeNodeDirty
+                          || activeNodeNeedsPathFirst
+                        }
+                        sx={scopedUpdateButtonSx(activeNodeDirty && !activeNodeNeedsPathFirst)}
+                      >
+                        {updatingActiveNode ? 'Đang cập nhật...' : 'Cập nhật Node'}
+                      </AppButton>
+                    </Box>
                   </Box>
                 ) : null}
                 {showMaterialUpdate && showMaterialContent && activeNode && activeMaterial ? (
@@ -347,6 +393,10 @@ export default function MentorCourseContentBuilder({
                         <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
                           Cập nhật node trước khi lưu học liệu này.
                         </Typography>
+                      ) : activeMaterialUploadPending ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          Đang tải file lên, vui lòng đợi hoàn tất trước khi cập nhật.
+                        </Typography>
                       ) : activeMaterialDirty ? (
                         <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
                           Học liệu chưa lưu.
@@ -357,28 +407,58 @@ export default function MentorCourseContentBuilder({
                         </Typography>
                       )}
                     </Box>
-                    <AppButton
-                      startIcon={<SaveOutlinedIcon />}
-                      onClick={() => onUpdateMaterial?.(
-                        activePath.tempId,
-                        activeNode.tempId,
-                        activeMaterial.tempId,
-                      )}
-                      disabled={
-                        disabled
-                        || updatingActiveMaterial
-                        || !activeMaterialDirty
-                        || activeNodeNeedsPathFirst
-                        || activeMaterialNeedsNodeFirst
-                      }
-                      sx={scopedUpdateButtonSx(
-                        activeMaterialDirty
-                        && !activeNodeNeedsPathFirst
-                        && !activeMaterialNeedsNodeFirst,
-                      )}
-                    >
-                      {updatingActiveMaterial ? 'Đang cập nhật...' : 'Cập nhật học liệu'}
-                    </AppButton>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, flexShrink: 0 }}>
+                      {getMaterialPersistentId(activeMaterial) ? (
+                        <AppButton
+                          startIcon={<UndoRoundedIcon />}
+                          onClick={() => onRestoreMaterial?.(
+                            activePath.tempId,
+                            activeNode.tempId,
+                            activeMaterial.tempId,
+                          )}
+                          disabled={
+                            disabled
+                            || updatingActiveMaterial
+                            || !activeMaterialDirty
+                            || activeMaterialUploadPending
+                            || activeNodeNeedsPathFirst
+                            || activeMaterialNeedsNodeFirst
+                          }
+                          sx={scopedRestoreButtonSx(
+                            activeMaterialDirty
+                            && !activeMaterialUploadPending
+                            && !activeNodeNeedsPathFirst
+                            && !activeMaterialNeedsNodeFirst,
+                          )}
+                        >
+                          Khôi phục
+                        </AppButton>
+                      ) : null}
+                      <AppButton
+                        startIcon={<SaveOutlinedIcon />}
+                        onClick={() => onUpdateMaterial?.(
+                          activePath.tempId,
+                          activeNode.tempId,
+                          activeMaterial.tempId,
+                        )}
+                        disabled={
+                          disabled
+                          || updatingActiveMaterial
+                          || !activeMaterialDirty
+                          || activeMaterialUploadPending
+                          || activeNodeNeedsPathFirst
+                          || activeMaterialNeedsNodeFirst
+                        }
+                        sx={scopedUpdateButtonSx(
+                          activeMaterialDirty
+                          && !activeMaterialUploadPending
+                          && !activeNodeNeedsPathFirst
+                          && !activeMaterialNeedsNodeFirst,
+                        )}
+                      >
+                        {updatingActiveMaterial ? 'Đang cập nhật...' : 'Cập nhật học liệu'}
+                      </AppButton>
+                    </Box>
                   </Box>
                 ) : null}
                 {showRightEditor ? (
@@ -406,12 +486,12 @@ export default function MentorCourseContentBuilder({
                   onMaterialDelete={onMaterialDelete}
                   onMaterialReorder={onMaterialReorder}
                   disabled={disabled}
-                  isSaved={isPathFieldsSnapshotSaved(activePath, savedPathSnapshots[activePath.tempId])}
+                  isSaved={!isEditDirty(dirtyKeys, makePathDirtyKey(activePath.tempId))}
                   saving={savingChapterId === activePath.tempId}
                   showSave={showChapterSave}
                   onSave={() => onSaveChapter?.(activePath.tempId)}
                   showNodeUpdate={showNodeUpdate}
-                  savedPathSnapshot={savedPathSnapshots[activePath.tempId]}
+                  dirtyKeys={dirtyKeys}
                   updatingNodeKey={updatingNodeKey}
                   onUpdateNode={(nodeTempId) => onUpdateNode?.(activePath.tempId, nodeTempId)}
                   focusLessonId={

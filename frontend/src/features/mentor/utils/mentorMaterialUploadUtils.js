@@ -4,8 +4,10 @@ import {
   DOC_SOURCE_UPLOAD,
   filterLearningMaterials,
   isHtmlContentEmpty,
+  resolveDocSourceType,
   withNormalizedOrders,
 } from './mentorCourseContentUtils';
+
 function isBrowserFile(value) {
   return typeof File !== 'undefined' && value instanceof File;
 }
@@ -33,7 +35,7 @@ async function uploadSingleMaterial(material) {
   }
 
   if (material.MaterialType === 'DOC') {
-    const sourceType = material.SourceType === DOC_SOURCE_LINK ? DOC_SOURCE_LINK : DOC_SOURCE_UPLOAD;
+    const sourceType = resolveDocSourceType(material);
     if (sourceType === DOC_SOURCE_LINK) {
       return material;
     }
@@ -53,6 +55,7 @@ async function uploadSingleMaterial(material) {
     };
   }
 
+  // VIDEO: đã upload Cloudinary ngay khi chọn file — lúc lưu chỉ cần URL.
   return material;
 }
 
@@ -72,6 +75,11 @@ async function hydrateTextMaterial(material) {
   } catch {
     return material;
   }
+}
+
+/** Hydrate Content cho một học liệu TEXT (dùng khi khôi phục từ API). */
+export async function hydrateSingleTextMaterial(material) {
+  return hydrateTextMaterial(material);
 }
 
 /** Tải HTML từ Cloudinary vào Content cho học liệu TEXT khi mở trang edit. */

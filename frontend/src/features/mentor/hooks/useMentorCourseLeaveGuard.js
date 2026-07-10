@@ -6,7 +6,13 @@ import {
   saveCreateCourseStep1ToStorage,
 } from '@/features/mentor/utils/mentorCourseCreateStorage';
 
-export function useMentorCourseLeaveGuard({ isDirty, form, instructorId, onPersistDraft }) {
+export function useMentorCourseLeaveGuard({
+  isDirty,
+  form,
+  instructorId,
+  onPersistDraft,
+  onDiscard,
+}) {
   const navigate = useNavigate();
   const allowLeaveRef = useRef(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -49,11 +55,15 @@ export function useMentorCourseLeaveGuard({ isDirty, form, instructorId, onPersi
   }, []);
 
   const handleDiscard = useCallback(() => {
-    clearCreateCourseDraft();
+    if (onDiscard) {
+      onDiscard();
+    } else {
+      clearCreateCourseDraft();
+    }
     const destination =
       pendingTo === 'back' ? '/mentor/courses' : (pendingTo ?? '/mentor/courses');
     completeLeave(destination);
-  }, [completeLeave, pendingTo]);
+  }, [completeLeave, onDiscard, pendingTo]);
 
   const handleSaveDraft = useCallback(async () => {
     setSaving(true);

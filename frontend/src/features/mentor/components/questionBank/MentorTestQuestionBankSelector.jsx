@@ -8,12 +8,10 @@ import { Link as RouterLink } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
+import { buildQuestionBankChapterManagePath } from '@/features/mentor/utils/mentorQuestionBankListParams';
+
 function buildManageUrl(courseId, chapterId) {
-  const params = new URLSearchParams({
-    courseId: String(courseId),
-    chapterId: String(chapterId),
-  });
-  return `/mentor/question-banks/manage?${params.toString()}`;
+  return buildQuestionBankChapterManagePath(courseId, chapterId);
 }
 
 export default function MentorTestQuestionBankSelector({

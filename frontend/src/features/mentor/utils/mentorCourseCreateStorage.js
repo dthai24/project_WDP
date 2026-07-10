@@ -73,6 +73,22 @@ export function clearCreateCourseDraft() {
   sessionStorage.removeItem(MENTOR_COURSE_CREATE_STORAGE_KEY);
 }
 
+/** Xóa snapshot nội dung (step 2) nhưng giữ thông tin khóa học step 1 trong session. */
+export function discardCreateCourseContentFromStorage() {
+  const existing = loadCreateCourseDraft();
+  if (!existing?.course) {
+    clearCreateCourseDraft();
+    return null;
+  }
+  return saveCreateCourseDraft({
+    course: existing.course,
+    paths: [],
+    meta: {
+      contentDraftSaved: false,
+    },
+  });
+}
+
 export function formFromStep1Payload(payload) {
   const course = payload?.course ?? payload;
   if (!course) return null;

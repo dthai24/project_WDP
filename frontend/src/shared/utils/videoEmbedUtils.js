@@ -3,6 +3,8 @@
  * @typedef {{ embedUrl: string | null, previewType: VideoPreviewType | null }} VideoEmbedResult
  */
 
+const DIRECT_VIDEO_EXT_RE = /\.(mp4|webm|mov)(\?|#|$)/i;
+
 function isHttpUrl(value) {
   const url = String(value ?? '').trim();
   if (!url) return false;
@@ -14,8 +16,14 @@ function isHttpUrl(value) {
   }
 }
 
+function isDirectVideoFileUrl(url, pathname = '') {
+  return DIRECT_VIDEO_EXT_RE.test(pathname) || DIRECT_VIDEO_EXT_RE.test(url);
+}
+
 /**
  * Convert a mentor-pasted video URL into an embeddable preview URL when possible.
+ * Direct files (.mp4/.webm/.mov) → previewType `video` (dùng thẻ <video>).
+ * YouTube/Vimeo/Drive → previewType `iframe`.
  * @param {string} rawUrl
  * @returns {VideoEmbedResult}
  */
@@ -30,7 +38,8 @@ export function resolveVideoEmbed(rawUrl) {
     const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
     const pathname = parsed.pathname;
 
-    if (/\.mp4(\?.*)?$/i.test(pathname) || /\.mp4(\?.*)?$/i.test(url)) {
+    // File video trực tiếp — iframe kém ổn định; caller nên dùng <video>.
+    if (isDirectVideoFileUrl(url, pathname)) {
       return { embedUrl: url, previewType: 'video' };
     }
 
@@ -91,13 +100,8 @@ export function resolveVideoEmbed(rawUrl) {
     }
 
     if (host === 'drive.google.com') {
-      let fileId = pathname.match(/\/file\/d\/([^/]+)/)?.[1] ?? parsed.searchParams.get('id');
-      if (fileId) {
-        return {
-          embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
-          previewType: 'iframe',
-        };
-      }
+      // Không dùng Google Drive preview (entity ngoài hệ thống).
+      return { embedUrl: null, previewType: null };
     }
 
     return { embedUrl: null, previewType: null };

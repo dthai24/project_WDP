@@ -8,6 +8,7 @@ import {
 import ExpandLessRoundedIcon from '@mui/icons-material/ExpandLessRounded';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import MentorChapterCardMenu from './MentorChapterCardMenu';
 import {
   getMaterialOutlineDetail,
   countMaterialsInPath,
@@ -149,7 +150,89 @@ function MaterialOutlineRow({ material }) {
   );
 }
 
-function ChapterOutline({ path, pathIndex, defaultExpanded }) {
+function LessonOutline({ node, nodeIndex, pathIndex }) {
+  const [expanded, setExpanded] = useState(false);
+  const materials = getNodeMaterials(node, { learningOnly: true });
+  const lessonTitle = node.NodeName || node.nodeName || `Bài ${nodeIndex + 1}`;
+
+  return (
+    <Box
+      sx={{
+        borderLeft: `2px solid ${LESSON_THEME.accent}`,
+        ...DETAIL_NESTED_BLOCK_SX,
+        borderRadius: '0 10px 10px 0',
+        overflow: 'hidden',
+      }}
+    >
+      <Box
+        role="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((prev) => !prev)}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.75,
+          pl: 1.25,
+          pr: 1.25,
+          py: 1.15,
+          cursor: 'pointer',
+          userSelect: 'none',
+          '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.02)' },
+        }}
+      >
+        <IconButton
+          size="small"
+          onClick={(event) => {
+            event.stopPropagation();
+            setExpanded((prev) => !prev);
+          }}
+          sx={{ p: 0.25 }}
+          aria-label={expanded ? 'Thu gọn học liệu' : 'Xem học liệu'}
+        >
+          {expanded ? (
+            <ExpandLessRoundedIcon sx={{ fontSize: 18, color: LESSON_THEME.color }} />
+          ) : (
+            <ExpandMoreRoundedIcon sx={{ fontSize: 18, color: LESSON_THEME.color }} />
+          )}
+        </IconButton>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
+            Bài {nodeIndex + 1}: {lessonTitle}
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.1 }}>
+            {materials.length} học liệu
+          </Typography>
+        </Box>
+      </Box>
+
+      <Collapse in={expanded}>
+        <Box sx={{ pl: 1.5, pr: 1.25, pb: 1.25 }}>
+          {node.Description && (
+            <Typography sx={{ fontSize: 12.5, color: MUTED, mb: 1.15, lineHeight: 1.55 }}>
+              {node.Description}
+            </Typography>
+          )}
+          {materials.length === 0 ? (
+            <Typography sx={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic' }}>
+              Chưa có học liệu
+            </Typography>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.85 }}>
+              {materials.map((material, materialIndex) => (
+                <MaterialOutlineRow
+                  key={getItemKey(material, `material-${pathIndex}-${nodeIndex}-${materialIndex}`)}
+                  material={material}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+function ChapterOutline({ path, pathIndex, defaultExpanded, onQuizSetup }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const nodes = getPathNodes(path);
   const chapterTitle = path.PathName || path.pathName || `Chương ${pathIndex + 1}`;
@@ -158,17 +241,32 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
   return (
     <Box sx={DETAIL_PANEL_SX}>
       <Box
+        role="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((prev) => !prev)}
         sx={{
           display: 'flex',
           alignItems: 'center',
+          flexWrap: 'wrap',
           gap: 1.25,
           px: 1.75,
           py: 1.5,
           bgcolor: SURFACE_SUBTLE,
           borderBottom: expanded ? `1px solid ${BORDER_SUBTLE}` : 'none',
+          cursor: 'pointer',
+          userSelect: 'none',
+          '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.035)' },
         }}
       >
-        <IconButton size="small" onClick={() => setExpanded((prev) => !prev)} sx={{ p: 0.4 }}>
+        <IconButton
+          size="small"
+          onClick={(event) => {
+            event.stopPropagation();
+            setExpanded((prev) => !prev);
+          }}
+          sx={{ p: 0.4 }}
+          aria-label={expanded ? 'Thu gọn chương' : 'Mở chương'}
+        >
           {expanded ? (
             <ExpandLessRoundedIcon sx={{ fontSize: 20, color: CHAPTER_THEME.color }} />
           ) : (
@@ -184,6 +282,21 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
             {nodes.length} bài học · {materialCount} học liệu
           </Typography>
         </Box>
+        {onQuizSetup ? (
+          <Box
+            onClick={(event) => event.stopPropagation()}
+            sx={{
+              flexShrink: 0,
+              width: { xs: '100%', sm: 'auto' },
+              pl: { xs: 4.5, sm: 0 },
+            }}
+          >
+            <MentorChapterCardMenu
+              variant="chapterButton"
+              onQuizSetup={() => onQuizSetup(path, pathIndex)}
+            />
+          </Box>
+        ) : null}
       </Box>
 
       <Collapse in={expanded}>
@@ -197,47 +310,15 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
           {nodes.length === 0 ? (
             <Typography sx={{ fontSize: 13, color: MUTED }}>Chương này chưa có bài học</Typography>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {nodes.map((node, nodeIndex) => {
-                const materials = getNodeMaterials(node, { learningOnly: true });
-                const lessonTitle = node.NodeName || node.nodeName || `Bài ${nodeIndex + 1}`;
-
-                return (
-                  <Box
-                    key={getItemKey(node, `node-${pathIndex}-${nodeIndex}`)}
-                    sx={{
-                      pl: 1.5,
-                      py: 1.25,
-                      borderLeft: `2px solid ${LESSON_THEME.accent}`,
-                      ...DETAIL_NESTED_BLOCK_SX,
-                      borderRadius: '0 10px 10px 0',
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, mb: 1 }}>
-                      Bài {nodeIndex + 1}: {lessonTitle}
-                    </Typography>
-                    {node.Description && (
-                      <Typography sx={{ fontSize: 12.5, color: MUTED, mb: 1.25, lineHeight: 1.55 }}>
-                        {node.Description}
-                      </Typography>
-                    )}
-                    {materials.length === 0 ? (
-                      <Typography sx={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic' }}>
-                        Chưa có học liệu
-                      </Typography>
-                    ) : (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.85 }}>
-                        {materials.map((material, materialIndex) => (
-                          <MaterialOutlineRow
-                            key={getItemKey(material, `material-${pathIndex}-${nodeIndex}-${materialIndex}`)}
-                            material={material}
-                          />
-                        ))}
-                      </Box>
-                    )}
-                  </Box>
-                );
-              })}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+              {nodes.map((node, nodeIndex) => (
+                <LessonOutline
+                  key={getItemKey(node, `node-${pathIndex}-${nodeIndex}`)}
+                  node={node}
+                  nodeIndex={nodeIndex}
+                  pathIndex={pathIndex}
+                />
+              ))}
             </Box>
           )}
         </Box>
@@ -246,7 +327,7 @@ function ChapterOutline({ path, pathIndex, defaultExpanded }) {
   );
 }
 
-export default function MentorCourseContentOutline({ paths = [] }) {
+export default function MentorCourseContentOutline({ paths = [], onChapterQuizSetup }) {
   if (paths.length === 0) return null;
 
   return (
@@ -256,7 +337,8 @@ export default function MentorCourseContentOutline({ paths = [] }) {
           key={getItemKey(path, `path-${pathIndex}`)}
           path={path}
           pathIndex={pathIndex}
-          defaultExpanded={pathIndex === 0}
+          defaultExpanded={false}
+          onQuizSetup={onChapterQuizSetup}
         />
       ))}
     </Box>

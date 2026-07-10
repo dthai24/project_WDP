@@ -15,12 +15,16 @@ const {
     createPath,
     updatePathById,
     deletePathById,
+    getPathById,
     createNodeByPathId,
     updateNodeById,
     deleteNodeById,
+    getNodeById,
     createMaterialByNodeId,
     updateMaterialById,
     deleteMaterialById,
+    getMaterialById,
+    downloadMaterialFile,
 } = require('../controllers/courseContentController');
 
 
@@ -42,12 +46,16 @@ router.patch('/courses/:courseId/comments/:commentId/reply', optionalAuth, reply
 router.patch('/courses/:courseId', optionalAuth, updateCourse);
 router.put('/courses/:courseId/content', optionalAuth, updateCourseContent);
 router.post('/courses/:courseId/paths', optionalAuth, createPath);
+router.get('/paths/:pathId', optionalAuth, getPathById);
 router.put('/paths/:pathId', optionalAuth, updatePathById);
 router.delete('/paths/:pathId', optionalAuth, deletePathById);
 router.post('/paths/:pathId/nodes', optionalAuth, createNodeByPathId);
+router.get('/nodes/:nodeId', optionalAuth, getNodeById);
 router.put('/nodes/:nodeId', optionalAuth, updateNodeById);
 router.delete('/nodes/:nodeId', optionalAuth, deleteNodeById);
 router.post('/nodes/:nodeId/materials', optionalAuth, createMaterialByNodeId);
+router.get('/materials/download', optionalAuth, downloadMaterialFile);
+router.get('/materials/:materialId', optionalAuth, getMaterialById);
 router.put('/materials/:materialId', optionalAuth, updateMaterialById);
 router.delete('/materials/:materialId', optionalAuth, deleteMaterialById);
 router.get('/courses/:courseId/setPublic', setPublishCourse);
