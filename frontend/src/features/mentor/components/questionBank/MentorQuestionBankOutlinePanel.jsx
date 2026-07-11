@@ -30,21 +30,25 @@ import {
   getSectionBaiNumber,
   getSectionsBySkill,
   isQuestionActive,
-  isQuestionBankWritingSkill,
+  isQuestionBankVocabularySkill,
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_LABELS,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
+  QUESTION_BANK_SKILLS,
   filterSectionsByUseForTest,
   SECTION_USE_FOR_TEST_FILTER,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
-const OUTLINE_SKILL_ITEMS = [
-  { skill: TEST_SKILL_LISTENING, icon: HeadphonesRoundedIcon },
-  { skill: TEST_SKILL_READING, icon: MenuBookRoundedIcon },
-  { skill: TEST_SKILL_WRITING, icon: EditNoteRoundedIcon },
-];
+const OUTLINE_SKILL_ITEMS = QUESTION_BANK_SKILLS.map((skill) => ({
+  skill,
+  icon: skill === TEST_SKILL_LISTENING
+    ? HeadphonesRoundedIcon
+    : skill === TEST_SKILL_READING
+      ? MenuBookRoundedIcon
+      : EditNoteRoundedIcon,
+}));
 
 function OutlineNavItem({
   label,
@@ -140,7 +144,7 @@ function getOutlineSectionLabel(section, sections) {
   const customName = String(section?.DisplayName ?? section?.SectionTitle ?? '').trim();
   const fallback = getQuestionBankSectionTabLabel(section, sections);
 
-  if (isQuestionBankWritingSkill(section?.SkillType)) {
+  if (isQuestionBankVocabularySkill(section?.SkillType)) {
     if (customName) return `Section ${order}: ${customName}`;
     return fallback.startsWith('Nhóm') ? fallback.replace(/^Nhóm/, 'Section') : `Section ${order}`;
   }
@@ -505,7 +509,7 @@ export default function MentorQuestionBankOutlinePanel({
                 (sum, section) => sum + getFilledTestQuestions(section?.Questions).length,
                 0,
               );
-              const sectionUnit = skill === TEST_SKILL_WRITING ? 'section' : 'bài';
+              const sectionUnit = skill === TEST_SKILL_VOCABULARY ? 'section' : 'bài';
               const isExpanded = expandedSkills.has(skill);
               const isSkillActive = activeSkill === skill;
 

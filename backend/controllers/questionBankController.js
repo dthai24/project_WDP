@@ -5,23 +5,15 @@ const questionBankSaveModel = require('../Models/questionBankSaveModel');
 
 
 const SKILL_TYPE_MAP = {
-
     LISTENING: 'LISTENING',
-
     READING: 'READING',
-
-    WRITING: 'WRITING',
-
+    VOCABULARY: 'VOCABULARY',
+    WRITING: 'VOCABULARY',
 };
 
-
-
 function normalizeSkillType(rawName) {
-
     const name = String(rawName ?? '').trim().toUpperCase();
-
-    return SKILL_TYPE_MAP[name] ?? 'WRITING';
-
+    return SKILL_TYPE_MAP[name] ?? 'VOCABULARY';
 }
 
 

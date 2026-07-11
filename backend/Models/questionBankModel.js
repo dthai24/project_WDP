@@ -267,7 +267,7 @@ const getActiveQuestionCountsByPath = async (courseId, pathId = null) => {
     return result.recordset;
 };
 
-const mapWritingSectionGroupRow = (row) => {
+const mapSectionGroupRow = (row) => {
     const sectionTitle = String(row.Title ?? row.SectionName ?? '').trim() || 'Section';
     return {
         sectionTempId: `section_${row.SectionId}`,
@@ -277,7 +277,79 @@ const mapWritingSectionGroupRow = (row) => {
     };
 };
 
-const getActiveWritingSectionCounts = async (courseId, pathId = null) => {
+const splitListeningReadingGroups = (rows = []) => {
+    const groups = {
+        LISTENING: [],
+        READING: [],
+    };
+
+    rows.forEach((row) => {
+        const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        if (!groups[skill]) return;
+        groups[skill].push(mapSectionGroupRow(row));
+    });
+
+    return groups;
+};
+
+const getActiveListeningReadingSectionCounts = async (courseId, pathId = null) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    let pathFilter = '';
+    if (pathId != null) {
+        request.input('pathId', sql.Int, Number(pathId));
+        pathFilter = 'AND qp.PathId = @pathId';
+    }
+
+    const result = await request.query(`
+        SELECT
+            qp.PathId,
+            RTRIM(st.Name) AS SkillType,
+            qs.SectionId,
+            qs.SectionName,
+            qs.Title,
+            qs.[Order] AS SectionOrder,
+            qs.IsUseForTest,
+            COUNT(
+                CASE
+                    WHEN q.QuestionId IS NOT NULL
+                     AND q.IsActive = 1
+                     AND ISNULL(q.IsUseForTest, 1) = 1
+                     AND ISNULL(qs.IsUseForTest, 1) = 1
+                     AND LTRIM(RTRIM(ISNULL(q.Title, ''))) <> ''
+                    THEN 1
+                END
+            ) AS ActiveCount
+        FROM dbo.Question_Sections qs
+        INNER JOIN dbo.Questions_Path qp
+            ON qp.Question_Path_Id = qs.Question_Path_Id
+        INNER JOIN dbo.Question_Bank qb
+            ON qb.BankId = qp.BankId
+        INNER JOIN dbo.Section_Type st
+            ON st.TypeId = qs.TypeId
+        LEFT JOIN dbo.Questions q
+            ON q.SectionId = qs.SectionId
+        WHERE qb.CourseId = @courseId
+          ${pathFilter}
+          AND UPPER(RTRIM(st.Name)) IN ('LISTENING', 'READING')
+        GROUP BY
+            qp.PathId,
+            RTRIM(st.Name),
+            qs.SectionId,
+            qs.SectionName,
+            qs.Title,
+            qs.[Order],
+            qs.IsUseForTest
+        ORDER BY qp.PathId, RTRIM(st.Name), qs.[Order], qs.SectionId
+    `);
+
+    return result.recordset;
+};
+
+    return result.recordset;
+};
+
+const getActiveVocabularySectionCounts = async (courseId, pathId = null) => {
     const request = new sql.Request();
     request.input('courseId', sql.Int, Number(courseId));
     let pathFilter = '';
@@ -315,7 +387,7 @@ const getActiveWritingSectionCounts = async (courseId, pathId = null) => {
             ON q.SectionId = qs.SectionId
         WHERE qb.CourseId = @courseId
           ${pathFilter}
-          AND UPPER(RTRIM(st.Name)) = 'WRITING'
+          AND UPPER(RTRIM(st.Name)) IN ('WRITING', 'VOCABULARY')
         GROUP BY
             qp.PathId,
             qs.SectionId,
@@ -331,34 +403,40 @@ const getActiveWritingSectionCounts = async (courseId, pathId = null) => {
 
 const getChapterQuestionBankActiveStats = async (courseId, pathId) => {
     const questionPathId = await getChapterQuestionPathId(courseId, pathId);
-    const [countRows, writingRows] = await Promise.all([
+    const [countRows, lrSectionRows, vocabularyRows] = await Promise.all([
         getActiveQuestionCountsByPath(courseId, pathId),
-        getActiveWritingSectionCounts(courseId, pathId),
+        getActiveListeningReadingSectionCounts(courseId, pathId),
+        getActiveVocabularySectionCounts(courseId, pathId),
     ]);
 
     const questionCountBySkill = {
         LISTENING: 0,
         READING: 0,
-        WRITING: 0,
+        VOCABULARY: 0,
     };
 
     countRows.forEach((row) => {
         const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        if (skill === 'WRITING') {
+            questionCountBySkill.VOCABULARY += Number(row.ActiveCount) || 0;
+            return;
+        }
         if (skill in questionCountBySkill) {
             questionCountBySkill[skill] += Number(row.ActiveCount) || 0;
-        } else {
-            questionCountBySkill.WRITING += Number(row.ActiveCount) || 0;
         }
     });
 
     const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
-    const writingSectionGroups = writingRows.map(mapWritingSectionGroupRow);
+    const lrSectionGroups = splitListeningReadingGroups(lrSectionRows);
+    const vocabularySectionGroups = vocabularyRows.map(mapSectionGroupRow);
 
     return {
         questionPathId,
         hasBank: questionPathId != null || totalActive > 0,
         questionCountBySkill,
-        writingSectionGroups,
+        listeningSectionGroups: lrSectionGroups.LISTENING,
+        readingSectionGroups: lrSectionGroups.READING,
+        vocabularySectionGroups,
         totalActive,
     };
 };
@@ -382,9 +460,10 @@ const getCourseQuestionBankActiveStats = async (courseId) => {
         ORDER BY p.[Order], p.PathId
     `);
 
-    const [countRows, writingRows] = await Promise.all([
+    const [countRows, lrSectionRows, vocabularyRows] = await Promise.all([
         getActiveQuestionCountsByPath(courseId),
-        getActiveWritingSectionCounts(courseId),
+        getActiveListeningReadingSectionCounts(courseId),
+        getActiveVocabularySectionCounts(courseId),
     ]);
     const countsByPath = new Map();
 
@@ -394,25 +473,40 @@ const getCourseQuestionBankActiveStats = async (courseId) => {
             countsByPath.set(pathKey, {
                 LISTENING: 0,
                 READING: 0,
-                WRITING: 0,
+                VOCABULARY: 0,
             });
         }
         const bucket = countsByPath.get(pathKey);
         const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        if (skill === 'WRITING') {
+            bucket.VOCABULARY += Number(row.ActiveCount) || 0;
+            return;
+        }
         if (skill in bucket) {
             bucket[skill] += Number(row.ActiveCount) || 0;
-        } else {
-            bucket.WRITING += Number(row.ActiveCount) || 0;
         }
     });
 
-    const writingGroupsByPath = new Map();
-    writingRows.forEach((row) => {
+    const lrGroupsByPath = new Map();
+    lrSectionRows.forEach((row) => {
         const pathKey = String(row.PathId);
-        if (!writingGroupsByPath.has(pathKey)) {
-            writingGroupsByPath.set(pathKey, []);
+        if (!lrGroupsByPath.has(pathKey)) {
+            lrGroupsByPath.set(pathKey, { LISTENING: [], READING: [] });
         }
-        writingGroupsByPath.get(pathKey).push(mapWritingSectionGroupRow(row));
+        const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        const bucket = lrGroupsByPath.get(pathKey);
+        if (bucket[skill]) {
+            bucket[skill].push(mapSectionGroupRow(row));
+        }
+    });
+
+    const vocabularyGroupsByPath = new Map();
+    vocabularyRows.forEach((row) => {
+        const pathKey = String(row.PathId);
+        if (!vocabularyGroupsByPath.has(pathKey)) {
+            vocabularyGroupsByPath.set(pathKey, []);
+        }
+        vocabularyGroupsByPath.get(pathKey).push(mapSectionGroupRow(row));
     });
 
     const chapters = pathsResult.recordset.map((row) => {
@@ -420,10 +514,11 @@ const getCourseQuestionBankActiveStats = async (courseId) => {
         const questionCountBySkill = countsByPath.get(pathKey) ?? {
             LISTENING: 0,
             READING: 0,
-            WRITING: 0,
+            VOCABULARY: 0,
         };
         const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
         const hasBank = row.QuestionPathId != null || totalActive > 0;
+        const lrGroups = lrGroupsByPath.get(pathKey) ?? { LISTENING: [], READING: [] };
 
         return {
             PathId: row.PathId,
@@ -431,7 +526,9 @@ const getCourseQuestionBankActiveStats = async (courseId) => {
             Order: row.PathOrder,
             hasBank,
             questionCountBySkill,
-            writingSectionGroups: writingGroupsByPath.get(pathKey) ?? [],
+            listeningSectionGroups: lrGroups.LISTENING,
+            readingSectionGroups: lrGroups.READING,
+            vocabularySectionGroups: vocabularyGroupsByPath.get(pathKey) ?? [],
             totalActive,
         };
     });
@@ -440,7 +537,7 @@ const getCourseQuestionBankActiveStats = async (courseId) => {
     const aggregatedSkill = {
         LISTENING: 0,
         READING: 0,
-        WRITING: 0,
+        VOCABULARY: 0,
     };
 
     chapters.forEach((chapter) => {

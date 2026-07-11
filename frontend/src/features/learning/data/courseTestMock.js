@@ -5,7 +5,7 @@
 import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 const DEMO_AUDIO = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
@@ -129,21 +129,21 @@ export function createDemoTestPaper() {
     },
   ];
 
-  const writingGroups = [
+  const vocabularyGroups = [
     {
-      groupId: 'demo-writing-1',
+      groupId: 'demo-vocab-1',
       displayName: 'Từ vựng',
       audioUrl: null,
       questions: [
         {
           ...q(
-            'demo-w1',
+            'demo-v1',
             'Chọn từ đồng nghĩa với "deadline":',
             [
-              opt('demo-w1-a', 'holiday'),
-              opt('demo-w1-b', 'due date'),
-              opt('demo-w1-c', 'break time'),
-              opt('demo-w1-d', 'overtime'),
+              opt('demo-v1-a', 'holiday'),
+              opt('demo-v1-b', 'due date'),
+              opt('demo-v1-c', 'break time'),
+              opt('demo-v1-d', 'overtime'),
             ],
           ),
           order: 5,
@@ -151,19 +151,19 @@ export function createDemoTestPaper() {
       ],
     },
     {
-      groupId: 'demo-writing-2',
-      displayName: 'Chọn nhiều đáp án',
+      groupId: 'demo-vocab-2',
+      displayName: 'Ngữ pháp',
       audioUrl: null,
       questions: [
         {
           ...q(
-            'demo-w2',
+            'demo-v2',
             'Từ nào KHÔNG chỉ nơi làm việc?',
             [
-              opt('demo-w2-a', 'headquarters'),
-              opt('demo-w2-b', 'branch office'),
-              opt('demo-w2-c', 'vacation'),
-              opt('demo-w2-d', 'warehouse'),
+              opt('demo-v2-a', 'headquarters'),
+              opt('demo-v2-b', 'branch office'),
+              opt('demo-v2-c', 'vacation'),
+              opt('demo-v2-d', 'warehouse'),
             ],
           ),
           order: 6,
@@ -190,12 +190,12 @@ export function createDemoTestPaper() {
       questions: readingGroups.flatMap((group) => group.questions),
     },
     {
-      skillType: TEST_SKILL_WRITING,
+      skillType: TEST_SKILL_VOCABULARY,
       displayName: 'Phần Từ vựng / Ngữ pháp',
       description: 'Chọn đáp án đúng về từ vựng và ngữ pháp.',
       audioUrl: null,
-      questionGroups: writingGroups,
-      questions: writingGroups.flatMap((group) => group.questions),
+      questionGroups: vocabularyGroups,
+      questions: vocabularyGroups.flatMap((group) => group.questions),
     },
   ];
 
@@ -214,6 +214,6 @@ export const DEMO_ANSWER_KEY = {
   'demo-l2': ['demo-l2-a'],
   'demo-r1': ['demo-r1-d'],
   'demo-r2': ['demo-r2-b'],
-  'demo-w1': ['demo-w1-b'],
-  'demo-w2': ['demo-w2-c'],
+  'demo-v1': ['demo-v1-b'],
+  'demo-v2': ['demo-v2-c'],
 };

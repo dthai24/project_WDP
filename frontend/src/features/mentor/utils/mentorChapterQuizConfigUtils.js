@@ -2,14 +2,13 @@ import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_QB_LABELS,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
+  QUESTION_BANK_SKILLS,
+  normalizeQuestionBankSkillType,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
-export const CHAPTER_QUIZ_SKILLS = [
-  TEST_SKILL_LISTENING,
-  TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
-];
+/** Quiz / làm bài kiểm tra: Nghe, Đọc, Từ vựng / Ngữ pháp. */
+export const CHAPTER_QUIZ_SKILLS = QUESTION_BANK_SKILLS;
 
 /** chapterId đặc biệt lưu cấu hình quiz toàn khóa trong cùng storage chapter quiz. */
 export const COURSE_QUIZ_CHAPTER_ID = '__course__';
@@ -25,44 +24,47 @@ function createPartConfig(part, questionCount = 0) {
   return { part, questionCount: Math.max(0, Number(questionCount) || 0) };
 }
 
-function resolveWritingQuestionCount(entry = {}) {
-  const directCount = Math.max(0, Number(entry.questionCount ?? 0));
-  if (directCount > 0 || !(entry.sectionGroups?.length > 0)) {
-    return directCount;
-  }
-  return getWritingQuestionCountFromGroups(entry.sectionGroups);
+export function buildSectionGroupsFromChapterSections(sections = [], skillType) {
+  const target = normalizeQuestionBankSkillType(skillType);
+  return (sections ?? [])
+    .filter((section) => normalizeQuestionBankSkillType(section.skillType) === target)
+    .map((section) => ({
+      sectionTempId: `section_${section.sectionId}`,
+      sectionTitle: section.displayName || section.sectionName || 'Section',
+      availableCount: Math.max(0, Number(section.questionCount) || 0),
+      isUseForTest: section.isUseForTest !== false,
+    }));
 }
 
-function normalizeWritingPartConfig(entry = {}, bankGroups = []) {
-  const sectionGroups = bankGroups.length > 0
-    ? mergeWritingSectionGroups(entry.sectionGroups ?? [], bankGroups)
-    : (entry.sectionGroups ?? []);
-
-  return {
-    ...entry,
-    part: TEST_SKILL_WRITING,
-    sectionGroups,
-    questionCount: getWritingQuestionCountFromGroups(sectionGroups),
-  };
+export function getSkillSectionGroupsFromStats(stats = null, skillType) {
+  if (!stats) return [];
+  if (skillType === TEST_SKILL_LISTENING) return stats.listeningSectionGroups ?? [];
+  if (skillType === TEST_SKILL_READING) return stats.readingSectionGroups ?? [];
+  if (skillType === TEST_SKILL_VOCABULARY) return stats.vocabularySectionGroups ?? [];
+  return [];
 }
 
-export function buildCourseWritingSectionTempId(pathId, sectionTempId) {
+export function buildCourseSectionTempId(pathId, sectionTempId) {
   const base = String(sectionTempId ?? '');
   if (!base) return '';
   if (base.includes('::')) return base;
   return `${pathId}::${base}`;
 }
 
-export function aggregateWritingSectionGroupsFromChapters(chapters = [], selectedChapterIds = []) {
+export function aggregateSkillSectionGroupsFromChapters(
+  chapters = [],
+  selectedChapterIds = [],
+  skillType,
+) {
   const selected = new Set(selectedChapterIds.map(String));
   const groups = [];
 
   chapters
     .filter((chapter) => chapter.hasBank && selected.has(String(chapter.PathId)))
     .forEach((chapter) => {
-      (chapter.writingSectionGroups ?? []).forEach((group) => {
+      getSkillSectionGroupsFromStats(chapter, skillType).forEach((group) => {
         groups.push({
-          sectionTempId: buildCourseWritingSectionTempId(chapter.PathId, group.sectionTempId),
+          sectionTempId: buildCourseSectionTempId(chapter.PathId, group.sectionTempId),
           sectionTitle: `${chapter.PathName} · ${group.sectionTitle}`,
           availableCount: Math.max(0, Number(group.availableCount ?? 0)),
           isUseForTest: group.isUseForTest !== false,
@@ -71,28 +73,6 @@ export function aggregateWritingSectionGroupsFromChapters(chapters = [], selecte
     });
 
   return groups;
-}
-
-export function getWritingSectionAvailableCount(sectionTempId, stats = null) {
-  const match = (stats?.writingSectionGroups ?? []).find(
-    (group) => String(group.sectionTempId) === String(sectionTempId),
-  );
-  if (match?.isUseForTest === false) return 0;
-  return Math.max(0, Number(match?.availableCount ?? 0));
-}
-
-export function isWritingSectionUseForTest(sectionTempId, stats = null) {
-  const match = (stats?.writingSectionGroups ?? []).find(
-    (group) => String(group.sectionTempId) === String(sectionTempId),
-  );
-  if (!match) return true;
-  return match.isUseForTest !== false;
-}
-
-export function findWritingSectionStat(sectionTempId, stats = null) {
-  return (stats?.writingSectionGroups ?? []).find(
-    (group) => String(group.sectionTempId) === String(sectionTempId),
-  ) ?? null;
 }
 
 export function isFirstChapterQuiz(chapterIndex = 0) {
@@ -154,6 +134,15 @@ export function buildPreviousChapterQuizOptions(paths = [], currentChapterIndex 
       };
     })
     .filter((item) => item.chapterId);
+}
+
+export function normalizeQuizQuestionConfigs(config = {}) {
+  const questionConfigs = CHAPTER_QUIZ_SKILLS.map((part) => {
+    const existing = (config.questionConfigs ?? []).find((entry) => entry.part === part);
+    return createPartConfig(part, existing?.questionCount ?? 0);
+  });
+
+  return { ...config, questionConfigs };
 }
 
 export function getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex = 0 }) {
@@ -235,48 +224,49 @@ export function aggregateCourseStatsByChapterIds(chapters = [], selectedChapterI
   const questionCountBySkill = {
     [TEST_SKILL_LISTENING]: 0,
     [TEST_SKILL_READING]: 0,
-    [TEST_SKILL_WRITING]: 0,
+    [TEST_SKILL_VOCABULARY]: 0,
   };
 
   selectedChapters.forEach((chapter) => {
-    Object.keys(questionCountBySkill).forEach((skill) => {
-      questionCountBySkill[skill] += chapter.questionCountBySkill?.[skill] ?? 0;
-    });
+    questionCountBySkill[TEST_SKILL_LISTENING] +=
+      chapter.questionCountBySkill?.[TEST_SKILL_LISTENING] ?? 0;
+    questionCountBySkill[TEST_SKILL_READING] +=
+      chapter.questionCountBySkill?.[TEST_SKILL_READING] ?? 0;
+    questionCountBySkill[TEST_SKILL_VOCABULARY] +=
+      chapter.questionCountBySkill?.[TEST_SKILL_VOCABULARY]
+      ?? chapter.questionCountBySkill?.WRITING
+      ?? 0;
   });
 
   const totalActive = Object.values(questionCountBySkill).reduce((sum, count) => sum + count, 0);
-  const writingSectionGroups = aggregateWritingSectionGroupsFromChapters(
-    chapters,
-    selectedChapterIds,
-  );
 
   return {
     ok: true,
     hasBank: selectedChapters.length > 0,
     bankCount: selectedChapters.length,
     questionCountBySkill,
-    writingSectionGroups,
+    listeningSectionGroups: aggregateSkillSectionGroupsFromChapters(
+      chapters,
+      selectedChapterIds,
+      TEST_SKILL_LISTENING,
+    ),
+    readingSectionGroups: aggregateSkillSectionGroupsFromChapters(
+      chapters,
+      selectedChapterIds,
+      TEST_SKILL_READING,
+    ),
+    vocabularySectionGroups: aggregateSkillSectionGroupsFromChapters(
+      chapters,
+      selectedChapterIds,
+      TEST_SKILL_VOCABULARY,
+    ),
     totalActive,
     selectedChapterCount: selectedChapters.length,
   };
 }
 
-export function getWritingSectionGroupsFromConfig(config = {}) {
-  const writingEntry = (config.questionConfigs ?? []).find((item) => item.part === TEST_SKILL_WRITING);
-  return writingEntry?.sectionGroups ?? [];
-}
-
-export function getWritingQuestionCountFromGroups(sectionGroups = []) {
-  return sectionGroups
-    .filter((group) => group.selected)
-    .reduce((sum, group) => sum + Math.max(0, Number(group?.questionCount ?? 0)), 0);
-}
-
 export function getQuestionCountForPart(config = {}, part) {
   const item = (config.questionConfigs ?? []).find((entry) => entry.part === part);
-  if (part === TEST_SKILL_WRITING) {
-    return resolveWritingQuestionCount(item ?? {});
-  }
   return Math.max(0, Number(item?.questionCount ?? 0));
 }
 
@@ -287,44 +277,11 @@ export function getChapterQuizConfigTotal(config = {}) {
   );
 }
 
-export function mergeWritingSectionGroups(existingGroups = [], bankGroups = []) {
-  return bankGroups.map((bankGroup) => {
-    const existing = existingGroups.find(
-      (group) => group.sectionTempId === bankGroup.sectionTempId,
-    );
-    const availableCount = Math.max(0, Number(bankGroup.availableCount ?? 0));
-    const isUseForTest = bankGroup.isUseForTest !== false;
-    const defaultSelected = isUseForTest && availableCount > 0;
-
-    return {
-      sectionTempId: bankGroup.sectionTempId,
-      sectionTitle: bankGroup.sectionTitle ?? 'Section',
-      selected: existing != null
-        ? Boolean(existing.selected) && isUseForTest
-        : defaultSelected,
-      questionCount: isUseForTest
-        ? Math.max(0, Number(existing?.questionCount ?? 0))
-        : 0,
-    };
-  });
-}
-
-/** Chuẩn hoá config quiz sau khi load bank (migrate cấu hình nhóm TV-NP cũ). */
+/** Chuẩn hoá config quiz — Nghe / Đọc / Từ vựng–Ngữ pháp. */
 export function syncChapterQuizConfigWithStats(config = {}, stats = null) {
-  const canSync = Boolean(
-    stats?.hasBank || (stats?.writingSectionGroups?.length > 0),
-  );
-  if (!config || !canSync) return config;
-
-  const bankGroups = stats.writingSectionGroups ?? [];
-
-  return {
-    ...config,
-    questionConfigs: (config.questionConfigs ?? []).map((item) => {
-      if (item.part !== TEST_SKILL_WRITING) return item;
-      return normalizeWritingPartConfig(item, bankGroups);
-    }),
-  };
+  if (!config) return config;
+  if (!stats?.hasBank) return normalizeQuizQuestionConfigs(config);
+  return normalizeQuizQuestionConfigs(config);
 }
 
 export function patchQuestionConfig(config, part, questionCount) {
@@ -332,48 +289,9 @@ export function patchQuestionConfig(config, part, questionCount) {
   const questionConfigs = CHAPTER_QUIZ_SKILLS.map((skill) => {
     const existing = (config.questionConfigs ?? []).find((entry) => entry.part === skill);
     if (skill === part) {
-      if (skill === TEST_SKILL_WRITING) {
-        return normalizeWritingPartConfig({
-          ...(existing ?? {}),
-          questionCount: nextCount,
-        });
-      }
       return createPartConfig(skill, nextCount);
     }
-    if (skill === TEST_SKILL_WRITING) {
-      return normalizeWritingPartConfig(existing ?? {});
-    }
     return createPartConfig(skill, Math.max(0, Number(existing?.questionCount ?? 0)));
-  });
-
-  return { ...config, questionConfigs };
-}
-
-export function patchWritingSectionGroup(config, sectionTempId, patch, bankGroups = []) {
-  const questionConfigs = (config.questionConfigs ?? []).map((item) => {
-    if (item.part !== TEST_SKILL_WRITING) return item;
-
-    const baseGroups = (item.sectionGroups?.length ?? 0) > 0
-      ? item.sectionGroups
-      : mergeWritingSectionGroups([], bankGroups);
-
-    const sectionGroups = baseGroups.map((group) => {
-      if (group.sectionTempId !== sectionTempId) return group;
-      const next = { ...group, ...patch };
-      if ('questionCount' in patch) {
-        next.questionCount = Math.max(0, Number.parseInt(String(patch.questionCount), 10) || 0);
-      }
-      if ('selected' in patch && !patch.selected) {
-        next.questionCount = 0;
-      }
-      return next;
-    });
-
-    return {
-      ...item,
-      sectionGroups,
-      questionCount: getWritingQuestionCountFromGroups(sectionGroups),
-    };
   });
 
   return { ...config, questionConfigs };
@@ -426,9 +344,12 @@ export function validateChapterQuizConfig(config = {}, stats = null) {
     errors._total = 'Vui lòng cấu hình ít nhất 1 câu hỏi khi bật kiểm tra';
   }
 
-  [TEST_SKILL_LISTENING, TEST_SKILL_READING].forEach((part) => {
+  CHAPTER_QUIZ_SKILLS.forEach((part) => {
     const count = getQuestionCountForPart(config, part);
-    const available = stats?.questionCountBySkill?.[part] ?? 0;
+    const available =
+      stats?.questionCountBySkill?.[part]
+      ?? (part === TEST_SKILL_VOCABULARY ? stats?.questionCountBySkill?.WRITING : undefined)
+      ?? 0;
     const label = TEST_SKILL_QB_LABELS[part];
 
     if (!Number.isFinite(count) || count < 0) {
@@ -441,45 +362,6 @@ export function validateChapterQuizConfig(config = {}, stats = null) {
         `Phần ${label} hiện chỉ có ${available} câu đang bật, không đủ để lấy ${count} câu.`;
     }
   });
-
-  const writingGroups = getWritingSectionGroupsFromConfig(config);
-  const writingLabel = TEST_SKILL_QB_LABELS[TEST_SKILL_WRITING];
-
-  if (writingGroups.length > 0) {
-    writingGroups
-      .filter((group) => group.selected)
-      .forEach((group) => {
-        if (!isWritingSectionUseForTest(group.sectionTempId, stats)) {
-          errors[`${TEST_SKILL_WRITING}.${group.sectionTempId}`] =
-            'Section này không được dùng trong bài kiểm tra.';
-          return;
-        }
-
-        const count = Math.max(0, Number(group.questionCount ?? 0));
-        const available = getWritingSectionAvailableCount(group.sectionTempId, stats);
-        const errorKey = `${TEST_SKILL_WRITING}.${group.sectionTempId}`;
-
-        if (!Number.isFinite(count) || count < 0) {
-          errors[errorKey] = `Số câu section "${group.sectionTitle}" không hợp lệ`;
-          return;
-        }
-
-        if (count > available) {
-          errors[errorKey] =
-            `Section "${group.sectionTitle}" chỉ có ${available} câu đang bật, không đủ để lấy ${count} câu.`;
-        }
-      });
-  } else {
-    const count = getQuestionCountForPart(config, TEST_SKILL_WRITING);
-    const available = stats?.questionCountBySkill?.[TEST_SKILL_WRITING] ?? 0;
-
-    if (!Number.isFinite(count) || count < 0) {
-      errors[TEST_SKILL_WRITING] = `Số câu ${writingLabel} không hợp lệ`;
-    } else if (count > available) {
-      errors[TEST_SKILL_WRITING] =
-        `Phần ${writingLabel} hiện chỉ có ${available} câu đang bật, không đủ để lấy ${count} câu.`;
-    }
-  }
 
   return errors;
 }

@@ -21,7 +21,9 @@ import {
   TEST_SKILL_LABELS,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
+  isQuestionBankVocabularySkill,
+  QUESTION_BANK_SKILLS,
   createEmptyTestQuestion,
   getListeningSectionFields,
   getReadingSectionFields,
@@ -43,9 +45,9 @@ import {
 const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
 
 const SKILL_OPTIONS = [
-  { value: TEST_SKILL_LISTENING, label: TEST_SKILL_LABELS.LISTENING, icon: HeadphonesRoundedIcon },
-  { value: TEST_SKILL_READING, label: TEST_SKILL_LABELS.READING, icon: MenuBookRoundedIcon },
-  { value: TEST_SKILL_WRITING, label: TEST_SKILL_LABELS.WRITING, icon: EditNoteRoundedIcon },
+  { value: TEST_SKILL_LISTENING, label: TEST_SKILL_LABELS[TEST_SKILL_LISTENING], icon: HeadphonesRoundedIcon },
+  { value: TEST_SKILL_READING, label: TEST_SKILL_LABELS[TEST_SKILL_READING], icon: MenuBookRoundedIcon },
+  { value: TEST_SKILL_VOCABULARY, label: TEST_SKILL_LABELS[TEST_SKILL_VOCABULARY], icon: EditNoteRoundedIcon },
 ];
 
 function SkillOptionButton({ option, selected, disabled, accentColor, onSelect }) {
@@ -250,7 +252,7 @@ export default function MentorTestSectionCard({
     : sectionScoreLabel;
   const sectionUseForTest = section.isUseForTest !== false;
   const isReadingQuestionBank = questionBankMode && skillType === TEST_SKILL_READING;
-  const isWritingQuestionBank = questionBankMode && skillType === TEST_SKILL_WRITING;
+  const isVocabularyQuestionBank = questionBankMode && isQuestionBankVocabularySkill(skillType);
   const sectionTitleLabel = (() => {
     if (!questionBankMode) return 'Tên phần';
     return isReadingQuestionBank ? 'Đề bài' : 'Tên bài';
@@ -278,7 +280,7 @@ export default function MentorTestSectionCard({
     return title || desc;
   })();
   const emptyQuestionsText = questionBankMode
-    ? isWritingQuestionBank
+    ? isVocabularyQuestionBank
       ? 'Chưa có câu hỏi trong nhóm này.'
       : 'Chưa có câu hỏi trong bài này.'
     : 'Chưa có câu hỏi trong phần này.';
@@ -646,7 +648,7 @@ export default function MentorTestSectionCard({
                 onRegisterControls={handleRegisterChildControls}
               />
             </>
-          ) : !isWritingQuestionBank ? (
+          ) : !isVocabularyQuestionBank ? (
             <>
               <Box sx={{ mb: 1.25 }}>
                 <ContentFieldLabel sx={fieldLabelSx}>{sectionTitleLabel}</ContentFieldLabel>
@@ -694,7 +696,7 @@ export default function MentorTestSectionCard({
                 </Box>
               ) : null}
 
-              {!isWritingQuestionBank ? (
+              {!isVocabularyQuestionBank ? (
                 <Box sx={{ mb: showListeningSource ? 1.25 : 1.5 }}>
                   <ContentFieldLabel sx={fieldLabelSx}>{sectionDescLabel}</ContentFieldLabel>
                   <InputBase

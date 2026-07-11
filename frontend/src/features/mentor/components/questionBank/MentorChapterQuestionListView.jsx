@@ -39,7 +39,9 @@ import {
   TEST_SKILL_LABELS,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
+  isQuestionBankVocabularySkill,
+  QUESTION_BANK_SKILLS,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { toast } from '@/shared/ui/Toast';
@@ -49,7 +51,7 @@ const SKILL_FILTER_ALL = 'ALL';
 const SKILL_META = {
   [TEST_SKILL_LISTENING]: { icon: HeadphonesRoundedIcon, label: TEST_SKILL_LABELS[TEST_SKILL_LISTENING] },
   [TEST_SKILL_READING]: { icon: MenuBookRoundedIcon, label: TEST_SKILL_LABELS[TEST_SKILL_READING] },
-  [TEST_SKILL_WRITING]: { icon: EditNoteRoundedIcon, label: TEST_SKILL_LABELS[TEST_SKILL_WRITING] },
+  [TEST_SKILL_VOCABULARY]: { icon: EditNoteRoundedIcon, label: TEST_SKILL_LABELS[TEST_SKILL_VOCABULARY] },
 };
 
 function StatPill({ label, value, accent = PRIMARY }) {
@@ -327,7 +329,7 @@ export default function MentorChapterQuestionListView({
     const bySkill = {
       [TEST_SKILL_LISTENING]: 0,
       [TEST_SKILL_READING]: 0,
-      [TEST_SKILL_WRITING]: 0,
+      [TEST_SKILL_VOCABULARY]: 0,
     };
     let publicCount = 0;
     sortedQuestions.forEach((q) => {

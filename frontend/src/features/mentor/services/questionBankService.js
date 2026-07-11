@@ -76,17 +76,28 @@ const emptyStats = {
   questionCountBySkill: {
     LISTENING: 0,
     READING: 0,
-    WRITING: 0,
+    VOCABULARY: 0,
   },
-  writingSectionGroups: [],
+  listeningSectionGroups: [],
+  readingSectionGroups: [],
+  vocabularySectionGroups: [],
   totalActive: 0,
 };
+
+function mapSectionGroups(groups = []) {
+  return (groups ?? []).map((group) => ({
+    sectionTempId: group.sectionTempId,
+    sectionTitle: group.sectionTitle ?? 'Section',
+    availableCount: Math.max(0, Number(group.availableCount ?? 0)),
+    isUseForTest: group.isUseForTest !== false,
+  }));
+}
 
 function mapChapterActiveStatsPayload(payload = {}) {
   const questionCountBySkill = {
     LISTENING: Number(payload.questionCountBySkill?.LISTENING) || 0,
     READING: Number(payload.questionCountBySkill?.READING) || 0,
-    WRITING: Number(payload.questionCountBySkill?.WRITING) || 0,
+    VOCABULARY: Number(payload.questionCountBySkill?.VOCABULARY ?? payload.questionCountBySkill?.WRITING) || 0,
   };
   const totalActive = Number(payload.totalActive);
   const resolvedTotal = Number.isFinite(totalActive)
@@ -97,12 +108,11 @@ function mapChapterActiveStatsPayload(payload = {}) {
     ok: true,
     hasBank: Boolean(payload.hasBank),
     questionCountBySkill,
-    writingSectionGroups: (payload.writingSectionGroups ?? []).map((group) => ({
-      sectionTempId: group.sectionTempId,
-      sectionTitle: group.sectionTitle ?? 'Section',
-      availableCount: Math.max(0, Number(group.availableCount ?? 0)),
-      isUseForTest: group.isUseForTest !== false,
-    })),
+    listeningSectionGroups: mapSectionGroups(payload.listeningSectionGroups),
+    readingSectionGroups: mapSectionGroups(payload.readingSectionGroups),
+    vocabularySectionGroups: mapSectionGroups(
+      payload.vocabularySectionGroups ?? payload.writingSectionGroups,
+    ),
     totalActive: resolvedTotal,
     questionPathId: payload.questionPathId ?? null,
   };
@@ -117,21 +127,20 @@ function mapCourseActiveStatsPayload(payload = {}) {
     questionCountBySkill: {
       LISTENING: Number(chapter.questionCountBySkill?.LISTENING) || 0,
       READING: Number(chapter.questionCountBySkill?.READING) || 0,
-      WRITING: Number(chapter.questionCountBySkill?.WRITING) || 0,
+      VOCABULARY: Number(chapter.questionCountBySkill?.VOCABULARY ?? chapter.questionCountBySkill?.WRITING) || 0,
     },
     totalActive: Number(chapter.totalActive) || 0,
-    writingSectionGroups: (chapter.writingSectionGroups ?? []).map((group) => ({
-      sectionTempId: group.sectionTempId,
-      sectionTitle: group.sectionTitle ?? 'Section',
-      availableCount: Math.max(0, Number(group.availableCount ?? 0)),
-      isUseForTest: group.isUseForTest !== false,
-    })),
+    listeningSectionGroups: mapSectionGroups(chapter.listeningSectionGroups),
+    readingSectionGroups: mapSectionGroups(chapter.readingSectionGroups),
+    vocabularySectionGroups: mapSectionGroups(
+      chapter.vocabularySectionGroups ?? chapter.writingSectionGroups,
+    ),
   }));
 
   const questionCountBySkill = {
     LISTENING: Number(payload.questionCountBySkill?.LISTENING) || 0,
     READING: Number(payload.questionCountBySkill?.READING) || 0,
-    WRITING: Number(payload.questionCountBySkill?.WRITING) || 0,
+    VOCABULARY: Number(payload.questionCountBySkill?.VOCABULARY ?? payload.questionCountBySkill?.WRITING) || 0,
   };
 
   return {

@@ -6,7 +6,7 @@ import {
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import TestQuestionGroup from './TestQuestionGroup';
 import TestQuestionCard from './TestQuestionCard';
@@ -15,7 +15,7 @@ import { TEST_DIVIDER, TEST_MUTED, TEST_TEXT } from './testTheme';
 const SKILL_ICONS = {
   [TEST_SKILL_LISTENING]: HeadphonesRoundedIcon,
   [TEST_SKILL_READING]: MenuBookRoundedIcon,
-  [TEST_SKILL_WRITING]: EditNoteRoundedIcon,
+  [TEST_SKILL_VOCABULARY]: EditNoteRoundedIcon,
 };
 
 export default function TestSkillSection({

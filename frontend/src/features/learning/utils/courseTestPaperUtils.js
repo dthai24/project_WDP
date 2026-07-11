@@ -1,15 +1,14 @@
 import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
   TEST_SKILL_QB_LABELS,
   getActiveFilledTestQuestions,
   getSectionsBySkill,
   DEFAULT_TEST_TOTAL_SCORE,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
+  CHAPTER_QUIZ_SKILLS,
   getQuestionCountForPart,
-  getWritingSectionGroupsFromConfig,
   isCourseQuizChapterId,
 } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import { findQuestionBankByChapter } from '@/features/mentor/services/questionBankService';
@@ -139,48 +138,25 @@ function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, start
   };
 }
 
-function pickWritingQuestions(config, bankSections, shuffleAnswers) {
-  const groups = getWritingSectionGroupsFromConfig(config).filter((group) => group.selected);
-  const picked = [];
-
-  groups.forEach((group) => {
-    const rawId = String(group.sectionTempId).includes('::')
-      ? String(group.sectionTempId).split('::').pop()
-      : group.sectionTempId;
-
-    const section = bankSections.find((item) => item.tempId === rawId);
-    if (!section) return;
-
-    const pool = getActiveFilledTestQuestions(section.Questions ?? []);
-    pickRandom(pool, group.questionCount).forEach((question) => {
-      picked.push({ question, section });
-    });
-  });
-
-  return picked;
-}
-
 function buildPaperFromBanks(config, bankList, options = {}) {
   const shuffleAnswers = false;
   const allSections = bankList.flatMap((bank) => bank.sections ?? []);
 
-  const pickedBySkill = {
-    [TEST_SKILL_LISTENING]: pickRandom(
-      collectQuestionsWithSource(allSections, TEST_SKILL_LISTENING),
-      getQuestionCountForPart(config, TEST_SKILL_LISTENING),
-    ),
-    [TEST_SKILL_READING]: pickRandom(
-      collectQuestionsWithSource(allSections, TEST_SKILL_READING),
-      getQuestionCountForPart(config, TEST_SKILL_READING),
-    ),
-    [TEST_SKILL_WRITING]: pickWritingQuestions(config, allSections, shuffleAnswers),
-  };
+  const pickedBySkill = Object.fromEntries(
+    CHAPTER_QUIZ_SKILLS.map((skill) => [
+      skill,
+      pickRandom(
+        collectQuestionsWithSource(allSections, skill),
+        getQuestionCountForPart(config, skill),
+      ),
+    ]),
+  );
 
   let order = 1;
   const paperSections = [];
   const gradingQuestions = [];
 
-  [TEST_SKILL_LISTENING, TEST_SKILL_READING, TEST_SKILL_WRITING].forEach((skill) => {
+  CHAPTER_QUIZ_SKILLS.forEach((skill) => {
     const section = buildSkillSection(skill, pickedBySkill[skill], shuffleAnswers, order);
     if (!section) return;
     paperSections.push(section);

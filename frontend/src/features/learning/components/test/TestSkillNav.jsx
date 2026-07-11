@@ -8,21 +8,21 @@ import {
   TEST_SKILL_LABELS,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
-  TEST_SKILLS,
+  TEST_SKILL_VOCABULARY,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import { CHAPTER_QUIZ_SKILLS } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import { TEST_DIVIDER, TEST_MUTED, TEST_PRIMARY, TEST_TEXT } from './testTheme';
 
 const SKILL_ICONS = {
   [TEST_SKILL_LISTENING]: HeadphonesRoundedIcon,
   [TEST_SKILL_READING]: MenuBookRoundedIcon,
-  [TEST_SKILL_WRITING]: EditNoteRoundedIcon,
+  [TEST_SKILL_VOCABULARY]: EditNoteRoundedIcon,
 };
 
 const SKILL_SHORT_LABELS = {
   [TEST_SKILL_LISTENING]: 'Nghe',
   [TEST_SKILL_READING]: 'Đọc',
-  [TEST_SKILL_WRITING]: 'Từ vựng / Ngữ pháp',
+  [TEST_SKILL_VOCABULARY]: 'Từ vựng / Ngữ pháp',
 };
 
 function getSectionProgress(section, answers = {}) {
@@ -42,7 +42,7 @@ export default function TestSkillNav({
     sections.map((section) => [section.skillType, section]),
   );
 
-  const availableSkills = TEST_SKILLS.filter((skill) => sectionMap[skill]);
+  const availableSkills = CHAPTER_QUIZ_SKILLS.filter((skill) => sectionMap[skill]);
 
   if (!availableSkills.length) return null;
 

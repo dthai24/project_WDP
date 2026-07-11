@@ -3,7 +3,8 @@ import {
   READING_SOURCE_UPLOAD,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
+  normalizeQuestionBankSkillType,
   buildQuestionContentSnapshot,
   buildTestQuestionPayload,
   buildTestSectionPayload,
@@ -51,7 +52,7 @@ function buildQuestionSaveSnapshot(question) {
 }
 
 export function mapApiSectionToEditorSection(apiSection) {
-  const skillType = apiSection.skillType ?? TEST_SKILL_WRITING;
+  const skillType = normalizeQuestionBankSkillType(apiSection.skillType ?? TEST_SKILL_VOCABULARY);
   const sectionName = String(apiSection.sectionName ?? '').trim();
   const displayName = String(apiSection.displayName ?? sectionName);
   const sourceUrl = resolveSectionSourceUrlFromApi(apiSection);
@@ -474,7 +475,7 @@ export function countQuestionsBySkillFromSections(sections = []) {
     {
       [TEST_SKILL_LISTENING]: 0,
       [TEST_SKILL_READING]: 0,
-      [TEST_SKILL_WRITING]: 0,
+      [TEST_SKILL_VOCABULARY]: 0,
     },
   );
 }

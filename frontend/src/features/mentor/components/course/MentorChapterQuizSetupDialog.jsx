@@ -48,11 +48,9 @@ import {
   getSelectedChapterIdsFromConfig,
   initCourseQuizChapterSelection,
   patchCourseChapterSelection,
-  getWritingSectionGroupsFromConfig,
-  getWritingSectionAvailableCount,
-  patchWritingSectionGroup,
-  mergeWritingSectionGroups,
-  isWritingSectionUseForTest,
+  getSkillSectionGroupsFromStats,
+  buildSectionGroupsFromChapterSections,
+  normalizeQuizQuestionConfigs,
   isFirstChapterQuiz,
   getRequiredChapterIdsFromConfig,
   sanitizeChapterPrerequisites,
@@ -62,8 +60,9 @@ import {
 import {
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_QB_LABELS,
-  TEST_SKILL_WRITING,
-  SECTION_USE_FOR_TEST_FILTER,
+  TEST_SKILL_LISTENING,
+  TEST_SKILL_READING,
+  TEST_SKILL_VOCABULARY,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
   buildQuestionBankChapterManagePath,
@@ -238,183 +237,64 @@ function CourseChapterSelector({
   );
 }
 
-const WRITING_SECTION_FILTER_OPTIONS = [
-  { id: SECTION_USE_FOR_TEST_FILTER.ALL, label: 'Tất cả' },
-  { id: SECTION_USE_FOR_TEST_FILTER.IN_TEST, label: 'Dùng trong bài kiểm tra' },
-  { id: SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST, label: 'Không dùng trong bài kiểm tra' },
-];
-
-function WritingSectionGroupConfigurator({
-  groups = [],
-  statsGroups = [],
-  disabled = false,
-  saving = false,
-  errors = {},
-  onToggleSection,
-  onSectionCountChange,
-}) {
-  const [sectionFilter, setSectionFilter] = useState(SECTION_USE_FOR_TEST_FILTER.ALL);
-
+function SkillTestSectionList({ groups = [] }) {
   if (groups.length === 0) {
     return (
-      <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5, mt: 0.75 }}>
-        Chưa có section Từ vựng / Ngữ pháp nào trong ngân hàng.
+      <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5, mt: 1 }}>
+        Chưa có section nào trong ngân hàng câu hỏi.
       </Typography>
     );
   }
 
-  const statsLookup = { writingSectionGroups: statsGroups };
-  const filteredGroups = groups.filter((group) => {
-    const isUseForTest = isWritingSectionUseForTest(group.sectionTempId, statsLookup);
-    if (sectionFilter === SECTION_USE_FOR_TEST_FILTER.IN_TEST) return isUseForTest;
-    if (sectionFilter === SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST) return !isUseForTest;
-    return true;
-  });
-
-  const inTestCount = groups.filter(
-    (group) => isWritingSectionUseForTest(group.sectionTempId, statsLookup),
-  ).length;
-  const notInTestCount = groups.length - inTestCount;
+  const inTestGroups = groups.filter((group) => group.isUseForTest !== false);
+  const notInTestGroups = groups.filter((group) => group.isUseForTest === false);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.85, mt: 1 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1 }}>
       <Typography sx={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>
-        Chọn section và cấu hình số câu random cho từng nhóm Từ vựng / Ngữ pháp.
+        Section lấy từ ngân hàng câu hỏi chương này (IsUseForTest):
       </Typography>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-        {WRITING_SECTION_FILTER_OPTIONS.map((option) => {
-          const isActive = sectionFilter === option.id;
-          const countLabel = option.id === SECTION_USE_FOR_TEST_FILTER.IN_TEST
-            ? inTestCount
-            : option.id === SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST
-              ? notInTestCount
-              : groups.length;
+      {inTestGroups.map((group) => (
+        <Box
+          key={group.sectionTempId}
+          sx={{
+            p: 1,
+            borderRadius: '10px',
+            bgcolor: 'rgba(8,145,178,0.04)',
+            border: '1px solid rgba(15,23,42,0.08)',
+          }}
+        >
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.4 }}>
+            {group.sectionTitle}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.2 }}>
+            {group.availableCount > 0
+              ? `${group.availableCount} câu đang bật · Dùng trong bài kiểm tra`
+              : 'Section chưa có câu đang bật'}
+          </Typography>
+        </Box>
+      ))}
 
-          return (
-            <AppButton
-              key={option.id}
-              size="small"
-              variant={isActive ? 'contained' : 'outlined'}
-              onClick={() => setSectionFilter(option.id)}
-              disabled={saving}
-              sx={{
-                minHeight: 28,
-                px: 1.1,
-                fontSize: 11,
-                fontWeight: 600,
-                borderRadius: '999px',
-                ...(isActive
-                  ? {
-                      bgcolor: '#EA580C',
-                      color: '#fff',
-                      boxShadow: 'none',
-                      '&:hover': { bgcolor: '#C2410C', boxShadow: 'none' },
-                    }
-                  : {
-                      borderColor: 'rgba(15,23,42,0.12)',
-                      color: TEXT,
-                    }),
-              }}
-            >
-              {option.label} ({countLabel})
-            </AppButton>
-          );
-        })}
-      </Box>
-
-      {filteredGroups.length === 0 ? (
-        <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5, py: 0.5 }}>
-          Không có section nào trong nhóm đã chọn.
-        </Typography>
-      ) : null}
-
-      {filteredGroups.map((group) => {
-        const isUseForTest = isWritingSectionUseForTest(group.sectionTempId, statsLookup);
-        const available = getWritingSectionAvailableCount(group.sectionTempId, statsLookup);
-        const errorKey = `${TEST_SKILL_WRITING}.${group.sectionTempId}`;
-        const fieldError = errors[errorKey];
-        const isBlocked = !isUseForTest;
-
-        return (
-          <Box
-            key={group.sectionTempId}
-            sx={{
-              p: 1,
-              borderRadius: '10px',
-              bgcolor: isBlocked
-                ? 'rgba(15,23,42,0.03)'
-                : group.selected
-                  ? 'rgba(234,88,12,0.04)'
-                  : '#fff',
-              border: `1px solid ${
-                fieldError ? 'rgba(220,38,38,0.35)' : 'rgba(15,23,42,0.08)'
-              }`,
-              opacity: isBlocked ? 0.92 : 1,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
-              <Checkbox
-                size="small"
-                checked={Boolean(group.selected) && !isBlocked}
-                disabled={disabled || saving || isBlocked || available <= 0}
-                onChange={(e) => onToggleSection(group.sectionTempId, e.target.checked)}
-                sx={{
-                  p: 0.25,
-                  mt: 0.1,
-                  color: MUTED,
-                  '&.Mui-checked': { color: '#EA580C' },
-                }}
-              />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                  sx={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: isBlocked ? MUTED : TEXT,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {group.sectionTitle}
-                </Typography>
-
-                {isBlocked ? (
-                  <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.35, lineHeight: 1.45 }}>
-                    Section này không được dùng trong bài kiểm tra
-                  </Typography>
-                ) : (
-                  <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.2 }}>
-                    {available > 0
-                      ? `Có ${available} câu đang bật`
-                      : 'Section chưa có câu đang bật'}
-                  </Typography>
-                )}
-
-                {group.selected && !isBlocked ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.85 }}>
-                    <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
-                    <InputBase
-                      type="number"
-                      inputProps={{ min: 0, max: available }}
-                      value={group.questionCount ?? 0}
-                      onChange={(e) => onSectionCountChange(group.sectionTempId, e.target.value)}
-                      disabled={disabled || saving}
-                      sx={countInputSx(Boolean(fieldError))}
-                    />
-                    <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu</Typography>
-                  </Box>
-                ) : null}
-
-                {fieldError ? (
-                  <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75, lineHeight: 1.45 }}>
-                    {fieldError}
-                  </Typography>
-                ) : null}
-              </Box>
-            </Box>
-          </Box>
-        );
-      })}
+      {notInTestGroups.map((group) => (
+        <Box
+          key={group.sectionTempId}
+          sx={{
+            p: 1,
+            borderRadius: '10px',
+            bgcolor: 'rgba(15,23,42,0.03)',
+            border: '1px solid rgba(15,23,42,0.08)',
+            opacity: 0.92,
+          }}
+        >
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: MUTED, lineHeight: 1.4 }}>
+            {group.sectionTitle}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.35, lineHeight: 1.45 }}>
+            Section này không được dùng trong bài kiểm tra
+          </Typography>
+        </Box>
+      ))}
     </Box>
   );
 }
@@ -504,29 +384,34 @@ export default function MentorChapterQuizSetupDialog({
       ]);
 
       let statsRes = statsResRaw;
-      if (
-        statsRes.ok
-        && !(statsRes.writingSectionGroups?.length > 0)
-        && statsRes.hasBank
-      ) {
-        const sectionsRes = await fetchChapterSections(courseId, chapterId);
-        if (sectionsRes.ok) {
-          const writingSectionGroups = (sectionsRes.sections ?? [])
-            .filter((section) => section.skillType === TEST_SKILL_WRITING)
-            .map((section) => ({
-              sectionTempId: `section_${section.sectionId}`,
-              sectionTitle: section.displayName || section.sectionName || 'Section',
-              availableCount: Math.max(0, Number(section.questionCount) || 0),
-              isUseForTest: section.isUseForTest !== false,
-            }));
-          if (writingSectionGroups.length > 0) {
-            statsRes = { ...statsRes, writingSectionGroups };
+      if (statsRes.ok && statsRes.hasBank) {
+        const needsSectionFallback =
+          !(statsRes.listeningSectionGroups?.length > 0)
+          || !(statsRes.readingSectionGroups?.length > 0)
+          || !(statsRes.vocabularySectionGroups?.length > 0);
+
+        if (needsSectionFallback) {
+          const sectionsRes = await fetchChapterSections(courseId, chapterId);
+          if (sectionsRes.ok) {
+            const sections = sectionsRes.sections ?? [];
+            statsRes = {
+              ...statsRes,
+              listeningSectionGroups: statsRes.listeningSectionGroups?.length > 0
+                ? statsRes.listeningSectionGroups
+                : buildSectionGroupsFromChapterSections(sections, TEST_SKILL_LISTENING),
+              readingSectionGroups: statsRes.readingSectionGroups?.length > 0
+                ? statsRes.readingSectionGroups
+                : buildSectionGroupsFromChapterSections(sections, TEST_SKILL_READING),
+              vocabularySectionGroups: statsRes.vocabularySectionGroups?.length > 0
+                ? statsRes.vocabularySectionGroups
+                : buildSectionGroupsFromChapterSections(sections, TEST_SKILL_VOCABULARY),
+            };
           }
         }
       }
 
       let nextConfig = configRes.ok
-        ? configRes.config
+        ? normalizeQuizQuestionConfigs(configRes.config)
         : getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex });
 
       nextConfig = sanitizeChapterPrerequisites(nextConfig, chapterIndex);
@@ -596,9 +481,6 @@ export default function MentorChapterQuizSetupDialog({
       const next = { ...prev };
       delete next[part];
       delete next._total;
-      Object.keys(next)
-        .filter((key) => key.startsWith(`${TEST_SKILL_WRITING}.`))
-        .forEach((key) => delete next[key]);
       return next;
     });
   };
@@ -617,41 +499,6 @@ export default function MentorChapterQuizSetupDialog({
       delete next._chapters;
       delete next._total;
       CHAPTER_QUIZ_SKILLS.forEach((part) => delete next[part]);
-      Object.keys(next)
-        .filter((key) => key.startsWith(`${TEST_SKILL_WRITING}.`))
-        .forEach((key) => delete next[key]);
-      return next;
-    });
-  };
-
-  const handleWritingSectionToggle = (sectionTempId, selected) => {
-    setConfig((prev) => patchWritingSectionGroup(
-      prev,
-      sectionTempId,
-      { selected },
-      stats?.writingSectionGroups ?? [],
-    ));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[`${TEST_SKILL_WRITING}.${sectionTempId}`];
-      delete next._total;
-      delete next[TEST_SKILL_WRITING];
-      return next;
-    });
-  };
-
-  const handleWritingSectionCountChange = (sectionTempId, rawValue) => {
-    setConfig((prev) => patchWritingSectionGroup(
-      prev,
-      sectionTempId,
-      { questionCount: rawValue },
-      stats?.writingSectionGroups ?? [],
-    ));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[`${TEST_SKILL_WRITING}.${sectionTempId}`];
-      delete next._total;
-      delete next[TEST_SKILL_WRITING];
       return next;
     });
   };
@@ -681,8 +528,11 @@ export default function MentorChapterQuizSetupDialog({
     setSaving(true);
     try {
       const payload = isCourseScope
-        ? { ...config, courseId, chapterId: COURSE_QUIZ_CHAPTER_ID }
-        : sanitizeChapterPrerequisites({ ...config, courseId, chapterId }, chapterIndex);
+        ? normalizeQuizQuestionConfigs({ ...config, courseId, chapterId: COURSE_QUIZ_CHAPTER_ID })
+        : sanitizeChapterPrerequisites(
+            normalizeQuizQuestionConfigs({ ...config, courseId, chapterId }),
+            chapterIndex,
+          );
       const saveFn = isCourseScope ? saveCourseQuizConfig : saveChapterQuizConfig;
       const res = await saveFn(payload);
       if (!res.ok) {
@@ -732,13 +582,6 @@ export default function MentorChapterQuizSetupDialog({
     ),
     [handleCreateQuestionBank, isCourseScope],
   );
-
-  const writingStatsGroups = stats?.writingSectionGroups ?? [];
-  const writingSectionGroups = useMemo(() => {
-    const configGroups = getWritingSectionGroupsFromConfig(config ?? {});
-    if (writingStatsGroups.length === 0) return configGroups;
-    return mergeWritingSectionGroups(configGroups, writingStatsGroups);
-  }, [config, writingStatsGroups]);
 
   return (
     <Dialog
@@ -976,8 +819,11 @@ export default function MentorChapterQuizSetupDialog({
                 const available = stats?.questionCountBySkill?.[part] ?? 0;
                 const count = getQuestionCountForPart(config ?? {}, part);
                 const fieldError = errors[part];
-                const isWritingPart = part === TEST_SKILL_WRITING;
-                const hasWritingSections = isWritingPart && writingSectionGroups.length > 0;
+                const sectionGroups = getSkillSectionGroupsFromStats(stats, part);
+                const hasSectionList = sectionGroups.length > 0;
+                const inTestSectionCount = sectionGroups.filter(
+                  (group) => group.isUseForTest !== false,
+                ).length;
 
                 return (
                   <Box
@@ -999,35 +845,27 @@ export default function MentorChapterQuizSetupDialog({
                         {TEST_SKILL_QB_LABELS[part]}
                       </Typography>
                       <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>
-                        {hasWritingSections
-                          ? `Đã chọn ${count} câu · Có ${available} câu đang bật`
+                        {hasSectionList
+                          ? `${inTestSectionCount} section dùng trong bài kiểm tra · Có ${available} câu đang bật`
                           : `Có ${available} câu đang bật`}
                       </Typography>
 
-                      {hasWritingSections ? (
-                        <WritingSectionGroupConfigurator
-                          groups={writingSectionGroups}
-                          statsGroups={writingStatsGroups}
-                          disabled={!config?.enabled || !courseHasSelectedChapters}
-                          saving={saving}
-                          errors={errors}
-                          onToggleSection={handleWritingSectionToggle}
-                          onSectionCountChange={handleWritingSectionCountChange}
+                      {hasSectionList ? (
+                        <SkillTestSectionList groups={sectionGroups} />
+                      ) : null}
+
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                        <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
+                        <InputBase
+                          type="number"
+                          inputProps={{ min: 0, max: available }}
+                          value={count}
+                          onChange={(e) => handleSkillCountChange(part, e.target.value)}
+                          disabled={saving || !config?.enabled || !courseHasSelectedChapters}
+                          sx={countInputSx(Boolean(fieldError))}
                         />
-                      ) : (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                          <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
-                          <InputBase
-                            type="number"
-                            inputProps={{ min: 0, max: available }}
-                            value={count}
-                            onChange={(e) => handleSkillCountChange(part, e.target.value)}
-                            disabled={saving || !config?.enabled || !courseHasSelectedChapters}
-                            sx={countInputSx(Boolean(fieldError))}
-                          />
-                          <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu</Typography>
-                        </Box>
-                      )}
+                        <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu</Typography>
+                      </Box>
 
                       {fieldError && (
                         <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75, lineHeight: 1.45 }}>

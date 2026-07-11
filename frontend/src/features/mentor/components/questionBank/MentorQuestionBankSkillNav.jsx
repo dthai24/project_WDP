@@ -14,15 +14,22 @@ import {
   TEST_SKILL_LABELS,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
+  QUESTION_BANK_SKILLS,
+  normalizeQuestionBankSkillType,
+  isQuestionBankVocabularySkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { getSectionDisplayQuestionCount } from '@/features/mentor/utils/questionBankApiMappers';
 
-const SKILL_NAV_ITEMS = [
-  { skill: TEST_SKILL_LISTENING, label: TEST_SKILL_LABELS[TEST_SKILL_LISTENING], icon: HeadphonesRoundedIcon },
-  { skill: TEST_SKILL_READING, label: TEST_SKILL_LABELS[TEST_SKILL_READING], icon: MenuBookRoundedIcon },
-  { skill: TEST_SKILL_WRITING, label: TEST_SKILL_LABELS[TEST_SKILL_WRITING], icon: EditNoteRoundedIcon },
-];
+const SKILL_NAV_ITEMS = QUESTION_BANK_SKILLS.map((skill) => ({
+  skill,
+  label: TEST_SKILL_LABELS[skill],
+  icon: skill === TEST_SKILL_LISTENING
+    ? HeadphonesRoundedIcon
+    : skill === TEST_SKILL_READING
+      ? MenuBookRoundedIcon
+      : EditNoteRoundedIcon,
+}));
 
 function SkillNavButton({
   label,
@@ -151,7 +158,7 @@ export default function MentorQuestionBankSkillNav({
                 icon={icon}
                 color={theme.color}
                 sectionCount={baiCountBySkill[skill]}
-                sectionUnit={skill === TEST_SKILL_WRITING ? 'nhóm' : 'bài'}
+                sectionUnit={skill === TEST_SKILL_VOCABULARY ? 'nhóm' : 'bài'}
                 questionCount={countBySkill[skill]}
                 selected={activeSkill === skill}
                 disabled={disabled}

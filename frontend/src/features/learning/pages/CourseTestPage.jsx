@@ -342,7 +342,7 @@ export default function CourseTestPage() {
               gap: 2.5,
             }}
           >
-            {/* Thanh menu bên trái để chuyển đổi giữa các kỹ năng (Listening, Reading, Writing...) */}
+            {/* Thanh menu bên trái — Nghe / Đọc / Từ vựng–Ngữ pháp */}
             <TestSkillNav
               sections={paper.sections ?? []}
               activeSkillType={activeSkillType}

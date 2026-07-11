@@ -7,7 +7,7 @@ import {
   TEST_SKILL_QB_LABELS,
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
-  TEST_SKILL_WRITING,
+  TEST_SKILL_VOCABULARY,
   getFinalTestConfigTotal,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
@@ -15,7 +15,7 @@ import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentor
 const SKILL_FIELDS = [
   { key: 'listeningCount', skill: TEST_SKILL_LISTENING, color: '#7C3AED' },
   { key: 'readingCount', skill: TEST_SKILL_READING, color: '#0891B2' },
-  { key: 'writingCount', skill: TEST_SKILL_WRITING, color: '#EA580C' },
+  { key: 'vocabularyCount', skill: TEST_SKILL_VOCABULARY, color: '#EA580C' },
 ];
 
 const inputSx = (hasError) => ({
@@ -43,7 +43,7 @@ export default function MentorFinalTestConfigEditor({
     questionCountBySkill: {
       [TEST_SKILL_LISTENING]: 0,
       [TEST_SKILL_READING]: 0,
-      [TEST_SKILL_WRITING]: 0,
+      [TEST_SKILL_VOCABULARY]: 0,
     },
   };
   const loading = false;

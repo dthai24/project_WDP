@@ -16,7 +16,7 @@ import {
   getFilledTestQuestions,
   getQuestionBankSectionTabLabel,
   getSectionDeletedQuestions,
-  isQuestionBankWritingSkill,
+  isQuestionBankVocabularySkill,
   restoreDeletedQuestionToSection,
   SECTION_USE_FOR_TEST_FILTER,
 } from '@/features/mentor/utils/mentorTestContentUtils';import {
@@ -179,9 +179,9 @@ export default function MentorQuestionBankBuilderPanel({
 }) {
   const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
   const accentColor = TEST_SKILL_CHIP_COLORS[activeSkill]?.color ?? PRIMARY;
-  const isWritingSkill = isQuestionBankWritingSkill(activeSkill);
-  const addLabel = isWritingSkill ? 'Thêm nhóm câu hỏi' : 'Thêm bài';
-  const countLabel = isWritingSkill ? 'nhóm' : 'bài';
+  const isVocabularySkill = isQuestionBankVocabularySkill(activeSkill);
+  const addLabel = isVocabularySkill ? 'Thêm nhóm câu hỏi' : 'Thêm bài';
+  const countLabel = isVocabularySkill ? 'nhóm' : 'bài';
   const deletedQuestions = getSectionDeletedQuestions(activeSection);
   const deletedSectionLabel = activeSection
     ? getQuestionBankSectionTabLabel(activeSection, sections)

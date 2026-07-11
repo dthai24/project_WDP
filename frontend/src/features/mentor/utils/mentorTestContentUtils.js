@@ -56,14 +56,23 @@ export { createTestTempId };
 
 export const TEST_SKILL_LISTENING = 'LISTENING';
 export const TEST_SKILL_READING = 'READING';
-export const TEST_SKILL_WRITING = 'WRITING';
+/** Từ vựng / Ngữ pháp — không dùng mã WRITING (kỹ năng viết). */
+export const TEST_SKILL_VOCABULARY = 'VOCABULARY';
 
-export const TEST_SKILLS = [TEST_SKILL_LISTENING, TEST_SKILL_READING, TEST_SKILL_WRITING];
+/** Nghe, Đọc, Từ vựng / Ngữ pháp — dùng cho ngân hàng câu hỏi và quiz / làm bài kiểm tra. */
+export const QUESTION_BANK_SKILLS = [
+  TEST_SKILL_LISTENING,
+  TEST_SKILL_READING,
+  TEST_SKILL_VOCABULARY,
+];
+
+/** @deprecated Dùng QUESTION_BANK_SKILLS cho ngân hàng câu hỏi. */
+export const TEST_SKILLS = QUESTION_BANK_SKILLS;
 
 export const TEST_SKILL_LABELS = {
   [TEST_SKILL_LISTENING]: 'Nghe',
   [TEST_SKILL_READING]: 'Đọc',
-  [TEST_SKILL_WRITING]: 'Từ vựng / Ngữ pháp',
+  [TEST_SKILL_VOCABULARY]: 'Từ vựng / Ngữ pháp',
 };
 
 export const TEST_SKILL_QB_LABELS = TEST_SKILL_LABELS;
@@ -71,18 +80,28 @@ export const TEST_SKILL_QB_LABELS = TEST_SKILL_LABELS;
 export const TEST_SKILL_CHIP_COLORS = {
   [TEST_SKILL_LISTENING]: { color: '#7C3AED', bg: 'rgba(124,58,237,0.12)' },
   [TEST_SKILL_READING]: { color: '#0891B2', bg: 'rgba(8,145,178,0.12)' },
-  [TEST_SKILL_WRITING]: { color: '#EA580C', bg: 'rgba(234,88,12,0.12)' },
+  [TEST_SKILL_VOCABULARY]: { color: '#EA580C', bg: 'rgba(234,88,12,0.12)' },
 };
 
 /** Khớp dbo.Section_Type.TypeId */
 export const SKILL_TO_TYPE_ID = {
   [TEST_SKILL_LISTENING]: 1,
   [TEST_SKILL_READING]: 2,
-  [TEST_SKILL_WRITING]: 3,
+  [TEST_SKILL_VOCABULARY]: 3,
+  WRITING: 3,
 };
 
+const LEGACY_WRITING_SKILL = 'WRITING';
+
+export function normalizeQuestionBankSkillType(skillType) {
+  const normalized = String(skillType ?? '').trim().toUpperCase();
+  if (normalized === LEGACY_WRITING_SKILL) return TEST_SKILL_VOCABULARY;
+  return normalized;
+}
+
 export function mapSkillTypeToTypeId(skillType) {
-  return SKILL_TO_TYPE_ID[String(skillType ?? '').trim().toUpperCase()] ?? SKILL_TO_TYPE_ID[TEST_SKILL_WRITING];
+  const normalized = normalizeQuestionBankSkillType(skillType);
+  return SKILL_TO_TYPE_ID[normalized] ?? SKILL_TO_TYPE_ID[TEST_SKILL_VOCABULARY];
 }
 
 export const LISTENING_SOURCE_UPLOAD = 'UPLOAD';
@@ -430,7 +449,7 @@ export function getDefaultFinalTestConfig() {
     totalQuestions: 30,
     listeningCount: 10,
     readingCount: 10,
-    writingCount: 10,
+    vocabularyCount: 10,
   };
 }
 
@@ -457,7 +476,7 @@ export function getFinalTestConfigTotal(config = {}) {
   return (
     Number(config.listeningCount ?? 0) +
     Number(config.readingCount ?? 0) +
-    Number(config.writingCount ?? 0)
+    Number(config.vocabularyCount ?? config.writingCount ?? 0)
   );
 }
 
@@ -465,7 +484,7 @@ export function validateFinalTestConfig(config = {}, stats = null) {
   const errors = {};
   const listening = Number(config.listeningCount ?? 0);
   const reading = Number(config.readingCount ?? 0);
-  const writing = Number(config.writingCount ?? 0);
+  const vocabulary = Number(config.vocabularyCount ?? config.writingCount ?? 0);
   const total = getFinalTestConfigTotal(config);
 
   if (!Number.isFinite(total) || total <= 0) {
@@ -473,7 +492,7 @@ export function validateFinalTestConfig(config = {}, stats = null) {
     return errors;
   }
 
-  [listening, reading, writing].forEach((value, index) => {
+  [listening, reading, vocabulary].forEach((value, index) => {
     const labels = ['Nghe', 'Đọc', 'Từ vựng / Ngữ pháp'];
     if (!Number.isFinite(value) || value < 0) {
       errors[`skill_${index}`] = `Số câu ${labels[index]} không hợp lệ`;
@@ -487,8 +506,8 @@ export function validateFinalTestConfig(config = {}, stats = null) {
     if (reading > (stats.questionCountBySkill[TEST_SKILL_READING] ?? 0)) {
       errors.readingCount = 'Không đủ câu hỏi Đọc trong các bank chương';
     }
-    if (writing > (stats.questionCountBySkill[TEST_SKILL_WRITING] ?? 0)) {
-      errors.writingCount = 'Không đủ câu hỏi Từ vựng / Ngữ pháp trong các bank chương';
+    if (vocabulary > (stats.questionCountBySkill[TEST_SKILL_VOCABULARY] ?? stats.questionCountBySkill.WRITING ?? 0)) {
+      errors.vocabularyCount = 'Không đủ câu hỏi Từ vựng / Ngữ pháp trong các bank chương';
     }
     if ((stats.chapterBankCount ?? 0) === 0) {
       errors._banks = 'Khóa học chưa có ngân hàng câu hỏi theo chương';
@@ -663,7 +682,7 @@ export function countActiveQuestionsBySkill(sections = []) {
       (sum, section) => sum + getActiveFilledTestQuestions(section?.Questions).length,
       0,
     ),
-    [TEST_SKILL_WRITING]: getSectionsBySkill(sections, TEST_SKILL_WRITING).reduce(
+    [TEST_SKILL_VOCABULARY]: getSectionsBySkill(sections, TEST_SKILL_VOCABULARY).reduce(
       (sum, section) => sum + getActiveFilledTestQuestions(section?.Questions).length,
       0,
     ),
@@ -757,7 +776,10 @@ export function ensureQuestionBankSkillSections(sections = []) {
 }
 
 export function getSectionsBySkill(sections = [], skillType) {
-  return sections.filter((section) => section.SkillType === skillType);
+  const target = normalizeQuestionBankSkillType(skillType);
+  return sections.filter(
+    (section) => normalizeQuestionBankSkillType(section.SkillType) === target,
+  );
 }
 
 export function getVisibleSectionsBySkill(sections = [], skillType) {
@@ -778,14 +800,14 @@ export function getSectionBaiNumber(section, sections = []) {
 
 export function getQuestionBankSectionNameFallback(section, sections = []) {
   const index = getSectionBaiNumber(section, sections);
-  if (section?.SkillType === TEST_SKILL_WRITING) {
+  if (normalizeQuestionBankSkillType(section?.SkillType) === TEST_SKILL_VOCABULARY) {
     return `Nhóm ${index}`;
   }
   return `Bài số ${index}`;
 }
 
 export function getQuestionBankSectionNamePlaceholder(section) {
-  if (section?.SkillType === TEST_SKILL_WRITING) {
+  if (normalizeQuestionBankSkillType(section?.SkillType) === TEST_SKILL_VOCABULARY) {
     return 'Chưa có tên nhóm';
   }
   return 'Chưa có tên bài';
@@ -796,14 +818,14 @@ export function supportsQuestionBankMultiSection(_skillType) {
   return true;
 }
 
-/** Gộp mọi section WRITING thành một (migrate data cũ có nhiều nhóm). */
-export function consolidateWritingSections(sections = []) {
-  const writingSections = getSectionsBySkill(sections, TEST_SKILL_WRITING);
-  if (writingSections.length <= 1) return sections;
+/** Gộp mọi section Từ vựng–Ngữ pháp thành một (migrate data cũ có nhiều nhóm). */
+export function consolidateVocabularySections(sections = []) {
+  const vocabularySections = getSectionsBySkill(sections, TEST_SKILL_VOCABULARY);
+  if (vocabularySections.length <= 1) return sections;
 
-  const mergedQuestions = writingSections.flatMap((section) => section.Questions ?? []);
+  const mergedQuestions = vocabularySections.flatMap((section) => section.Questions ?? []);
   const primary = {
-    ...writingSections[0],
+    ...vocabularySections[0],
     Questions: mergedQuestions,
     DisplayName: '',
     SectionTitle: '',
@@ -812,7 +834,7 @@ export function consolidateWritingSections(sections = []) {
 
   let merged = false;
   return sections.reduce((acc, section) => {
-    if (section.SkillType !== TEST_SKILL_WRITING) {
+    if (normalizeQuestionBankSkillType(section.SkillType) !== TEST_SKILL_VOCABULARY) {
       acc.push(section);
       return acc;
     }
@@ -823,6 +845,9 @@ export function consolidateWritingSections(sections = []) {
     return acc;
   }, []);
 }
+
+/** @deprecated */
+export const consolidateWritingSections = consolidateVocabularySections;
 
 /** @deprecated use getQuestionBankSectionNameFallback — kept for imports */
 export function getQuestionBankSectionDisplayTitle(section, sections = []) {
@@ -839,9 +864,12 @@ export function getQuestionBankSectionTabLabel(section, sections = []) {
   return getQuestionBankSectionNameFallback(section, sections);
 }
 
-export function isQuestionBankWritingSkill(skillType) {
-  return skillType === TEST_SKILL_WRITING;
+export function isQuestionBankVocabularySkill(skillType) {
+  return normalizeQuestionBankSkillType(skillType) === TEST_SKILL_VOCABULARY;
 }
+
+/** @deprecated */
+export const isQuestionBankWritingSkill = isQuestionBankVocabularySkill;
 
 export function createQuestionBankSection(skillType = TEST_SKILL_READING) {
   return createEmptyTestSection(skillType);
@@ -880,7 +908,7 @@ function normalizeQuestionBankCompareKey(value) {
 function resolveQuestionBankSectionTitleForCompare(section) {
   const trimmedTitle = String(section?.SectionTitle ?? '').trim();
   if (trimmedTitle) return trimmedTitle;
-  if (section?.SkillType === TEST_SKILL_WRITING) {
+  if (section?.SkillType === TEST_SKILL_VOCABULARY) {
     return String(section?.DisplayName ?? '').trim();
   }
   return '';
@@ -1277,7 +1305,7 @@ export function validateQuestionBankSection(
     }
 
     const sectionTitle = String(section.SectionTitle ?? '').trim()
-      || (section.SkillType === TEST_SKILL_WRITING
+      || (section.SkillType === TEST_SKILL_VOCABULARY
         ? String(section.DisplayName ?? '').trim()
         : '');
     if (!sectionTitle) {
