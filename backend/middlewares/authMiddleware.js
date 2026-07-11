@@ -25,13 +25,18 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Unauthorized. No token or userId provided.' });
     }
 
-    // Verify user exists in DB
+    // Verify user exists in DB and is active
     const checkReq = new sql.Request();
     checkReq.input('userId', sql.Int, parseInt(userId, 10));
-    const result = await checkReq.query('SELECT UserId FROM Users WHERE UserId = @userId');
+    const result = await checkReq.query('SELECT UserId, IsActive FROM Users WHERE UserId = @userId');
 
     if (result.recordset.length === 0) {
       return res.status(401).json({ success: false, message: 'Unauthorized. User does not exist.' });
+    }
+
+    // Kiểm tra tài khoản có bị khóa không
+    if (result.recordset[0].IsActive === 0 || result.recordset[0].IsActive === false) {
+      return res.status(401).json({ success: false, message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
     }
 
     // Attach user to request
