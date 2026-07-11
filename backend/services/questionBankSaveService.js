@@ -5,6 +5,7 @@ const questionBankModel = require('../Models/questionBankModel');
 const SKILL_TO_TYPE_ID = {
   LISTENING: 1,
   READING: 2,
+  VOCABULARY: 3,
   WRITING: 3,
 };
 
@@ -29,7 +30,9 @@ const QUESTION_SET_COLUMN_MAP = {
 };
 
 function mapSkillTypeToTypeId(skillType) {
-  return SKILL_TO_TYPE_ID[String(skillType ?? '').trim().toUpperCase()] ?? 3;
+  const normalized = String(skillType ?? '').trim().toUpperCase();
+  if (normalized === 'WRITING') return SKILL_TO_TYPE_ID.VOCABULARY;
+  return SKILL_TO_TYPE_ID[normalized] ?? SKILL_TO_TYPE_ID.VOCABULARY;
 }
 
 function normalizeSourceUrl(value) {
