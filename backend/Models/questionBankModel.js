@@ -346,9 +346,6 @@ const getActiveListeningReadingSectionCounts = async (courseId, pathId = null) =
     return result.recordset;
 };
 
-    return result.recordset;
-};
-
 const getActiveVocabularySectionCounts = async (courseId, pathId = null) => {
     const request = new sql.Request();
     request.input('courseId', sql.Int, Number(courseId));
