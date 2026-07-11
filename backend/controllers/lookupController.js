@@ -5,6 +5,7 @@ const getCategories = async (_req, res) => {
     const result = await new sql.Request().query(`
       SELECT CategoryId AS categoryId, DisplayName AS displayName
       FROM Categories
+      WHERE IsActive = 1
       ORDER BY DisplayName
     `);
 
@@ -23,6 +24,7 @@ const getLevels = async (_req, res) => {
     const result = await new sql.Request().query(`
       SELECT LevelId AS levelId, DisplayName AS displayName
       FROM Levels
+      WHERE IsActive = 1
       ORDER BY SortOrder ASC
     `);
 
