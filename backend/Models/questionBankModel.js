@@ -1,4 +1,8 @@
 const { sql } = require('../config/db');
+const {
+    normalizeSectionSkillType,
+    SQL_SKILL_TYPE_FROM_TYPE_ID,
+} = require('../utils/sectionSkillType');
 
 
 
@@ -73,7 +77,7 @@ const getSectionsByPath = async (courseId, pathId) => {
             qs.SectionName,
             qs.Title,
             qs.TypeId,
-            RTRIM(st.Name) AS SkillType,
+            ${SQL_SKILL_TYPE_FROM_TYPE_ID} AS SkillType,
             qs.[Order] AS SectionOrder,
             qs.SourceUrl,
             qs.IsUseForTest,
@@ -97,7 +101,6 @@ const getSectionsByPath = async (courseId, pathId) => {
             qs.SectionName,
             qs.Title,
             qs.TypeId,
-            st.Name,
             qs.[Order],
             qs.SourceUrl,
             qs.IsUseForTest
@@ -117,7 +120,7 @@ const getQuestionsBySection = async (sectionId) => {
             q.SectionId,
             q.Title,
             qs.TypeId,
-            RTRIM(st.Name) AS SkillType,
+            ${SQL_SKILL_TYPE_FROM_TYPE_ID} AS SkillType,
             qs.SourceUrl AS SourceUrl,
             q.[Order] AS QuestionOrder,
             q.IsActive,
@@ -247,7 +250,8 @@ const getActiveQuestionCountsByPath = async (courseId, pathId = null) => {
     const result = await request.query(`
         SELECT
             qp.PathId,
-            RTRIM(st.Name) AS SkillType,
+            qs.TypeId,
+            ${SQL_SKILL_TYPE_FROM_TYPE_ID} AS SkillType,
             COUNT(*) AS ActiveCount
         FROM dbo.Questions q
         INNER JOIN dbo.Question_Sections qs
@@ -261,7 +265,7 @@ const getActiveQuestionCountsByPath = async (courseId, pathId = null) => {
         WHERE qb.CourseId = @courseId
           ${pathFilter}
           AND ${ACTIVE_QUESTION_WHERE}
-        GROUP BY qp.PathId, RTRIM(st.Name)
+        GROUP BY qp.PathId, qs.TypeId
     `);
 
     return result.recordset;
@@ -284,7 +288,7 @@ const splitListeningReadingGroups = (rows = []) => {
     };
 
     rows.forEach((row) => {
-        const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        const skill = normalizeSectionSkillType(row.SkillType, row.TypeId);
         if (!groups[skill]) return;
         groups[skill].push(mapSectionGroupRow(row));
     });
@@ -304,7 +308,8 @@ const getActiveListeningReadingSectionCounts = async (courseId, pathId = null) =
     const result = await request.query(`
         SELECT
             qp.PathId,
-            RTRIM(st.Name) AS SkillType,
+            qs.TypeId,
+            ${SQL_SKILL_TYPE_FROM_TYPE_ID} AS SkillType,
             qs.SectionId,
             qs.SectionName,
             qs.Title,
@@ -331,16 +336,16 @@ const getActiveListeningReadingSectionCounts = async (courseId, pathId = null) =
             ON q.SectionId = qs.SectionId
         WHERE qb.CourseId = @courseId
           ${pathFilter}
-          AND UPPER(RTRIM(st.Name)) IN ('LISTENING', 'READING')
+          AND qs.TypeId IN (1, 2)
         GROUP BY
             qp.PathId,
-            RTRIM(st.Name),
+            qs.TypeId,
             qs.SectionId,
             qs.SectionName,
             qs.Title,
             qs.[Order],
             qs.IsUseForTest
-        ORDER BY qp.PathId, RTRIM(st.Name), qs.[Order], qs.SectionId
+        ORDER BY qp.PathId, qs.TypeId, qs.[Order], qs.SectionId
     `);
 
     return result.recordset;
@@ -358,6 +363,7 @@ const getActiveVocabularySectionCounts = async (courseId, pathId = null) => {
     const result = await request.query(`
         SELECT
             qp.PathId,
+            qs.TypeId,
             qs.SectionId,
             qs.SectionName,
             qs.Title,
@@ -384,9 +390,10 @@ const getActiveVocabularySectionCounts = async (courseId, pathId = null) => {
             ON q.SectionId = qs.SectionId
         WHERE qb.CourseId = @courseId
           ${pathFilter}
-          AND UPPER(RTRIM(st.Name)) IN ('WRITING', 'VOCABULARY')
+          AND qs.TypeId = 3
         GROUP BY
             qp.PathId,
+            qs.TypeId,
             qs.SectionId,
             qs.SectionName,
             qs.Title,
@@ -413,11 +420,7 @@ const getChapterQuestionBankActiveStats = async (courseId, pathId) => {
     };
 
     countRows.forEach((row) => {
-        const skill = String(row.SkillType ?? '').trim().toUpperCase();
-        if (skill === 'WRITING') {
-            questionCountBySkill.VOCABULARY += Number(row.ActiveCount) || 0;
-            return;
-        }
+        const skill = normalizeSectionSkillType(row.SkillType, row.TypeId);
         if (skill in questionCountBySkill) {
             questionCountBySkill[skill] += Number(row.ActiveCount) || 0;
         }
@@ -474,11 +477,7 @@ const getCourseQuestionBankActiveStats = async (courseId) => {
             });
         }
         const bucket = countsByPath.get(pathKey);
-        const skill = String(row.SkillType ?? '').trim().toUpperCase();
-        if (skill === 'WRITING') {
-            bucket.VOCABULARY += Number(row.ActiveCount) || 0;
-            return;
-        }
+        const skill = normalizeSectionSkillType(row.SkillType, row.TypeId);
         if (skill in bucket) {
             bucket[skill] += Number(row.ActiveCount) || 0;
         }
@@ -490,7 +489,7 @@ const getCourseQuestionBankActiveStats = async (courseId) => {
         if (!lrGroupsByPath.has(pathKey)) {
             lrGroupsByPath.set(pathKey, { LISTENING: [], READING: [] });
         }
-        const skill = String(row.SkillType ?? '').trim().toUpperCase();
+        const skill = normalizeSectionSkillType(row.SkillType, row.TypeId);
         const bucket = lrGroupsByPath.get(pathKey);
         if (bucket[skill]) {
             bucket[skill].push(mapSectionGroupRow(row));

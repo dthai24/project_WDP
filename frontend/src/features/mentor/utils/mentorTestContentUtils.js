@@ -91,11 +91,37 @@ export const SKILL_TO_TYPE_ID = {
   WRITING: 3,
 };
 
+const TYPE_ID_TO_SKILL = {
+  1: TEST_SKILL_LISTENING,
+  2: TEST_SKILL_READING,
+  3: TEST_SKILL_VOCABULARY,
+};
+
 const LEGACY_WRITING_SKILL = 'WRITING';
 
-export function normalizeQuestionBankSkillType(skillType) {
+export function normalizeQuestionBankSkillType(skillType, typeId = null) {
+  const parsedTypeId = Number(typeId);
+  if (Number.isInteger(parsedTypeId) && TYPE_ID_TO_SKILL[parsedTypeId]) {
+    return TYPE_ID_TO_SKILL[parsedTypeId];
+  }
+
   const normalized = String(skillType ?? '').trim().toUpperCase();
+  if (!normalized) return TEST_SKILL_VOCABULARY;
   if (normalized === LEGACY_WRITING_SKILL) return TEST_SKILL_VOCABULARY;
+  if (normalized === TEST_SKILL_LISTENING || normalized === 'NGHE') return TEST_SKILL_LISTENING;
+  if (normalized === TEST_SKILL_READING || normalized === 'ĐỌC' || normalized === 'DOC') {
+    return TEST_SKILL_READING;
+  }
+  if (
+    normalized === TEST_SKILL_VOCABULARY
+    || normalized.includes('VỰNG')
+    || normalized.includes('VOCAB')
+    || normalized.includes('NGỮ PHÁP')
+  ) {
+    return TEST_SKILL_VOCABULARY;
+  }
+  if (normalized.includes('NGHE') || normalized.includes('LISTEN')) return TEST_SKILL_LISTENING;
+  if (normalized.includes('ĐỌC') || normalized.includes('READ')) return TEST_SKILL_READING;
   return normalized;
 }
 
@@ -256,6 +282,26 @@ export function isSectionUseForTest(section) {
   return section?.isUseForTest !== false;
 }
 
+/** Section có ít nhất một câu đã điền và bật "Dùng trong bài kiểm tra". */
+export function hasQuestionUseForTestInSection(section) {
+  return getActiveFilledTestQuestions(section?.Questions ?? []).length > 0;
+}
+
+export function canEnableSectionUseForTest(section) {
+  return hasQuestionUseForTestInSection(section);
+}
+
+export const SECTION_USE_FOR_TEST_REQUIRES_QUESTION_MESSAGE =
+  'Section phải có ít nhất 1 câu hỏi được dùng trong bài kiểm tra';
+
+export function validateSectionUseForTestRule(section) {
+  if (!isSectionUseForTest(section)) return {};
+  if (hasQuestionUseForTestInSection(section)) return {};
+  return {
+    isUseForTest: SECTION_USE_FOR_TEST_REQUIRES_QUESTION_MESSAGE,
+  };
+}
+
 export function countSectionsByUseForTest(sections = []) {
   const inTest = sections.filter(isSectionUseForTest).length;
   return {
@@ -278,12 +324,41 @@ export function filterSectionsByUseForTest(
   return sections;
 }
 
+/** Giữ giá trị isUseForTest đã lưu của section đang chỉnh khi có thay đổi chưa cập nhật. */
+export function resolveSectionsForUseForTestFilter(
+  sections = [],
+  { sectionBaselines = {}, activeSection = null, frozen = false } = {},
+) {
+  if (!frozen || !activeSection?.tempId) return sections;
+
+  const baselineJson = sectionBaselines[activeSection.tempId];
+  if (baselineJson == null) return sections;
+
+  try {
+    const baseline = JSON.parse(baselineJson);
+    const baselineUseForTest = baseline.isUseForTest !== false;
+    return sections.map((section) => (
+      section.tempId === activeSection.tempId
+        ? { ...section, isUseForTest: baselineUseForTest }
+        : section
+    ));
+  } catch {
+    return sections;
+  }
+}
+
 export function isPersistedQuestionLocked(question, persistedQuestionIds, coursePublished) {
   if (!coursePublished || !question?.tempId) return false;
   const ids = persistedQuestionIds instanceof Set
     ? persistedQuestionIds
     : new Set(persistedQuestionIds ?? []);
   return ids.has(question.tempId) && isFilledTestQuestion(question);
+}
+
+/** Câu hỏi đã có bản ghi trong DB (Question_Sections / Questions). */
+export function isQuestionPersistedInDatabase(question) {
+  const questionId = Number(question?.QuestionId);
+  return Number.isFinite(questionId) && questionId > 0;
 }
 
 export function collectPersistedQuestionIds(sections = []) {
@@ -778,7 +853,8 @@ export function ensureQuestionBankSkillSections(sections = []) {
 export function getSectionsBySkill(sections = [], skillType) {
   const target = normalizeQuestionBankSkillType(skillType);
   return sections.filter(
-    (section) => normalizeQuestionBankSkillType(section.SkillType) === target,
+    (section) =>
+      normalizeQuestionBankSkillType(section.SkillType, section.typeId) === target,
   );
 }
 
@@ -793,9 +869,30 @@ export function getSectionBySkill(sections = [], skillType) {
 
 export function getSectionBaiNumber(section, sections = []) {
   if (!section) return 1;
-  const skillSections = getSectionsBySkill(sections, section.SkillType);
+  const skillSections = getVisibleSectionsBySkill(sections, section.SkillType);
   const index = skillSections.findIndex((item) => item.tempId === section.tempId);
   return index >= 0 ? index + 1 : skillSections.length + 1;
+}
+
+/** Order lưu DB — ưu tiên sectionOrder hiện có, section mới lấy max + 1 trong cùng kỹ năng. */
+export function resolveSectionOrderForSave(section, sections = []) {
+  if (!section) return 1;
+
+  const parsedOrder = Number(section.sectionOrder);
+  if (section.SectionId && Number.isInteger(parsedOrder) && parsedOrder > 0) {
+    return parsedOrder;
+  }
+
+  const skillSections = getSectionsBySkill(sections, section.SkillType);
+  const maxOrder = skillSections
+    .filter((item) => item.tempId !== section.tempId)
+    .reduce((max, item) => Math.max(max, Number(item.sectionOrder) || 0), 0);
+
+  if (Number.isInteger(parsedOrder) && parsedOrder > 0) {
+    return parsedOrder;
+  }
+
+  return maxOrder + 1;
 }
 
 export function getQuestionBankSectionNameFallback(section, sections = []) {
@@ -883,7 +980,9 @@ export function getNonEmptyQuestionBankSections(sections = []) {
     }))
     .filter(
       (section) =>
-        section.Questions.length > 0 || Number(section.questionCount) > 0,
+        section.Questions.length > 0
+        || Number(section.questionCount) > 0
+        || Boolean(section.SectionId),
     );
 }
 
@@ -1328,6 +1427,10 @@ export function validateQuestionBankSection(
     Object.assign(sErrors, validateQuestionBankReadingComposeSource(section));
   }
 
+  if (forSave) {
+    Object.assign(sErrors, validateSectionUseForTestRule(section));
+  }
+
   const questionErrors = {};
   const questionsToValidate = forSave ? questions : questions.filter(isFilledTestQuestion);
   questionsToValidate.forEach((question) => {
@@ -1371,6 +1474,7 @@ export function getQuestionBankSectionValidationToasts(errors = {}, section = nu
   if (errors.DisplayName) messages.push(errors.DisplayName);
   if (errors.SectionTitle) messages.push(errors.SectionTitle);
   if (errors._questions) messages.push(errors._questions);
+  if (errors.isUseForTest) messages.push(errors.isUseForTest);
   if (errors._audio) messages.push(errors._audio);
   if (errors.File) messages.push(errors.File);
   if (errors.AudioUrl) messages.push(errors.AudioUrl);
@@ -1442,6 +1546,14 @@ export function findQuestionBankSectionSaveIssue(section, allSections = []) {
     return {
       message: errors._questions,
       sectionTempId: section.tempId,
+    };
+  }
+
+  if (errors.isUseForTest) {
+    return {
+      message: errors.isUseForTest,
+      sectionTempId: section.tempId,
+      field: 'isUseForTest',
     };
   }
 

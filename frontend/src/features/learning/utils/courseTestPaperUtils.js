@@ -8,8 +8,11 @@ import {
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
   CHAPTER_QUIZ_SKILLS,
-  getQuestionCountForPart,
+  getSectionCountForPart,
+  getSectionQuestionCountsForPart,
+  isSkillSectionRandomPick,
   isCourseQuizChapterId,
+  buildCourseSectionTempId,
 } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import { findQuestionBankByChapter } from '@/features/mentor/services/questionBankService';
 
@@ -76,13 +79,67 @@ function toGradingQuestion(question, sourceSection = null) {
   };
 }
 
-function collectQuestionsWithSource(sections = [], skillType) {
-  return getSectionsBySkill(sections, skillType).flatMap((section) =>
-    getActiveFilledTestQuestions(section.Questions ?? []).map((question) => ({
+function isSectionUseForTest(section) {
+  return section?.isUseForTest !== false;
+}
+
+function resolveSectionConfigKey(section, pathId = null) {
+  const base = section?.tempId ?? (section?.SectionId ? `section_${section.SectionId}` : '');
+  if (!base) return '';
+  return pathId != null ? buildCourseSectionTempId(pathId, base) : base;
+}
+
+function flattenBankSections(bankList = []) {
+  return bankList.flatMap((bank) => {
+    const pathId = bank.pathId ?? bank.PathId ?? null;
+    return (bank.sections ?? []).map((section) => ({ section, pathId }));
+  });
+}
+
+function pickQuestionsForSkill(config, bankList, skill) {
+  const entries = flattenBankSections(bankList);
+  const isCourseScope = isCourseQuizChapterId(config?.chapterId);
+
+  if (isSkillSectionRandomPick(skill)) {
+    const inTestEntries = entries.filter(({ section }) =>
+      getSectionsBySkill([section], skill).length > 0 && isSectionUseForTest(section));
+    const pickedEntries = pickRandom(inTestEntries, getSectionCountForPart(config, skill));
+    return pickedEntries.flatMap(({ section }) =>
+      getActiveFilledTestQuestions(section.Questions ?? []).map((question) => ({
+        question,
+        section,
+      })),
+    );
+  }
+
+  const countBySection = new Map(
+    getSectionQuestionCountsForPart(config, skill).map((entry) => [
+      String(entry.sectionTempId),
+      entry.questionCount,
+    ]),
+  );
+
+  return entries.flatMap(({ section, pathId }) => {
+    if (!getSectionsBySkill([section], skill).length || !isSectionUseForTest(section)) {
+      return [];
+    }
+
+    const configKey = isCourseScope
+      ? resolveSectionConfigKey(section, pathId)
+      : resolveSectionConfigKey(section);
+    const fallbackKey = resolveSectionConfigKey(section);
+    const configuredCount = countBySection.get(configKey)
+      ?? countBySection.get(fallbackKey)
+      ?? 0;
+
+    if (configuredCount <= 0) return [];
+
+    const pool = getActiveFilledTestQuestions(section.Questions ?? []).map((question) => ({
       question,
       section,
-    })),
-  );
+    }));
+    return pickRandom(pool, configuredCount);
+  });
 }
 
 function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, startOrder) {
@@ -140,15 +197,11 @@ function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, start
 
 function buildPaperFromBanks(config, bankList, options = {}) {
   const shuffleAnswers = false;
-  const allSections = bankList.flatMap((bank) => bank.sections ?? []);
 
   const pickedBySkill = Object.fromEntries(
     CHAPTER_QUIZ_SKILLS.map((skill) => [
       skill,
-      pickRandom(
-        collectQuestionsWithSource(allSections, skill),
-        getQuestionCountForPart(config, skill),
-      ),
+      pickQuestionsForSkill(config, bankList, skill),
     ]),
   );
 

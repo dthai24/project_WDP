@@ -16,7 +16,7 @@ import {
   scopedUpdateButtonSx,
 } from './mentorCourseContentStyles';
 import { PathPublishToggle, NodePublishToggle } from './MentorPublishToggles';
-import { filterLearningMaterials, getMaterialPersistentId, isEditDirty, isMaterialFileUploadPending, makePathDirtyKey, makeNodeDirtyKey, makeMaterialDirtyKey, resolveChapterId, chapterHasContent } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { filterLearningMaterials, getMaterialPersistentId, isEditDirty, isMaterialFileUploadPending, makePathDirtyKey, makeNodeDirtyKey, makeMaterialDirtyKey, resolveChapterId, chapterHasContent, chapterCanPublish, getChapterPublishBlockReason, lessonCanPublish, getLessonPublishBlockReason, isPathActive, isNodeActive } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 export default function MentorCourseContentBuilder({
   paths,
@@ -139,6 +139,9 @@ export default function MentorCourseContentBuilder({
 
   const activePathIndex = paths.findIndex((p) => p.tempId === activeChapterId);
   const activePath = activePathIndex >= 0 ? paths[activePathIndex] : null;
+  const activePathPublishBlockReason = activePath && !chapterCanPublish(activePath)
+    ? getChapterPublishBlockReason(activePath)
+    : null;
   const activePathDirty = Boolean(
     activePath && isEditDirty(dirtyKeys, makePathDirtyKey(activePath.tempId)),
   );
@@ -197,6 +200,9 @@ export default function MentorCourseContentBuilder({
   );
   const activeNodeNeedsPathFirst = Boolean(activePath && !activePath.PathId);
   const activeMaterialNeedsNodeFirst = Boolean(activePath && activeNode && !activeNode.NodeId);
+  const activeNodePublishBlockReason = activeNode && !isNodeActive(activeNode) && !lessonCanPublish(activeNode)
+    ? getLessonPublishBlockReason(activeNode)
+    : null;
 
   useEffect(() => {
     if (activePathIndex >= 0) activeChapterIndexRef.current = activePathIndex;
@@ -301,7 +307,13 @@ export default function MentorCourseContentBuilder({
                         path={activePath}
                         onChange={onPathChange}
                         disabled={disabled}
+                        publishBlockReason={activePathPublishBlockReason}
                       />
+                      {activePathPublishBlockReason ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          {activePathPublishBlockReason}
+                        </Typography>
+                      ) : null}
                       {activePathDirty ? (
                         <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
                           Thông tin chương chưa lưu.
@@ -339,7 +351,13 @@ export default function MentorCourseContentBuilder({
                           onNodeChange(activePath.tempId, nodeTempId, patch)
                         }
                         disabled={disabled}
+                        publishBlockReason={activeNodePublishBlockReason}
                       />
+                      {activeNodePublishBlockReason ? (
+                        <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                          {activeNodePublishBlockReason}
+                        </Typography>
+                      ) : null}
                       {activeNodeNeedsPathFirst ? (
                         <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
                           Cập nhật path trước khi lưu bài học này.

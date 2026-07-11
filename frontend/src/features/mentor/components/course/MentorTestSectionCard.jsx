@@ -34,13 +34,29 @@ import {
   getSectionScoreLabel,
   isFilledTestQuestion,
   isPersistedQuestionLocked,
+  isQuestionPersistedInDatabase,
   appendDeletedQuestionToSection,
   findInitialSectionQuestion,
   isQuestionContentChangedFromInitial,
   restoreQuestionFromInitial,
   validateTestQuestion,
   SCORING_MODE_AUTO,
+  hasQuestionUseForTestInSection,
+  SECTION_USE_FOR_TEST_REQUIRES_QUESTION_MESSAGE,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  canDisableQuestionBankSectionUseForTest,
+  canDisableVocabularyQuestionUseForTest,
+  countPublishedQuestionsInSection,
+  getListeningReadingPublishLockMessage,
+  getRequiredTestSectionCountForSkill,
+  getSectionPublishLockMessage,
+  getVocabularyQuestionPublishLockMessage,
+  getVocabularySectionRequiredQuestionCount,
+  isQuestionBankSectionPublishLocked,
+  isVocabularyQuestionPublishLocked,
+} from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
+import { toast } from '@/shared/ui/Toast';
 
 const fieldLabelSx = { mb: 0.5, fontSize: 12, fontWeight: 700, color: '#64748B' };
 
@@ -210,6 +226,7 @@ export default function MentorTestSectionCard({
   questionBankMode = false,
   allSections = [],
   coursePublished = false,
+  chapterQuizConfig = null,
   persistedQuestionIds = null,
   onChange,
   onRegisterSectionControls,
@@ -253,6 +270,15 @@ export default function MentorTestSectionCard({
   const sectionUseForTest = section.isUseForTest !== false;
   const isReadingQuestionBank = questionBankMode && skillType === TEST_SKILL_READING;
   const isVocabularyQuestionBank = questionBankMode && isQuestionBankVocabularySkill(skillType);
+  const requiredTestSections = getRequiredTestSectionCountForSkill(skillType, chapterQuizConfig);
+  const requiredVocabularyQuestions = isVocabularyQuestionBank
+    ? getVocabularySectionRequiredQuestionCount(section.tempId, chapterQuizConfig)
+    : 0;
+  const sectionPublishLocked = questionBankMode
+    && isQuestionBankSectionPublishLocked(section, allSections, chapterQuizConfig);
+  const sectionPublishLockMessage = questionBankMode
+    ? getSectionPublishLockMessage(section, allSections, chapterQuizConfig)
+    : '';
   const sectionTitleLabel = (() => {
     if (!questionBankMode) return 'Tên phần';
     return isReadingQuestionBank ? 'Đề bài' : 'Tên bài';
@@ -340,6 +366,22 @@ export default function MentorTestSectionCard({
       return;
     }
 
+    if (
+      questionBankMode
+      && isVocabularyQuestionBank
+      && prev?.isUseForTest !== false
+      && nextQuestion.isUseForTest === false
+      && !canDisableVocabularyQuestionUseForTest(prev, section, chapterQuizConfig)
+    ) {
+      toast.warning(
+        getVocabularyQuestionPublishLockMessage(
+          requiredVocabularyQuestions,
+          countPublishedQuestionsInSection(section),
+        ),
+      );
+      return;
+    }
+
     updateQuestions(
       questions.map((question) => (question.tempId === questionTempId ? nextQuestion : question)),
     );
@@ -359,6 +401,7 @@ export default function MentorTestSectionCard({
   const handleDeleteQuestion = (questionTempId) => {
     const target = questions.find((question) => question.tempId === questionTempId);
     if (isPersistedQuestionLocked(target, persistedQuestionIds, coursePublished)) return;
+    if (questionBankMode && isQuestionPersistedInDatabase(target)) return;
 
     const nextQuestions = questions.filter((question) => question.tempId !== questionTempId);
     const patch = { Questions: nextQuestions };
@@ -563,33 +606,69 @@ export default function MentorTestSectionCard({
       <Collapse in={expanded}>
         <Box sx={{ p: { xs: 1.25, sm: 1.5 }, bgcolor: '#F8FAFC' }}>
           {questionBankMode ? (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                mb: 1.25,
-                px: 0.25,
-              }}
-            >
-              <Switch
-                size="small"
-                checked={sectionUseForTest}
-                onChange={(event) => updateSection({ isUseForTest: event.target.checked })}
-                disabled={disabled}
-                inputProps={{ 'aria-label': 'Section được dùng cho bài kiểm tra' }}
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: skillAccent },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                    bgcolor: skillAccent,
-                    opacity: 0.5,
-                  },
-                }}
-              />
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, userSelect: 'none' }}>
-                Section được dùng cho bài kiểm tra
-              </Typography>
-              <SectionUseForTestBadge active={sectionUseForTest} />
+            <Box sx={{ mb: 1.25, px: 0.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                <Tooltip
+                  title={sectionPublishLockMessage}
+                  arrow
+                  disableHoverListener={!sectionPublishLocked}
+                >
+                  <span>
+                    <Switch
+                      size="small"
+                      checked={sectionUseForTest}
+                      onChange={(event) => {
+                        const next = event.target.checked;
+                        if (next && !hasQuestionUseForTestInSection(section)) {
+                          toast.warning(SECTION_USE_FOR_TEST_REQUIRES_QUESTION_MESSAGE);
+                          return;
+                        }
+                        if (
+                          !next
+                          && !canDisableQuestionBankSectionUseForTest(
+                            section,
+                            allSections,
+                            chapterQuizConfig,
+                          )
+                        ) {
+                          toast.warning(
+                            sectionPublishLockMessage
+                            || getListeningReadingPublishLockMessage(requiredTestSections),
+                          );
+                          return;
+                        }
+                        updateSection({ isUseForTest: next });
+                      }}
+                      disabled={disabled || sectionPublishLocked}
+                      inputProps={{ 'aria-label': 'Section được dùng cho bài kiểm tra' }}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': { color: skillAccent },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          bgcolor: skillAccent,
+                          opacity: 0.5,
+                        },
+                      }}
+                    />
+                  </span>
+                </Tooltip>
+                <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, userSelect: 'none' }}>
+                  Section được dùng cho bài kiểm tra
+                </Typography>
+                {sectionPublishLocked ? (
+                  <Typography
+                    component="span"
+                    sx={{ fontSize: 11, color: '#047857', fontWeight: 600 }}
+                  >
+                    (bắt buộc cho bài kiểm tra)
+                  </Typography>
+                ) : null}
+                <SectionUseForTestBadge active={sectionUseForTest} />
+              </Box>
+              {errors.isUseForTest ? (
+                <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.5, lineHeight: 1.45 }}>
+                  {errors.isUseForTest}
+                </Typography>
+              ) : null}
             </Box>
           ) : null}
 
@@ -830,6 +909,16 @@ export default function MentorTestSectionCard({
                 const questionErrors = questionBankMode && isFilledTestQuestion(question)
                   ? validateTestQuestion(question)
                   : (errors.Questions?.[question.tempId] ?? {});
+                const hideDelete = questionBankMode && isQuestionPersistedInDatabase(question);
+                const questionPublishLocked = questionBankMode
+                  && isVocabularyQuestionBank
+                  && isVocabularyQuestionPublishLocked(question, section, chapterQuizConfig);
+                const questionPublishLockMessage = questionPublishLocked
+                  ? getVocabularyQuestionPublishLockMessage(
+                    requiredVocabularyQuestions,
+                    countPublishedQuestionsInSection(section),
+                  )
+                  : '';
                 return (
                   <MentorTestQuestionCard
                     key={question.tempId}
@@ -839,6 +928,9 @@ export default function MentorTestSectionCard({
                     accentColor={skillAccent}
                     disabled={disabled}
                     contentLocked={contentLocked}
+                    hideDelete={hideDelete}
+                    useForTestLocked={questionPublishLocked}
+                    useForTestLockMessage={questionPublishLockMessage}
                     showActiveToggle={questionBankMode || (coursePublished && contentLocked)}
                     collapsibleChoices={questionBankMode}
                     contentChanged={contentChanged}

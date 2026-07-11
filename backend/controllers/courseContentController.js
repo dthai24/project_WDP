@@ -4,6 +4,7 @@ const {
   fetchCloudinaryAssetBuffer,
   isCloudinaryDeliveryUrl,
 } = require('../services/cloudinaryService');
+const { toPathIsActiveBit } = require('../utils/pathActiveUtils');
 
 async function assertMentorOwnsCourse(courseId, instructorId) {
   const ownerId = await coursesModel.getCourseInstructorId(courseId);
@@ -82,11 +83,19 @@ const createPath = async (req, res) => {
       return res.status(400).json({ success: false, message: 'PathName là bắt buộc.' });
     }
 
+    const isActive = toPathIsActiveBit(data.IsActive, 0);
+    if (isActive === 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Chương cần ít nhất 1 bài học và 1 học liệu trước khi xuất bản.',
+      });
+    }
+
     const pathId = await courseContentSaveModel.insertPathRow(courseId, {
       PathName: pathName,
       Description: data.Description ?? data.description ?? null,
       Order: data.Order ?? data.PathOrder ?? 1,
-      IsActive: toPathIsActiveBit(data.IsActive, 1),
+      IsActive: isActive,
     });
     await courseContentSaveModel.recalculateCourseTotalLessons(courseId);
 
@@ -110,6 +119,9 @@ const updatePathById = async (req, res) => {
     }
 
     const set = req.body?.set ?? req.body ?? {};
+    if (set.IsActive !== undefined && toPathIsActiveBit(set.IsActive, 1) === 1) {
+      await courseContentSaveModel.assertPathCanPublish(pathId);
+    }
     await courseContentSaveModel.updatePathById(pathId, set);
 
     return res.status(200).json({
@@ -154,7 +166,18 @@ const createNodeByPathId = async (req, res) => {
     }
 
     const data = req.body?.data ?? req.body ?? {};
-    const nodeId = await courseContentSaveModel.insertNodeRow(pathId, data);
+    const isActive = toPathIsActiveBit(data.IsActive, 0);
+    if (isActive === 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bài học cần ít nhất 1 học liệu trước khi xuất bản.',
+      });
+    }
+
+    const nodeId = await courseContentSaveModel.insertNodeRow(pathId, {
+      ...data,
+      IsActive: isActive,
+    });
     await courseContentSaveModel.recalculateCourseTotalLessons(access.courseId);
 
     return res.status(201).json({
@@ -184,6 +207,9 @@ const updateNodeById = async (req, res) => {
     const set = req.body?.set ?? req.body ?? {};
     if (req.body?.order != null || req.body?.NodeOrder != null) {
       set.NodeOrder = req.body.order ?? req.body.NodeOrder;
+    }
+    if (set.IsActive !== undefined && toPathIsActiveBit(set.IsActive, 1) === 1) {
+      await courseContentSaveModel.assertNodeCanPublish(nodeId);
     }
     await courseContentSaveModel.updateNodeById(nodeId, set);
 

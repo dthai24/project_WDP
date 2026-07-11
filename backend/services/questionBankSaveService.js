@@ -1,13 +1,7 @@
 const { sql } = require('../config/db');
 const questionBankSaveModel = require('../Models/questionBankSaveModel');
 const questionBankModel = require('../Models/questionBankModel');
-
-const SKILL_TO_TYPE_ID = {
-  LISTENING: 1,
-  READING: 2,
-  VOCABULARY: 3,
-  WRITING: 3,
-};
+const { mapSkillTypeToTypeId } = require('../utils/sectionSkillType');
 
 const SECTION_SET_COLUMN_MAP = {
   SectionName: 'SectionName',
@@ -28,12 +22,6 @@ const QUESTION_SET_COLUMN_MAP = {
   IsActive: 'IsActive',
   IsUseForTest: 'IsUseForTest',
 };
-
-function mapSkillTypeToTypeId(skillType) {
-  const normalized = String(skillType ?? '').trim().toUpperCase();
-  if (normalized === 'WRITING') return SKILL_TO_TYPE_ID.VOCABULARY;
-  return SKILL_TO_TYPE_ID[normalized] ?? SKILL_TO_TYPE_ID.VOCABULARY;
-}
 
 function normalizeSourceUrl(value) {
   const trimmed = String(value ?? '').trim();
@@ -582,12 +570,19 @@ async function saveQuestionBankSectionPayload(payload, { requireExistingSection 
   const questionIdMap = [];
   const choiceIdMap = [];
   let savedSourceUrl = null;
+  let insertedSectionOrder = null;
   const transaction = new sql.Transaction();
   await transaction.begin();
 
   try {
     if (payload.sectionInsert?.data) {
       const row = buildSectionInsertRow(payload.sectionInsert.data, questionPathId, typeId);
+      row.Order = await questionBankSaveModel.getNextSectionOrder(
+        questionPathId,
+        typeId,
+        transaction,
+      );
+      insertedSectionOrder = row.Order;
       sectionId = await insertSectionRow(transaction, row);
       savedSourceUrl = row.SourceUrl;
 
@@ -612,6 +607,7 @@ async function saveQuestionBankSectionPayload(payload, { requireExistingSection 
       questionIdMap,
       choiceIdMap,
       sourceUrl: savedSourceUrl,
+      sectionOrder: insertedSectionOrder,
     };
   } catch (error) {
     await transaction.rollback();

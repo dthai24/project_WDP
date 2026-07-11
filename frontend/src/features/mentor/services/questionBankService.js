@@ -523,6 +523,7 @@ export async function saveQuestionBankSection(savePayload) {
         questionIdMap: data?.data?.questionIdMap ?? questionIdMap,
         choiceIdMap: data?.data?.choiceIdMap ?? choiceIdMap,
         sourceUrl: data?.data?.sourceUrl ?? savedSourceUrl,
+        sectionOrder: data?.data?.sectionOrder ?? null,
         message: data?.message ?? 'Đã cập nhật section.',
       };
     }

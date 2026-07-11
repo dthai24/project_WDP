@@ -87,10 +87,75 @@ export function chapterHasContent(path = {}) {
   return nodes.some((node) => String(node.NodeName ?? node.nodeName ?? '').trim().length > 0);
 }
 
+/** Chương đủ điều kiện xuất bản: ≥1 bài học, ≥1 học liệu, ≥1 bài học đã xuất bản. */
+export function chapterCanPublish(path = {}) {
+  const nodes = getPathNodes(path);
+  if (nodes.length === 0) return false;
+  if (countMaterialsInPath(path) === 0) return false;
+  return nodes.some(isNodeActive);
+}
+
+export function getChapterPublishBlockReason(path = {}) {
+  const nodes = getPathNodes(path);
+  if (nodes.length === 0) {
+    return 'Chương cần ít nhất 1 bài học trước khi xuất bản.';
+  }
+  if (countMaterialsInPath(path) === 0) {
+    return 'Chương cần ít nhất 1 học liệu trước khi xuất bản.';
+  }
+  if (!nodes.some(isNodeActive)) {
+    return 'Chương cần ít nhất 1 bài học được xuất bản trước khi xuất bản chương.';
+  }
+  return null;
+}
+
+/** Hủy xuất bản chương khi không còn bài học nào được xuất bản. */
+export function normalizeChapterPublishState(path = {}) {
+  if (!isPathActive(path)) return path;
+  if (getPathNodes(path).some(isNodeActive)) return path;
+  return { ...path, IsActive: 0 };
+}
+
+export function syncPathsChapterPublishState(paths, pathTempId = null) {
+  return (paths ?? []).map((path) => {
+    if (pathTempId && path.tempId !== pathTempId) return path;
+    return normalizeChapterPublishState(path);
+  });
+}
+
+export function wasChapterAutoUnpublished(beforePath, afterPath) {
+  return Boolean(
+    beforePath
+    && afterPath
+    && isPathActive(beforePath)
+    && !isPathActive(afterPath),
+  );
+}
+
+/** Chương đang xuất bản nhưng mọi bài học (state UI) đều tắt xuất bản. */
+export function shouldUnpublishChapterBecauseAllLessonsOff(path = {}) {
+  if (!isPathActive(path)) return false;
+  const nodes = getPathNodes(path);
+  if (nodes.length === 0) return false;
+  return !nodes.some(isNodeActive);
+}
+
 /** Bài học đã có nội dung (tên hoặc học liệu). */
 export function lessonHasContent(node = {}) {
   if (countLearningMaterials(getNodeMaterials(node)) > 0) return true;
   return String(node.NodeName ?? node.nodeName ?? '').trim().length > 0;
+}
+
+/** Bài học đủ điều kiện xuất bản: ≥1 học liệu (VIDEO/TEXT/DOC). */
+export function lessonCanPublish(node = {}) {
+  return countLearningMaterials(getNodeMaterials(node)) > 0;
+}
+
+export function getLessonPublishBlockReason(node = {}) {
+  if (countLearningMaterials(getNodeMaterials(node)) === 0) {
+    return 'Bài học cần ít nhất 1 học liệu trước khi xuất bản.';
+  }
+  return null;
 }
 
 /** Học liệu đã có nội dung (tiêu đề, link, file hoặc văn bản). */
@@ -697,6 +762,10 @@ export function validatePathFieldsForSave(path, allPaths = []) {
     errors.PathName = 'Tên chương bị trùng.';
   }
 
+  if (isPathActive(path) && !chapterCanPublish(path)) {
+    errors._publish = getChapterPublishBlockReason(path);
+  }
+
   return errors;
 }
 
@@ -715,6 +784,10 @@ export function validateNodeFieldsForSave(node, siblingNodes = []) {
   );
   if (hasDuplicate) {
     errors.NodeName = 'Tên bài học bị trùng.';
+  }
+
+  if (isNodeActive(node) && !lessonCanPublish(node)) {
+    errors._publish = getLessonPublishBlockReason(node);
   }
 
   return errors;
@@ -754,6 +827,7 @@ export function getNodeContentValidationToast(nodeErrors = {}, node) {
   if (!node || !nodeErrors || Object.keys(nodeErrors).length === 0) return null;
 
   if (nodeErrors.NodeName) return nodeErrors.NodeName;
+  if (nodeErrors._publish) return nodeErrors._publish;
   if (nodeErrors._materials) return nodeErrors._materials;
 
   for (const material of node.materials ?? node.Materials ?? []) {
@@ -807,6 +881,10 @@ export function validatePathForSave(path, allPaths = []) {
       currentNodeErrors._materials = 'Mỗi bài học cần ít nhất 1 học liệu.';
     }
 
+    if (isNodeActive(node) && !lessonCanPublish(node)) {
+      currentNodeErrors._publish = getLessonPublishBlockReason(node);
+    }
+
     const materials = filterLearningMaterials(node.materials ?? node.Materials ?? []);
     const materialErrorsMap = {};
     applyDuplicateNameErrors(buildMaterialDuplicateTitleGroups(materials), (materialTempId) => {
@@ -834,6 +912,10 @@ export function validatePathForSave(path, allPaths = []) {
 
   if (Object.keys(nodeErrors).length > 0) {
     errors.nodes = nodeErrors;
+  }
+
+  if (isPathActive(path) && !chapterCanPublish(path)) {
+    errors._publish = getChapterPublishBlockReason(path);
   }
 
   return errors;

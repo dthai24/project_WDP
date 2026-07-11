@@ -22,7 +22,13 @@ import {
   createEmptyMaterial,
   createEmptyNode,
   createEmptyPath,
+  chapterCanPublish,
   chapterHasContent,
+  getChapterPublishBlockReason,
+  getLessonPublishBlockReason,
+  lessonCanPublish,
+  normalizeChapterPublishState,
+  syncPathsChapterPublishState,
   lessonHasContent,
   materialHasContent,
   getMaterialPersistentId,
@@ -333,6 +339,15 @@ export default function MentorCreateCourseContentPage() {
   };
 
   const handlePathChange = (pathTempId, patch) => {
+    if (patch.IsActive === 1 || patch.IsActive === true) {
+      const path = paths.find((item) => item.tempId === pathTempId);
+      const nextPath = path ? { ...path, ...patch } : null;
+      if (nextPath && !chapterCanPublish(nextPath)) {
+        toast.error(getChapterPublishBlockReason(nextPath));
+        return;
+      }
+    }
+
     markDirty(makePathDirtyKey(pathTempId));
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
   };
@@ -431,6 +446,16 @@ export default function MentorCreateCourseContentPage() {
   };
 
   const handleNodeChange = (pathTempId, nodeTempId, patch) => {
+    if (patch.IsActive === 1 || patch.IsActive === true) {
+      const path = paths.find((item) => item.tempId === pathTempId);
+      const node = (path?.nodes ?? []).find((item) => item.tempId === nodeTempId);
+      const nextNode = node ? { ...node, ...patch } : null;
+      if (nextNode && !lessonCanPublish(nextNode)) {
+        toast.error(getLessonPublishBlockReason(nextNode));
+        return;
+      }
+    }
+
     markDirty(makeNodeDirtyKey(pathTempId, nodeTempId));
     applyPaths((prev) => updateNodeInPath(prev, pathTempId, nodeTempId, patch));
   };
@@ -534,8 +559,10 @@ export default function MentorCreateCourseContentPage() {
       const firstNodeError = Object.values(pathErrors.nodes ?? {})[0];
       const firstMaterialError = Object.values(firstNodeError?.materials ?? {})[0];
       const toastMessage = pathErrors.PathName
+        ?? pathErrors._publish
         ?? pathErrors._nodes
         ?? firstNodeError?.NodeName
+        ?? firstNodeError?._publish
         ?? firstNodeError?._materials
         ?? firstMaterialError?.Title
         ?? Object.values(firstMaterialError ?? {}).find(Boolean)

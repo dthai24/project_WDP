@@ -20,6 +20,7 @@ import {
   isQuestionBankVocabularySkill,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { getSectionDisplayQuestionCount } from '@/features/mentor/utils/questionBankApiMappers';
+import { getSkillTestUsageLabel } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 
 const SKILL_NAV_ITEMS = QUESTION_BANK_SKILLS.map((skill) => ({
   skill,
@@ -38,6 +39,7 @@ function SkillNavButton({
   sectionCount = 0,
   sectionUnit = 'bài',
   questionCount = 0,
+  testUsageLabel = null,
   selected = false,
   disabled = false,
   hasError = false,
@@ -91,6 +93,11 @@ function SkillNavButton({
         <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.15, lineHeight: 1.35 }}>
           {sectionCount} {sectionUnit} · {questionCount} câu hỏi
         </Typography>
+        {testUsageLabel ? (
+          <Typography sx={{ fontSize: 11, color: '#047857', mt: 0.2, lineHeight: 1.35, fontWeight: 600 }}>
+            {testUsageLabel}
+          </Typography>
+        ) : null}
       </Box>
     </Box>
   );
@@ -101,6 +108,7 @@ export default function MentorQuestionBankSkillNav({
   activeSkill,
   disabled = false,
   sectionErrors = {},
+  chapterQuizConfig = null,
   onSkillChange,
 }) {
   const baiCountBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
@@ -160,6 +168,7 @@ export default function MentorQuestionBankSkillNav({
                 sectionCount={baiCountBySkill[skill]}
                 sectionUnit={skill === TEST_SKILL_VOCABULARY ? 'nhóm' : 'bài'}
                 questionCount={countBySkill[skill]}
+                testUsageLabel={getSkillTestUsageLabel(skill, chapterQuizConfig)}
                 selected={activeSkill === skill}
                 disabled={disabled}
                 hasError={errorBySkill[skill]}

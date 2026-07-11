@@ -15,6 +15,7 @@ import {
 import {
   COURSE_QUIZ_CHAPTER_ID,
   getChapterQuizConfigTotal,
+  hasConfiguredQuizSources,
   getRequiredChapterIdsFromConfig,
   evaluateQuizPrerequisites,
 } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
@@ -214,7 +215,7 @@ export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
   const config = configRes.ok ? configRes.config : null;
 
-  if (config?.enabled && getChapterQuizConfigTotal(config) > 0) {
+  if (config?.enabled && hasConfiguredQuizSources(config)) {
     const paperRes = buildTestPaper(courseId, scope, chapterId, config);
     const totalQuestions = paperRes.ok ? paperRes.paper.totalQuestions : getChapterQuizConfigTotal(config);
     const prerequisiteStatus = scope === 'final'
@@ -261,7 +262,7 @@ export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
   let isDemo = false;
   let gradingQuestions = [];
 
-  if (config?.enabled && getChapterQuizConfigTotal(config) > 0) {
+  if (config?.enabled && hasConfiguredQuizSources(config)) {
     const prerequisiteStatus = scope === 'final'
       ? { ok: true, blockers: [] }
       : await resolvePrerequisiteStatus(courseId, config);

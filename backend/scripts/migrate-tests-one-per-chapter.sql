@@ -10,11 +10,12 @@
 --
 -- When implementing API, map UI config like this:
 --   Tests              : 1 row per chapter quiz OR 1 course quiz per course
---   Test_Config        : DurationMinutes, MaxAttempts, PickMode=RANDOM
+--                        HasPrerequisite = 1 when Test_Prerequisites has rows
+--   Test_Prerequisites : TestId -> PrerequisiteTestId (join check khi HasPrerequisite = 1)
+--   Test_Config        : DurationMinutes, MaxAttempts, UpdatedBy, UpdatedAt
 --   Test_Pass_Config   : MinPassScore (= passingScore)
---   Test_Config_Section : per Question_Sections.SectionId + QuestionQuantity
---       - WRITING: one row per selected sectionGroup (sectionTempId -> SectionId)
---       - LISTENING/READING: split questionCount across bank sections of that skill
+--   Test_Config_Section : TypeId + QuestionQuantity (Nghe/Đọc: số section; Từ vựng/Ngữ pháp: số câu) + BankSectionId (chỉ TypeId=3)
+--       Không tham chiếu Question_Sections — ngân hàng câu hỏi độc lập, resolve lúc runtime.
 --
 -- Until then use rollback-tests-ui-migration.sql to undo partial runs.
 

@@ -1,19 +1,10 @@
 const questionBankModel = require('../Models/questionBankModel');
 const questionBankSaveService = require('../services/questionBankSaveService');
 const questionBankSaveModel = require('../Models/questionBankSaveModel');
+const { normalizeSectionSkillType } = require('../utils/sectionSkillType');
 
-
-
-const SKILL_TYPE_MAP = {
-    LISTENING: 'LISTENING',
-    READING: 'READING',
-    VOCABULARY: 'VOCABULARY',
-    WRITING: 'VOCABULARY',
-};
-
-function normalizeSkillType(rawName) {
-    const name = String(rawName ?? '').trim().toUpperCase();
-    return SKILL_TYPE_MAP[name] ?? 'VOCABULARY';
+function normalizeSkillType(rawName, typeId = null) {
+    return normalizeSectionSkillType(rawName, typeId);
 }
 
 
@@ -38,7 +29,7 @@ function groupQuestionsWithChoices(rows = []) {
 
                 typeId: row.TypeId,
 
-                skillType: normalizeSkillType(row.SkillType),
+                skillType: normalizeSkillType(row.SkillType, row.TypeId),
 
                 sourceUrl: row.SourceUrl ?? null,
 
@@ -135,7 +126,8 @@ const getChapterSections = async (req, res) => {
 
         const rows = await questionBankModel.getSectionsByPath(courseId, pathId);
 
-        const questionPathId = rows[0]?.QuestionPathId ?? null;
+        const questionPathId = rows[0]?.QuestionPathId
+            ?? await questionBankSaveModel.findQuestionPathId(courseId, pathId);
 
 
 
@@ -149,7 +141,7 @@ const getChapterSections = async (req, res) => {
 
             typeId: row.TypeId,
 
-            skillType: normalizeSkillType(row.SkillType),
+            skillType: normalizeSkillType(row.SkillType, row.TypeId),
 
             order: row.SectionOrder,
 
@@ -402,6 +394,7 @@ const createSectionSave = async (req, res) => {
                 questionIdMap: result.questionIdMap,
                 choiceIdMap: result.choiceIdMap ?? [],
                 sourceUrl: result.sourceUrl ?? null,
+                sectionOrder: result.sectionOrder ?? null,
             },
         });
     } catch (error) {

@@ -580,8 +580,14 @@ export default function MentorCourseContentSidebar({
 
   const handleChapterClick = useCallback((pathTempId) => {
     setExpandedChapterId((prev) => (prev === pathTempId ? prev : pathTempId));
+    if (
+      focusTarget?.type === 'chapter-edit'
+      && focusTarget.pathTempId === pathTempId
+    ) {
+      return;
+    }
     onSelectChapter?.(pathTempId);
-  }, [onSelectChapter]);
+  }, [focusTarget, onSelectChapter]);
 
   const handleToggleChapter = useCallback((event, pathTempId) => {
     event.stopPropagation();
@@ -593,8 +599,15 @@ export default function MentorCourseContentSidebar({
 
   const handleNodeClick = useCallback((pathTempId, nodeTempId) => {
     setExpandedNodeId((prev) => (prev === nodeTempId ? prev : nodeTempId));
+    if (
+      focusTarget?.type === 'lesson'
+      && focusTarget.pathTempId === pathTempId
+      && focusTarget.nodeTempId === nodeTempId
+    ) {
+      return;
+    }
     onSelectNode?.(pathTempId, nodeTempId);
-  }, [onSelectNode]);
+  }, [focusTarget, onSelectNode]);
 
   const handleToggleNode = useCallback((event, pathTempId, nodeTempId) => {
     event.stopPropagation();

@@ -195,10 +195,24 @@ const choiceBelongsToQuestion = async (choiceId, questionId, transaction = null)
   return result.recordset.length > 0;
 };
 
+async function getNextSectionOrder(questionPathId, typeId, transaction = null) {
+  const request = createRequest(transaction);
+  request.input('questionPathId', sql.Int, Number(questionPathId));
+  request.input('typeId', sql.Int, Number(typeId));
+  const result = await request.query(`
+    SELECT ISNULL(MAX([Order]), 0) + 1 AS NextOrder
+    FROM dbo.Question_Sections WITH (UPDLOCK, HOLDLOCK)
+    WHERE Question_Path_Id = @questionPathId
+      AND TypeId = @typeId
+  `);
+  return Number(result.recordset[0]?.NextOrder) || 1;
+}
+
 module.exports = {
   resolveQuestionPathId,
   ensureQuestionPathForCourseChapter,
   findQuestionPathId,
   questionBelongsToSection,
   choiceBelongsToQuestion,
+  getNextSectionOrder,
 };

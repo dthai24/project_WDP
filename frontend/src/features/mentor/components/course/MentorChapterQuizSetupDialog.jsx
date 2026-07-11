@@ -41,9 +41,13 @@ import {
   getDefaultCourseQuizConfig,
   hasChapterQuizConfigErrors,
   syncChapterQuizConfigWithStats,
-  patchQuestionConfig,
+  patchSectionCountConfig,
+  patchSectionQuestionCountConfig,
   validateChapterQuizConfig,
-  getQuestionCountForPart,
+  getSectionCountForPart,
+  getSectionQuestionCountForSection,
+  getChapterQuizConfigSummary,
+  isSkillSectionRandomPick,
   aggregateCourseStatsByChapterIds,
   getSelectedChapterIdsFromConfig,
   initCourseQuizChapterSelection,
@@ -237,7 +241,7 @@ function CourseChapterSelector({
   );
 }
 
-function SkillTestSectionList({ groups = [] }) {
+function SkillTestSectionList({ groups = [], children = null }) {
   if (groups.length === 0) {
     return (
       <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5, mt: 1 }}>
@@ -252,7 +256,7 @@ function SkillTestSectionList({ groups = [] }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1 }}>
       <Typography sx={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>
-        Section lấy từ ngân hàng câu hỏi chương này (IsUseForTest):
+        Section lấy từ ngân hàng câu hỏi (IsUseForTest):
       </Typography>
 
       {inTestGroups.map((group) => (
@@ -273,6 +277,7 @@ function SkillTestSectionList({ groups = [] }) {
               ? `${group.availableCount} câu đang bật · Dùng trong bài kiểm tra`
               : 'Section chưa có câu đang bật'}
           </Typography>
+          {children ? children(group) : null}
         </Box>
       ))}
 
@@ -295,6 +300,29 @@ function SkillTestSectionList({ groups = [] }) {
           </Typography>
         </Box>
       ))}
+    </Box>
+  );
+}
+
+function SectionQuestionCountInput({
+  value,
+  max = 0,
+  disabled = false,
+  hasError = false,
+  onChange,
+}) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.85 }}>
+      <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
+      <InputBase
+        type="number"
+        inputProps={{ min: 0, max }}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        disabled={disabled}
+        sx={countInputSx(hasError)}
+      />
+      <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu random</Typography>
     </Box>
   );
 }
@@ -336,7 +364,8 @@ export default function MentorChapterQuizSetupDialog({
 
   const hasAnyCourseBank = Boolean(allCourseStats?.hasBank);
   const hasBank = isCourseScope ? hasAnyCourseBank : Boolean(stats?.hasBank);
-  const totalQuestions = getChapterQuizConfigTotal(config ?? {});
+  const totalQuestions = getChapterQuizConfigTotal(config ?? {}, stats);
+  const configSummary = getChapterQuizConfigSummary(config ?? {});
   const courseHasSelectedChapters = !isCourseScope || selectedChapterIds.length > 0;
 
   const loadData = useCallback(async () => {
@@ -475,11 +504,21 @@ export default function MentorChapterQuizSetupDialog({
     handleFieldChange({ [key]: value });
   };
 
-  const handleSkillCountChange = (part, rawValue) => {
-    setConfig((prev) => patchQuestionConfig(prev, part, rawValue));
+  const handleSectionCountChange = (part, rawValue) => {
+    setConfig((prev) => patchSectionCountConfig(prev, part, rawValue));
     setErrors((prev) => {
       const next = { ...prev };
       delete next[part];
+      delete next._total;
+      return next;
+    });
+  };
+
+  const handleSectionQuestionCountChange = (part, sectionTempId, rawValue) => {
+    setConfig((prev) => patchSectionQuestionCountConfig(prev, part, sectionTempId, rawValue));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[`${part}.${sectionTempId}`];
       delete next._total;
       return next;
     });
@@ -622,8 +661,8 @@ export default function MentorChapterQuizSetupDialog({
             </Typography>
             <Typography sx={{ fontSize: 13, color: MUTED, mt: 0.35, lineHeight: 1.5 }}>
               {isCourseScope
-                ? 'Chọn chương và cấu hình số câu hỏi random từ ngân hàng câu hỏi của các chương đã chọn.'
-                : 'Cấu hình số câu hỏi được random từ ngân hàng câu hỏi của chương này.'}
+                ? 'Chọn chương và cấu hình số section/câu random từ ngân hàng câu hỏi của các chương đã chọn.'
+                : 'Cấu hình số section random (Nghe/Đọc) hoặc số câu random theo section (Từ vựng/Ngữ pháp).'}
             </Typography>
           </Box>
         </Box>
@@ -799,8 +838,8 @@ export default function MentorChapterQuizSetupDialog({
             <SectionTitle>Nguồn câu hỏi</SectionTitle>
             <Typography sx={{ fontSize: 12, color: MUTED, mb: 1.25, lineHeight: 1.5 }}>
               {isCourseScope
-                ? 'Random các câu hỏi đang bật "Dùng trong bài kiểm tra" (IsUseForTest) từ ngân hàng của các chương đã chọn.'
-                : 'Chỉ random các câu hỏi đang bật "Dùng trong bài kiểm tra" (IsUseForTest) trong ngân hàng câu hỏi.'}
+                ? 'Random từ các section/câu đang bật "Dùng trong bài kiểm tra" (IsUseForTest) trong ngân hàng các chương đã chọn.'
+                : 'Nghe/Đọc: random section. Từ vựng/Ngữ pháp: random câu trong từng section được dùng trong bài kiểm tra.'}
             </Typography>
 
             {isCourseScope && !courseHasSelectedChapters ? (
@@ -817,13 +856,15 @@ export default function MentorChapterQuizSetupDialog({
               {CHAPTER_QUIZ_SKILLS.map((part) => {
                 const chip = TEST_SKILL_CHIP_COLORS[part];
                 const available = stats?.questionCountBySkill?.[part] ?? 0;
-                const count = getQuestionCountForPart(config ?? {}, part);
-                const fieldError = errors[part];
                 const sectionGroups = getSkillSectionGroupsFromStats(stats, part);
                 const hasSectionList = sectionGroups.length > 0;
                 const inTestSectionCount = sectionGroups.filter(
                   (group) => group.isUseForTest !== false,
                 ).length;
+                const isSectionPick = isSkillSectionRandomPick(part);
+                const sectionCount = getSectionCountForPart(config ?? {}, part);
+                const fieldError = errors[part];
+                const inputsDisabled = saving || !config?.enabled || !courseHasSelectedChapters;
 
                 return (
                   <Box
@@ -845,27 +886,64 @@ export default function MentorChapterQuizSetupDialog({
                         {TEST_SKILL_QB_LABELS[part]}
                       </Typography>
                       <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>
-                        {hasSectionList
-                          ? `${inTestSectionCount} section dùng trong bài kiểm tra · Có ${available} câu đang bật`
-                          : `Có ${available} câu đang bật`}
+                        {isSectionPick
+                          ? hasSectionList
+                            ? `${inTestSectionCount} section dùng trong bài kiểm tra · Có ${available} câu đang bật`
+                            : `Có ${available} câu đang bật`
+                          : hasSectionList
+                            ? `${inTestSectionCount} section dùng trong bài kiểm tra · Cấu hình số câu random theo section`
+                            : `Có ${available} câu đang bật`}
                       </Typography>
 
-                      {hasSectionList ? (
-                        <SkillTestSectionList groups={sectionGroups} />
-                      ) : null}
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                        <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>Lấy</Typography>
-                        <InputBase
-                          type="number"
-                          inputProps={{ min: 0, max: available }}
-                          value={count}
-                          onChange={(e) => handleSkillCountChange(part, e.target.value)}
-                          disabled={saving || !config?.enabled || !courseHasSelectedChapters}
-                          sx={countInputSx(Boolean(fieldError))}
-                        />
-                        <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>câu</Typography>
-                      </Box>
+                      {isSectionPick ? (
+                        <>
+                          {hasSectionList ? <SkillTestSectionList groups={sectionGroups} /> : null}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                            <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>
+                              Lấy
+                            </Typography>
+                            <InputBase
+                              type="number"
+                              inputProps={{ min: 0, max: inTestSectionCount }}
+                              value={sectionCount}
+                              onChange={(e) => handleSectionCountChange(part, e.target.value)}
+                              disabled={inputsDisabled}
+                              sx={countInputSx(Boolean(fieldError))}
+                            />
+                            <Typography sx={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>
+                              section random
+                            </Typography>
+                          </Box>
+                        </>
+                      ) : (
+                        <SkillTestSectionList groups={sectionGroups}>
+                          {(group) => (
+                            <>
+                              <SectionQuestionCountInput
+                                value={getSectionQuestionCountForSection(
+                                  config ?? {},
+                                  part,
+                                  group.sectionTempId,
+                                )}
+                                max={group.availableCount ?? 0}
+                                disabled={inputsDisabled}
+                                hasError={Boolean(errors[`${part}.${group.sectionTempId}`])}
+                                onChange={(rawValue) =>
+                                  handleSectionQuestionCountChange(
+                                    part,
+                                    group.sectionTempId,
+                                    rawValue,
+                                  )}
+                              />
+                              {errors[`${part}.${group.sectionTempId}`] ? (
+                                <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.5, lineHeight: 1.45 }}>
+                                  {errors[`${part}.${group.sectionTempId}`]}
+                                </Typography>
+                              ) : null}
+                            </>
+                          )}
+                        </SkillTestSectionList>
+                      )}
 
                       {fieldError && (
                         <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 0.75, lineHeight: 1.45 }}>
@@ -885,8 +963,15 @@ export default function MentorChapterQuizSetupDialog({
                 bgcolor: 'rgba(15,23,42,0.04)',
               }}
             >
-              <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT }}>
-                Tổng số câu: {totalQuestions}
+              <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, mb: 0.35 }}>
+                Tổng ước tính: {totalQuestions} câu
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
+                Nghe: {configSummary.listeningSections} section
+                {' · '}
+                Đọc: {configSummary.readingSections} section
+                {' · '}
+                Từ vựng/Ngữ pháp: {configSummary.vocabularyQuestions} câu
               </Typography>
             </Box>
           </>

@@ -1,10 +1,23 @@
 /**
- * Mock service — cấu hình Quiz/Test theo chương (localStorage).
- * TODO: replace bằng API khi backend sẵn sàng.
+ * Cấu hình Quiz/Test theo chương — chapter: API; course quiz: localStorage (tạm).
  */
-import { getDefaultChapterQuizConfig, getDefaultCourseQuizConfig, COURSE_QUIZ_CHAPTER_ID } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
+import axios from 'axios';
+import { getUser } from '@/features/auth/utils/authUtils';
+import {
+  getDefaultChapterQuizConfig,
+  getDefaultCourseQuizConfig,
+  COURSE_QUIZ_CHAPTER_ID,
+} from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
 const STORAGE_KEY = 'mentor_chapter_quiz_configs_v1';
+
+function getAuthHeaders() {
+  const userId = getUser()?.userId;
+  const headers = { 'Content-Type': 'application/json' };
+  if (userId) headers['x-user-id'] = String(userId);
+  return headers;
+}
 
 function configKey(courseId, chapterId) {
   return `${courseId}_${chapterId}`;
@@ -27,13 +40,6 @@ function saveAllConfigs(map) {
   }
 }
 
-function nextConfigId(map) {
-  const ids = Object.values(map)
-    .map((item) => Number(item?.id))
-    .filter((id) => Number.isFinite(id) && id > 0);
-  return ids.length > 0 ? Math.max(...ids) + 1 : 1;
-}
-
 export async function getChapterQuizConfig(courseId, chapterId, meta = {}) {
   if (courseId == null || chapterId == null) {
     return {
@@ -42,23 +48,40 @@ export async function getChapterQuizConfig(courseId, chapterId, meta = {}) {
     };
   }
 
-  const map = loadAllConfigs();
-  const key = configKey(courseId, chapterId);
-  const stored = map[key];
+  try {
+    const { data: payload } = await axios.get(
+      `${API_BASE}/mentor/courses/${encodeURIComponent(courseId)}/paths/${encodeURIComponent(chapterId)}/chapter-quiz-config`,
+      { headers: getAuthHeaders() },
+    );
 
-  if (stored) {
-    return { ok: true, config: stored };
+    if (payload.success === false) {
+      return {
+        ok: false,
+        message: payload.message ?? 'Không tải được thiết lập kiểm tra.',
+      };
+    }
+
+    const stored = payload.data?.config;
+    if (stored) {
+      return { ok: true, config: stored };
+    }
+
+    return {
+      ok: true,
+      config: getDefaultChapterQuizConfig({
+        courseId,
+        chapterId,
+        chapterTitle: meta.chapterTitle,
+        chapterIndex: meta.chapterIndex,
+      }),
+    };
+  } catch (error) {
+    console.error('getChapterQuizConfig error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải thiết lập kiểm tra.',
+    };
   }
-
-  return {
-    ok: true,
-    config: getDefaultChapterQuizConfig({
-      courseId,
-      chapterId,
-      chapterTitle: meta.chapterTitle,
-      chapterIndex: meta.chapterIndex,
-    }),
-  };
 }
 
 export async function saveChapterQuizConfig(config) {
@@ -66,30 +89,42 @@ export async function saveChapterQuizConfig(config) {
     return { ok: false, message: 'Thiếu thông tin khóa học hoặc chương' };
   }
 
-  const map = loadAllConfigs();
-  const key = configKey(config.courseId, config.chapterId);
-  const now = new Date().toISOString();
-  const existing = map[key];
+  try {
+    const { data: payload } = await axios.put(
+      `${API_BASE}/mentor/courses/${encodeURIComponent(config.courseId)}/paths/${encodeURIComponent(config.chapterId)}/chapter-quiz-config`,
+      { config },
+      { headers: getAuthHeaders() },
+    );
 
-  const saved = {
-    ...config,
-    id: existing?.id ?? nextConfigId(map),
-    updatedAt: now,
-  };
+    if (payload.success === false) {
+      return {
+        ok: false,
+        message: payload.message ?? 'Không thể lưu thiết lập',
+      };
+    }
 
-  map[key] = saved;
-  saveAllConfigs(map);
-
-  return { ok: true, config: saved };
+    return {
+      ok: true,
+      config: payload.data?.config ?? config,
+    };
+  } catch (error) {
+    console.error('saveChapterQuizConfig error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi lưu thiết lập kiểm tra.',
+    };
+  }
 }
 
 export async function getCourseQuizConfig(courseId, meta = {}) {
-  const res = await getChapterQuizConfig(courseId, COURSE_QUIZ_CHAPTER_ID, {
-    chapterTitle: meta.courseTitle,
-    chapterIndex: 0,
-  });
-  if (!res.ok) return res;
-  if (res.config?.updatedAt) return res;
+  const map = loadAllConfigs();
+  const key = configKey(courseId, COURSE_QUIZ_CHAPTER_ID);
+  const stored = map[key];
+
+  if (stored) {
+    return { ok: true, config: stored };
+  }
+
   return {
     ok: true,
     config: getDefaultCourseQuizConfig({
@@ -100,16 +135,46 @@ export async function getCourseQuizConfig(courseId, meta = {}) {
 }
 
 export async function saveCourseQuizConfig(config) {
-  return saveChapterQuizConfig({
+  const map = loadAllConfigs();
+  const key = configKey(config.courseId, COURSE_QUIZ_CHAPTER_ID);
+  const now = new Date().toISOString();
+  const existing = map[key];
+  const saved = {
     ...config,
     chapterId: COURSE_QUIZ_CHAPTER_ID,
-  });
+    id: existing?.id ?? null,
+    updatedAt: now,
+  };
+  map[key] = saved;
+  saveAllConfigs(map);
+  return { ok: true, config: saved };
 }
 
 export async function getChapterQuizConfigsByCourse(courseId) {
-  const map = loadAllConfigs();
-  const configs = Object.values(map).filter(
-    (item) => String(item?.courseId) === String(courseId),
-  );
-  return { ok: true, configs };
+  try {
+    const { data: payload } = await axios.get(
+      `${API_BASE}/mentor/courses/${encodeURIComponent(courseId)}/chapter-quiz-configs`,
+      { headers: getAuthHeaders() },
+    );
+
+    if (payload.success === false) {
+      return {
+        ok: false,
+        message: payload.message ?? 'Không tải được danh sách thiết lập kiểm tra.',
+        configs: [],
+      };
+    }
+
+    return {
+      ok: true,
+      configs: payload.data?.configs ?? [],
+    };
+  } catch (error) {
+    console.error('getChapterQuizConfigsByCourse error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải danh sách thiết lập.',
+      configs: [],
+    };
+  }
 }

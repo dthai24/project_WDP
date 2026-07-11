@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Chip, Switch, Typography } from '@mui/material';
+import { Box, Chip, Switch, Tooltip, Typography } from '@mui/material';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import AppButton from '@/shared/ui/AppButton';
@@ -17,6 +17,9 @@ export default function MentorTestQuestionCard({
   accentColor,
   disabled = false,
   contentLocked = false,
+  hideDelete = false,
+  useForTestLocked = false,
+  useForTestLockMessage = '',
   showActiveToggle = false,
   collapsibleChoices = false,
   contentChanged = false,
@@ -109,24 +112,32 @@ export default function MentorTestQuestionCard({
 
         {showActiveToggle ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
-            <Switch
-              size="small"
-              checked={isActive}
-              onChange={handleActiveToggle}
-              disabled={disabled}
-              inputProps={{
-                'aria-label': collapsibleChoices
-                  ? 'Dùng câu hỏi trong bài kiểm tra'
-                  : 'Bật câu hỏi cho quiz mới',
-              }}
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: accentColor },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                  bgcolor: accentColor,
-                  opacity: 0.5,
-                },
-              }}
-            />
+            <Tooltip
+              title={useForTestLockMessage}
+              arrow
+              disableHoverListener={!useForTestLocked}
+            >
+              <span>
+                <Switch
+                  size="small"
+                  checked={isActive}
+                  onChange={handleActiveToggle}
+                  disabled={disabled || useForTestLocked}
+                  inputProps={{
+                    'aria-label': collapsibleChoices
+                      ? 'Dùng câu hỏi trong bài kiểm tra'
+                      : 'Bật câu hỏi cho quiz mới',
+                  }}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: accentColor },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      bgcolor: accentColor,
+                      opacity: 0.5,
+                    },
+                  }}
+                />
+              </span>
+            </Tooltip>
             <Typography sx={{ fontSize: 12, fontWeight: 600, color: MUTED, userSelect: 'none' }}>
               {collapsibleChoices ? 'Dùng trong bài kiểm tra' : 'Dùng cho quiz'}
             </Typography>
@@ -156,7 +167,7 @@ export default function MentorTestQuestionCard({
 
         <Box sx={{ flex: 1 }} />
 
-        {!contentLocked ? (
+        {!contentLocked && !hideDelete ? (
           <Box
             component="button"
             type="button"

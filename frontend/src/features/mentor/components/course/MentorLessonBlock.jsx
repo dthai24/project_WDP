@@ -8,6 +8,9 @@ import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import {
   countLearningMaterials,
   filterLearningMaterials,
+  getLessonPublishBlockReason,
+  isNodeActive,
+  lessonCanPublish,
   lessonHasContent,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { NodePublishToggle } from './MentorPublishToggles';
@@ -48,6 +51,9 @@ export default function MentorLessonBlock({
 }) {
   const materials = filterLearningMaterials(node.Materials ?? node.materials ?? []);
   const materialCount = countLearningMaterials(materials);
+  const lessonPublishBlockReason = !isNodeActive(node) && !lessonCanPublish(node)
+    ? getLessonPublishBlockReason(node)
+    : null;
   const canReorder = materialCount > 1 && !disabled;
 
   const [dragIndex, setDragIndex] = useState(null);
@@ -105,7 +111,12 @@ export default function MentorLessonBlock({
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT }}>
             Xuất bản bài học
           </Typography>
-          <NodePublishToggle node={node} onChange={onChange} disabled={disabled} />
+          <NodePublishToggle
+            node={node}
+            onChange={onChange}
+            disabled={disabled}
+            publishBlockReason={lessonPublishBlockReason}
+          />
         </Box>
       ) : null}
 

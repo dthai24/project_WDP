@@ -18,6 +18,7 @@ import MentorQuestionBankSkillNav from '@/features/mentor/components/questionBan
 import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
+  TEST_SKILL_VOCABULARY,
   countActiveQuestionsBySkill,
   createQuestionBankSection,
   createQuestionBankSkillSections,
@@ -35,6 +36,8 @@ import {
   SECTION_USE_FOR_TEST_FILTER,
   countSectionsByUseForTest,
   filterSectionsByUseForTest,
+  validateSectionUseForTestRule,
+  SECTION_USE_FOR_TEST_REQUIRES_QUESTION_MESSAGE,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
   buildSectionBaselinesMap,
@@ -56,6 +59,8 @@ import useQuestionBankSectionCommit from '@/features/mentor/hooks/useQuestionBan
 import { saveQuestionBankSection } from '@/features/mentor/services/questionBankService';
 import { uploadTextMaterial } from '@/features/mentor/services/materialUploadService';
 import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
+import { getChapterQuizConfig } from '@/features/mentor/services/chapterQuizConfigService';
+import { validateListeningReadingPublishedSectionQuota, validateVocabularySectionQuestionQuota, isSkillSectionRandomPick } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import { useNavigationGuard } from '@/context/NavigationGuardContext';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
@@ -94,6 +99,7 @@ export default function MentorQuestionBankManagePage() {
   const [sectionUseForTestFilter, setSectionUseForTestFilter] = useState(
     SECTION_USE_FOR_TEST_FILTER.ALL,
   );
+  const [chapterQuizConfig, setChapterQuizConfig] = useState(null);
   const {
     bindSectionControls,
     flushActiveSection,
@@ -125,16 +131,18 @@ export default function MentorQuestionBankManagePage() {
     (async () => {
       setLoading(true);
       try {
-        const [resCourse, resPaths, resSections] = await Promise.all([
+        const [resCourse, resPaths, resSections, resQuizConfig] = await Promise.all([
           axios.get(`${API_BASE}/api/courses/my-courses/${courseId}`, { params: { tab: 'course' } }),
           axios.get(`${API_BASE}/api/courses/my-courses/${courseId}/chapters`),
           axios.get(`${API_BASE}/api/question-bank/courses/${courseId}/paths/${pathId}/sections`),
+          getChapterQuizConfig(courseId, pathId),
         ]);
 
         if (cancelled) return;
 
         setCourse(resCourse.data?.data?.[0] ?? null);
         setCoursePaths(resPaths.data?.data?.Paths ?? []);
+        setChapterQuizConfig(resQuizConfig?.ok ? resQuizConfig.config ?? null : null);
 
         const sectionPayload = resSections.data;
         if (sectionPayload?.success === false) {
@@ -486,6 +494,59 @@ export default function MentorQuestionBankManagePage() {
     const section = sectionsRef.current.find((s) => s.tempId === activeSectionId) ?? activeSection;
     if (!section) return;
 
+    const useForTestError = validateSectionUseForTestRule(section);
+    if (useForTestError.isUseForTest) {
+      setSectionErrors((prev) => ({
+        ...prev,
+        [section.tempId]: {
+          ...(prev[section.tempId] ?? {}),
+          isUseForTest: useForTestError.isUseForTest,
+        },
+      }));
+      toast.error(SECTION_USE_FOR_TEST_REQUIRES_QUESTION_MESSAGE);
+      return;
+    }
+
+    if (isSkillSectionRandomPick(section.SkillType)) {
+      const quotaError = validateListeningReadingPublishedSectionQuota(
+        sectionsRef.current,
+        section.SkillType,
+        chapterQuizConfig,
+      );
+      if (quotaError.isUseForTest) {
+        setSectionErrors((prev) => ({
+          ...prev,
+          [section.tempId]: {
+            ...(prev[section.tempId] ?? {}),
+            isUseForTest: quotaError.isUseForTest,
+          },
+        }));
+        toast.error(quotaError.isUseForTest);
+        setSavePreviewOpen(false);
+        savePreviewReadingTextRef.current = null;
+        savePayloadRef.current = null;
+        return;
+      }
+    }
+
+    if (section.SkillType === TEST_SKILL_VOCABULARY) {
+      const vocabQuotaError = validateVocabularySectionQuestionQuota(section, chapterQuizConfig);
+      if (vocabQuotaError.isUseForTest || vocabQuotaError._questions) {
+        setSectionErrors((prev) => ({
+          ...prev,
+          [section.tempId]: {
+            ...(prev[section.tempId] ?? {}),
+            ...vocabQuotaError,
+          },
+        }));
+        toast.error(vocabQuotaError.isUseForTest ?? vocabQuotaError._questions);
+        setSavePreviewOpen(false);
+        savePreviewReadingTextRef.current = null;
+        savePayloadRef.current = null;
+        return;
+      }
+    }
+
     const normalized = normalizeQuestionBankSectionForSave(section);
     const previewPayload = savePayloadRef.current ?? buildQuestionBankSectionSavePayload(
       section,
@@ -818,6 +879,7 @@ export default function MentorQuestionBankManagePage() {
           sections={visibleSections}
           activeSkill={activeSkill}
           sectionErrors={sectionErrors}
+          chapterQuizConfig={chapterQuizConfig}
           onSkillChange={handleSkillSelect}
         />
 
@@ -850,6 +912,7 @@ export default function MentorQuestionBankManagePage() {
             updatingSection={updatingSectionId === activeSectionId}
             questionCount={questionCount}
             coursePublished={Boolean(course?.IsPublished)}
+            chapterQuizConfig={chapterQuizConfig}
             onSectionSelect={handleSectionSelect}
             onAddBai={handleAddBai}
             onSectionChange={handleSectionChange}
@@ -871,6 +934,7 @@ export default function MentorQuestionBankManagePage() {
             selectedChapterId={pathId}
             chapterError={errors.pathId}
             courseId={courseId}
+            chapterQuizConfig={chapterQuizConfig}
             onChapterSelect={handlePathSelect}
           />
         </Box>

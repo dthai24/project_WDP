@@ -1,5 +1,11 @@
--- Remove shuffle feature from Test_Config (aligned with UI: no shuffle questions/answers).
--- App does not read these columns yet; safe when Test_Config is empty or unused.
+-- Add Tests.HasPrerequisite (BIT)
+--
+--   0 = bài test không yêu cầu điều kiện tiên quyết
+--   1 = bài test có điều kiện tiên quyết (phải hoàn thành trước khi được phép làm)
+--
+-- Chi tiết chương tiên quyết lưu ở dbo.Test_Prerequisites (join để check khi HasPrerequisite = 1).
+-- UI hiện tại: requiredChapterIds.length > 0 -> HasPrerequisite = 1
+--
 -- Idempotent — safe to re-run.
 
 USE [LearningPath_Base];
@@ -9,24 +15,26 @@ IF OBJECT_ID(N'dbo.vw_Test_Config_Summary', N'V') IS NOT NULL
     DROP VIEW dbo.vw_Test_Config_Summary;
 GO
 
-IF EXISTS (
-    SELECT 1 FROM sys.default_constraints WHERE name = N'DF_Test_Config_ShuffleQ'
-)
-    ALTER TABLE dbo.Test_Config DROP CONSTRAINT DF_Test_Config_ShuffleQ;
+IF COL_LENGTH('dbo.Tests', 'HasPrerequisite') IS NULL
+BEGIN
+    ALTER TABLE dbo.Tests
+    ADD HasPrerequisite BIT NOT NULL
+        CONSTRAINT DF_Tests_HasPrerequisite DEFAULT (0);
+END
 GO
 
-IF EXISTS (
-    SELECT 1 FROM sys.default_constraints WHERE name = N'DF_Test_Config_ShuffleC'
-)
-    ALTER TABLE dbo.Test_Config DROP CONSTRAINT DF_Test_Config_ShuffleC;
-GO
-
-IF COL_LENGTH('dbo.Test_Config', 'ShuffleQuestions') IS NOT NULL
-    ALTER TABLE dbo.Test_Config DROP COLUMN ShuffleQuestions;
-GO
-
-IF COL_LENGTH('dbo.Test_Config', 'ShuffleChoices') IS NOT NULL
-    ALTER TABLE dbo.Test_Config DROP COLUMN ShuffleChoices;
+-- Backfill from prerequisite link table when present.
+IF OBJECT_ID(N'dbo.Test_Prerequisites', N'U') IS NOT NULL
+BEGIN
+    UPDATE t
+    SET t.HasPrerequisite = 1
+    FROM dbo.Tests t
+    WHERE EXISTS (
+        SELECT 1
+        FROM dbo.Test_Prerequisites tp
+        WHERE tp.TestId = t.TestId
+    );
+END
 GO
 
 CREATE VIEW dbo.vw_Test_Config_Summary
@@ -56,5 +64,5 @@ LEFT JOIN dbo.Test_Pass_Config pc ON pc.[TestId] = t.[TestId]
 LEFT JOIN dbo.Test_Config tc ON tc.[TestId] = t.[TestId];
 GO
 
-PRINT 'OK: drop-test-config-shuffle-columns';
+PRINT 'OK: add-tests-has-prerequisite';
 GO

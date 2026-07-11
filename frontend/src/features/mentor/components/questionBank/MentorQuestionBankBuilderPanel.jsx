@@ -23,8 +23,22 @@ import {
   getSectionDisplayQuestionCount,
   hasSectionUnsavedChanges,
 } from '@/features/mentor/utils/questionBankApiMappers';
+import {
+  getListeningReadingTestSectionCountLabel,
+  getVocabularySectionTestUsage,
+} from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 
-function BaiTab({ label, selected, disabled, accentColor, hasContent = false, isDirty = false, onClick }) {
+function BaiTab({
+  label,
+  selected,
+  disabled,
+  accentColor,
+  hasContent = false,
+  isDirty = false,
+  testUsageLabel = null,
+  inTest = false,
+  onClick,
+}) {
   const StatusIcon = hasContent ? CheckCircleOutlineRoundedIcon : RadioButtonUncheckedRoundedIcon;
   const statusColor = hasContent ? '#047857' : alpha(MUTED, 0.85);
 
@@ -70,6 +84,25 @@ function BaiTab({ label, selected, disabled, accentColor, hasContent = false, is
       <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
         {label}
       </Box>
+      {inTest && testUsageLabel ? (
+        <Box
+          component="span"
+          sx={{
+            flexShrink: 0,
+            px: 0.65,
+            py: 0.1,
+            borderRadius: '999px',
+            bgcolor: 'rgba(5,150,105,0.12)',
+            color: '#047857',
+            fontSize: 10,
+            fontWeight: 700,
+            lineHeight: 1.4,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {testUsageLabel}
+        </Box>
+      ) : null}
       {isDirty ? (
         <Box
           component="span"
@@ -92,9 +125,9 @@ const SECTION_USE_FOR_TEST_FILTER_OPTIONS = [
   { value: SECTION_USE_FOR_TEST_FILTER.NOT_IN_TEST, label: 'Không dùng trong test', countKey: 'notInTest' },
 ];
 
-function SectionUseForTestFilterRow({ value, counts, onChange }) {
+function SectionUseForTestFilterRow({ value, counts, onChange, disabled = false }) {
   return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5, opacity: disabled ? 0.55 : 1 }}>
       {SECTION_USE_FOR_TEST_FILTER_OPTIONS.map((option) => {
         const selected = value === option.value;
         const count = counts?.[option.countKey] ?? 0;
@@ -104,7 +137,11 @@ function SectionUseForTestFilterRow({ value, counts, onChange }) {
             key={option.value}
             component="button"
             type="button"
-            onClick={() => onChange?.(option.value)}
+            disabled={disabled}
+            onClick={() => {
+              if (disabled) return;
+              onChange?.(option.value);
+            }}
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -118,9 +155,9 @@ function SectionUseForTestFilterRow({ value, counts, onChange }) {
               fontSize: 12,
               fontWeight: selected ? 700 : 500,
               fontFamily: 'inherit',
-              cursor: 'pointer',
+              cursor: disabled ? 'default' : 'pointer',
               transition: 'all 0.15s',
-              '&:hover': { borderColor: alpha(PRIMARY, 0.3) },
+              '&:hover': disabled ? undefined : { borderColor: alpha(PRIMARY, 0.3) },
             }}
           >
             <Box component="span">{option.label}</Box>
@@ -159,6 +196,7 @@ export default function MentorQuestionBankBuilderPanel({
   sectionUseForTestFilter = SECTION_USE_FOR_TEST_FILTER.ALL,
   sectionUseForTestCounts = { all: 0, inTest: 0, notInTest: 0 },
   onSectionUseForTestFilterChange,
+  sectionUseForTestFilterDisabled = false,
   sectionErrors = {},
   sectionBaselines = {},
   sectionSourceBaselines = {},
@@ -169,6 +207,7 @@ export default function MentorQuestionBankBuilderPanel({
   emptyHint = null,
   publishedHint = null,
   coursePublished = false,
+  chapterQuizConfig = null,
   persistedQuestionIds = null,
   onSectionSelect,
   onAddBai,
@@ -182,6 +221,7 @@ export default function MentorQuestionBankBuilderPanel({
   const isVocabularySkill = isQuestionBankVocabularySkill(activeSkill);
   const addLabel = isVocabularySkill ? 'Thêm nhóm câu hỏi' : 'Thêm bài';
   const countLabel = isVocabularySkill ? 'nhóm' : 'bài';
+  const listeningReadingTestLabel = getListeningReadingTestSectionCountLabel(activeSkill, chapterQuizConfig);
   const deletedQuestions = getSectionDeletedQuestions(activeSection);
   const deletedSectionLabel = activeSection
     ? getQuestionBankSectionTabLabel(activeSection, sections)
@@ -250,6 +290,7 @@ export default function MentorQuestionBankBuilderPanel({
                 value={sectionUseForTestFilter}
                 counts={sectionUseForTestCounts}
                 onChange={onSectionUseForTestFilterChange}
+                disabled={sectionUseForTestFilterDisabled}
               />
             ) : null}
 
@@ -271,10 +312,32 @@ export default function MentorQuestionBankBuilderPanel({
               </Box>
             ) : null}
 
+            {listeningReadingTestLabel ? (
+              <Box
+                sx={{
+                  mb: 1.5,
+                  px: 1.25,
+                  py: 0.85,
+                  borderRadius: '10px',
+                  bgcolor: 'rgba(5,150,105,0.08)',
+                  border: '1px solid rgba(5,150,105,0.16)',
+                }}
+              >
+                <Typography sx={{ fontSize: 12, color: '#047857', fontWeight: 600, lineHeight: 1.45 }}>
+                  {listeningReadingTestLabel}
+                </Typography>
+              </Box>
+            ) : null}
+
             {activeSection ? (
               <>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mb: 2 }}>
-                  {skillSections.map((section) => (
+                  {skillSections.map((section) => {
+                    const sectionTestUsage = isVocabularySkill
+                      ? getVocabularySectionTestUsage(section.tempId, chapterQuizConfig)
+                      : { inTest: false, label: null };
+
+                    return (
                     <BaiTab
                       key={section.tempId}
                       label={getQuestionBankSectionTabLabel(section, sections)}
@@ -286,9 +349,12 @@ export default function MentorQuestionBankBuilderPanel({
                       selected={section.tempId === activeSectionId}
                       disabled={disabled}
                       accentColor={accentColor}
+                      inTest={sectionTestUsage.inTest}
+                      testUsageLabel={sectionTestUsage.label}
                       onClick={() => onSectionSelect?.(section.tempId)}
                     />
-                  ))}
+                    );
+                  })}
                   <Box
                     component="button"
                     type="button"
@@ -392,6 +458,29 @@ export default function MentorQuestionBankBuilderPanel({
                 />
 
                 <Box id={`qb-section-${activeSection.tempId}`} sx={{ scrollMarginTop: 24, minWidth: 0 }}>
+                  {isVocabularySkill ? (() => {
+                    const activeSectionTestUsage = getVocabularySectionTestUsage(
+                      activeSection.tempId,
+                      chapterQuizConfig,
+                    );
+                    if (!activeSectionTestUsage.inTest) return null;
+                    return (
+                      <Box
+                        sx={{
+                          mb: 1.25,
+                          px: 1.25,
+                          py: 0.85,
+                          borderRadius: '10px',
+                          bgcolor: 'rgba(5,150,105,0.08)',
+                          border: '1px solid rgba(5,150,105,0.16)',
+                        }}
+                      >
+                        <Typography sx={{ fontSize: 12, color: '#047857', fontWeight: 600, lineHeight: 1.45 }}>
+                          Section này dùng trong bài kiểm tra · {activeSectionTestUsage.label}
+                        </Typography>
+                      </Box>
+                    );
+                  })() : null}
                   <MentorTestSectionCard
                     section={activeSection}
                     index={activeSectionIndex}
@@ -405,6 +494,7 @@ export default function MentorQuestionBankBuilderPanel({
                     questionBankMode
                     allSections={sections}
                     coursePublished={coursePublished}
+                    chapterQuizConfig={chapterQuizConfig}
                     persistedQuestionIds={persistedQuestionIds}
                     defaultExpanded
                     onChange={(nextSection) => onSectionChange(activeSection.tempId, nextSection)}

@@ -21,10 +21,16 @@ import { ContentStatusIcon } from './MentorChapterTabs';
 import { ContentFieldLabel, ContentShortDescriptionField } from './MentorContentSectionHeading';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import {
+  chapterCanPublish,
   chapterHasContent,
   filterLearningMaterials,
+  getChapterPublishBlockReason,
+  getLessonPublishBlockReason,
   isEditDirty,
   isNewUnsavedPath,
+  isNodeActive,
+  isPathActive,
+  lessonCanPublish,
   lessonHasContent,
   makeNodeDirtyKey,
   materialHasContent,
@@ -63,7 +69,7 @@ function getMaterialToolbarSummary(material) {
   return `${typeLabel} · ${title || 'Chưa đặt tiêu đề'}`;
 }
 
-function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false }) {
+function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false, publishBlockReason = null }) {
   if (isNewUnsavedPath(path)) {
     return (
       <AppButton
@@ -79,7 +85,14 @@ function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false 
     );
   }
 
-  return <PathPublishToggle path={path} onChange={onChange} disabled={disabled} />;
+  return (
+    <PathPublishToggle
+      path={path}
+      onChange={onChange}
+      disabled={disabled}
+      publishBlockReason={publishBlockReason}
+    />
+  );
 }
 
 export default function MentorChapterCard({
@@ -127,6 +140,9 @@ export default function MentorChapterCard({
   const nodesNormal = path.nodes ?? path.Nodes ?? [];
   const lessonCount = nodesNormal.length;
   const hasContent = chapterHasContent(path);
+  const pathPublishBlockReason = !chapterCanPublish(path)
+    ? getChapterPublishBlockReason(path)
+    : null;
   const [activeLessonId, setActiveLessonId] = useState(
     () => focusLessonId ?? nodesNormal[0]?.tempId ?? null,
   );
@@ -249,6 +265,9 @@ export default function MentorChapterCard({
 
   const activeLessonIndex = nodesNormal.findIndex((n) => n.tempId === activeLessonId);
   const activeLesson = activeLessonIndex >= 0 ? nodesNormal[activeLessonIndex] : null;
+  const activeNodePublishBlockReason = activeLesson && !isNodeActive(activeLesson) && !lessonCanPublish(activeLesson)
+    ? getLessonPublishBlockReason(activeLesson)
+    : null;
   const activeMaterials = filterLearningMaterials(activeLesson?.Materials ?? activeLesson?.materials ?? []);
   const activeNodeDirty = Boolean(
     showNodeUpdate
@@ -806,7 +825,13 @@ export default function MentorChapterCard({
             node={activeLesson}
             onChange={onNodeChange}
             disabled={disabled}
+            publishBlockReason={activeNodePublishBlockReason}
           />
+          {activeNodePublishBlockReason ? (
+            <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+              {activeNodePublishBlockReason}
+            </Typography>
+          ) : null}
           {needsPathFirst ? (
             <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
               Cập nhật path trước khi lưu bài học này.
@@ -992,6 +1017,7 @@ export default function MentorChapterCard({
           onChange={onChange}
           onDeleteNewPath={onDeleteNewPath}
           disabled={disabled}
+          publishBlockReason={pathPublishBlockReason}
         />
       ) : showChapterEdit && isNewUnsavedPath(path) ? (
         <PathChapterActions
@@ -999,6 +1025,7 @@ export default function MentorChapterCard({
           onChange={onChange}
           onDeleteNewPath={onDeleteNewPath}
           disabled={disabled}
+          publishBlockReason={pathPublishBlockReason}
         />
       ) : null}
     </Box>
@@ -1017,7 +1044,12 @@ export default function MentorChapterCard({
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT }}>
             Xuất bản chương
           </Typography>
-          <PathPublishToggle path={path} onChange={onChange} disabled={disabled} />
+          <PathPublishToggle
+            path={path}
+            onChange={onChange}
+            disabled={disabled}
+            publishBlockReason={pathPublishBlockReason}
+          />
         </Box>
       ) : null}
 
@@ -1217,6 +1249,7 @@ export default function MentorChapterCard({
           onChange={onChange}
           onDeleteNewPath={onDeleteNewPath}
           disabled={disabled}
+          publishBlockReason={pathPublishBlockReason}
         />
       </Box>
 

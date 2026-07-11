@@ -52,7 +52,10 @@ function buildQuestionSaveSnapshot(question) {
 }
 
 export function mapApiSectionToEditorSection(apiSection) {
-  const skillType = normalizeQuestionBankSkillType(apiSection.skillType ?? TEST_SKILL_VOCABULARY);
+  const skillType = normalizeQuestionBankSkillType(
+    apiSection.skillType ?? TEST_SKILL_VOCABULARY,
+    apiSection.typeId,
+  );
   const sectionName = String(apiSection.sectionName ?? '').trim();
   const displayName = String(apiSection.displayName ?? sectionName);
   const sourceUrl = resolveSectionSourceUrlFromApi(apiSection);
@@ -125,7 +128,10 @@ export function mapApiQuestionToEditorQuestion(apiQuestion, section = {}) {
     QuestionId: apiQuestion.questionId,
     // typeId / SkillType lấy từ section (API join Question_Sections + Section_Type)
     typeId: apiQuestion.typeId ?? section.typeId ?? null,
-    SkillType: apiQuestion.skillType ?? section.SkillType ?? null,
+    SkillType: normalizeQuestionBankSkillType(
+      apiQuestion.skillType ?? section.SkillType ?? null,
+      apiQuestion.typeId ?? section.typeId ?? null,
+    ),
     QuestionText: apiQuestion.title ?? '',
     Score: 1,
     order: Number(apiQuestion.order) || 0,

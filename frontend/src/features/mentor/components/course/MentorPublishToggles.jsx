@@ -1,14 +1,21 @@
-import { Box, Switch, Typography } from '@mui/material';
+import { Box, Switch, Tooltip, Typography } from '@mui/material';
 import {
   isNodeActive,
   isPathActive,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { MUTED } from './mentorCourseCreateStyles';
 
-export function PathPublishToggle({ path, onChange, disabled = false }) {
+export function PathPublishToggle({
+  path,
+  onChange,
+  disabled = false,
+  publishBlockReason = null,
+}) {
   const published = isPathActive(path);
+  const publishBlocked = !published && Boolean(publishBlockReason);
+  const switchDisabled = disabled || publishBlocked;
 
-  return (
+  const toggle = (
     <Box
       sx={{
         display: 'inline-flex',
@@ -20,6 +27,7 @@ export function PathPublishToggle({ path, onChange, disabled = false }) {
         bgcolor: published ? 'rgba(4,120,87,0.08)' : 'rgba(100,116,139,0.08)',
         border: `1px solid ${published ? 'rgba(4,120,87,0.2)' : 'rgba(15,23,42,0.08)'}`,
         flexShrink: 0,
+        opacity: switchDisabled && !published ? 0.72 : 1,
       }}
     >
       <Typography sx={{ fontSize: 12, fontWeight: 600, color: published ? '#047857' : MUTED }}>
@@ -29,7 +37,7 @@ export function PathPublishToggle({ path, onChange, disabled = false }) {
         size="small"
         checked={published}
         onChange={(event) => onChange(path.tempId, { IsActive: event.target.checked ? 1 : 0 })}
-        disabled={disabled}
+        disabled={switchDisabled}
         inputProps={{ 'aria-label': 'Xuất bản chương cho học viên' }}
         sx={{
           m: 0,
@@ -39,12 +47,29 @@ export function PathPublishToggle({ path, onChange, disabled = false }) {
       />
     </Box>
   );
+
+  if (publishBlocked) {
+    return (
+      <Tooltip title={publishBlockReason} arrow placement="top">
+        <span>{toggle}</span>
+      </Tooltip>
+    );
+  }
+
+  return toggle;
 }
 
-export function NodePublishToggle({ node, onChange, disabled = false }) {
+export function NodePublishToggle({
+  node,
+  onChange,
+  disabled = false,
+  publishBlockReason = null,
+}) {
   const published = isNodeActive(node);
+  const publishBlocked = !published && Boolean(publishBlockReason);
+  const switchDisabled = disabled || publishBlocked;
 
-  return (
+  const toggle = (
     <Box
       sx={{
         display: 'inline-flex',
@@ -56,6 +81,7 @@ export function NodePublishToggle({ node, onChange, disabled = false }) {
         bgcolor: published ? 'rgba(4,120,87,0.08)' : 'rgba(100,116,139,0.08)',
         border: `1px solid ${published ? 'rgba(4,120,87,0.2)' : 'rgba(15,23,42,0.08)'}`,
         flexShrink: 0,
+        opacity: switchDisabled && !published ? 0.72 : 1,
       }}
     >
       <Typography sx={{ fontSize: 12, fontWeight: 600, color: published ? '#047857' : MUTED }}>
@@ -65,7 +91,7 @@ export function NodePublishToggle({ node, onChange, disabled = false }) {
         size="small"
         checked={published}
         onChange={(event) => onChange(node.tempId, { IsActive: event.target.checked ? 1 : 0 })}
-        disabled={disabled}
+        disabled={switchDisabled}
         inputProps={{ 'aria-label': 'Xuất bản bài học cho học viên' }}
         sx={{
           m: 0,
@@ -75,4 +101,14 @@ export function NodePublishToggle({ node, onChange, disabled = false }) {
       />
     </Box>
   );
+
+  if (publishBlocked) {
+    return (
+      <Tooltip title={publishBlockReason} arrow placement="top">
+        <span>{toggle}</span>
+      </Tooltip>
+    );
+  }
+
+  return toggle;
 }

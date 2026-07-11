@@ -38,8 +38,13 @@ import {
   TEST_SKILL_VOCABULARY,
   QUESTION_BANK_SKILLS,
   filterSectionsByUseForTest,
+  resolveSectionsForUseForTestFilter,
   SECTION_USE_FOR_TEST_FILTER,
 } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  getSkillTestUsageLabel,
+  getVocabularySectionTestUsage,
+} from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 
 const OUTLINE_SKILL_ITEMS = QUESTION_BANK_SKILLS.map((skill) => ({
   skill,
@@ -156,6 +161,7 @@ function getOutlineSectionLabel(section, sections) {
 function SkillOutlineCard({
   label,
   meta,
+  testUsageLabel = null,
   icon: Icon,
   theme,
   expanded,
@@ -218,6 +224,11 @@ function SkillOutlineCard({
           {meta ? (
             <Typography sx={{ fontSize: 11.5, color: MUTED, mt: 0.2, lineHeight: 1.35 }}>{meta}</Typography>
           ) : null}
+          {testUsageLabel ? (
+            <Typography sx={{ fontSize: 11.5, color: '#047857', mt: 0.15, lineHeight: 1.35, fontWeight: 600 }}>
+              {testUsageLabel}
+            </Typography>
+          ) : null}
         </Box>
 
         {expanded ? (
@@ -249,6 +260,8 @@ function SkillOutlineCard({
 function SectionOutlineCard({
   label,
   meta,
+  testUsageLabel = null,
+  inTest = false,
   accent,
   expanded,
   active,
@@ -286,11 +299,35 @@ function SectionOutlineCard({
       >
         <MenuBookRoundedIcon sx={{ fontSize: 15, color: accent, flexShrink: 0 }} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
-            {label}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: TEXT, lineHeight: 1.4 }}>
+              {label}
+            </Typography>
+            {inTest ? (
+              <Box
+                component="span"
+                sx={{
+                  px: 0.55,
+                  py: 0.1,
+                  borderRadius: '999px',
+                  bgcolor: 'rgba(5,150,105,0.12)',
+                  color: '#047857',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  lineHeight: 1.4,
+                }}
+              >
+                Bài kiểm tra
+              </Box>
+            ) : null}
+          </Box>
           {meta ? (
             <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.1, lineHeight: 1.35 }}>{meta}</Typography>
+          ) : null}
+          {testUsageLabel ? (
+            <Typography sx={{ fontSize: 11, color: '#047857', mt: 0.1, lineHeight: 1.35, fontWeight: 600 }}>
+              {testUsageLabel}
+            </Typography>
           ) : null}
         </Box>
         {expanded ? (
@@ -375,6 +412,9 @@ export default function MentorQuestionBankOutlinePanel({
   sections = [],
   activeSkill,
   activeSectionId = '',
+  activeSection = null,
+  sectionBaselines = {},
+  freezeUseForTestFilter = false,
   sectionUseForTestFilter = SECTION_USE_FOR_TEST_FILTER.ALL,
   onNavigateToItem,
   courseName = '',
@@ -386,6 +426,7 @@ export default function MentorQuestionBankOutlinePanel({
   selectedChapterId = '',
   chapterError = '',
   courseId = '',
+  chapterQuizConfig = null,
   courseOutlineHint = 'Chọn chương để tạo hoặc mở ngân hàng câu hỏi tương ứng.',
   onChapterSelect,
   onChapterQuizSetup,
@@ -395,14 +436,23 @@ export default function MentorQuestionBankOutlinePanel({
   const [expandedSections, setExpandedSections] = useState(() => new Set());
   const [selectedQuestionId, setSelectedQuestionId] = useState('');
 
+  const sectionsForUseForTestFilter = useMemo(
+    () => resolveSectionsForUseForTestFilter(sections, {
+      sectionBaselines,
+      activeSection,
+      frozen: freezeUseForTestFilter,
+    }),
+    [sections, sectionBaselines, activeSection, freezeUseForTestFilter],
+  );
+
   const filledSections = getNonEmptyQuestionBankSections(sections);
   const hasContentOutline = filledSections.length > 0;
   const hasFilteredOutline = useMemo(
     () => OUTLINE_SKILL_ITEMS.some(({ skill }) =>
       getNonEmptyQuestionBankSections(
-        filterSectionsByUseForTest(getSectionsBySkill(sections, skill), sectionUseForTestFilter),
+        filterSectionsByUseForTest(getSectionsBySkill(sectionsForUseForTestFilter, skill), sectionUseForTestFilter),
       ).length > 0),
-    [sections, sectionUseForTestFilter],
+    [sectionsForUseForTestFilter, sectionUseForTestFilter],
   );
 
   useEffect(() => {
@@ -500,7 +550,7 @@ export default function MentorQuestionBankOutlinePanel({
           >
             {OUTLINE_SKILL_ITEMS.map(({ skill, icon: Icon }) => {
               const skillSectionsOutline = getNonEmptyQuestionBankSections(
-                filterSectionsByUseForTest(getSectionsBySkill(sections, skill), sectionUseForTestFilter),
+                filterSectionsByUseForTest(getSectionsBySkill(sectionsForUseForTestFilter, skill), sectionUseForTestFilter),
               );
               if (skillSectionsOutline.length === 0) return null;
 
@@ -512,12 +562,14 @@ export default function MentorQuestionBankOutlinePanel({
               const sectionUnit = skill === TEST_SKILL_VOCABULARY ? 'section' : 'bài';
               const isExpanded = expandedSkills.has(skill);
               const isSkillActive = activeSkill === skill;
+              const skillTestUsageLabel = getSkillTestUsageLabel(skill, chapterQuizConfig);
 
               return (
                 <SkillOutlineCard
                   key={skill}
                   label={TEST_SKILL_LABELS[skill]}
                   meta={`${skillSectionsOutline.length} ${sectionUnit} · ${skillQuestionCount} câu hỏi`}
+                  testUsageLabel={skillTestUsageLabel}
                   icon={Icon}
                   theme={theme}
                   expanded={isExpanded}
@@ -529,12 +581,17 @@ export default function MentorQuestionBankOutlinePanel({
                     const sectionLabel = getOutlineSectionLabel(section, sections);
                     const isSectionExpanded = expandedSections.has(section.tempId);
                     const isSectionActive = String(activeSectionId) === String(section.tempId);
+                    const sectionTestUsage = skill === TEST_SKILL_VOCABULARY
+                      ? getVocabularySectionTestUsage(section.tempId, chapterQuizConfig)
+                      : { inTest: false, label: null };
 
                     return (
                       <SectionOutlineCard
                         key={section.tempId}
                         label={sectionLabel}
                         meta={`${questions.length} câu hỏi`}
+                        inTest={sectionTestUsage.inTest}
+                        testUsageLabel={sectionTestUsage.label}
                         accent={theme?.color ?? PRIMARY}
                         expanded={isSectionExpanded}
                         active={isSectionActive}

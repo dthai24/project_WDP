@@ -26,6 +26,7 @@ import {
 import {
   applyCoursePathSaveResult,
   buildCoursePathOnlySavePayload,
+  buildCoursePathUnpublishOnlyPayload,
   buildCourseNodeOnlySavePayload,
   buildCourseMaterialSavePayload,
   hasCoursePathOnlySaveOperations,
@@ -44,6 +45,13 @@ import {
   createEmptyNode,
   createEmptyPath,
   chapterHasContent,
+  chapterCanPublish,
+  getChapterPublishBlockReason,
+  getLessonPublishBlockReason,
+  lessonCanPublish,
+  normalizeChapterPublishState,
+  shouldUnpublishChapterBecauseAllLessonsOff,
+  syncPathsChapterPublishState,
   lessonHasContent,
   materialHasContent,
   makePathDirtyKey,
@@ -265,7 +273,7 @@ export default function MentorEditCourseContentPage() {
       const hydratedPaths = await hydrateTextMaterialsInPaths(resolvedPaths);
       if (cancelled) return;
 
-      const loaded = withNormalizedOrders(hydratedPaths);
+      const loaded = syncPathsChapterPublishState(withNormalizedOrders(hydratedPaths));
 
       setCoursePascal(resolvedCoursePascal);
       setPaths(loaded);
@@ -296,6 +304,15 @@ export default function MentorEditCourseContentPage() {
   }, [applyPaths, applyFocusTarget, markDirty]);
 
   const handlePathChange = (pathTempId, patch) => {
+    if (patch.IsActive === 1 || patch.IsActive === true) {
+      const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+      const nextPath = path ? { ...path, ...patch } : null;
+      if (nextPath && !chapterCanPublish(nextPath)) {
+        toast.error(getChapterPublishBlockReason(nextPath));
+        return;
+      }
+    }
+
     markDirty(makePathDirtyKey(pathTempId));
     applyPaths((prev) => updatePathInList(prev, pathTempId, patch));
   };
@@ -449,6 +466,16 @@ export default function MentorEditCourseContentPage() {
   }, [applyPaths, applyFocusTarget, markDirty]);
 
   const handleNodeChange = (pathTempId, nodeTempId, patch) => {
+    if (patch.IsActive === 1 || patch.IsActive === true) {
+      const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+      const node = (path?.nodes ?? path?.Nodes ?? []).find((item) => item.tempId === nodeTempId);
+      const nextNode = node ? { ...node, ...patch } : null;
+      if (nextNode && !lessonCanPublish(nextNode)) {
+        toast.error(getLessonPublishBlockReason(nextNode));
+        return;
+      }
+    }
+
     markDirty(makeNodeDirtyKey(pathTempId, nodeTempId));
     applyPaths((prev) => updateNodeInPath(prev, pathTempId, nodeTempId, patch));
   };
@@ -554,6 +581,7 @@ export default function MentorEditCourseContentPage() {
           },
         }));
         if (pathErrors.PathName) toast.error(pathErrors.PathName);
+        else if (pathErrors._publish) toast.error(pathErrors._publish);
         setExpandedPaths((prev) => ({ ...prev, [pathTempId]: true }));
         return;
       }
@@ -583,7 +611,7 @@ export default function MentorEditCourseContentPage() {
             },
           },
         }));
-        toast.error(nodeErrors.NodeName ?? 'Vui lòng kiểm tra lại thông tin bài học.');
+        toast.error(nodeErrors.NodeName ?? nodeErrors._publish ?? 'Vui lòng kiểm tra lại thông tin bài học.');
         setExpandedPaths((prev) => ({ ...prev, [pathTempId]: true }));
         setExpandedNodes((prev) => ({ ...prev, [nodeTempId]: true }));
         return;
@@ -852,6 +880,41 @@ export default function MentorEditCourseContentPage() {
           nextPaths = pathsRef.current;
         } else {
           clearDirtyKey(makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId));
+        }
+
+        const pathForChapterCheck = pathsRef.current.find((item) => item.tempId === pathTempId);
+        if (
+          shouldUnpublishChapterBecauseAllLessonsOff(pathForChapterCheck)
+          && pathForChapterCheck?.PathId
+        ) {
+          const unpublishedPath = normalizeChapterPublishState(pathForChapterCheck);
+          const pathUnpublishPayload = buildCoursePathUnpublishOnlyPayload(
+            unpublishedPath,
+            {
+              courseId: Number(courseId),
+              pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+            },
+          );
+          const pathResult = await saveCoursePath({
+            ...pathUnpublishPayload,
+            context: {
+              ...(pathUnpublishPayload.context ?? {}),
+              courseId: Number(courseId),
+              pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+            },
+          });
+          if (pathResult.ok) {
+            const syncedPath = applyCoursePathSaveResult(unpublishedPath, pathResult);
+            nextPaths = withNormalizedOrders(
+              pathsRef.current.map((item) => (item.tempId === pathTempId ? syncedPath : item)),
+            );
+            pathsRef.current = nextPaths;
+            setPaths(nextPaths);
+            clearDirtyKey(makePathDirtyKey(pathTempId));
+            toast.info('Chương đã được hủy xuất bản vì không còn bài học nào được xuất bản.');
+          } else {
+            toast.error(pathResult.message ?? 'Không thể hủy xuất bản chương.');
+          }
         }
       } else if (saveScope === 'node') {
         clearDirtyKey(makeNodeDirtyKey(pathTempId, nodeTempId));
@@ -1222,18 +1285,26 @@ export default function MentorEditCourseContentPage() {
   };
 
   const handleSelectChapter = useCallback((pathTempId) => {
+    const focus = focusTargetRef.current;
     const navigate = () => {
       setActiveChapterId(pathTempId);
       applyFocusTarget(null);
     };
 
-    if (pathTempId === activeChapterId && !focusTarget) {
-      navigate();
+    if (pathTempId === activeChapterId && !focus) {
+      return;
+    }
+
+    if (
+      pathTempId === activeChapterId
+      && focus?.type === 'chapter-edit'
+      && focus.pathTempId === pathTempId
+    ) {
       return;
     }
 
     requestContentNavigation(navigate);
-  }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
+  }, [activeChapterId, applyFocusTarget, requestContentNavigation]);
 
   const handleEditChapter = useCallback((pathTempId) => {
     const navigate = () => {
@@ -1254,6 +1325,7 @@ export default function MentorEditCourseContentPage() {
   }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
 
   const handleSelectNode = useCallback((pathTempId, nodeTempId) => {
+    const focus = focusTargetRef.current;
     const navigate = () => {
       setActiveChapterId(pathTempId);
       applyFocusTarget({ type: 'lesson', pathTempId, nodeTempId });
@@ -1262,17 +1334,18 @@ export default function MentorEditCourseContentPage() {
 
     if (
       pathTempId === activeChapterId
-      && focusTarget?.type === 'lesson'
-      && focusTarget?.nodeTempId === nodeTempId
+      && focus?.type === 'lesson'
+      && focus.pathTempId === pathTempId
+      && focus.nodeTempId === nodeTempId
     ) {
-      navigate();
       return;
     }
 
     requestContentNavigation(navigate);
-  }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
+  }, [activeChapterId, applyFocusTarget, requestContentNavigation]);
 
   const handleSelectMaterial = useCallback((pathTempId, nodeTempId, materialTempId) => {
+    const focus = focusTargetRef.current;
     const navigate = () => {
       setActiveChapterId(pathTempId);
       applyFocusTarget({ type: 'material', pathTempId, nodeTempId, materialTempId });
@@ -1281,22 +1354,22 @@ export default function MentorEditCourseContentPage() {
 
     if (
       pathTempId === activeChapterId
-      && focusTarget?.type === 'material'
-      && focusTarget?.nodeTempId === nodeTempId
-      && focusTarget?.materialTempId === materialTempId
+      && focus?.type === 'material'
+      && focus.pathTempId === pathTempId
+      && focus.nodeTempId === nodeTempId
+      && focus.materialTempId === materialTempId
     ) {
-      navigate();
       return;
     }
 
     const keepParentDraft = (
-      focusTarget?.type === 'lesson'
-      && focusTarget.pathTempId === pathTempId
-      && focusTarget.nodeTempId === nodeTempId
+      focus?.type === 'lesson'
+      && focus.pathTempId === pathTempId
+      && focus.nodeTempId === nodeTempId
     );
 
     requestContentNavigation(navigate, { keepParentDraft });
-  }, [activeChapterId, focusTarget, applyFocusTarget, requestContentNavigation]);
+  }, [activeChapterId, applyFocusTarget, requestContentNavigation]);
 
   const handleBack = () => {
     requestContentNavigation(() => navigate(`/mentor/courses/${courseId}?tab=content`));

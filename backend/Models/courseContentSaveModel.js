@@ -116,6 +116,78 @@ async function updatePathById(pathId, set = {}, transaction = null) {
   return pathId;
 }
 
+async function assertPathCanPublish(pathId, transaction = null) {
+  const request = transaction ? new sql.Request(transaction) : new sql.Request();
+  request.input('pathId', sql.Int, Number(pathId));
+  const result = await request.query(`
+    SELECT
+      (SELECT COUNT(*) FROM dbo.Path_Nodes WHERE PathId = @pathId) AS NodeCount,
+      (SELECT COUNT(*)
+       FROM dbo.Path_Nodes
+       WHERE PathId = @pathId
+         AND ISNULL(IsActive, 1) = 1
+      ) AS ActiveNodeCount,
+      (SELECT COUNT(*)
+       FROM dbo.Node_Materials nm
+       INNER JOIN dbo.Path_Nodes pn ON pn.NodeId = nm.NodeId
+       WHERE pn.PathId = @pathId
+         AND nm.MaterialType IN ('VIDEO', 'TEXT', 'DOC')
+      ) AS MaterialCount
+  `);
+  const nodeCount = Number(result.recordset[0]?.NodeCount ?? 0);
+  const activeNodeCount = Number(result.recordset[0]?.ActiveNodeCount ?? 0);
+  const materialCount = Number(result.recordset[0]?.MaterialCount ?? 0);
+  if (nodeCount < 1) {
+    const error = new Error('Chương cần ít nhất 1 bài học trước khi xuất bản.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (materialCount < 1) {
+    const error = new Error('Chương cần ít nhất 1 học liệu trước khi xuất bản.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (activeNodeCount < 1) {
+    const error = new Error('Chương cần ít nhất 1 bài học được xuất bản trước khi xuất bản chương.');
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+async function assertNodeCanPublish(nodeId, transaction = null) {
+  const request = transaction ? new sql.Request(transaction) : new sql.Request();
+  request.input('nodeId', sql.Int, Number(nodeId));
+  const result = await request.query(`
+    SELECT COUNT(*) AS MaterialCount
+    FROM dbo.Node_Materials
+    WHERE NodeId = @nodeId
+      AND MaterialType IN ('VIDEO', 'TEXT', 'DOC')
+  `);
+  const materialCount = Number(result.recordset[0]?.MaterialCount ?? 0);
+  if (materialCount < 1) {
+    const error = new Error('Bài học cần ít nhất 1 học liệu trước khi xuất bản.');
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+async function unpublishPathIfNoActiveNodes(pathId, transaction = null) {
+  const request = transaction ? new sql.Request(transaction) : new sql.Request();
+  request.input('pathId', sql.Int, Number(pathId));
+  await request.query(`
+    UPDATE dbo.Paths
+    SET IsActive = 0
+    WHERE PathId = @pathId
+      AND ISNULL(IsActive, 1) = 1
+      AND NOT EXISTS (
+        SELECT 1
+        FROM dbo.Path_Nodes pn
+        WHERE pn.PathId = @pathId
+          AND ISNULL(pn.IsActive, 1) = 1
+      )
+  `);
+}
+
 async function deletePathById(pathId, transaction = null) {
   const request = transaction ? new sql.Request(transaction) : new sql.Request();
   request.input('pathId', sql.Int, Number(pathId));
@@ -147,7 +219,7 @@ async function insertNodeRow(pathId, data = {}, transaction = null) {
   request.input('NodeName', sql.NVarChar(255), nodeName);
   request.input('NodeOrder', sql.Int, Number(data.NodeOrder ?? data.Order ?? 1));
   request.input('Description', sql.NVarChar(sql.MAX), data.Description ?? null);
-  request.input('IsActive', sql.Bit, toPathIsActiveBit(data.IsActive, 1));
+  request.input('IsActive', sql.Bit, toPathIsActiveBit(data.IsActive, 0));
 
   const result = await request.query(`
     INSERT INTO dbo.Path_Nodes (PathId, NodeName, NodeOrder, Description, IsActive)
@@ -313,6 +385,9 @@ module.exports = {
   recalculateCourseTotalLessons,
   insertPathRow,
   updatePathById,
+  assertPathCanPublish,
+  assertNodeCanPublish,
+  unpublishPathIfNoActiveNodes,
   deletePathById,
   insertNodeRow,
   updateNodeById,

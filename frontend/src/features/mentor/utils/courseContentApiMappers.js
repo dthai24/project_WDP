@@ -492,6 +492,67 @@ export function hasCoursePathOnlySaveOperations(payload = {}) {
   return Boolean(payload.pathInsert || payload.pathUpdate);
 }
 
+export function buildCoursePathUnpublishOnlyPayload(
+  path,
+  { courseId, pathOrder },
+) {
+  const pathId = path?.PathId ?? null;
+  const emptySummary = {
+    pathInsert: 0,
+    pathUpdate: 0,
+    nodesInsert: 0,
+    nodesUpdate: 0,
+    nodesDelete: 0,
+    materialsInsert: 0,
+    materialsUpdate: 0,
+    materialsDelete: 0,
+  };
+
+  if (!pathId) {
+    return {
+      context: {
+        courseId: Number(courseId) || null,
+        pathId: null,
+        pathOrder: Number(pathOrder) || 1,
+        pathTempId: path?.tempId ?? null,
+        pathName: normalizePathFields(path ?? {}).PathName || null,
+      },
+      summary: emptySummary,
+      pathInsert: null,
+      pathUpdate: null,
+      nodesInsert: [],
+      nodesUpdate: [],
+      nodesDelete: [],
+      materialsInsert: [],
+      materialsUpdate: [],
+      materialsDelete: [],
+    };
+  }
+
+  return {
+    context: {
+      courseId: Number(courseId) || null,
+      pathId,
+      pathOrder: Number(pathOrder) || 1,
+      pathTempId: path?.tempId ?? null,
+      pathName: normalizePathFields(path ?? {}).PathName || null,
+    },
+    summary: { ...emptySummary, pathUpdate: 1 },
+    pathInsert: null,
+    pathUpdate: {
+      table: 'Paths',
+      pathId,
+      set: { IsActive: 0 },
+    },
+    nodesInsert: [],
+    nodesUpdate: [],
+    nodesDelete: [],
+    materialsInsert: [],
+    materialsUpdate: [],
+    materialsDelete: [],
+  };
+}
+
 export function buildCourseNodeOnlySavePayload(
   path,
   nodeTempId,

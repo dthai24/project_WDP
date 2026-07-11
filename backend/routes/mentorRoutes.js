@@ -26,6 +26,11 @@ const {
     getMaterialById,
     downloadMaterialFile,
 } = require('../controllers/courseContentController');
+const {
+    getChapterQuizConfig,
+    saveChapterQuizConfig,
+    listChapterQuizConfigsByCourse,
+} = require('../controllers/chapterQuizConfigController');
 
 
 const optionalAuth = (req, res, next) => {
@@ -45,6 +50,9 @@ router.post('/courses/:courseId/comments', optionalAuth, createCourseCommentForM
 router.patch('/courses/:courseId/comments/:commentId/reply', optionalAuth, replyCourseComment);
 router.patch('/courses/:courseId', optionalAuth, updateCourse);
 router.put('/courses/:courseId/content', optionalAuth, updateCourseContent);
+router.get('/courses/:courseId/chapter-quiz-configs', optionalAuth, listChapterQuizConfigsByCourse);
+router.get('/courses/:courseId/paths/:pathId/chapter-quiz-config', optionalAuth, getChapterQuizConfig);
+router.put('/courses/:courseId/paths/:pathId/chapter-quiz-config', optionalAuth, saveChapterQuizConfig);
 router.post('/courses/:courseId/paths', optionalAuth, createPath);
 router.get('/paths/:pathId', optionalAuth, getPathById);
 router.put('/paths/:pathId', optionalAuth, updatePathById);

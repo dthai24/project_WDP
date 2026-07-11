@@ -5,6 +5,10 @@ import {
   TEST_SKILL_VOCABULARY,
   QUESTION_BANK_SKILLS,
   normalizeQuestionBankSkillType,
+  getSectionsBySkill,
+  isSectionUseForTest,
+  getActiveFilledTestQuestions,
+  isQuestionActive,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 
 /** Quiz / làm bài kiểm tra: Nghe, Đọc, Từ vựng / Ngữ pháp. */
@@ -20,8 +24,33 @@ export function isCourseQuizChapterId(chapterId) {
   return String(chapterId) === COURSE_QUIZ_CHAPTER_ID;
 }
 
-function createPartConfig(part, questionCount = 0) {
-  return { part, questionCount: Math.max(0, Number(questionCount) || 0) };
+export function isSkillSectionRandomPick(part) {
+  return part === TEST_SKILL_LISTENING || part === TEST_SKILL_READING;
+}
+
+function createPartConfig(part, source = {}) {
+  if (isSkillSectionRandomPick(part)) {
+    return {
+      part,
+      sectionCount: Math.max(0, Number(source.sectionCount ?? source.questionCount ?? 0) || 0),
+      sectionQuestionCounts: [],
+    };
+  }
+
+  const sectionQuestionCounts = Array.isArray(source.sectionQuestionCounts)
+    ? source.sectionQuestionCounts
+      .map((entry) => ({
+        sectionTempId: String(entry.sectionTempId ?? ''),
+        questionCount: Math.max(0, Number(entry.questionCount ?? 0) || 0),
+      }))
+      .filter((entry) => entry.sectionTempId)
+    : [];
+
+  return {
+    part,
+    sectionCount: 0,
+    sectionQuestionCounts,
+  };
 }
 
 export function buildSectionGroupsFromChapterSections(sections = [], skillType) {
@@ -139,10 +168,288 @@ export function buildPreviousChapterQuizOptions(paths = [], currentChapterIndex 
 export function normalizeQuizQuestionConfigs(config = {}) {
   const questionConfigs = CHAPTER_QUIZ_SKILLS.map((part) => {
     const existing = (config.questionConfigs ?? []).find((entry) => entry.part === part);
-    return createPartConfig(part, existing?.questionCount ?? 0);
+    return createPartConfig(part, existing ?? {});
   });
 
   return { ...config, questionConfigs };
+}
+
+export function getSectionCountForPart(config = {}, part) {
+  const item = (config.questionConfigs ?? []).find((entry) => entry.part === part);
+  return Math.max(0, Number(item?.sectionCount ?? 0));
+}
+
+export function getSectionQuestionCountsForPart(config = {}, part) {
+  const item = (config.questionConfigs ?? []).find((entry) => entry.part === part);
+  return (item?.sectionQuestionCounts ?? []).map((entry) => ({
+    sectionTempId: String(entry.sectionTempId ?? ''),
+    questionCount: Math.max(0, Number(entry.questionCount ?? 0) || 0),
+  })).filter((entry) => entry.sectionTempId);
+}
+
+export function getSectionQuestionCountForSection(config = {}, part, sectionTempId) {
+  const entry = getSectionQuestionCountsForPart(config, part)
+    .find((item) => item.sectionTempId === String(sectionTempId));
+  return Math.max(0, Number(entry?.questionCount ?? 0));
+}
+
+export function isChapterQuizConfigActive(config = null) {
+  return Boolean(config?.enabled);
+}
+
+/** Nhãn cấp kỹ năng Nghe/Đọc: số section lấy trong bài kiểm tra. */
+export function getListeningReadingTestSectionCountLabel(skill, config = null) {
+  if (!isChapterQuizConfigActive(config) || !isSkillSectionRandomPick(skill)) return null;
+  const count = getSectionCountForPart(config, skill);
+  if (count <= 0) return null;
+  return `${count} section dùng trong bài kiểm tra`;
+}
+
+/** Nhãn cấp kỹ năng Từ vựng/Ngữ pháp: tổng section + câu trong bài kiểm tra. */
+export function getVocabularySkillTestUsageLabel(config = null) {
+  if (!isChapterQuizConfigActive(config)) return null;
+  const entries = getSectionQuestionCountsForPart(config, TEST_SKILL_VOCABULARY)
+    .filter((entry) => entry.questionCount > 0);
+  if (entries.length === 0) return null;
+  const totalQuestions = entries.reduce((sum, entry) => sum + entry.questionCount, 0);
+  return `${entries.length} section · ${totalQuestions} câu trong bài kiểm tra`;
+}
+
+export function getSkillTestUsageLabel(skill, config = null) {
+  if (!isChapterQuizConfigActive(config)) return null;
+  if (isSkillSectionRandomPick(skill)) {
+    return getListeningReadingTestSectionCountLabel(skill, config);
+  }
+  if (skill === TEST_SKILL_VOCABULARY) {
+    return getVocabularySkillTestUsageLabel(config);
+  }
+  return null;
+}
+
+/** Cấp section Từ vựng/Ngữ pháp: section có trong config bài kiểm tra hay không. */
+export function getVocabularySectionTestUsage(sectionTempId, config = null) {
+  if (!isChapterQuizConfigActive(config)) {
+    return { inTest: false, questionCount: 0, label: null };
+  }
+  const questionCount = getSectionQuestionCountForSection(
+    config,
+    TEST_SKILL_VOCABULARY,
+    sectionTempId,
+  );
+  if (questionCount <= 0) {
+    return { inTest: false, questionCount: 0, label: null };
+  }
+  return {
+    inTest: true,
+    questionCount,
+    label: `${questionCount} câu trong bài kiểm tra`,
+  };
+}
+
+export function getRequiredTestSectionCountForSkill(skill, config = null) {
+  if (!isChapterQuizConfigActive(config) || !isSkillSectionRandomPick(skill)) return 0;
+  return getSectionCountForPart(config, skill);
+}
+
+export function countPublishedQuestionBankSections(sections = [], skill) {
+  return getSectionsBySkill(sections, skill).filter(isSectionUseForTest).length;
+}
+
+export function getListeningReadingPublishLockMessage(requiredCount) {
+  return `Không thể tắt: bài kiểm tra cần ${requiredCount} section xuất bản, hiện đang có đúng ${requiredCount}.`;
+}
+
+/** Nghe/Đọc: số section xuất bản phải >= số section lấy trong bài kiểm tra. */
+export function validateListeningReadingPublishedSectionQuota(allSections = [], skill, config = null) {
+  if (!isSkillSectionRandomPick(skill)) return {};
+  const required = getRequiredTestSectionCountForSkill(skill, config);
+  if (required <= 0) return {};
+
+  const published = countPublishedQuestionBankSections(allSections, skill);
+  if (published >= required) return {};
+
+  const label = TEST_SKILL_QB_LABELS[skill] ?? skill;
+  return {
+    isUseForTest: `Kỹ năng ${label} cần ít nhất ${required} section xuất bản (hiện có ${published}). Bài kiểm tra đang lấy ${required} section.`,
+  };
+}
+
+/** Section Nghe/Đọc đang xuất bản có được phép tắt không. */
+export function canDisableListeningReadingSectionUseForTest(section, allSections = [], config = null) {
+  const skill = section?.SkillType;
+  if (!isSkillSectionRandomPick(skill)) return true;
+  if (!isSectionUseForTest(section)) return true;
+
+  const required = getRequiredTestSectionCountForSkill(skill, config);
+  if (required <= 0) return true;
+
+  const published = countPublishedQuestionBankSections(allSections, skill);
+  return published > required;
+}
+
+export function isListeningReadingSectionPublishLocked(section, allSections = [], config = null) {
+  const skill = section?.SkillType;
+  if (!isSkillSectionRandomPick(skill)) return false;
+  if (!isSectionUseForTest(section)) return false;
+
+  const required = getRequiredTestSectionCountForSkill(skill, config);
+  if (required <= 0) return false;
+
+  const published = countPublishedQuestionBankSections(allSections, skill);
+  return published <= required;
+}
+
+export function getVocabularySectionRequiredQuestionCount(sectionTempId, config = null) {
+  if (!isChapterQuizConfigActive(config)) return 0;
+  return getSectionQuestionCountForSection(config, TEST_SKILL_VOCABULARY, sectionTempId);
+}
+
+export function isVocabularySectionConfiguredInTest(sectionTempId, config = null) {
+  return getVocabularySectionRequiredQuestionCount(sectionTempId, config) > 0;
+}
+
+export function getVocabularySectionPublishLockMessage() {
+  return 'Không thể tắt: section này đang được dùng trong bài kiểm tra.';
+}
+
+export function canDisableVocabularySectionUseForTest(section, config = null) {
+  if (section?.SkillType !== TEST_SKILL_VOCABULARY) return true;
+  if (!isSectionUseForTest(section)) return true;
+  return !isVocabularySectionConfiguredInTest(section?.tempId, config);
+}
+
+export function isVocabularySectionPublishLocked(section, config = null) {
+  if (section?.SkillType !== TEST_SKILL_VOCABULARY) return false;
+  if (!isSectionUseForTest(section)) return false;
+  return isVocabularySectionConfiguredInTest(section?.tempId, config);
+}
+
+export function countPublishedQuestionsInSection(section) {
+  return getActiveFilledTestQuestions(section?.Questions ?? []).length;
+}
+
+export function getVocabularyQuestionPublishLockMessage(requiredCount, publishedCount) {
+  return `Không thể tắt: bài kiểm tra cần ${requiredCount} câu xuất bản, hiện đang có đúng ${publishedCount}.`;
+}
+
+export function canDisableVocabularyQuestionUseForTest(question, section, config = null) {
+  if (section?.SkillType !== TEST_SKILL_VOCABULARY) return true;
+  if (!isQuestionActive(question)) return true;
+
+  const required = getVocabularySectionRequiredQuestionCount(section?.tempId, config);
+  if (required <= 0) return true;
+
+  const published = countPublishedQuestionsInSection(section);
+  return published > required;
+}
+
+export function isVocabularyQuestionPublishLocked(question, section, config = null) {
+  if (section?.SkillType !== TEST_SKILL_VOCABULARY) return false;
+  if (!isQuestionActive(question)) return false;
+
+  const required = getVocabularySectionRequiredQuestionCount(section?.tempId, config);
+  if (required <= 0) return false;
+
+  const published = countPublishedQuestionsInSection(section);
+  return published <= required;
+}
+
+/** Từ vựng/Ngữ pháp: section trong bài kiểm tra phải xuất bản và đủ số câu. */
+export function validateVocabularySectionQuestionQuota(section, config = null) {
+  if (section?.SkillType !== TEST_SKILL_VOCABULARY) return {};
+
+  const required = getVocabularySectionRequiredQuestionCount(section?.tempId, config);
+  if (required <= 0) return {};
+
+  if (!isSectionUseForTest(section)) {
+    return {
+      isUseForTest: 'Section này đang được dùng trong bài kiểm tra, không thể tắt xuất bản.',
+    };
+  }
+
+  const published = countPublishedQuestionsInSection(section);
+  if (published >= required) return {};
+
+  return {
+    _questions: `Section cần ít nhất ${required} câu hỏi xuất bản (hiện có ${published}). Bài kiểm tra đang lấy ${required} câu.`,
+  };
+}
+
+export function getSectionPublishLockMessage(section, allSections = [], config = null) {
+  if (isListeningReadingSectionPublishLocked(section, allSections, config)) {
+    return getListeningReadingPublishLockMessage(
+      getRequiredTestSectionCountForSkill(section?.SkillType, config),
+    );
+  }
+  if (isVocabularySectionPublishLocked(section, config)) {
+    return getVocabularySectionPublishLockMessage();
+  }
+  return '';
+}
+
+export function isQuestionBankSectionPublishLocked(section, allSections = [], config = null) {
+  return isListeningReadingSectionPublishLocked(section, allSections, config)
+    || isVocabularySectionPublishLocked(section, config);
+}
+
+export function canDisableQuestionBankSectionUseForTest(section, allSections = [], config = null) {
+  if (isSkillSectionRandomPick(section?.SkillType)) {
+    return canDisableListeningReadingSectionUseForTest(section, allSections, config);
+  }
+  if (section?.SkillType === TEST_SKILL_VOCABULARY) {
+    return canDisableVocabularySectionUseForTest(section, config);
+  }
+  return true;
+}
+
+export function getVocabularyQuestionTotal(config = {}) {
+  return getSectionQuestionCountsForPart(config, TEST_SKILL_VOCABULARY)
+    .reduce((sum, entry) => sum + entry.questionCount, 0);
+}
+
+export function getChapterQuizConfigSummary(config = {}) {
+  return {
+    listeningSections: getSectionCountForPart(config, TEST_SKILL_LISTENING),
+    readingSections: getSectionCountForPart(config, TEST_SKILL_READING),
+    vocabularyQuestions: getVocabularyQuestionTotal(config),
+  };
+}
+
+export function hasConfiguredQuizSources(config = {}) {
+  const summary = getChapterQuizConfigSummary(config);
+  return summary.listeningSections > 0
+    || summary.readingSections > 0
+    || summary.vocabularyQuestions > 0;
+}
+
+export function syncPartConfigWithSectionGroups(partConfig = {}, sectionGroups = []) {
+  const inTestGroups = (sectionGroups ?? []).filter((group) => group.isUseForTest !== false);
+
+  if (isSkillSectionRandomPick(partConfig.part)) {
+    const maxSections = inTestGroups.length;
+    return {
+      ...partConfig,
+      sectionCount: Math.min(Math.max(0, Number(partConfig.sectionCount ?? 0) || 0), maxSections),
+    };
+  }
+
+  const existing = new Map(
+    (partConfig.sectionQuestionCounts ?? []).map((entry) => [
+      String(entry.sectionTempId),
+      Math.max(0, Number(entry.questionCount ?? 0) || 0),
+    ]),
+  );
+
+  return {
+    ...partConfig,
+    sectionQuestionCounts: inTestGroups.map((group) => ({
+      sectionTempId: group.sectionTempId,
+      questionCount: Math.min(
+        existing.get(String(group.sectionTempId)) ?? 0,
+        Math.max(0, Number(group.availableCount ?? 0) || 0),
+      ),
+    })),
+  };
 }
 
 export function getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex = 0 }) {
@@ -266,35 +573,90 @@ export function aggregateCourseStatsByChapterIds(chapters = [], selectedChapterI
 }
 
 export function getQuestionCountForPart(config = {}, part) {
-  const item = (config.questionConfigs ?? []).find((entry) => entry.part === part);
-  return Math.max(0, Number(item?.questionCount ?? 0));
+  if (isSkillSectionRandomPick(part)) {
+    return getSectionCountForPart(config, part);
+  }
+  return getVocabularyQuestionTotal(config);
 }
 
-export function getChapterQuizConfigTotal(config = {}) {
-  return CHAPTER_QUIZ_SKILLS.reduce(
-    (sum, part) => sum + getQuestionCountForPart(config, part),
-    0,
-  );
+export function getChapterQuizConfigTotal(config = {}, stats = null) {
+  let total = getVocabularyQuestionTotal(config);
+
+  if (!stats?.hasBank) {
+    return total;
+  }
+
+  [TEST_SKILL_LISTENING, TEST_SKILL_READING].forEach((part) => {
+    const sectionCount = getSectionCountForPart(config, part);
+    if (sectionCount <= 0) return;
+
+    const groups = getSkillSectionGroupsFromStats(stats, part)
+      .filter((group) => group.isUseForTest !== false)
+      .sort((a, b) => (b.availableCount ?? 0) - (a.availableCount ?? 0));
+
+    total += groups
+      .slice(0, sectionCount)
+      .reduce((sum, group) => sum + (group.availableCount ?? 0), 0);
+  });
+
+  return total;
 }
 
 /** Chuẩn hoá config quiz — Nghe / Đọc / Từ vựng–Ngữ pháp. */
 export function syncChapterQuizConfigWithStats(config = {}, stats = null) {
   if (!config) return config;
   if (!stats?.hasBank) return normalizeQuizQuestionConfigs(config);
-  return normalizeQuizQuestionConfigs(config);
-}
 
-export function patchQuestionConfig(config, part, questionCount) {
-  const nextCount = Math.max(0, Number.parseInt(String(questionCount), 10) || 0);
-  const questionConfigs = CHAPTER_QUIZ_SKILLS.map((skill) => {
-    const existing = (config.questionConfigs ?? []).find((entry) => entry.part === skill);
-    if (skill === part) {
-      return createPartConfig(skill, nextCount);
-    }
-    return createPartConfig(skill, Math.max(0, Number(existing?.questionCount ?? 0)));
+  const questionConfigs = CHAPTER_QUIZ_SKILLS.map((part) => {
+    const existing = (config.questionConfigs ?? []).find((entry) => entry.part === part);
+    const partConfig = createPartConfig(part, existing ?? {});
+    const groups = getSkillSectionGroupsFromStats(stats, part);
+    return syncPartConfigWithSectionGroups(partConfig, groups);
   });
 
   return { ...config, questionConfigs };
+}
+
+export function patchSectionCountConfig(config, part, sectionCount) {
+  const nextCount = Math.max(0, Number.parseInt(String(sectionCount), 10) || 0);
+  const questionConfigs = CHAPTER_QUIZ_SKILLS.map((skill) => {
+    const existing = (config.questionConfigs ?? []).find((entry) => entry.part === skill);
+    if (skill !== part) return createPartConfig(skill, existing ?? {});
+    return { ...createPartConfig(part, existing ?? {}), sectionCount: nextCount };
+  });
+
+  return { ...config, questionConfigs };
+}
+
+export function patchSectionQuestionCountConfig(config, part, sectionTempId, questionCount) {
+  const nextCount = Math.max(0, Number.parseInt(String(questionCount), 10) || 0);
+  const id = String(sectionTempId);
+  const questionConfigs = CHAPTER_QUIZ_SKILLS.map((skill) => {
+    const existing = (config.questionConfigs ?? []).find((entry) => entry.part === skill);
+    if (skill !== part) return createPartConfig(skill, existing ?? {});
+
+    const base = createPartConfig(part, existing ?? {});
+    const counts = [...(base.sectionQuestionCounts ?? [])];
+    const index = counts.findIndex((entry) => entry.sectionTempId === id);
+
+    if (index >= 0) {
+      counts[index] = { ...counts[index], questionCount: nextCount };
+    } else {
+      counts.push({ sectionTempId: id, questionCount: nextCount });
+    }
+
+    return { ...base, sectionQuestionCounts: counts };
+  });
+
+  return { ...config, questionConfigs };
+}
+
+/** @deprecated Dùng patchSectionCountConfig hoặc patchSectionQuestionCountConfig. */
+export function patchQuestionConfig(config, part, questionCount) {
+  if (isSkillSectionRandomPick(part)) {
+    return patchSectionCountConfig(config, part, questionCount);
+  }
+  return config;
 }
 
 export function validateChapterQuizConfig(config = {}, stats = null) {
@@ -339,28 +701,43 @@ export function validateChapterQuizConfig(config = {}, stats = null) {
     }
   }
 
-  const total = getChapterQuizConfigTotal(config);
-  if (total <= 0) {
-    errors._total = 'Vui lòng cấu hình ít nhất 1 câu hỏi khi bật kiểm tra';
+  if (!hasConfiguredQuizSources(config)) {
+    errors._total = 'Vui lòng cấu hình ít nhất 1 section hoặc câu hỏi khi bật kiểm tra';
   }
 
   CHAPTER_QUIZ_SKILLS.forEach((part) => {
-    const count = getQuestionCountForPart(config, part);
-    const available =
-      stats?.questionCountBySkill?.[part]
-      ?? (part === TEST_SKILL_VOCABULARY ? stats?.questionCountBySkill?.WRITING : undefined)
-      ?? 0;
     const label = TEST_SKILL_QB_LABELS[part];
+    const groups = getSkillSectionGroupsFromStats(stats, part);
+    const inTestGroups = groups.filter((group) => group.isUseForTest !== false);
 
-    if (!Number.isFinite(count) || count < 0) {
-      errors[part] = `Số câu ${label} không hợp lệ`;
+    if (isSkillSectionRandomPick(part)) {
+      const sectionCount = getSectionCountForPart(config, part);
+      if (!Number.isFinite(sectionCount) || sectionCount < 0) {
+        errors[part] = `Số section ${label} không hợp lệ`;
+        return;
+      }
+
+      if (sectionCount > inTestGroups.length) {
+        errors[part] =
+          `Phần ${label} hiện chỉ có ${inTestGroups.length} section dùng trong bài kiểm tra, không thể lấy ${sectionCount} section.`;
+      }
       return;
     }
 
-    if (count > available) {
-      errors[part] =
-        `Phần ${label} hiện chỉ có ${available} câu đang bật, không đủ để lấy ${count} câu.`;
-    }
+    getSectionQuestionCountsForPart(config, part).forEach(({ sectionTempId, questionCount }) => {
+      const group = inTestGroups.find((item) => item.sectionTempId === sectionTempId);
+      if (!group) return;
+
+      if (!Number.isFinite(questionCount) || questionCount < 0) {
+        errors[`${part}.${sectionTempId}`] = `Số câu section "${group.sectionTitle}" không hợp lệ`;
+        return;
+      }
+
+      if (questionCount > (group.availableCount ?? 0)) {
+        errors[`${part}.${sectionTempId}`] =
+          `Section "${group.sectionTitle}" chỉ có ${group.availableCount ?? 0} câu đang bật, không đủ để lấy ${questionCount} câu.`;
+      }
+    });
   });
 
   return errors;
