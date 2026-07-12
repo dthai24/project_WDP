@@ -35,7 +35,16 @@ export default function TestIntroPanel({
   const canStart =
     prerequisitesMet && (BYPASS_ATTEMPT_LIMIT || (meta?.remainingAttempts ?? 0) > 0);
   const prerequisiteBlockers = meta?.prerequisiteBlockers ?? [];
-
+  const formatSkills = (skills = []) => {
+    const map = { LISTENING: 'Nghe', READING: 'Đọc', VOCABULARY: 'Từ vựng/Ngữ pháp' };
+    const labels = skills.map(s => map[s] || s);
+    if (labels.length === 0) return '';
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return `${labels[0]} và ${labels[1]}`;
+    return labels.slice(0, -1).join(', ') + ` và ${labels[labels.length - 1]}`;
+  };
+  const skillText = meta?.skills?.length > 0 ? formatSkills(meta.skills) : '';
+  const questionLabel = skillText ? skillText : 'Bài kiểm tra';
   return (
     <Box
       sx={{
@@ -91,7 +100,7 @@ export default function TestIntroPanel({
           />
           <Chip
             icon={<QuizRoundedIcon sx={{ fontSize: '16px !important' }} />}
-            label={`${meta?.totalQuestions ?? 0} câu`}
+            label={questionLabel}
             size="small"
             sx={{ fontWeight: 600, bgcolor: alpha('#7C3AED', 0.08), color: '#7C3AED' }}
           />

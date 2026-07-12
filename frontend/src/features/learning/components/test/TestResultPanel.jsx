@@ -87,11 +87,6 @@ export default function TestResultPanel({
             sx={{ fontWeight: 600 }}
           />
           <Chip
-            label={`Điểm đạt: ${passingScore}/${maxScore}`}
-            size="small"
-            sx={{ fontWeight: 600 }}
-          />
-          <Chip
             label={`Thời gian: ${formatTimeSpent(result?.timeSpentSeconds)}`}
             size="small"
             sx={{ fontWeight: 600 }}

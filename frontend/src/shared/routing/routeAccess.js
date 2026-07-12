@@ -1,6 +1,6 @@
 import { ROLE_DEFAULT_PATHS } from '@/features/auth/utils/authUtils';
 
-/** Redirect khi role không được phép vào shell học viên (my-courses, ...). */
+/** Redirect khi role không được phép vào shell Student. */
 export const STUDENT_SHELL_BLOCK_REDIRECTS = {
   Mentor: ROLE_DEFAULT_PATHS.Mentor,
   Admin: ROLE_DEFAULT_PATHS.Admin,

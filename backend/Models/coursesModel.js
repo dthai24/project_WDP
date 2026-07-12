@@ -721,7 +721,12 @@ const getCourseLearningPath = async (courseId, userId) => {
                 pn.NodeOrder,
                 nm.MaterialType,
                 nm.MaterialUrl,
-                CAST(CASE WHEN un.NodeId IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsCompleted
+                CAST(CASE WHEN un.NodeId IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS IsCompleted,
+                CAST(CASE WHEN EXISTS (
+                    SELECT 1 FROM dbo.Test_Attempts ta
+                    JOIN dbo.Tests t ON ta.TestId = t.TestId
+                    WHERE t.PathId = p.PathId AND ta.UserId = @userId AND ta.IsPass = 1
+                ) THEN 1 ELSE 0 END AS BIT) AS IsTestPassed
             FROM Paths p
             LEFT JOIN Path_Nodes pn ON p.PathId = pn.PathId
             LEFT JOIN Node_Materials nm ON pn.NodeId = nm.NodeId
@@ -746,6 +751,7 @@ const getCourseLearningPath = async (courseId, userId) => {
           PathId: row.PathId,
           PathName: row.PathName,
           Description: row.PathDescription ?? null,
+          IsTestPassed: row.IsTestPassed,
           lessons: [],
         };
         finalModules.push(existingModule);

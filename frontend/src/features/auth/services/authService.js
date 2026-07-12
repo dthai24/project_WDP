@@ -69,7 +69,6 @@ export const getCoursesApi = (userId) => {
  */
 export const getTopCoursesApi = (limit = 4) => apiGet(`/courses/top?limit=${limit}`);
 
-// 🔥 ĐÃ FIX: Nhận thẳng 1 cục Object (data) từ Frontend truyền sang
 /**
  * Gửi yêu cầu đăng ký tham gia (enroll) một khóa học mới.
  */

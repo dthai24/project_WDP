@@ -121,7 +121,7 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Chặn đồng bộ ngay — trước khi React kịp re-render (ngăn spam click)
+    // Chống spam click 
     if (submittingRef.current) return;
 
     const errs = validate();

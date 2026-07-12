@@ -155,7 +155,8 @@ export default function CourseTestPage() {
     setPageState(PAGE_STATE.SUBMITTING);
     setConfirmSubmitOpen(false);
 
-    const res = await submitTestAttempt(attempt.attemptId, answers, options);
+    const timeSpentSeconds = totalSeconds - remainingSeconds;
+    const res = await submitTestAttempt(courseId, resolvedChapterId, attempt.attemptId, answers, timeSpentSeconds, allQuestions.length);
 
     submitInFlightRef.current = false;
 

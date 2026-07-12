@@ -1,6 +1,7 @@
 import {
   Box,
   Checkbox,
+  Radio,
   FormControlLabel,
   Typography,
   alpha,
@@ -17,11 +18,22 @@ export default function TestQuestionCard({
   selectedOptionTempIds = [],
   onChange,
 }) {
+    const isMultiple = question.isMultipleChoice; 
+
   const handleToggle = (optionTempId) => {
-    const current = selectedOptionTempIds ?? [];
-    const next = current.includes(optionTempId)
-      ? current.filter((id) => id !== optionTempId)
-      : [...current, optionTempId];
+   const current = selectedOptionTempIds ?? [];
+    let next;
+    
+    if (isMultiple) {
+      // Logic dành cho Checkbox (chọn nhiều)
+      next = current.includes(optionTempId)
+        ? current.filter((id) => id !== optionTempId)
+        : [...current, optionTempId];
+    } else {
+      // Logic dành cho Radio (chỉ chọn 1, ghi đè mảng)
+      next = [optionTempId];
+    }
+    
     onChange(question.tempId, next);
   };
 
@@ -76,14 +88,19 @@ export default function TestQuestionCard({
             >
               <FormControlLabel
                 control={
-                  <Checkbox
-                    checked={checked}
-                    onChange={() => handleToggle(option.tempId)}
-                    sx={{
-                      color: TEST_MUTED,
-                      '&.Mui-checked': { color: TEST_PRIMARY },
-                    }}
-                  />
+                  isMultiple ? (
+                    <Checkbox
+                      checked={checked}
+                      onChange={() => handleToggle(option.tempId)}
+                      sx={{ color: TEST_MUTED, '&.Mui-checked': { color: TEST_PRIMARY } }}
+                    />
+                  ) : (
+                    <Radio
+                      checked={checked}
+                      onChange={() => handleToggle(option.tempId)}
+                      sx={{ color: TEST_MUTED, '&.Mui-checked': { color: TEST_PRIMARY } }}
+                    />
+                  )
                 }
                 label={option.optionText}
                 sx={{

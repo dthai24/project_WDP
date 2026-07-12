@@ -176,7 +176,7 @@ function computeProgress(mods) {
   );
 }
 
-function OutlineTestItem({ label, subtitle, onClick, variant = "chapter" }) {
+function OutlineTestItem({ label, subtitle, onClick, variant = "chapter", isPassed = false }) {
   const isCourse = variant === "course";
 
   return (
@@ -197,16 +197,20 @@ function OutlineTestItem({ label, subtitle, onClick, variant = "chapter" }) {
         cursor: "pointer",
         textAlign: "left",
         fontFamily: "inherit",
-        bgcolor: isCourse ? alpha("#7C3AED", 0.08) : alpha("#7C3AED", 0.05),
+        bgcolor: isPassed ? alpha("#7C3AED", 0.08) : (isCourse ? alpha("#7C3AED", 0.08) : alpha("#7C3AED", 0.05)),
         borderTop: isCourse ? "none" : `1px dashed ${alpha("#7C3AED", 0.22)}`,
         transition: "background-color 0.15s ease",
         "&:hover": {
-          bgcolor: alpha("#7C3AED", isCourse ? 0.12 : 0.1),
+          bgcolor: isPassed ? alpha("#7C3AED", 0.12) : alpha("#7C3AED", isCourse ? 0.12 : 0.1),
         },
       }}
     >
       <Box sx={{ pt: 0.1, flexShrink: 0 }}>
-        <QuizRoundedIcon sx={{ fontSize: 18, color: "#7C3AED" }} />
+        {isPassed ? (
+          <CheckRoundedIcon sx={{ fontSize: 18, color: "#7C3AED" }} />
+        ) : (
+          <QuizRoundedIcon sx={{ fontSize: 18, color: "#7C3AED" }} />
+        )}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography
@@ -341,7 +345,8 @@ export default function CourseLearningPage() {
     const fetchLearningData = async () => {
       try {
         const response = await fetch(`http://localhost:5000/api/courses/${courseId}/learning`, {
-          headers: { 'x-user-id': currentUserId }
+          headers: { 'x-user-id': currentUserId },
+          cache: 'no-store'
         });
         const result = await response.json();
 
@@ -351,23 +356,26 @@ export default function CourseLearningPage() {
             instructor: result.instructor
           });
           // ĐÂY LÀ ĐOẠN "DỊCH THUẬT" SIÊU HAY
-          const mappedModules = result.data.map((mod, chapterIndex) => ({
-            id: mod.PathId,
-            index: chapterIndex + 1,
-            title: mod.PathName,
-            description: String(mod.Description ?? "").trim(),
-            lessons: mod.lessons.map((lesson, lessonIndex) => ({
-              id: lesson.NodeId,
-              index: lessonIndex + 1,
-              title: lesson.NodeName,
-              description: String(lesson.Description ?? "").trim(),
-              type: mapMaterialTypeToUi(lesson.MaterialType),
-              status: lesson.IsCompleted ? "completed" : "not_started",
-              // Lấy thêm trường link video và nội dung HTML từ Backend
-              videoUrl: lesson.MaterialUrl,
-              contentBody: lesson.Content
-            })),
-          }));
+          const mappedModules = result.data.map((mod, chapterIndex) => {
+            console.log("Module:", mod.PathName, "IsTestPassed from BE:", mod.IsTestPassed);
+            return {
+              id: mod.PathId,
+              index: chapterIndex + 1,
+              title: mod.PathName,
+              description: String(mod.Description ?? "").trim(),
+              isTestPassed: mod.IsTestPassed,
+              lessons: mod.lessons.map((lesson, lessonIndex) => ({
+                id: lesson.NodeId,
+                index: lessonIndex + 1,
+                title: lesson.NodeName,
+                description: String(lesson.Description ?? "").trim(),
+                type: mapMaterialTypeToUi(lesson.MaterialType),
+                status: lesson.IsCompleted ? "completed" : "not_started",
+                videoUrl: lesson.MaterialUrl,
+                contentBody: lesson.Content
+              }))
+            };
+          });
 
           setModules(mappedModules);
 
@@ -456,21 +464,29 @@ export default function CourseLearningPage() {
     }
   };
 
-  if (!rawData) {
+ // 1. Nếu API đang xoay, hiển thị trạng thái chờ
+  if (courseInfo.courseTitle === "Đang tải dữ liệu...") {
+    return (
+      <Box sx={{ py: 8, textAlign: "center", color: "#64748B" }}>
+        Đang tải dữ liệu khóa học...
+      </Box>
+    );
+  }
+  // 2. Nếu API đã gọi xong nhưng khóa học chưa có bài học nào được mở (IsActive = 0)
+  if (modules.length === 0) {
     return (
       <Box sx={{ maxWidth: 1280, mx: "auto", py: 8 }}>
         <EmptyState
           variant="error"
           icon={SearchOffRoundedIcon}
-          title="Không tìm thấy khóa học"
-          description="Khóa học này chưa có nội dung học hoặc bạn chưa đăng ký."
+          title="Chưa có nội dung"
+          description="Khóa học này hiện tại chưa có chương hoặc bài học nào được xuất bản."
           actionLabel="Về Khóa học của tôi"
           onAction={() => navigate("/my-courses")}
         />
       </Box>
     );
   }
-
   const handleSelectLesson = (id) => setCurrentLessonId(id);
 
   const handlePrev = () => {
@@ -1089,6 +1105,7 @@ export default function CourseLearningPage() {
                           subtitle={
                             chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"
                           }
+                          isPassed={mod.isTestPassed}
                           onClick={() => handleGoToChapterTest(mod.id)}
                         />
                       </AccordionDetails>
