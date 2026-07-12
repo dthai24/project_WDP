@@ -12,14 +12,13 @@ import { getNewsArticles } from '@/features/admin/services/adminNewsService';
 import {
   ADMIN_NEWS_STATUS_OPTIONS,
 } from '@/features/admin/data/adminNewsMock';
-import { filterAndSortNews, buildAdminNewsCategoryFilterOptions } from '@/features/admin/utils/adminNewsUtils';
+import { buildAdminNewsCategoryFilterOptions } from '@/features/admin/utils/adminNewsUtils';
 import {
   ADMIN_NEWS_LIST_DEFAULTS,
   ADMIN_NEWS_LIST_PAGE_SIZE,
   buildAdminNewsActiveChips,
   buildAdminNewsListSearchParams,
   hasActiveAdminNewsFilters,
-  paginateNews,
   parseAdminNewsListParams,
   resetAdminNewsListParams,
 } from '@/features/admin/utils/adminNewsListParams';
@@ -32,6 +31,7 @@ export default function AdminNewsManagementPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [articles, setArticles] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [editArticleId, setEditArticleId] = useState(null);
@@ -54,24 +54,35 @@ export default function AdminNewsManagementPage() {
     [queryState, categoryOptions],
   );
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   const loadArticles = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
     try {
-      const res = await getNewsArticles();
+      const res = await getNewsArticles({
+        status: queryState.status !== 'all' ? queryState.status : 'all',
+        categoryId: queryState.category !== 'all' ? queryState.category : undefined,
+        search: queryState.q || undefined,
+        page: queryState.page,
+        pageSize: PAGE_SIZE,
+      });
       if (res.ok) {
         setArticles(res.articles ?? []);
+        setTotal(res.total ?? 0);
       } else {
         setArticles([]);
+        setTotal(0);
         setLoadError(true);
       }
     } catch {
       setArticles([]);
+      setTotal(0);
       setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [queryState.status, queryState.category, queryState.q, queryState.page]);
 
   useEffect(() => {
     loadArticles();
@@ -94,22 +105,6 @@ export default function AdminNewsManagementPage() {
       { replace: true },
     );
   };
-
-  const filteredArticles = useMemo(
-    () => filterAndSortNews(articles, queryState),
-    [articles, queryState],
-  );
-
-  const pagination = useMemo(
-    () => paginateNews(filteredArticles, queryState.page, PAGE_SIZE),
-    [filteredArticles, queryState.page],
-  );
-
-  useEffect(() => {
-    if (!loading && queryState.page !== pagination.page) {
-      updateQuery({ page: pagination.page });
-    }
-  }, [loading, queryState.page, pagination.page]);
 
   const handleCategoryChange = (value) => updateQuery({ category: value, page: 1 });
   const handleStatusChange = (value) => updateQuery({ status: value, page: 1 });
@@ -198,26 +193,28 @@ export default function AdminNewsManagementPage() {
         onSortChange={handleSortChange}
         showReset={showReset}
         onReset={handleReset}
-        totalCount={filteredArticles.length}
+        totalCount={total}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
       />
 
       <AdminNewsList
-        articles={pagination.items}
+        articles={articles}
         loading={loading}
         error={loadError}
-        hasAnyArticles={articles.length > 0}
+        hasAnyArticles={total > 0}
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={handleEditClick}
         onClearFilters={handleReset}
       />
 
-      <AppPagination
-        page={pagination.page}
-        totalPages={pagination.totalPages}
-        onPageChange={handlePageChange}
-      />
+      {totalPages > 1 ? (
+        <AppPagination
+          page={queryState.page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      ) : null}
 
       <AdminNewsEditDialog
         open={editArticleId != null}
