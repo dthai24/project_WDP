@@ -894,6 +894,7 @@ export default function MentorQuestionBankManagePage() {
             alignItems: 'start',
           }}
         >
+          {/*_________________Phần ở giữa gồm các câu hỏi theo section_______________*/}
           <MentorQuestionBankBuilderPanel
             sections={sections}
             activeSkill={activeSkill}

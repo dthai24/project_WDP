@@ -2,7 +2,7 @@
  * Editor câu hỏi — cột giữa workspace question bank.
  */
 import { useEffect, useState } from 'react';
-import { Box, Typography, alpha } from '@mui/material';import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import { Box, Typography, alpha } from '@mui/material'; import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
@@ -19,7 +19,7 @@ import {
   isQuestionBankVocabularySkill,
   restoreDeletedQuestionToSection,
   SECTION_USE_FOR_TEST_FILTER,
-} from '@/features/mentor/utils/mentorTestContentUtils';import {
+} from '@/features/mentor/utils/mentorTestContentUtils'; import {
   getSectionDisplayQuestionCount,
   hasSectionUnsavedChanges,
 } from '@/features/mentor/utils/questionBankApiMappers';
@@ -338,21 +338,21 @@ export default function MentorQuestionBankBuilderPanel({
                       : { inTest: false, label: null };
 
                     return (
-                    <BaiTab
-                      key={section.tempId}
-                      label={getQuestionBankSectionTabLabel(section, sections)}
-                      hasContent={
-                        getSectionDisplayQuestionCount(section) > 0
-                        || getFilledTestQuestions(section?.Questions).length > 0
-                      }
-                      isDirty={hasSectionUnsavedChanges(section, sectionBaselines, sectionSourceBaselines)}
-                      selected={section.tempId === activeSectionId}
-                      disabled={disabled}
-                      accentColor={accentColor}
-                      inTest={sectionTestUsage.inTest}
-                      testUsageLabel={sectionTestUsage.label}
-                      onClick={() => onSectionSelect?.(section.tempId)}
-                    />
+                      <BaiTab
+                        key={section.tempId}
+                        label={getQuestionBankSectionTabLabel(section, sections)}
+                        hasContent={
+                          getSectionDisplayQuestionCount(section) > 0
+                          || getFilledTestQuestions(section?.Questions).length > 0
+                        }
+                        isDirty={hasSectionUnsavedChanges(section, sectionBaselines, sectionSourceBaselines)}
+                        selected={section.tempId === activeSectionId}
+                        disabled={disabled}
+                        accentColor={accentColor}
+                        inTest={sectionTestUsage.inTest}
+                        testUsageLabel={sectionTestUsage.label}
+                        onClick={() => onSectionSelect?.(section.tempId)}
+                      />
                     );
                   })}
                   <Box
@@ -481,6 +481,7 @@ export default function MentorQuestionBankBuilderPanel({
                       </Box>
                     );
                   })() : null}
+                  {/*____Card thêm đề bài + câu hỏi */}
                   <MentorTestSectionCard
                     section={activeSection}
                     index={activeSectionIndex}

@@ -73,6 +73,7 @@ import {
   validateNodeFieldsForSave,
   validatePathFieldsForSave,
   withNormalizedOrders,
+  serializePathSnapshot,
 } from '@/features/mentor/utils/mentorCourseContentUtils';
 
 const COURSE_CONTENT_MOBILE_BACK_ID = 'course-content-mobile-back';
@@ -117,9 +118,14 @@ function getSaveConfirmDialogContent({
 
   if (saveScope === 'node') {
     const name = String(node?.NodeName ?? node?.nodeName ?? '').trim() || 'Chưa đặt tên';
+    const willUnpublishChapter = shouldUnpublishChapterBecauseAllLessonsOff(path);
+    let message = `Lưu thông tin bài học "${name}" lên hệ thống? Chỉ tên, mô tả và trạng thái xuất bản của bài học được cập nhật.`;
+    if (willUnpublishChapter) {
+      message += ' Chương chứa bài học này cũng sẽ được chuyển sang chưa xuất bản vì không còn bài học nào được xuất bản.';
+    }
     return {
       title: 'Cập nhật bài học?',
-      message: `Lưu thông tin bài học "${name}" lên hệ thống? Chỉ tên, mô tả và trạng thái xuất bản của bài học được cập nhật.`,
+      message,
       confirmLabel: 'Cập nhật Node',
     };
   }
@@ -133,6 +139,71 @@ function getSaveConfirmDialogContent({
     message: `Lưu học liệu "${materialLabel}" lên hệ thống? Chỉ nội dung học liệu này được cập nhật.`,
     confirmLabel: 'Cập nhật học liệu',
   };
+}
+
+function buildPathSnapshotsMap(paths = []) {
+  return Object.fromEntries(
+    (paths ?? []).map((path) => [path.tempId, serializePathSnapshot(path)]),
+  );
+}
+
+function updatePathSnapshotRef(snapshotsRef, pathTempId, path) {
+  if (!pathTempId || !path) return;
+  snapshotsRef.current = {
+    ...snapshotsRef.current,
+    [pathTempId]: serializePathSnapshot(path),
+  };
+}
+
+async function unpublishPathWhenAllLessonsOff({
+  pathTempId,
+  pathIndex,
+  courseId,
+  pathsRef,
+  setPaths,
+  pathSnapshotsRef,
+  clearDirtyKey,
+}) {
+  const pathForChapterCheck = pathsRef.current.find((item) => item.tempId === pathTempId);
+  if (
+    !shouldUnpublishChapterBecauseAllLessonsOff(pathForChapterCheck)
+    || !pathForChapterCheck?.PathId
+  ) {
+    return { ok: true, didUnpublish: false };
+  }
+
+  const unpublishedPath = normalizeChapterPublishState(pathForChapterCheck);
+  const pathUnpublishPayload = buildCoursePathUnpublishOnlyPayload(
+    unpublishedPath,
+    {
+      courseId: Number(courseId),
+      pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+    },
+  );
+  const pathResult = await saveCoursePath({
+    ...pathUnpublishPayload,
+    context: {
+      ...(pathUnpublishPayload.context ?? {}),
+      courseId: Number(courseId),
+      pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
+    },
+  });
+
+  if (!pathResult.ok) {
+    toast.error(pathResult.message ?? 'Không thể hủy xuất bản chương.');
+    return { ok: false, didUnpublish: false };
+  }
+
+  const syncedPath = applyCoursePathSaveResult(unpublishedPath, pathResult);
+  const nextPaths = withNormalizedOrders(
+    pathsRef.current.map((item) => (item.tempId === pathTempId ? syncedPath : item)),
+  );
+  pathsRef.current = nextPaths;
+  setPaths(nextPaths);
+  clearDirtyKey(makePathDirtyKey(pathTempId));
+  updatePathSnapshotRef(pathSnapshotsRef, pathTempId, syncedPath);
+  toast.info('Chương đã được hủy xuất bản vì không còn bài học nào được xuất bản.');
+  return { ok: true, didUnpublish: true };
 }
 
 function updatePathInList(paths, pathTempId, patch) {
@@ -201,6 +272,7 @@ export default function MentorEditCourseContentPage() {
   const [updatingMaterialKey, setUpdatingMaterialKey] = useState(null);
 
   const pathsRef = useRef(paths);
+  const pathSnapshotsRef = useRef({});
   const dirtyKeysRef = useRef(dirtyKeys);
   const focusTargetRef = useRef(focusTarget);
   const pendingNavigationRef = useRef(null);
@@ -275,6 +347,7 @@ export default function MentorEditCourseContentPage() {
 
       const loaded = syncPathsChapterPublishState(withNormalizedOrders(hydratedPaths));
 
+      pathSnapshotsRef.current = buildPathSnapshotsMap(loaded);
       setCoursePascal(resolvedCoursePascal);
       setPaths(loaded);
       setDirtyKeys({});
@@ -339,6 +412,9 @@ export default function MentorEditCourseContentPage() {
     );
 
     setPaths(nextPaths);
+    const nextSnapshots = { ...pathSnapshotsRef.current };
+    delete nextSnapshots[pathTempId];
+    pathSnapshotsRef.current = nextSnapshots;
     setValidationErrors({ root: [], paths: {} });
     setDirtyKeys((prev) => clearDirtyKeysForPath(prev, pathTempId));
     setExpandedPaths((prev) => {
@@ -785,6 +861,8 @@ export default function MentorEditCourseContentPage() {
         }
       }
 
+      const baselineSnapshot = pathSnapshotsRef.current[pathTempId] ?? null;
+
       const savePayload = saveScope === 'path'
         ? buildCoursePathOnlySavePayload(
           workingPath,
@@ -792,7 +870,7 @@ export default function MentorEditCourseContentPage() {
             courseId: Number(courseId),
             pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
           },
-          null,
+          baselineSnapshot,
         )
         : saveScope === 'node'
           ? buildCourseNodeOnlySavePayload(
@@ -802,7 +880,7 @@ export default function MentorEditCourseContentPage() {
               courseId: Number(courseId),
               pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
             },
-            null,
+            baselineSnapshot,
           )
           : buildCourseMaterialSavePayload(
             workingPath,
@@ -812,7 +890,7 @@ export default function MentorEditCourseContentPage() {
               courseId: Number(courseId),
               pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
             },
-            null,
+            baselineSnapshot,
           );
 
       const hasOperations = saveScope === 'path'
@@ -882,44 +960,33 @@ export default function MentorEditCourseContentPage() {
           clearDirtyKey(makeMaterialDirtyKey(pathTempId, nodeTempId, materialTempId));
         }
 
-        const pathForChapterCheck = pathsRef.current.find((item) => item.tempId === pathTempId);
-        if (
-          shouldUnpublishChapterBecauseAllLessonsOff(pathForChapterCheck)
-          && pathForChapterCheck?.PathId
-        ) {
-          const unpublishedPath = normalizeChapterPublishState(pathForChapterCheck);
-          const pathUnpublishPayload = buildCoursePathUnpublishOnlyPayload(
-            unpublishedPath,
-            {
-              courseId: Number(courseId),
-              pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
-            },
-          );
-          const pathResult = await saveCoursePath({
-            ...pathUnpublishPayload,
-            context: {
-              ...(pathUnpublishPayload.context ?? {}),
-              courseId: Number(courseId),
-              pathOrder: pathIndex >= 0 ? pathIndex + 1 : 1,
-            },
-          });
-          if (pathResult.ok) {
-            const syncedPath = applyCoursePathSaveResult(unpublishedPath, pathResult);
-            nextPaths = withNormalizedOrders(
-              pathsRef.current.map((item) => (item.tempId === pathTempId ? syncedPath : item)),
-            );
-            pathsRef.current = nextPaths;
-            setPaths(nextPaths);
-            clearDirtyKey(makePathDirtyKey(pathTempId));
-            toast.info('Chương đã được hủy xuất bản vì không còn bài học nào được xuất bản.');
-          } else {
-            toast.error(pathResult.message ?? 'Không thể hủy xuất bản chương.');
-          }
-        }
+        await unpublishPathWhenAllLessonsOff({
+          pathTempId,
+          pathIndex,
+          courseId,
+          pathsRef,
+          setPaths,
+          pathSnapshotsRef,
+          clearDirtyKey,
+        });
       } else if (saveScope === 'node') {
         clearDirtyKey(makeNodeDirtyKey(pathTempId, nodeTempId));
+        await unpublishPathWhenAllLessonsOff({
+          pathTempId,
+          pathIndex,
+          courseId,
+          pathsRef,
+          setPaths,
+          pathSnapshotsRef,
+          clearDirtyKey,
+        });
       } else {
         clearDirtyKey(makePathDirtyKey(pathTempId));
+      }
+
+      const syncedPath = pathsRef.current.find((item) => item.tempId === pathTempId);
+      if (syncedPath) {
+        updatePathSnapshotRef(pathSnapshotsRef, pathTempId, syncedPath);
       }
 
       setSaveConfirm(null);
@@ -963,16 +1030,17 @@ export default function MentorEditCourseContentPage() {
       }
 
       const data = result.data ?? {};
-      setPaths((prev) => prev.map((item) => (
-        item.tempId === pathTempId
-          ? {
-            ...item,
-            PathName: data.PathName ?? data.pathName ?? item.PathName,
-            Description: data.Description ?? data.description ?? item.Description,
-            IsActive: data.IsActive ?? data.isActive ?? item.IsActive,
-          }
-          : item
-      )));
+      setPaths((prev) => prev.map((item) => {
+        if (item.tempId !== pathTempId) return item;
+        const restored = {
+          ...item,
+          PathName: data.PathName ?? data.pathName ?? item.PathName,
+          Description: data.Description ?? data.description ?? item.Description,
+          IsActive: data.IsActive ?? data.isActive ?? item.IsActive,
+        };
+        updatePathSnapshotRef(pathSnapshotsRef, pathTempId, restored);
+        return restored;
+      }));
       clearDirtyKey(makePathDirtyKey(pathTempId));
       setValidationErrors((prev) => ({
         ...prev,
@@ -1006,12 +1074,19 @@ export default function MentorEditCourseContentPage() {
       }
 
       const data = result.data ?? {};
-      setPaths((prev) => updateNodeInPath(prev, pathTempId, nodeTempId, {
-        NodeName: data.NodeName ?? data.nodeName ?? node.NodeName,
-        Description: data.Description ?? data.description ?? node.Description,
-        IsActive: data.IsActive ?? data.isActive ?? node.IsActive,
-        NodeOrder: data.NodeOrder ?? data.nodeOrder ?? node.NodeOrder,
-      }));
+      setPaths((prev) => {
+        const nextPaths = updateNodeInPath(prev, pathTempId, nodeTempId, {
+          NodeName: data.NodeName ?? data.nodeName ?? node.NodeName,
+          Description: data.Description ?? data.description ?? node.Description,
+          IsActive: data.IsActive ?? data.isActive ?? node.IsActive,
+          NodeOrder: data.NodeOrder ?? data.nodeOrder ?? node.NodeOrder,
+        });
+        const restoredPath = nextPaths.find((item) => item.tempId === pathTempId);
+        if (restoredPath) {
+          updatePathSnapshotRef(pathSnapshotsRef, pathTempId, restoredPath);
+        }
+        return nextPaths;
+      });
       clearDirtyKey(makeNodeDirtyKey(pathTempId, nodeTempId));
       setValidationErrors((prev) => {
         const pathErrors = prev.paths?.[pathTempId];
@@ -1086,6 +1161,10 @@ export default function MentorEditCourseContentPage() {
           },
         };
       });
+      const restoredPath = pathsRef.current.find((item) => item.tempId === pathTempId);
+      if (restoredPath) {
+        updatePathSnapshotRef(pathSnapshotsRef, pathTempId, restoredPath);
+      }
       toast.success('Đã khôi phục học liệu.');
     } catch (error) {
       toast.error(error?.message || 'Không thể khôi phục học liệu.');
