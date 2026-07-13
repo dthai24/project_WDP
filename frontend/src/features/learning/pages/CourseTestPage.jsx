@@ -396,6 +396,7 @@ export default function CourseTestPage() {
         <TestResultPanel
           meta={meta}
           result={result}
+          paper={paper}
           onRetry={handleRetry}
           onBack={handleBackToLearn}
         />

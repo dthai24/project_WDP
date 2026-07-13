@@ -3,11 +3,24 @@ import {
   Chip,
   Typography,
   alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
+import React, { useState } from 'react';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import AppButton from '@/shared/ui/AppButton';
 import { BYPASS_ATTEMPT_LIMIT } from '@/features/learning/services/courseTestService';
 import {
@@ -24,6 +37,8 @@ export default function TestIntroPanel({
   onStart,
   onBack,
 }) {
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const rules = [
     `Thời gian làm bài: ${formatDurationMinutes(meta?.timeLimitMinutes)}.`,
     `Điểm đạt: ${meta?.passingScore ?? 70}%.`,
@@ -45,6 +60,30 @@ export default function TestIntroPanel({
   };
   const skillText = meta?.skills?.length > 0 ? formatSkills(meta.skills) : '';
   const questionLabel = skillText ? skillText : 'Bài kiểm tra';
+
+  // Format date
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    // Remove 'Z' if present, because DB returns local time but node-mssql appends Z
+    const normalizedDate = dateString.endsWith('Z') ? dateString.slice(0, -1) : dateString;
+    const d = new Date(normalizedDate);
+    return d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Calculate time spent
+  const calculateTimeSpent = (start, submit) => {
+    if (!start || !submit) return 'N/A';
+    const normStart = start.endsWith('Z') ? start.slice(0, -1) : start;
+    const normSubmit = submit.endsWith('Z') ? submit.slice(0, -1) : submit;
+    
+    const diff = Math.floor((new Date(normSubmit) - new Date(normStart)) / 1000);
+    if (diff < 0) return 'N/A';
+    const m = Math.floor(diff / 60);
+    const s = diff % 60;
+    if (m === 0) return `${s} giây`;
+    return `${m} phút ${s} giây`;
+  };
+
   return (
     <Box
       sx={{
@@ -70,7 +109,7 @@ export default function TestIntroPanel({
           >
             <QuizRoundedIcon sx={{ fontSize: 22, color: '#7C3AED' }} />
           </Box>
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               sx={{
                 fontSize: { xs: 20, md: 24 },
@@ -88,6 +127,26 @@ export default function TestIntroPanel({
                   ? meta.chapterTitle
                   : 'Kiểm tra cuối chương'}
             </Typography>
+          </Box>
+          <Box>
+            <AppButton
+              variant="outlined"
+              size="small"
+              startIcon={<HistoryRoundedIcon />}
+              onClick={() => setHistoryOpen(true)}
+              sx={{
+                borderRadius: '8px',
+                px: 1.5,
+                py: 0.5,
+                fontSize: 13,
+                fontWeight: 600,
+                borderColor: TEST_DIVIDER,
+                color: TEST_TEXT,
+                '&:hover': { borderColor: TEST_PRIMARY, color: TEST_PRIMARY, bgcolor: alpha(TEST_PRIMARY, 0.04) },
+              }}
+            >
+              Lịch sử
+            </AppButton>
           </Box>
         </Box>
 
@@ -193,6 +252,89 @@ export default function TestIntroPanel({
           </AppButton>
         </Box>
       </Box>
+
+      {/* Modal Lịch sử làm bài */}
+      <Dialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: '16px' }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+          <Typography sx={{ fontSize: 18, fontWeight: 700, color: TEST_TEXT }}>
+            Lịch sử làm bài
+          </Typography>
+          <IconButton onClick={() => setHistoryOpen(false)} size="small" sx={{ color: TEST_MUTED }}>
+            <CloseRoundedIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {(!meta?.history || meta.history.length === 0) ? (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography sx={{ color: TEST_MUTED, fontSize: 14 }}>
+                Chưa có lịch sử làm bài nào.
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead sx={{ bgcolor: alpha(TEST_PRIMARY, 0.03) }}>
+                  <TableRow>
+                    <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5 }}>Ngày giờ</TableCell>
+                    <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5 }}>Thời gian làm</TableCell>
+                    <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5, textAlign: 'right' }}>Điểm</TableCell>
+                    <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5, textAlign: 'right' }}>Kết quả</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {meta.history.map((attempt, index) => {
+                    const passed = attempt.IsPass;
+                    const scoreValue = Number.isInteger(attempt.Point) ? attempt.Point : Number(attempt.Point).toFixed(1);
+                    
+                    return (
+                      <TableRow 
+                        key={attempt.AttemptId}
+                        sx={{ 
+                          '&:last-child td, &:last-child th': { border: 0 },
+                          bgcolor: passed ? alpha('#10B981', 0.015) : alpha('#EF4444', 0.015),
+                        }}
+                      >
+                        <TableCell sx={{ fontSize: 14, fontWeight: 600, color: TEST_TEXT, py: 2 }}>
+                          {formatDateTime(attempt.StartedAt)}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: 14, color: TEST_TEXT, py: 2 }}>
+                          {calculateTimeSpent(attempt.StartedAt, attempt.SubmittedAt)}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: 'right', py: 2 }}>
+                          <Typography sx={{ fontSize: 18, fontWeight: 800, color: passed ? '#10B981' : '#EF4444', lineHeight: 1 }}>
+                            {scoreValue} <Box component="span" sx={{ fontSize: 13, fontWeight: 600, color: TEST_MUTED }}>/ 100</Box>
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ textAlign: 'right', py: 2 }}>
+                          <Chip 
+                            label={passed ? 'Đạt' : 'Chưa đạt'} 
+                            size="small" 
+                            sx={{ 
+                              bgcolor: passed ? alpha('#10B981', 0.1) : alpha('#EF4444', 0.1),
+                              color: passed ? '#10B981' : '#EF4444',
+                              fontWeight: 700,
+                              fontSize: 12,
+                              height: 24
+                            }} 
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

@@ -35,10 +35,23 @@ const submitTestAttemptModel = async (attemptId, score, status, isPass = 0) => {
 
     await request.query(`
         UPDATE dbo.Test_Attempts 
-        SET Point = @score, Status = @status, IsPass = @isPass
+        SET Point = @score, Status = @status, IsPass = @isPass, SubmittedAt = GETDATE()
         WHERE AttemptId = @attemptId
     `);
     return true;
+};
+
+const getTestAttemptsHistory = async (userId, testId) => {
+    const request = new sql.Request();
+    request.input('userId', sql.Int, Number(userId));
+    request.input('testId', sql.Int, Number(testId));
+    const result = await request.query(`
+        SELECT AttemptId, StartedAt, SubmittedAt, Status, Point, IsPass, ScorePercentage 
+        FROM dbo.Test_Attempts
+        WHERE UserId = @userId AND TestId = @testId AND Status = 'submitted'
+        ORDER BY AttemptId DESC
+    `);
+    return result.recordset;
 };
 const getTestIdByCourseAndPath = async (courseId, pathId) => {
     const request = new sql.Request();
@@ -84,5 +97,6 @@ module.exports = {
     submitTestAttemptModel,
     getTestIdByCourseAndPath,   
     getTestInfoByAttempt,
-    getAttemptCountByUserAndTest
+    getAttemptCountByUserAndTest,
+    getTestAttemptsHistory
 };

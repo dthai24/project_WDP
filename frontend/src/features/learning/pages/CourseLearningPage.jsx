@@ -90,6 +90,7 @@ import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import QuizRoundedIcon from "@mui/icons-material/QuizRounded";
+import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
@@ -176,7 +177,7 @@ function computeProgress(mods) {
   );
 }
 
-function OutlineTestItem({ label, subtitle, onClick, variant = "chapter", isPassed = false }) {
+function OutlineTestItem({ label, subtitle, onClick, variant = "chapter", isPassed = false, locked = false }) {
   const isCourse = variant === "course";
 
   return (
@@ -194,19 +195,22 @@ function OutlineTestItem({ label, subtitle, onClick, variant = "chapter", isPass
         mt: isCourse ? 0.5 : 0.25,
         border: "none",
         borderRadius: "10px",
-        cursor: "pointer",
+        cursor: locked ? "not-allowed" : "pointer",
         textAlign: "left",
         fontFamily: "inherit",
+        opacity: locked ? 0.6 : 1,
         bgcolor: isPassed ? alpha("#7C3AED", 0.08) : (isCourse ? alpha("#7C3AED", 0.08) : alpha("#7C3AED", 0.05)),
         borderTop: isCourse ? "none" : `1px dashed ${alpha("#7C3AED", 0.22)}`,
         transition: "background-color 0.15s ease",
         "&:hover": {
-          bgcolor: isPassed ? alpha("#7C3AED", 0.12) : alpha("#7C3AED", isCourse ? 0.12 : 0.1),
+          bgcolor: locked ? undefined : (isPassed ? alpha("#7C3AED", 0.12) : alpha("#7C3AED", isCourse ? 0.12 : 0.1)),
         },
       }}
     >
       <Box sx={{ pt: 0.1, flexShrink: 0 }}>
-        {isPassed ? (
+        {locked ? (
+          <LockRoundedIcon sx={{ fontSize: 18, color: MUTED }} />
+        ) : isPassed ? (
           <CheckRoundedIcon sx={{ fontSize: 18, color: "#7C3AED" }} />
         ) : (
           <QuizRoundedIcon sx={{ fontSize: 18, color: "#7C3AED" }} />
@@ -217,7 +221,7 @@ function OutlineTestItem({ label, subtitle, onClick, variant = "chapter", isPass
           sx={{
             fontSize: 12.5,
             fontWeight: 600,
-            color: "#6D28D9",
+            color: locked ? MUTED : "#6D28D9",
             lineHeight: 1.35,
           }}
         >
@@ -423,11 +427,36 @@ export default function CourseLearningPage() {
     };
   }, [courseId, modules, courseInfo.courseTitle]);
 
-  // 4. Các hàm tính toán của React (Giữ nguyên không đổi)
-  const allLessons = useMemo(() => flatLessons(modules), [modules]);
+  // 4. Các hàm tính toán của React
+  const processedModules = useMemo(() => {
+    if (!modules.length) return [];
+    
+    // Pass 1: compute isCompleted for each module
+    const modulesWithStatus = modules.map((mod) => {
+      const allLessonsDone = mod.lessons.every((l) => l.status === "completed");
+      const hasActiveTest = chapterQuizConfigs[mod.id]?.enabled !== false && chapterQuizConfigs[mod.id] != null;
+      const isCompleted = allLessonsDone && (!hasActiveTest || mod.isTestPassed);
+      return { ...mod, isCompleted, hasActiveTest, allLessonsDone };
+    });
+
+    // Pass 2: compute isLocked
+    return modulesWithStatus.map((mod, index) => {
+      if (index === 0) return { ...mod, isLocked: false };
+      const prevMod = modulesWithStatus[index - 1];
+      return { ...mod, isLocked: !prevMod.isCompleted };
+    });
+  }, [modules, chapterQuizConfigs]);
+
+  const allLessons = useMemo(() => flatLessons(processedModules), [processedModules]);
   const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
-  const { lesson: currentLesson, mod: currentMod } = findLessonAndModule(modules, currentLessonId);
-  const progress = useMemo(() => computeProgress(modules), [modules]);
+  const { lesson: currentLesson, mod: currentMod } = findLessonAndModule(processedModules, currentLessonId);
+  const progress = useMemo(() => computeProgress(processedModules), [processedModules]);
+
+  console.log("RENDER DEBUG:", {
+    courseQuizConfig,
+    chapterQuizConfigs,
+    processedModules
+  });
 
   // 5. Nút Đánh dấu hoàn thành
   const handleToggleComplete = async () => {
@@ -473,7 +502,7 @@ export default function CourseLearningPage() {
     );
   }
   // 2. Nếu API đã gọi xong nhưng khóa học chưa có bài học nào được mở (IsActive = 0)
-  if (modules.length === 0) {
+  if (processedModules.length === 0) {
     return (
       <Box sx={{ maxWidth: 1280, mx: "auto", py: 8 }}>
         <EmptyState
@@ -978,7 +1007,7 @@ export default function CourseLearningPage() {
                   overflowY: "auto",
                 }}
               >
-                {modules.map((mod) => {
+                {processedModules.map((mod) => {
                   const doneCount = mod.lessons.filter(
                     (l) => l.status === "completed"
                   ).length;
@@ -1008,22 +1037,26 @@ export default function CourseLearningPage() {
                           minHeight: 44,
                           px: 1,
                           "& .MuiAccordionSummary-content": { my: 1 },
+                          opacity: mod.isLocked ? 0.6 : 1,
                         }}
                       >
-                        <Box sx={{ flex: 1, minWidth: 0, pr: 1 }}>
-                          <Typography
-                            sx={{
-                              fontSize: 12.5,
-                              fontWeight: isActiveModule ? 600 : 500,
-                              color: isActiveModule ? PRIMARY : TEXT,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            Chương {mod.index}: {mod.title}
-                          </Typography>
-                          <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.2 }}>
-                            {doneCount}/{mod.lessons.length} bài
-                          </Typography>
+                        <Box sx={{ flex: 1, minWidth: 0, pr: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                          <Box>
+                            <Typography
+                              sx={{
+                                fontSize: 12.5,
+                                fontWeight: isActiveModule ? 600 : 500,
+                                color: isActiveModule ? PRIMARY : TEXT,
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              Chương {mod.index}: {mod.title}
+                            </Typography>
+                            <Typography sx={{ fontSize: 11, color: MUTED, mt: 0.2 }}>
+                              {doneCount}/{mod.lessons.length} bài
+                            </Typography>
+                          </Box>
+                          {mod.isLocked && <LockRoundedIcon sx={{ fontSize: 16, color: MUTED }} />}
                         </Box>
                       </AccordionSummary>
 
@@ -1040,7 +1073,7 @@ export default function CourseLearningPage() {
                               key={lesson.id}
                               component="button"
                               type="button"
-                              onClick={() => handleSelectLesson(lesson.id)}
+                              onClick={() => !mod.isLocked && handleSelectLesson(lesson.id)}
                               sx={{
                                 width: "100%",
                                 display: "flex",
@@ -1050,9 +1083,10 @@ export default function CourseLearningPage() {
                                 px: 1.25,
                                 border: "none",
                                 borderRadius: "10px",
-                                cursor: "pointer",
+                                cursor: mod.isLocked ? "not-allowed" : "pointer",
                                 textAlign: "left",
                                 fontFamily: "inherit",
+                                opacity: mod.isLocked ? 0.6 : 1,
                                 bgcolor: isActive ? alpha(PRIMARY, 0.08) : "transparent",
                                 transition: "background-color 0.15s ease",
                                 "&:hover": {
@@ -1101,24 +1135,27 @@ export default function CourseLearningPage() {
                         })}
 
                         <OutlineTestItem
-                          label="Làm bài kiểm tra"
-                          subtitle={
-                            chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"
-                          }
+                          label="Bài kiểm tra chương"
+                          subtitle={chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"}
                           isPassed={mod.isTestPassed}
-                          onClick={() => handleGoToChapterTest(mod.id)}
+                          onClick={() => !mod.isLocked && mod.allLessonsDone && handleGoToChapterTest(mod.id)}
+                          locked={mod.isLocked || !mod.allLessonsDone}
                         />
                       </AccordionDetails>
                     </Accordion>
                   );
                 })}
 
-                <Box sx={{ px: 0.5, pt: 0.5, pb: 0.5 }}>
+                <Box sx={{ px: 1.5, pb: 2, pt: 1 }}>
                   <OutlineTestItem
                     variant="course"
-                    label="Làm bài kiểm tra toàn khóa"
+                    label="Kiểm tra cuối khóa"
                     subtitle={courseQuizConfig?.title || "Kiểm tra cuối khóa"}
-                    onClick={handleGoToCourseTest}
+                    onClick={() => {
+                      const allCompleted = processedModules.every(m => m.isCompleted);
+                      if (allCompleted) handleGoToCourseTest();
+                    }}
+                    locked={!processedModules.every(m => m.isCompleted)}
                   />
                 </Box>
               </Box>
