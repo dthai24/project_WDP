@@ -1,6 +1,7 @@
 import { adminCategoriesSeed } from '@/features/admin/data/adminCategoriesMock';
 import { adminLevelsSeed } from '@/features/admin/data/adminLevelsMock';
 import {
+  CATALOG_COLOR_PALETTE,
   DEFAULT_CATALOG_CHIP_SX,
   LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME,
   LEGACY_LEVEL_COLOR_BY_DISPLAY_NAME,
@@ -11,6 +12,17 @@ import {
 
 const CATEGORY_STORAGE_KEY = 'admin_categories_v1';
 const LEVEL_STORAGE_KEY = 'admin_levels_v1';
+
+function hashString(str) {
+  if (!str) return 0;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
 
 /**
  * Chuẩn hóa cấu trúc dữ liệu của một Danh mục (Category).
@@ -130,7 +142,13 @@ function findLevel({ id, displayName, colorCode } = {}) {
  */
 function resolveLegacyCategoryColor(displayName) {
   if (!displayName) return null;
-  return LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME[normalizeCatalogLabel(displayName)] ?? null;
+  const key = normalizeCatalogLabel(displayName);
+  if (LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME[key]) {
+    return LEGACY_CATEGORY_COLOR_BY_DISPLAY_NAME[key];
+  }
+  // Fallback to deterministic hashed color
+  const hash = hashString(key);
+  return CATALOG_COLOR_PALETTE[hash % CATALOG_COLOR_PALETTE.length].code;
 }
 
 /**
@@ -152,7 +170,9 @@ function resolveLegacyLevelColor(displayName) {
   if (key.includes('trung cấp')) return 'amber';
   if (key.includes('cao cấp') || key.includes('nâng cao')) return 'orange';
   
-  return null;
+  // Fallback to deterministic hashed color
+  const hash = hashString(key);
+  return CATALOG_COLOR_PALETTE[hash % CATALOG_COLOR_PALETTE.length].code;
 }
 
 /**
