@@ -1,23 +1,82 @@
 const studentTestModel = require('../Models/studentTestModel');
 const questionBankModel = require('../Models/questionBankModel'); 
 const chapterQuizConfigService = require('../services/chapterQuizConfigService'); 
+const courseModel = require('../models/coursesModel');
+
+async function checkPrerequisites(courseId, userId, scope, chapterId) {
+    const learningPath = await courseModel.getCourseLearningPath(courseId, userId);
+    let prerequisitesMet = true;
+    let prerequisiteBlockers = [];
+
+    if (learningPath && learningPath.length > 0) {
+        const modulesMap = new Map();
+        for (const row of learningPath) {
+            if (!modulesMap.has(row.PathId)) {
+                modulesMap.set(row.PathId, { id: row.PathId, isTestPassed: row.IsTestPassed, lessons: [] });
+            }
+            if (row.NodeId) {
+                modulesMap.get(row.PathId).lessons.push({ isCompleted: row.IsCompleted });
+            }
+        }
+        
+        const modules = Array.from(modulesMap.values());
+        for (let i = 0; i < modules.length; i++) {
+            const mod = modules[i];
+            const allLessonsDone = mod.lessons.every(l => l.isCompleted);
+            const hasConfigRes = await chapterQuizConfigService.getChapterQuizConfig(courseId, mod.id);
+            const hasActiveTest = hasConfigRes.ok && hasConfigRes.config?.enabled !== false && hasConfigRes.config != null;
+            mod.isCompleted = allLessonsDone && (!hasActiveTest || mod.isTestPassed);
+            mod.allLessonsDone = allLessonsDone;
+        }
+
+        if (scope === 'chapter' && chapterId) {
+            const targetMod = modules.find(m => m.id === Number(chapterId));
+            if (targetMod) {
+                const targetIndex = modules.findIndex(m => m.id === Number(chapterId));
+                const isLocked = targetIndex > 0 ? !modules[targetIndex - 1].isCompleted : false;
+                
+                if (isLocked) {
+                    prerequisitesMet = false;
+                    prerequisiteBlockers.push("Chương này đang bị khóa do chưa hoàn thành chương trước đó.");
+                } else if (!targetMod.allLessonsDone) {
+                    prerequisitesMet = false;
+                    prerequisiteBlockers.push("Bạn phải học xong tất cả bài học trong chương trước khi làm bài kiểm tra.");
+                }
+            }
+        } else if (scope === 'final') {
+            const allCompleted = modules.every(m => m.isCompleted);
+            if (!allCompleted) {
+                prerequisitesMet = false;
+                prerequisiteBlockers.push("Bạn phải hoàn thành tất cả các chương trước khi làm bài kiểm tra cuối khóa.");
+            }
+        }
+    }
+    return { prerequisitesMet, prerequisiteBlockers };
+}
+
 const getTestMeta = async (req, res) => {
     try {
         const { courseId, scope } = req.params;
         const chapterId = req.query.chapterId;
         const userId = req.headers['x-user-id'] || req.user?.userId || 1; // Lấy ID Học viên
         
+        const prereq = await checkPrerequisites(courseId, userId, scope, chapterId);
+
         let meta = {
             title: "Bài kiểm tra", courseId: Number(courseId),
             timeLimitMinutes: 15, passingScore: 70, maxAttempts: 3,
             attemptsUsed: 0, remainingAttempts: 3, enabled: true,
-            skills: [] 
+            skills: [], history: [],
+            prerequisitesMet: prereq.prerequisitesMet,
+            prerequisiteBlockers: prereq.prerequisiteBlockers
         };
         if (scope === 'chapter' && chapterId) {
             // 1. ĐẾM SỐ LƯỢT ĐÃ LÀM CỦA HỌC VIÊN DƯỚI DB
             const testId = await studentTestModel.getTestIdByCourseAndPath(courseId, chapterId);
             if (testId) {
                 meta.attemptsUsed = await studentTestModel.getAttemptCountByUserAndTest(userId, testId);
+                const history = await studentTestModel.getTestAttemptsHistory(userId, testId);
+                meta.history = history;
             }
             const configResult = await chapterQuizConfigService.getChapterQuizConfig(courseId, chapterId);
             if (configResult.ok && configResult.config) {
@@ -73,6 +132,11 @@ const startTestAttempt = async (req, res) => {
         const userId = req.headers['x-user-id'] || req.user?.userId || 1;
         let pathId = req.body.chapterId;
         
+        const prereq = await checkPrerequisites(courseId, userId, scope, pathId);
+        if (!prereq.prerequisitesMet) {
+            return res.status(403).json({ ok: false, message: prereq.prerequisiteBlockers.join(" ") });
+        }
+
         let testId = null;
         let config = {}; 
         if (scope === 'final') {
@@ -181,6 +245,7 @@ const submitTestAttempt = async (req, res) => {
         
         const questionIds = Object.keys(answers || {}).map(id => Number(id)).filter(id => !isNaN(id));
         let correctCount = 0;
+        const questionResults = [];
 
         if (questionIds.length > 0) {
             const { sql } = require('../config/db');
@@ -202,10 +267,25 @@ const submitTestAttempt = async (req, res) => {
                 const userChoiceIds = Array.isArray(answers[qId]) ? answers[qId].map(String) : [String(answers[qId])];
                 const correctChoiceIds = (correctAnswersMap[qId] || []).map(String);
                 
-                if (correctChoiceIds.length > 0 && userChoiceIds.length === correctChoiceIds.length) {
-                    const isCorrect = correctChoiceIds.every(id => userChoiceIds.includes(id));
+                let isCorrect = false;
+                let isBlank = false;
+                
+                // Kiểm tra xem có bị bỏ trống không (null, undefined, mảng rỗng)
+                if (userChoiceIds.length === 0 || (userChoiceIds.length === 1 && (userChoiceIds[0] === 'null' || userChoiceIds[0] === 'undefined' || !userChoiceIds[0]))) {
+                    isBlank = true;
+                } else if (correctChoiceIds.length > 0 && userChoiceIds.length === correctChoiceIds.length) {
+                    isCorrect = correctChoiceIds.every(id => userChoiceIds.includes(id));
                     if (isCorrect) correctCount++;
                 }
+                
+                // Thêm kết quả chi tiết từng câu
+                questionResults.push({
+                    questionId: Number(qId),
+                    isCorrect,
+                    isBlank,
+                    userChoiceIds: isBlank ? [] : userChoiceIds,
+                    correctChoiceIds: isBlank ? [] : correctChoiceIds // Giấu đáp án nếu bỏ trống
+                });
             }
         }
 
@@ -236,7 +316,8 @@ const submitTestAttempt = async (req, res) => {
                 wrongCount: wrongCount >= 0 ? wrongCount : 0,
                 totalQuestions: totalQ,
                 timeSpentSeconds: timeSpentSeconds || 0,
-                passingScore: passingScore
+                passingScore: passingScore,
+                questionResults: questionResults // Trả về chi tiết các câu hỏi
             }
         });
     } catch (error) {
