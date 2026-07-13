@@ -72,4 +72,25 @@ router.get('/:id/learning', getLearningPath);
 router.post('/:id/progress', updateProgress);
 // lay treak
 router.get("/streak", getStreak);
+
+router.get('/:courseId/comments', optionalAuth, getCourseComments);
+router.post('/:courseId/comments', optionalAuth, createCourseComment);
+
+// Lấy lộ trình học và trạng thái hoàn thành (Trang Course Learning)
+router.get('/:id/learning', getLearningPath);
+
+// Lưu tiến độ học và đánh dấu bài học hoàn thành
+router.post('/:id/progress', updateProgress);
+// lay treak
+router.get("/streak", getStreak);
 module.exports = router;
+
+const studentTestController = require('../controllers/studentTestController');
+// Lấy thông tin giới thiệu bài thi (tên bài, thời gian, số câu...)
+router.get('/:courseId/tests/:scope/meta', studentTestController.getTestMeta);
+// Khởi tạo lượt thi mới, lấy ngẫu nhiên câu hỏi tạo thành đề thi
+router.post('/:courseId/tests/:scope/start', studentTestController.startTestAttempt);
+// Nộp bài thi (tính điểm, lưu trạng thái hoàn thành)
+router.post('/:courseId/tests/attempts/:attemptId/submit', studentTestController.submitTestAttempt);
+
+

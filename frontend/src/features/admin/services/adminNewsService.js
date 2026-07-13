@@ -1,22 +1,19 @@
 /**
- * Admin News Service — mock API-ready; swap to real backend when News table exists.
+ * Admin News Service — gọi backend thật qua newsApiClient.
  */
-import { MOCK_ADMIN_NEWS } from '@/features/admin/data/adminNewsMock';
-import { getCatalogCategories } from '@/shared/catalog/catalogRegistry';
+import {
+  apiGetNewsList,
+  apiGetNewsById,
+  apiCreateNews,
+  apiUpdateNews,
+  apiDeleteNews,
+} from '@/features/news/services/newsApiClient';
 
-const MOCK_DELAY_MS = 280;
-
-function delay(ms = MOCK_DELAY_MS) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function normalizeNews(raw = {}) {
+function normalizeArticle(raw = {}) {
   return {
-    id: raw.id,
+    id: raw.newsId,
     title: raw.title ?? '',
-    category: raw.category ?? '',
+    category: raw.categoryName ?? raw.category ?? '',
     categoryId: raw.categoryId ?? null,
     status: raw.status ?? 'DRAFT',
     author: raw.author ?? '',
@@ -25,80 +22,37 @@ function normalizeNews(raw = {}) {
     thumbnail: raw.thumbnail ?? null,
     publishedAt: raw.publishedAt ?? null,
     updatedAt: raw.updatedAt ?? null,
+    createdByName: raw.createdByName ?? '',
   };
 }
 
-function resolveCategoryLabel(categoryId) {
-  const category = getCatalogCategories().find(
-    (item) => String(item.id) === String(categoryId),
-  );
-  return category?.displayName ?? '';
-}
+export async function getNewsArticles({ status, categoryId, search, page, pageSize, sort } = {}) {
+  const result = await apiGetNewsList({ status, categoryId, search, page, pageSize, sort });
 
-function findNewsIndex(id) {
-  return MOCK_ADMIN_NEWS.findIndex((item) => String(item.id) === String(id));
-}
-
-function getNextNewsId() {
-  const ids = MOCK_ADMIN_NEWS.map((item) => Number(item.id) || 0);
-  return ids.length ? Math.max(...ids) + 1 : 1;
-}
-
-function buildNewsPayload(payload = {}, existing = {}) {
-  const title = String(payload.title ?? '').trim();
-  const categoryId = payload.categoryId;
-  const status = payload.status ?? existing.status ?? 'DRAFT';
-  const now = new Date().toISOString();
-  const wasPublished = existing.status === 'PUBLISHED';
-  const isPublished = status === 'PUBLISHED';
-
-  let publishedAt = existing.publishedAt ?? null;
-  if (isPublished && !publishedAt) {
-    publishedAt = now;
-  } else if (!isPublished && !wasPublished) {
-    publishedAt = null;
+  if (!result.ok) {
+    return { ok: false, articles: [], total: 0, message: result.message ?? 'Không tải được tin tức.' };
   }
 
   return {
-    title,
-    category: resolveCategoryLabel(categoryId),
-    categoryId: Number(categoryId),
-    status,
-    author: String(payload.author ?? '').trim() || existing.author || 'Admin',
-    excerpt: String(payload.excerpt ?? '').trim(),
-    content: String(payload.content ?? '').trim(),
-    thumbnail: String(payload.thumbnail ?? '').trim() || null,
-    publishedAt,
-    updatedAt: now,
-  };
-}
-
-export async function getNewsArticles() {
-  await delay();
-  return {
     ok: true,
-    articles: MOCK_ADMIN_NEWS.map(normalizeNews),
+    articles: (result.data || []).map(normalizeArticle),
+    total: result.total ?? 0,
+    page: result.page ?? page ?? 1,
+    pageSize: result.pageSize ?? pageSize ?? 10,
   };
 }
 
 export async function getNewsArticleById(id) {
-  await delay();
-  const index = findNewsIndex(id);
-  if (index < 0) {
-    return { ok: false, message: 'Không tìm thấy tin tức' };
+  const result = await apiGetNewsById(id);
+  if (!result.ok) {
+    return { ok: false, article: null, message: result.message ?? 'Không tìm thấy tin tức.' };
   }
-  return {
-    ok: true,
-    article: normalizeNews(MOCK_ADMIN_NEWS[index]),
-  };
+  return { ok: true, article: normalizeArticle(result.data) };
 }
 
 export async function createNewsArticle(payload = {}) {
-  await delay();
-
   const title = String(payload.title ?? '').trim();
   const categoryId = payload.categoryId;
-  const status = payload.status ?? 'DRAFT';
 
   if (!title) {
     return { ok: false, message: 'Tiêu đề không được để trống' };
@@ -107,33 +61,37 @@ export async function createNewsArticle(payload = {}) {
     return { ok: false, message: 'Vui lòng chọn danh mục' };
   }
 
-  const now = new Date().toISOString();
-  const article = {
-    id: getNextNewsId(),
-    ...buildNewsPayload(payload, {}),
-    publishedAt: status === 'PUBLISHED' ? now : null,
-    updatedAt: now,
-  };
+  const result = await apiCreateNews({
+    title,
+    categoryId: Number(categoryId),
+    status: payload.status ?? 'DRAFT',
+    author: payload.author || undefined,
+    excerpt: payload.excerpt || undefined,
+    content: payload.content || undefined,
+    thumbnail: payload.thumbnail || undefined,
+    publishedAt: payload.status === 'PUBLISHED' ? new Date().toISOString() : null,
+  });
 
-  MOCK_ADMIN_NEWS.unshift(article);
+  if (!result.ok) {
+    return { ok: false, message: result.message ?? 'Không thể tạo bài viết.' };
+  }
 
+  // Fetch lại bài viết vừa tạo để có đầy đủ thông tin
+  const articleResult = await getNewsArticleById(result.data?.newsId);
   return {
     ok: true,
-    article: normalizeNews(article),
+    article: articleResult.ok ? articleResult.article : normalizeArticle({ newsId: result.data?.newsId, title, categoryId }),
   };
 }
 
 export async function updateNewsArticle(id, payload = {}) {
-  await delay();
-
-  const index = findNewsIndex(id);
-  if (index < 0) {
+  const existingResult = await getNewsArticleById(id);
+  if (!existingResult.ok) {
     return { ok: false, message: 'Không tìm thấy tin tức' };
   }
 
-  const existing = MOCK_ADMIN_NEWS[index];
-  const title = String(payload.title ?? existing.title ?? '').trim();
-  const categoryId = payload.categoryId ?? existing.categoryId;
+  const title = String(payload.title ?? existingResult.article.title ?? '').trim();
+  const categoryId = payload.categoryId ?? existingResult.article.categoryId;
 
   if (!title) {
     return { ok: false, message: 'Tiêu đề không được để trống' };
@@ -142,29 +100,36 @@ export async function updateNewsArticle(id, payload = {}) {
     return { ok: false, message: 'Vui lòng chọn danh mục' };
   }
 
-  const next = {
-    ...existing,
-    ...buildNewsPayload(payload, existing),
-    id: existing.id,
-  };
+  const result = await apiUpdateNews(id, {
+    title,
+    categoryId: Number(categoryId),
+    status: payload.status ?? existingResult.article.status,
+    author: payload.author !== undefined ? payload.author : existingResult.article.author,
+    excerpt: payload.excerpt !== undefined ? payload.excerpt : existingResult.article.excerpt,
+    content: payload.content !== undefined ? payload.content : existingResult.article.content,
+    thumbnail: payload.thumbnail !== undefined ? payload.thumbnail : existingResult.article.thumbnail,
+    publishedAt: payload.status === 'PUBLISHED'
+      ? (existingResult.article.publishedAt || new Date().toISOString())
+      : null,
+  });
 
-  MOCK_ADMIN_NEWS[index] = next;
+  if (!result.ok) {
+    return { ok: false, message: result.message ?? 'Không thể cập nhật bài viết.' };
+  }
 
+  const articleResult = await getNewsArticleById(id);
   return {
     ok: true,
-    article: normalizeNews(next),
+    article: articleResult.ok ? articleResult.article : normalizeArticle({ ...existingResult.article, ...payload, id }),
   };
 }
 
 export async function updateNewsArticleBasicInfo(id, payload = {}) {
-  await delay();
-
-  const index = findNewsIndex(id);
-  if (index < 0) {
+  const existingResult = await getNewsArticleById(id);
+  if (!existingResult.ok) {
     return { ok: false, message: 'Không tìm thấy tin tức' };
   }
 
-  const existing = MOCK_ADMIN_NEWS[index];
   const title = String(payload.title ?? '').trim();
   const categoryId = payload.categoryId;
 
@@ -175,69 +140,59 @@ export async function updateNewsArticleBasicInfo(id, payload = {}) {
     return { ok: false, message: 'Vui lòng chọn danh mục' };
   }
 
-  const next = {
-    ...existing,
-    ...buildNewsPayload({ ...payload, content: existing.content ?? '' }, existing),
-    id: existing.id,
-  };
+  const result = await apiUpdateNews(id, {
+    title,
+    categoryId: Number(categoryId),
+    status: payload.status ?? existingResult.article.status,
+    author: payload.author !== undefined ? payload.author : existingResult.article.author,
+    excerpt: payload.excerpt !== undefined ? payload.excerpt : existingResult.article.excerpt,
+    thumbnail: payload.thumbnail !== undefined ? payload.thumbnail : existingResult.article.thumbnail,
+    publishedAt: payload.status === 'PUBLISHED'
+      ? (existingResult.article.publishedAt || new Date().toISOString())
+      : null,
+  });
 
-  MOCK_ADMIN_NEWS[index] = next;
+  if (!result.ok) {
+    return { ok: false, message: result.message ?? 'Không thể cập nhật bài viết.' };
+  }
 
+  const articleResult = await getNewsArticleById(id);
   return {
     ok: true,
-    article: normalizeNews(next),
+    article: articleResult.ok ? articleResult.article : normalizeArticle({ ...existingResult.article, ...payload, id }),
   };
 }
 
 export async function updateNewsArticleContent(id, content = '') {
-  await delay();
-
-  const index = findNewsIndex(id);
-  if (index < 0) {
+  const existingResult = await getNewsArticleById(id);
+  if (!existingResult.ok) {
     return { ok: false, message: 'Không tìm thấy tin tức' };
   }
 
-  const existing = MOCK_ADMIN_NEWS[index];
-  const next = {
-    ...existing,
+  const result = await apiUpdateNews(id, {
     content: String(content ?? '').trim(),
-    updatedAt: new Date().toISOString(),
-  };
+    status: existingResult.article.status,
+  });
 
-  MOCK_ADMIN_NEWS[index] = next;
+  if (!result.ok) {
+    return { ok: false, message: result.message ?? 'Không thể cập nhật nội dung.' };
+  }
 
+  const articleResult = await getNewsArticleById(id);
   return {
     ok: true,
-    article: normalizeNews(next),
+    article: articleResult.ok ? articleResult.article : normalizeArticle({ ...existingResult.article, content, id }),
   };
 }
 
-export async function revertNewsArticle(id, original = {}) {
-  await delay();
-
-  const index = findNewsIndex(id);
-  if (index < 0) {
-    return { ok: false, message: 'Không tìm thấy tin tức' };
+export async function deleteNewsArticle(id) {
+  if (id == null || id === '') {
+    return { ok: false, message: 'ID bài viết không hợp lệ' };
   }
 
-  const existing = MOCK_ADMIN_NEWS[index];
-  const title = String(original.title ?? existing.title ?? '').trim();
-  const categoryId = original.categoryId ?? existing.categoryId;
-
-  if (!title || !categoryId) {
-    return { ok: false, message: 'Không thể khôi phục bài viết' };
+  const result = await apiDeleteNews(id);
+  if (!result.ok) {
+    return { ok: false, message: result.message ?? 'Không thể xóa bài viết.' };
   }
-
-  const next = {
-    ...existing,
-    ...buildNewsPayload(original, existing),
-    id: existing.id,
-  };
-
-  MOCK_ADMIN_NEWS[index] = next;
-
-  return {
-    ok: true,
-    article: normalizeNews(next),
-  };
+  return { ok: true, message: result.message ?? 'Đã xóa bài viết.' };
 }

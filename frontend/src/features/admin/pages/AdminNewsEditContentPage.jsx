@@ -142,7 +142,6 @@ export default function AdminNewsEditContentPage() {
           articleId: Number(newsId),
           step1,
           content: material.Content ?? '',
-          original: draft?.original ?? null,
           returnTo: 'dialog',
         });
         navigate('/admin/news', { state: { reopenEditArticleId: Number(newsId) } });

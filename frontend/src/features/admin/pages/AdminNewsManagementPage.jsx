@@ -4,22 +4,26 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import AppPagination from '@/shared/ui/AppPagination';
+import ConfirmDialog from '@/shared/ui/ConfirmDialog';
+import { toast } from '@/shared/ui/Toast';
 import AdminNewsToolbar from '@/features/admin/components/AdminNewsToolbar';
 import AdminNewsList from '@/features/admin/components/AdminNewsList';
 import AdminNewsEditDialog from '@/features/admin/components/AdminNewsEditDialog';
 import { clearAdminNewsEditDraft } from '@/features/admin/utils/adminNewsEditStorage';
-import { getNewsArticles } from '@/features/admin/services/adminNewsService';
+import {
+  deleteNewsArticle,
+  getNewsArticles,
+} from '@/features/admin/services/adminNewsService';
 import {
   ADMIN_NEWS_STATUS_OPTIONS,
 } from '@/features/admin/data/adminNewsMock';
-import { filterAndSortNews, buildAdminNewsCategoryFilterOptions } from '@/features/admin/utils/adminNewsUtils';
+import { buildAdminNewsCategoryFilterOptions } from '@/features/admin/utils/adminNewsUtils';
 import {
   ADMIN_NEWS_LIST_DEFAULTS,
   ADMIN_NEWS_LIST_PAGE_SIZE,
   buildAdminNewsActiveChips,
   buildAdminNewsListSearchParams,
   hasActiveAdminNewsFilters,
-  paginateNews,
   parseAdminNewsListParams,
   resetAdminNewsListParams,
 } from '@/features/admin/utils/adminNewsListParams';
@@ -32,9 +36,12 @@ export default function AdminNewsManagementPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [articles, setArticles] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [editArticleId, setEditArticleId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const queryState = useMemo(
     () => parseAdminNewsListParams(searchParams),
@@ -44,6 +51,7 @@ export default function AdminNewsManagementPage() {
   const categoryOptions = useMemo(() => buildAdminNewsCategoryFilterOptions(), []);
 
   const showReset = hasActiveAdminNewsFilters(queryState);
+  const isFiltered = showReset || Boolean(queryState.q?.trim());
 
   const activeFilterChips = useMemo(
     () =>
@@ -54,24 +62,42 @@ export default function AdminNewsManagementPage() {
     [queryState, categoryOptions],
   );
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   const loadArticles = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
     try {
-      const res = await getNewsArticles();
+      const res = await getNewsArticles({
+        status: queryState.status !== 'all' ? queryState.status : 'all',
+        categoryId: queryState.category !== 'all' ? queryState.category : undefined,
+        search: queryState.q || undefined,
+        page: queryState.page,
+        pageSize: PAGE_SIZE,
+        sort: queryState.sort,
+      });
       if (res.ok) {
         setArticles(res.articles ?? []);
+        setTotal(res.total ?? 0);
       } else {
         setArticles([]);
+        setTotal(0);
         setLoadError(true);
       }
     } catch {
       setArticles([]);
+      setTotal(0);
       setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [
+    queryState.status,
+    queryState.category,
+    queryState.q,
+    queryState.page,
+    queryState.sort,
+  ]);
 
   useEffect(() => {
     loadArticles();
@@ -94,22 +120,6 @@ export default function AdminNewsManagementPage() {
       { replace: true },
     );
   };
-
-  const filteredArticles = useMemo(
-    () => filterAndSortNews(articles, queryState),
-    [articles, queryState],
-  );
-
-  const pagination = useMemo(
-    () => paginateNews(filteredArticles, queryState.page, PAGE_SIZE),
-    [filteredArticles, queryState.page],
-  );
-
-  useEffect(() => {
-    if (!loading && queryState.page !== pagination.page) {
-      updateQuery({ page: pagination.page });
-    }
-  }, [loading, queryState.page, pagination.page]);
 
   const handleCategoryChange = (value) => updateQuery({ category: value, page: 1 });
   const handleStatusChange = (value) => updateQuery({ status: value, page: 1 });
@@ -144,6 +154,38 @@ export default function AdminNewsManagementPage() {
 
   const handleEditSaved = () => {
     loadArticles();
+  };
+
+  const handleDeleteClick = (article) => {
+    setDeleteTarget(article);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget?.id) return;
+    setDeleting(true);
+    try {
+      const res = await deleteNewsArticle(deleteTarget.id);
+      if (!res.ok) {
+        toast.error(res.message ?? 'Không thể xóa bài viết');
+        return;
+      }
+      toast.success('Đã xóa bài viết');
+      setDeleteTarget(null);
+      if (editArticleId === deleteTarget.id) {
+        setEditArticleId(null);
+        clearAdminNewsEditDraft();
+      }
+      // Nếu xóa hết trang hiện tại, lùi 1 trang
+      if (articles.length <= 1 && queryState.page > 1) {
+        updateQuery({ page: queryState.page - 1 });
+      } else {
+        loadArticles();
+      }
+    } catch {
+      toast.error('Không thể xóa bài viết');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -198,32 +240,46 @@ export default function AdminNewsManagementPage() {
         onSortChange={handleSortChange}
         showReset={showReset}
         onReset={handleReset}
-        totalCount={filteredArticles.length}
+        totalCount={total}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}
       />
 
       <AdminNewsList
-        articles={pagination.items}
+        articles={articles}
         loading={loading}
         error={loadError}
-        hasAnyArticles={articles.length > 0}
-        isFiltered={showReset || Boolean(queryState.q?.trim())}
+        isFiltered={isFiltered}
         onEdit={handleEditClick}
+        onDelete={handleDeleteClick}
         onClearFilters={handleReset}
       />
 
-      <AppPagination
-        page={pagination.page}
-        totalPages={pagination.totalPages}
-        onPageChange={handlePageChange}
-      />
+      {totalPages > 1 ? (
+        <AppPagination
+          page={queryState.page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      ) : null}
 
       <AdminNewsEditDialog
         open={editArticleId != null}
         articleId={editArticleId}
         onClose={handleEditDialogClose}
         onSaved={handleEditSaved}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget != null}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+        destructive
+        title="Xóa bài viết?"
+        message={`Bài viết "${deleteTarget?.title ?? ''}" sẽ bị xóa vĩnh viễn và không thể khôi phục.`}
+        confirmLabel="Xóa bài viết"
+        cancelLabel="Hủy"
       />
     </Box>
   );

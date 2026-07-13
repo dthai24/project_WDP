@@ -1,5 +1,4 @@
-import { ADMIN_NEWS_SORT_OPTIONS } from '@/features/admin/data/adminNewsMock';
-import { buildAdminNewsCategoryFilterOptions } from '@/features/admin/utils/adminNewsUtils';
+import { getCatalogCategories } from '@/shared/catalog/catalogRegistry';
 
 export const NEWS_LIST_PAGE_SIZE = 9;
 
@@ -10,12 +9,19 @@ export const NEWS_LIST_DEFAULTS = {
   page: 1,
 };
 
-export const NEWS_SORT_OPTIONS = ADMIN_NEWS_SORT_OPTIONS.filter(
-  (option) => option.value !== 'title_desc',
-);
+export const NEWS_SORT_OPTIONS = [
+  { value: 'newest', label: 'Mới nhất' },
+  { value: 'oldest', label: 'Cũ nhất' },
+];
 
 export function buildNewsCategoryFilterOptions() {
-  return buildAdminNewsCategoryFilterOptions();
+  return [
+    { value: 'all', label: 'Tất cả danh mục' },
+    ...getCatalogCategories().map((category) => ({
+      value: String(category.id),
+      label: category.displayName,
+    })),
+  ];
 }
 
 export function parseNewsListParams(searchParams) {
@@ -77,20 +83,6 @@ export function buildNewsActiveChips(filters, categoryOptions = []) {
     });
   }
   return chips;
-}
-
-export function paginateNewsList(news = [], page = 1, pageSize = NEWS_LIST_PAGE_SIZE) {
-  const total = news.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-
-  return {
-    items: news.slice(start, start + pageSize),
-    page: safePage,
-    totalPages,
-    total,
-  };
 }
 
 export function buildNewsDetailPath(newsId, listSearchParams) {

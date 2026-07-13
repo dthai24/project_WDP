@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Box,
   Breadcrumbs,
@@ -16,15 +16,14 @@ import NewsCard from '@/features/news/components/NewsCard';
 import NewsCatalogToolbar from '@/features/news/components/NewsCatalogToolbar';
 import NewsListPagination from '@/features/news/components/NewsListPagination';
 import { fetchPublishedNewsArticles } from '@/features/news/services/newsService';
-import { filterAndSortNews } from '@/features/admin/utils/adminNewsUtils';
 import {
   buildNewsActiveChips,
   buildNewsCategoryFilterOptions,
   buildNewsListSearchParams,
   hasActiveNewsFilters,
-  paginateNewsList,
   parseNewsListParams,
   resetNewsListParams,
+  NEWS_LIST_PAGE_SIZE,
 } from '@/features/news/utils/newsListParams';
 import { toast } from '@/shared/ui/Toast';
 
@@ -32,6 +31,7 @@ export default function NewsListPage() {
   const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const [articles, setArticles] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const filters = useMemo(() => parseNewsListParams(searchParams), [searchParams]);
@@ -42,24 +42,34 @@ export default function NewsListPage() {
     [filters, categoryOptions],
   );
 
-  const updateFilters = (patch, options = {}) => {
+  const totalPages = Math.max(1, Math.ceil(total / NEWS_LIST_PAGE_SIZE));
+
+  const updateFilters = useCallback((patch, options = {}) => {
     const next = buildNewsListSearchParams({ ...filters, ...patch }, searchParams);
     setSearchParams(next, { replace: options.replace ?? true });
-  };
+  }, [filters, searchParams, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadNews() {
       setLoading(true);
-      const result = await fetchPublishedNewsArticles();
+      const result = await fetchPublishedNewsArticles({
+        page: filters.page,
+        pageSize: NEWS_LIST_PAGE_SIZE,
+        categoryId: filters.category !== 'all' ? filters.category : undefined,
+        search: filters.q || undefined,
+        sort: filters.sort,
+      });
       if (cancelled) return;
 
       if (!result.ok) {
         toast.error(result.message ?? 'Không thể tải tin tức.');
         setArticles([]);
+        setTotal(0);
       } else {
         setArticles(result.articles);
+        setTotal(result.total);
       }
       setLoading(false);
     }
@@ -68,23 +78,7 @@ export default function NewsListPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const filteredArticles = useMemo(
-    () => filterAndSortNews(articles, { ...filters, status: 'all' }),
-    [articles, filters],
-  );
-
-  const pagination = useMemo(
-    () => paginateNewsList(filteredArticles, filters.page),
-    [filteredArticles, filters.page],
-  );
-
-  useEffect(() => {
-    if (pagination.page !== filters.page) {
-      updateFilters({ page: pagination.page });
-    }
-  }, [pagination.page, filters.page]);
+  }, [filters.page, filters.category, filters.q, filters.sort]);
 
   const handleRemoveFilterChip = (chip) => {
     if (chip.type === 'q') {
@@ -124,7 +118,7 @@ export default function NewsListPage() {
         onCategoryChange={(category) => updateFilters({ category, page: 1 })}
         sortBy={filters.sort}
         onSortChange={(sort) => updateFilters({ sort, page: 1 })}
-        totalCount={loading ? '—' : pagination.total}
+        totalCount={loading ? '—' : total}
         showReset={showReset}
         onReset={handleResetFilters}
         activeFilterChips={activeFilterChips}
@@ -134,7 +128,7 @@ export default function NewsListPage() {
 
       {loading ? (
         <Loading message="Đang tải tin tức..." />
-      ) : filteredArticles.length === 0 ? (
+      ) : articles.length === 0 ? (
         <Box
           sx={{
             py: 7,
@@ -156,17 +150,17 @@ export default function NewsListPage() {
       ) : (
         <>
           <Grid container spacing={2.5}>
-            {pagination.items.map((article) => (
+            {articles.map((article) => (
               <Grid key={article.id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <NewsCard article={article} listSearchParams={searchParams} />
               </Grid>
             ))}
           </Grid>
 
-          {pagination.totalPages > 1 ? (
+          {totalPages > 1 ? (
             <NewsListPagination
-              page={pagination.page}
-              totalPages={pagination.totalPages}
+              page={filters.page}
+              totalPages={totalPages}
               onPageChange={handlePageChange}
             />
           ) : null}

@@ -46,7 +46,11 @@ import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 
 
-/* ─── Constants ─────────────────────────────────────────────────────────── */
+
+
+/* ==========================================================================
+   Constants
+   ========================================================================== */
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
 const MUTED = "#64748B";
@@ -279,7 +283,7 @@ function StatRow({ icon: Icon, iconColor, label, value, last = false, children }
 }
 
 
-// ── Safe State Initialization Helpers ──
+//  CÁC HÀM HỖ TRỢ KHỞI TẠO GIÁ TRỊ AN TOÀN 
 const getInitialUser = () => {
   try {
     const userRaw = localStorage.getItem("user");
@@ -314,10 +318,12 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    // Safely parse inside the effect to avoid any dependency array tracking issues
+    // Lấy dữ liệu an toàn bên trong useEffect để tránh lỗi theo dõi dependency (tránh vòng lặp vô tận)
     const cUser = getInitialUser();
     if (!cUser?.userId) return;
 
+    // 1. KÉO DỮ LIỆU TỪ BACKEND KHI MỚI VÀO TRANG
+    // Gọi API (GET /api/users/profile) để lấy thông tin của người dùng đắp lên màn hình.
     const fetchProfile = async () => {
       try {
         const data = await fetchUserProfile();
@@ -360,7 +366,7 @@ export default function ProfilePage() {
     };
     fetchProfile();
   }, []);
-
+  //tạo Avatar chữ cái khi chưa có ảnh đại diện
   const initials = (profile?.name || "Người dùng")
     .split(" ")
     .filter(Boolean)
@@ -372,6 +378,8 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // 2. CHỈNH SỬA THÔNG TIN CƠ BẢN
+  // Mở form sửa Tên, SĐT, Ngày sinh -> Gọi API lưu lại (PUT /api/users/profile)
   const handleSave = async () => {
     if (!currentUser?.userId) return;
 
@@ -394,11 +402,11 @@ export default function ProfilePage() {
         setProfile((prev) => ({ ...prev, ...formData }));
         setEditMode(false);
 
-        // Optional: Update session storage to reflect new name in Navbar
+        // Tùy chọn: Cập nhật bộ nhớ đệm để hiển thị tên mới trên thanh Navbar
         const updatedUser = { ...currentUser, fullName: formData.name };
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        // Force a small storage event to update Header if they listen to it, 
-        // though normally context is better.
+
+        // tất cả các Tab đang mở đều được cập nhật cùng lúc.
         window.dispatchEvent(new Event("storage"));
       } else {
         alert("Cập nhật thất bại: " + data.message);
@@ -428,10 +436,7 @@ export default function ProfilePage() {
     setCropperOpen(true);
   };
 
-  /**
-   * HAm: handleAvatarSelected
-   * TAc dng: B_t file t th input vA chuyn thAnh URL tm ` `a vAo khung c_t
-   */
+  
   const handleAvatarSelected = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -441,7 +446,7 @@ export default function ProfilePage() {
       toast.error('Vui lòng chọn file ảnh hợp lệ.');
       return;
     }
-
+    // Tạo một đường link nháp để hiển thị ảnh tạm thời trong Cropper trước khi uploads
     setTempImageSrc(URL.createObjectURL(file));
     setCropperOpen(true);
   };
@@ -452,17 +457,21 @@ export default function ProfilePage() {
       const FACE_SIZE = 380;
       const FACE_X = (FRAME_SIZE - FACE_SIZE) / 2;
       const FACE_Y = (FRAME_SIZE - FACE_SIZE) / 2;
+      //Tạo một bảng vẽ ẩn kích thước 500x500 trong RAM trình duyệt
       const canvas = document.createElement('canvas');
       canvas.width = FRAME_SIZE;
       canvas.height = FRAME_SIZE;
       const ctx = canvas.getContext('2d');
       const faceImg = new Image();
+      //cấp quyền crossOrigin để tránh lỗi CORS khi tải ảnh từ URL khác
       faceImg.crossOrigin = 'Anonymous';
+      //Tải tấm ảnh khuôn mặt
       faceImg.src = faceBase64;
-
+      //Cắt ảnh Vuông thành ảnh Tròn 
       faceImg.onload = () => {
         ctx.save();
         ctx.beginPath();
+        //ệnh toán học để vẽ một hình tròn
         ctx.arc(
           FACE_X + FACE_SIZE / 2,
           FACE_Y + FACE_SIZE / 2,
@@ -471,6 +480,7 @@ export default function ProfilePage() {
           Math.PI * 2,
         );
         ctx.closePath();
+        //Lệnh Cắt Kéo
         ctx.clip();
         ctx.drawImage(faceImg, FACE_X, FACE_Y, FACE_SIZE, FACE_SIZE);
         ctx.restore();
@@ -488,6 +498,8 @@ export default function ProfilePage() {
     });
   };
 
+  // 3. ĐỔI ẢNH ĐẠI DIỆN TÍCH HỢP AI (FACE API)
+  // Nhận diện khuôn mặt, tự động cắt và ghép với Khung viền (Avatar Frame) -> Gọi API upload (POST /api/users/avatar)
   const handleAvatarUpload = async ({ faceBase64, frameUrl }) => {
     if (!currentUser?.userId) {
       toast.error('Vui lòng đăng nhập lại để cập nhật ảnh đại diện.');
@@ -535,6 +547,8 @@ export default function ProfilePage() {
   // HÀM: MỞ POPUP VÀ TẢI DANH MỤC TỪ API
   // Tác dụng: Lấy list categories và gán dữ liệu cũ vào Form
   // ==========================================
+  // 4. MỞ CỬA SỔ CẬP NHẬT MỤC TIÊU
+  // Kéo danh sách Lĩnh vực (Categories) về để hiển thị ở hộp thoại Dropdown
   const handleOpenPopup = async () => {
     // Lấy danh sách Categories từ API
     const res = await fetch("http://localhost:5000/api/categories");
@@ -549,6 +563,7 @@ export default function ProfilePage() {
   // HÀM: LƯU MỤC TIÊU VÀ ĐÓNG POPUP
   // Tác dụng: Đẩy dữ liệu xuống Backend và tự động F5
   // ==========================================
+  // 5. LƯU MỤC TIÊU (PUT /api/users/goals) VÀ TỰ ĐỘNG TẢI LẠI TRANG
   const saveGoals = async () => {
     await fetch("http://localhost:5000/api/users/goals", {
       method: "PUT",

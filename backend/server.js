@@ -18,6 +18,7 @@ const mentorRoutes = require('./routes/mentorRoutes');
 const materialsRoutes = require('./routes/materialsRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const questionBankRoutes = require('./routes/questionBankRoutes');
+const newsRoutes = require('./routes/newsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,7 +28,7 @@ app.use(cors());
 // Base64 ảnh 5MB (~6.7MB trong JSON) — limit phải lớn hơn ngưỡng validate thumbnail
 app.use(express.json({ limit: '8mb' }));
 
-// ---- Static: serve uploaded avatars ----
+// ---- Static: serve uploaded avatars & news thumbnails ----
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---- Database ----
@@ -43,6 +44,7 @@ app.use('/api', lookupRoutes);
 app.use('/api/admin', adminRoutes);
 // _________Question Bank Routes______________
 app.use('/api/question-bank', questionBankRoutes)
+app.use('/api/news', newsRoutes);
 // Link URL Courses's Avatar
 // Static: serve course avatars
 app.use('/assets', express.static(path.join(__dirname, 'public/assets')));

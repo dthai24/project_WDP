@@ -28,12 +28,19 @@ import {
   createDemoTestPaper,
   DEMO_ANSWER_KEY,
 } from '@/features/learning/data/courseTestMock';
-
+import axios from 'axios'; 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
+function getAuthHeaders() {
+  const userId = getUser()?.userId;
+  const headers = { 'Content-Type': 'application/json' };
+  if (userId) headers['x-user-id'] = String(userId);
+  return headers;
+}
 const ATTEMPTS_STORAGE_KEY = 'student_test_attempts_v1';
 const SESSIONS_STORAGE_KEY = 'student_test_sessions_v1';
 
 /** TODO: tắt khi backend enforce giới hạn lượt làm bài */
-export const BYPASS_ATTEMPT_LIMIT = true;
+export const BYPASS_ATTEMPT_LIMIT = false;
 
 /**
  * Hàm tạo hiệu ứng trễ (delay) giả lập thời gian phản hồi của mạng khi gọi API.
@@ -206,236 +213,74 @@ function buildDemoGradingQuestions(paper) {
   );
 }
 
-/**
- * API MOCK: Lấy thông tin chung (metadata) của bài thi phục vụ cho trang giới thiệu bài thi (TestIntroPanel).
- */
+// 1. Lấy thông tin bài kiểm tra
 export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
-  await delay();
+  try {
+    // Nếu là Toàn khóa thì mượn LocalStorage của Mentor
+    if (scope === 'final') {
+      const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
+      if (!configRes.ok) return configRes;
+      let finalMeta = buildMetaFromConfig(configRes.config, scope, { courseId, chapterId, ...meta });
+      return { ok: true, meta: finalMeta };
+    }
+    // Nếu là bài Chương thì gọi API chuẩn của Học sinh (Không bị lỗi 403)
+    const url = `${API_BASE}/courses/${courseId}/tests/${scope}/meta`;
+    const { data } = await axios.get(url, { params: { chapterId }, headers: getAuthHeaders() });
+    return data; 
+  } catch (error) {
+    console.error('getTestMeta error:', error);
+    return { ok: false, message: 'Không tải được thông tin bài kiểm tra.' };
+  }
+}
 
-  const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
-  const config = configRes.ok ? configRes.config : null;
+// 2. Bắt đầu làm bài (Backend sẽ random câu hỏi từ Question Bank và trả về đề)
 
-  if (config?.enabled && hasConfiguredQuizSources(config)) {
-    const paperRes = buildTestPaper(courseId, scope, chapterId, config);
-    const totalQuestions = paperRes.ok ? paperRes.paper.totalQuestions : getChapterQuizConfigTotal(config);
-    const prerequisiteStatus = scope === 'final'
-      ? { ok: true, blockers: [] }
-      : await resolvePrerequisiteStatus(courseId, config);
+// 2. Bắt đầu làm bài (Backend sẽ random câu hỏi từ Question Bank và trả về đề)
 
+export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
+  try {
+    let body = { chapterId };
+    if (scope === 'final') {
+      const configResult = await loadQuizConfig(courseId, scope, chapterId, meta);
+      const config = configResult.config || {};
+      body.timeLimitMinutes = config.timeLimitMinutes || 45;
+      body.sources = config.sources || [];
+    }
+    const url = `${API_BASE}/courses/${courseId}/tests/${scope}/start`;
+    const { data } = await axios.post(url, body, { headers: getAuthHeaders() });
+    
+    if (!data.ok) return data;
+    // DÒNG QUAN TRỌNG NHẤT: Gọi lại getTestMeta để lấy đầy đủ gói thông tin meta đưa cho React
+    const metaRes = await getTestMeta(courseId, scope, chapterId, meta);
     return {
       ok: true,
-      meta: {
-        ...buildMetaFromConfig(config, scope, {
-          courseId,
-          chapterId,
-          chapterTitle: meta.chapterTitle,
-          totalQuestions,
-        }),
-        prerequisitesMet: prerequisiteStatus.ok,
-        prerequisiteBlockers: prerequisiteStatus.blockers,
+      meta: metaRes.ok ? metaRes.meta : data.meta, // TRẢ VỀ META ĐỂ REACT KHÔNG BỊ XÓA TRẮNG UI
+      attempt: {
+        attemptId: data.attempt.attemptId,
+        expiresAt: data.attempt.expiresAt,
+        timeLimitMinutes: data.meta?.timeLimitMinutes || body.timeLimitMinutes, 
+        status: 'in_progress',
       },
+      paper: data.paper,
     };
+  } catch (error) {
+    console.error('startTestAttempt error:', error);
+    return { ok: false, message: error.response?.data?.message || 'Lỗi khi tạo đề thi mới.' };
   }
-
-  const demoMeta = createDemoTestMeta(scope);
-  return {
-    ok: true,
-    meta: {
-      ...demoMeta,
-      courseId,
-      chapterId: scope === 'final' ? null : chapterId,
-      chapterTitle: meta.chapterTitle ?? null,
-    },
-  };
 }
 
-/**
- * API MOCK: Bắt đầu một lượt thi mới. Tạo attemptId, trộn đề thi (nếu có), thiết lập thời gian làm bài.
- */
-export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
-  await delay();
-
-  const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
-  const config = configRes.ok ? configRes.config : null;
-
-  let paper;
-  let isDemo = false;
-  let gradingQuestions = [];
-
-  if (config?.enabled && hasConfiguredQuizSources(config)) {
-    const prerequisiteStatus = scope === 'final'
-      ? { ok: true, blockers: [] }
-      : await resolvePrerequisiteStatus(courseId, config);
-
-    if (!prerequisiteStatus.ok) {
-      return {
-        ok: false,
-        message: 'Bạn chưa đủ điều kiện làm bài kiểm tra này.',
-        prerequisiteBlockers: prerequisiteStatus.blockers,
-      };
-    }
-
-    const paperRes = buildTestPaper(courseId, scope, chapterId, config);
-    if (!paperRes.ok) {
-      paper = createDemoTestPaper();
-      isDemo = true;
-      gradingQuestions = buildDemoGradingQuestions(paper);
-    } else {
-      paper = paperRes.paper;
-      gradingQuestions = paper.gradingQuestions ?? [];
-      delete paper.gradingQuestions;
-    }
-  } else {
-    paper = createDemoTestPaper();
-    isDemo = true;
-    gradingQuestions = buildDemoGradingQuestions(paper);
+// 3. Nộp bài (Gửi đáp án xuống Backend chấm điểm)
+export async function submitTestAttempt(courseId, chapterId, attemptId, answers, timeSpentSeconds, totalQuestions) {
+  try {
+    const url = `${API_BASE}/courses/${courseId}/tests/attempts/${attemptId}/submit`;
+    const { data } = await axios.post(
+      url,
+      { answers, timeSpentSeconds, chapterId, totalQuestions },
+      { headers: getAuthHeaders() }
+    );
+    return data;
+  } catch (error) {
+    console.error('submitTestAttempt error:', error);
+    return { ok: false, message: 'Lỗi khi nộp bài.' };
   }
-
-  const testMeta = config
-    ? buildMetaFromConfig(config, scope, {
-        courseId,
-        chapterId,
-        chapterTitle: meta.chapterTitle,
-        totalQuestions: paper.totalQuestions,
-        isDemo,
-      })
-    : {
-        ...createDemoTestMeta(scope),
-        courseId,
-        chapterId: scope === 'final' ? null : chapterId,
-        totalQuestions: paper.totalQuestions,
-      };
-
-  if (!BYPASS_ATTEMPT_LIMIT && testMeta.remainingAttempts <= 0) {
-    return {
-      ok: false,
-      message: 'Bạn đã hết lượt làm bài kiểm tra.',
-    };
-  }
-
-  const startedAt = new Date();
-  const remainingSeconds = testMeta.timeLimitMinutes * 60;
-  const expiresAt = new Date(startedAt.getTime() + remainingSeconds * 1000);
-  const attemptId = `attempt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-  const attempt = {
-    attemptId,
-    paperId: paper.paperId,
-    status: 'in_progress',
-    startedAt: startedAt.toISOString(),
-    expiresAt: expiresAt.toISOString(),
-    attemptNumber: testMeta.attemptsUsed + 1,
-    remainingSeconds,
-    timeLimitMinutes: testMeta.timeLimitMinutes,
-  };
-
-  saveSession(attemptId, {
-    attempt,
-    meta: testMeta,
-    paper,
-    gradingQuestions,
-    answers: {},
-    scope,
-    courseId,
-    chapterId: scope === 'final' ? COURSE_QUIZ_CHAPTER_ID : chapterId,
-    isDemo,
-  });
-
-  return {
-    ok: true,
-    meta: testMeta,
-    attempt,
-    paper: {
-      paperId: paper.paperId,
-      totalQuestions: paper.totalQuestions,
-      totalScore: paper.totalScore,
-      scoringMode: paper.scoringMode,
-      sections: paper.sections,
-    },
-  };
-}
-
-/**
- * API MOCK: Nộp bài thi. Tiến hành so khớp đáp án để tính điểm, xác định Đạt/Không đạt và lưu lịch sử.
- */
-export async function submitTestAttempt(attemptId, answers = {}, options = {}) {
-  await delay();
-
-  const session = getSession(attemptId);
-  if (!session) {
-    return { ok: false, message: 'Không tìm thấy phiên làm bài.' };
-  }
-
-  if (session.attempt.status === 'submitted') {
-    return { ok: true, result: session.result, meta: session.meta, attempt: session.attempt };
-  }
-
-  const startedAt = new Date(session.attempt.startedAt);
-  const submittedAt = new Date();
-  const timeSpentSeconds = Math.max(
-    0,
-    Math.floor((submittedAt.getTime() - startedAt.getTime()) / 1000),
-  );
-
-  const graded = gradeTestAnswers(
-    session.gradingQuestions,
-    answers,
-    session.paper.totalScore ?? 100,
-  );
-
-  const passed = graded.percentage >= (session.meta.passingScore ?? 70);
-  const remainingAttempts = Math.max(
-    0,
-    (session.meta.maxAttempts ?? 3) -
-      (session.meta.attemptsUsed ?? 0) -
-      1,
-  );
-
-  const result = {
-    ...graded,
-    passed,
-    passingScore: session.meta.passingScore ?? 70,
-    timeSpentSeconds,
-    canRetry: BYPASS_ATTEMPT_LIMIT || remainingAttempts > 0,
-    remainingAttempts: BYPASS_ATTEMPT_LIMIT
-      ? Math.max(remainingAttempts, 1)
-      : remainingAttempts,
-  };
-
-  const nextAttempt = {
-    ...session.attempt,
-    status: options.autoExpired ? 'expired' : 'submitted',
-    submittedAt: submittedAt.toISOString(),
-    remainingSeconds: 0,
-  };
-
-  saveSession(attemptId, {
-    ...session,
-    attempt: nextAttempt,
-    answers,
-    result,
-  });
-
-  const userId = getUser()?.userId;
-  if (userId) {
-    saveAttemptRecord(userId, session.courseId, session.scope, session.chapterId, {
-      attemptId,
-      status: nextAttempt.status,
-      score: result.score,
-      percentage: result.percentage,
-      passed,
-      submittedAt: nextAttempt.submittedAt,
-    });
-  }
-
-  return {
-    ok: true,
-    meta: {
-      ...session.meta,
-      attemptsUsed: (session.meta.attemptsUsed ?? 0) + 1,
-      remainingAttempts: result.remainingAttempts,
-    },
-    attempt: nextAttempt,
-    result,
-  };
 }
