@@ -1,7 +1,9 @@
-import { Box, Chip, Typography } from '@mui/material';
+import { Box, Chip, IconButton, Tooltip, Typography, alpha } from '@mui/material';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import { CategoryNameChip } from '@/shared/catalog/CatalogNameChip';
 import AdminCatalogEditButton from '@/features/admin/components/AdminCatalogEditButton';
+import ThumbnailImage from '@/shared/ui/ThumbnailImage';
 import {
   ADMIN_NEWS_STATUS_CHIP_SX,
   ADMIN_NEWS_STATUS_LABELS,
@@ -46,15 +48,16 @@ function DesktopValue({ value }) {
 function NewsThumbnail({ item }) {
   if (item.thumbnail) {
     return (
-      <Box
-        component="img"
+      <ThumbnailImage
         src={item.thumbnail}
+        label={item.title}
         alt=""
+        cacheKey={item.updatedAt || item.id}
+        iconSize={20}
         sx={{
           width: 44,
           height: 44,
           borderRadius: '10px',
-          objectFit: 'cover',
           flexShrink: 0,
           border: '1px solid rgba(15,23,42,0.08)',
         }}
@@ -81,7 +84,7 @@ function NewsThumbnail({ item }) {
   );
 }
 
-export default function AdminNewsRow({ article, onEdit }) {
+export default function AdminNewsRow({ article, onEdit, onDelete }) {
   const statusSx = ADMIN_NEWS_STATUS_CHIP_SX[article.status] ?? ADMIN_NEWS_STATUS_CHIP_SX.DRAFT;
 
   return (
@@ -195,11 +198,42 @@ export default function AdminNewsRow({ article, onEdit }) {
         <DesktopValue value={formatNewsDate(article.updatedAt)} />
       </Box>
 
-      <AdminCatalogEditButton
-        ariaLabel="Chỉnh sửa tin tức"
-        title="Chỉnh sửa tin tức"
-        onClick={() => onEdit?.(article)}
-      />
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: { xs: 'flex-start', md: 'flex-end' },
+          alignItems: 'center',
+          gap: 0.5,
+        }}
+      >
+        <AdminCatalogEditButton
+          bare
+          ariaLabel="Chỉnh sửa tin tức"
+          title="Chỉnh sửa tin tức"
+          onClick={() => onEdit?.(article)}
+        />
+        <Tooltip title="Xóa tin tức">
+          <IconButton
+            size="small"
+            aria-label="Xóa tin tức"
+            onClick={() => onDelete?.(article)}
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: '10px',
+              border: '1px solid rgba(15,23,42,0.08)',
+              color: MUTED,
+              '&:hover': {
+                color: '#DC2626',
+                bgcolor: alpha('#DC2626', 0.06),
+                borderColor: alpha('#DC2626', 0.22),
+              },
+            }}
+          >
+            <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Box>
   );
 }

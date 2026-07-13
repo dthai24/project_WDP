@@ -1,10 +1,22 @@
 const { sql } = require('../config/db');
 
+const SORT_SQL = {
+  newest: 'COALESCE(n.[PublishedAt], n.[CreatedAt]) DESC, n.[NewsId] DESC',
+  oldest: 'COALESCE(n.[PublishedAt], n.[CreatedAt]) ASC, n.[NewsId] ASC',
+  title_asc: 'n.[Title] ASC, n.[NewsId] DESC',
+  title_desc: 'n.[Title] DESC, n.[NewsId] DESC',
+};
+
+function resolveOrderBy(sort) {
+  return SORT_SQL[sort] || SORT_SQL.newest;
+}
+
 const NewsModel = {
   /**
-   * Lấy danh sách bài viết (có phân trang + filter)
+   * Lấy danh sách bài viết (có phân trang + filter + sort)
+   * @param {string|null} status — null = không filter status (admin all)
    */
-  async getNewsList({ status, categoryId, search, page = 1, pageSize = 10 }) {
+  async getNewsList({ status, categoryId, search, page = 1, pageSize = 10, sort = 'newest' }) {
     const offset = (page - 1) * pageSize;
 
     let whereClauses = ['1=1'];
@@ -27,6 +39,7 @@ const NewsModel = {
     }
 
     const whereSQL = whereClauses.join(' AND ');
+    const orderBySQL = resolveOrderBy(sort);
 
     const countReq = new sql.Request();
     inputs.forEach(({ name, type, value }) => countReq.input(name, type, value));
@@ -61,7 +74,7 @@ const NewsModel = {
       LEFT JOIN [dbo].[Categories] c ON c.[CategoryId] = n.[CategoryId]
       LEFT JOIN [dbo].[Users] u ON u.[UserId] = n.[CreatedBy]
       WHERE ${whereSQL}
-      ORDER BY n.[CreatedAt] DESC
+      ORDER BY ${orderBySQL}
       OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
     `);
 

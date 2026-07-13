@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, adminOnly } = require('../middlewares/authMiddleware');
 const {
   getDashboard,
   getUsers,
@@ -23,39 +23,6 @@ const {
   updateCourse,
   deleteCourse,
 } = require('../controllers/adminController');
-
-
-// Middleware kiểm tra quyền Admin
-const adminOnly = (req, res, next) => {
-  // Lấy userId từ protect middleware
-  const userId = req.user?.userId;
-  if (!userId) {
-    return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
-  }
-  // Kiểm tra role Admin từ header hoặc có thể query DB
-  // Đơn giản: dùng header x-role-name hoặc query DB
-  const roleName = req.headers['x-role-name'];
-  if (roleName && roleName.toLowerCase() === 'admin') {
-    return next();
-  }
-  // Fallback: kiểm tra từ DB
-  const { sql } = require('../config/db');
-  new sql.Request()
-    .input('userId', sql.Int, userId)
-    .query(`
-      SELECT 1 FROM User_Roles ur
-      JOIN Roles r ON ur.RoleId = r.RoleId
-      WHERE ur.UserId = @userId AND r.RoleName = 'Admin'
-    `)
-    .then(result => {
-      if (result.recordset.length > 0) {
-        next();
-      } else {
-        return res.status(403).json({ success: false, message: 'Không có quyền Admin' });
-      }
-    })
-    .catch(() => res.status(500).json({ success: false, message: 'Lỗi server' }));
-};
 
 // ========== DASHBOARD ==========
 router.get('/dashboard', protect, adminOnly, getDashboard);

@@ -1,10 +1,23 @@
 /**
  * News API client — gọi backend thật tại /api/news
  */
-const API_BASE = 'http://localhost:5000/api/news';
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${String(import.meta.env.VITE_API_URL).replace(/\/$/, '')}/api/news`
+  : 'http://localhost:5000/api/news';
+
+function normalizeRoleName(role) {
+  if (typeof role === 'string') return role.trim();
+  return String(role?.roleName || role?.RoleName || '').trim();
+}
 
 function getAuthHeaders() {
   const headers = { 'Content-Type': 'application/json' };
+
+  const token = localStorage.getItem('token');
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   try {
     const stored = localStorage.getItem('user');
     if (stored) {
@@ -12,8 +25,14 @@ function getAuthHeaders() {
       if (user?.userId) {
         headers['x-user-id'] = String(user.userId);
       }
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`;
+      // Fallback nếu token chỉ nằm trong object user (legacy)
+      if (!token && user?.token) {
+        headers.Authorization = `Bearer ${user.token}`;
+      }
+      const roles = Array.isArray(user?.roles) ? user.roles : user?.role ? [user.role] : [];
+      const isAdmin = roles.some((r) => normalizeRoleName(r).toLowerCase() === 'admin');
+      if (isAdmin) {
+        headers['x-role-name'] = 'Admin';
       }
     }
   } catch {
@@ -23,14 +42,26 @@ function getAuthHeaders() {
 }
 
 async function handleResponse(response) {
-  const data = await response.json();
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
   if (!response.ok) {
     return { ok: false, message: data.message || 'Lỗi server', data: null };
   }
-  return { ok: true, data: data.data, total: data.total, page: data.page, pageSize: data.pageSize, message: data.message };
+  return {
+    ok: true,
+    data: data.data,
+    total: data.total,
+    page: data.page,
+    pageSize: data.pageSize,
+    message: data.message,
+  };
 }
 
-export async function apiGetNewsList({ status, categoryId, search, page, pageSize } = {}) {
+export async function apiGetNewsList({ status, categoryId, search, page, pageSize, sort } = {}) {
   try {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
@@ -38,6 +69,7 @@ export async function apiGetNewsList({ status, categoryId, search, page, pageSiz
     if (search) params.set('search', search);
     if (page) params.set('page', page);
     if (pageSize) params.set('pageSize', pageSize);
+    if (sort) params.set('sort', sort);
 
     const query = params.toString();
     const url = query ? `${API_BASE}?${query}` : API_BASE;
@@ -47,7 +79,7 @@ export async function apiGetNewsList({ status, categoryId, search, page, pageSiz
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
-  } catch (err) {
+  } catch {
     return { ok: false, message: 'Không thể kết nối đến server', data: [] };
   }
 }
@@ -59,7 +91,7 @@ export async function apiGetNewsById(id) {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
-  } catch (err) {
+  } catch {
     return { ok: false, message: 'Không thể kết nối đến server', data: null };
   }
 }
@@ -72,7 +104,7 @@ export async function apiCreateNews(payload) {
       body: JSON.stringify(payload),
     });
     return handleResponse(response);
-  } catch (err) {
+  } catch {
     return { ok: false, message: 'Không thể kết nối đến server', data: null };
   }
 }
@@ -85,7 +117,7 @@ export async function apiUpdateNews(id, payload) {
       body: JSON.stringify(payload),
     });
     return handleResponse(response);
-  } catch (err) {
+  } catch {
     return { ok: false, message: 'Không thể kết nối đến server', data: null };
   }
 }
@@ -97,7 +129,7 @@ export async function apiDeleteNews(id) {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
-  } catch (err) {
+  } catch {
     return { ok: false, message: 'Không thể kết nối đến server', data: null };
   }
 }
