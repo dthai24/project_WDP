@@ -16,13 +16,11 @@ import Loading from '@/shared/ui/Loading';
 import AdminNewsForm from '@/features/admin/components/AdminNewsForm';
 import {
   getNewsArticleById,
-  revertNewsArticle,
   updateNewsArticleBasicInfo,
 } from '@/features/admin/services/adminNewsService';
 import {
   ADMIN_NEWS_FORM_INITIAL,
   hasAdminNewsFormErrors,
-  mapArticleToEditOriginal,
   mapArticleToNewsFormStep1,
   validateAdminNewsFormStep1,
 } from '@/features/admin/utils/adminNewsFormUtils';
@@ -54,15 +52,13 @@ export default function AdminNewsEditDialog({
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(ADMIN_NEWS_FORM_INITIAL);
   const [content, setContent] = useState('');
-  const [original, setOriginal] = useState(null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [reverting, setReverting] = useState(false);
   const [navigatingContent, setNavigatingContent] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const categoryOptions = useMemo(() => buildAdminNewsCategoryFormOptions(), []);
-  const busy = saving || navigatingContent || reverting;
+  const busy = saving || navigatingContent;
 
   useEffect(() => {
     if (!open || !articleId) return;
@@ -75,11 +71,10 @@ export default function AdminNewsEditDialog({
       setCancelConfirmOpen(false);
 
       const draft = isAdminNewsEditDraftForArticle(articleId) ? loadAdminNewsEditDraft() : null;
-      if (draft?.step1 && draft?.original) {
+      if (draft?.step1) {
         if (!cancelled) {
           setForm({ ...ADMIN_NEWS_FORM_INITIAL, ...draft.step1 });
           setContent(draft.content ?? '');
-          setOriginal(draft.original);
           setLoading(false);
         }
         return;
@@ -95,16 +90,13 @@ export default function AdminNewsEditDialog({
       }
 
       const step1 = mapArticleToNewsFormStep1(res.article);
-      const snapshot = mapArticleToEditOriginal(res.article);
 
       setForm(step1);
       setContent(res.article.content ?? '');
-      setOriginal(snapshot);
       saveAdminNewsEditDraft({
         articleId: Number(articleId),
         step1,
         content: res.article.content ?? '',
-        original: snapshot,
         returnTo: 'dialog',
       });
       setLoading(false);
@@ -129,32 +121,11 @@ export default function AdminNewsEditDialog({
     setCancelConfirmOpen(true);
   };
 
-  const handleConfirmCancel = async () => {
-    if (!original) {
-      clearAdminNewsEditDraft();
-      setCancelConfirmOpen(false);
-      onClose?.();
-      return;
-    }
-
-    setReverting(true);
-    try {
-      const res = await revertNewsArticle(articleId, original);
-      if (!res.ok) {
-        toast.error(res.message ?? 'Không thể khôi phục bài viết');
-        return;
-      }
-
-      clearAdminNewsEditDraft();
-      toast.success('Đã hủy và khôi phục bài viết ban đầu');
-      setCancelConfirmOpen(false);
-      onSaved?.(res.article);
-      onClose?.();
-    } catch {
-      toast.error('Không thể khôi phục bài viết');
-    } finally {
-      setReverting(false);
-    }
+  /** Chỉ hủy nháp local — không ghi đè DB. */
+  const handleConfirmCancel = () => {
+    clearAdminNewsEditDraft();
+    setCancelConfirmOpen(false);
+    onClose?.();
   };
 
   const handleSave = async () => {
@@ -196,7 +167,6 @@ export default function AdminNewsEditDialog({
         articleId: Number(articleId),
         step1: form,
         content,
-        original,
         returnTo: 'dialog',
       });
       onClose?.();
@@ -287,13 +257,11 @@ export default function AdminNewsEditDialog({
 
       <ConfirmDialog
         open={cancelConfirmOpen}
-        onClose={() => !reverting && setCancelConfirmOpen(false)}
+        onClose={() => setCancelConfirmOpen(false)}
         onConfirm={handleConfirmCancel}
-        loading={reverting}
-        destructive
         title="Hủy chỉnh sửa?"
-        message="Mọi thay đổi sẽ không được lưu, bao gồm cả nội dung đã lưu trong phiên này. Bài viết sẽ được khôi phục về trạng thái ban đầu."
-        confirmLabel="Hủy và khôi phục"
+        message="Các thay đổi chưa lưu trong form sẽ bị bỏ. Bài viết trên hệ thống không bị thay đổi."
+        confirmLabel="Hủy chỉnh sửa"
         cancelLabel="Tiếp tục chỉnh sửa"
       />
     </>

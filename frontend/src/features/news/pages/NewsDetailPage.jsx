@@ -19,6 +19,7 @@ import { fetchPublishedNewsArticleById } from '@/features/news/services/newsServ
 import { formatNewsDate } from '@/features/admin/utils/adminNewsUtils';
 import { buildNewsListPath } from '@/features/news/utils/newsListParams';
 import { resolveCategoryChipSx } from '@/shared/catalog/catalogRegistry';
+import { resolveThumbnailUrl } from '@/shared/utils/thumbnailUtils';
 
 const PRIMARY = '#0891B2';
 const TEXT = '#0F172A';
@@ -101,6 +102,10 @@ export default function NewsDetailPage() {
     { withBorder: true },
   );
   const displayDate = formatNewsDate(article.publishedAt || article.updatedAt);
+  const thumbnailUrl = resolveThumbnailUrl(
+    article.thumbnail,
+    article.updatedAt || article.id,
+  );
 
   return (
     <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto' }}>
@@ -181,10 +186,10 @@ export default function NewsDetailPage() {
             position: 'relative',
           }}
         >
-          {article.thumbnail ? (
+          {thumbnailUrl ? (
             <Box
               component="img"
-              src={article.thumbnail}
+              src={thumbnailUrl}
               alt={article.title}
               sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />

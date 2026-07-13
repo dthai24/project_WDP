@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const newsController = require('../controllers/newsController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, adminOnly } = require('../middlewares/authMiddleware');
 
-// Public routes
+// Public read — controller tự ẩn DRAFT/HIDDEN với non-admin
 router.get('/', newsController.getNewsList);
 router.get('/:id', newsController.getNewsById);
 
-// Protected routes (cần đăng nhập)
-router.post('/', protect, newsController.createNews);
-router.put('/:id', protect, newsController.updateNews);
-router.delete('/:id', protect, newsController.deleteNews);
+// Ghi — chỉ Admin (protect + adminOnly)
+router.post('/', protect, adminOnly, newsController.createNews);
+router.put('/:id', protect, adminOnly, newsController.updateNews);
+router.delete('/:id', protect, adminOnly, newsController.deleteNews);
 
 module.exports = router;

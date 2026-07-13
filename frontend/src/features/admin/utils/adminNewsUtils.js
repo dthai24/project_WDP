@@ -1,7 +1,7 @@
 import { getCatalogCategories } from '@/shared/catalog/catalogRegistry';
 
 export const ADMIN_NEWS_TABLE_GRID_COLUMNS =
-  'minmax(220px, 1.8fr) minmax(100px, auto) minmax(108px, auto) minmax(108px, auto) minmax(108px, auto) 72px';
+  'minmax(220px, 1.8fr) minmax(100px, auto) minmax(108px, auto) minmax(108px, auto) minmax(108px, auto) 96px';
 
 export const ADMIN_NEWS_TABLE_HEADERS = [
   'Tiêu đề',

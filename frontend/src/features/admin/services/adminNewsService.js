@@ -8,7 +8,6 @@ import {
   apiUpdateNews,
   apiDeleteNews,
 } from '@/features/news/services/newsApiClient';
-import { getCatalogCategories } from '@/shared/catalog/catalogRegistry';
 
 function normalizeArticle(raw = {}) {
   return {
@@ -27,15 +26,8 @@ function normalizeArticle(raw = {}) {
   };
 }
 
-function resolveCategoryLabel(categoryId) {
-  const category = getCatalogCategories().find(
-    (item) => String(item.id) === String(categoryId),
-  );
-  return category?.displayName ?? '';
-}
-
-export async function getNewsArticles({ status, categoryId, search, page, pageSize } = {}) {
-  const result = await apiGetNewsList({ status, categoryId, search, page, pageSize });
+export async function getNewsArticles({ status, categoryId, search, page, pageSize, sort } = {}) {
+  const result = await apiGetNewsList({ status, categoryId, search, page, pageSize, sort });
 
   if (!result.ok) {
     return { ok: false, articles: [], total: 0, message: result.message ?? 'Không tải được tin tức.' };
@@ -193,36 +185,14 @@ export async function updateNewsArticleContent(id, content = '') {
   };
 }
 
-export async function revertNewsArticle(id, original = {}) {
-  const existingResult = await getNewsArticleById(id);
-  if (!existingResult.ok) {
-    return { ok: false, message: 'Không tìm thấy tin tức' };
+export async function deleteNewsArticle(id) {
+  if (id == null || id === '') {
+    return { ok: false, message: 'ID bài viết không hợp lệ' };
   }
 
-  const title = String(original.title ?? existingResult.article.title ?? '').trim();
-  const categoryId = original.categoryId ?? existingResult.article.categoryId;
-
-  if (!title || !categoryId) {
-    return { ok: false, message: 'Không thể khôi phục bài viết' };
-  }
-
-  const result = await apiUpdateNews(id, {
-    title,
-    categoryId: Number(categoryId),
-    status: original.status ?? existingResult.article.status,
-    author: original.author ?? existingResult.article.author,
-    excerpt: original.excerpt ?? existingResult.article.excerpt,
-    content: original.content ?? existingResult.article.content,
-    thumbnail: original.thumbnail ?? existingResult.article.thumbnail,
-  });
-
+  const result = await apiDeleteNews(id);
   if (!result.ok) {
-    return { ok: false, message: result.message ?? 'Không thể khôi phục bài viết.' };
+    return { ok: false, message: result.message ?? 'Không thể xóa bài viết.' };
   }
-
-  const articleResult = await getNewsArticleById(id);
-  return {
-    ok: true,
-    article: articleResult.ok ? articleResult.article : normalizeArticle({ ...existingResult.article, ...original, id }),
-  };
+  return { ok: true, message: result.message ?? 'Đã xóa bài viết.' };
 }

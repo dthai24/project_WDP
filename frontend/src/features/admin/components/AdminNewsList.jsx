@@ -49,9 +49,9 @@ export default function AdminNewsList({
   articles,
   loading,
   error,
-  hasAnyArticles,
   isFiltered,
   onEdit,
+  onDelete,
   onClearFilters,
 }) {
   if (loading) {
@@ -68,26 +68,26 @@ export default function AdminNewsList({
     );
   }
 
-  if (!hasAnyArticles) {
+  if (!articles?.length) {
+    if (isFiltered) {
+      return (
+        <EmptyState
+          embedded
+          icon={SearchOffOutlinedIcon}
+          title="Không tìm thấy tin tức nào."
+          description="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."
+          actionLabel="Xóa bộ lọc"
+          onAction={onClearFilters}
+        />
+      );
+    }
+
     return (
       <EmptyState
         embedded
         icon={ArticleRoundedIcon}
         title="Chưa có tin tức nào."
         description="Danh sách tin tức sẽ hiển thị tại đây khi có dữ liệu."
-      />
-    );
-  }
-
-  if (articles.length === 0 && isFiltered) {
-    return (
-      <EmptyState
-        embedded
-        icon={SearchOffOutlinedIcon}
-        title="Không tìm thấy tin tức nào."
-        description="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."
-        actionLabel="Xóa bộ lọc"
-        onAction={onClearFilters}
       />
     );
   }
@@ -103,7 +103,12 @@ export default function AdminNewsList({
     >
       <ListHeader />
       {articles.map((article) => (
-        <AdminNewsRow key={article.id} article={article} onEdit={onEdit} />
+        <AdminNewsRow
+          key={article.id}
+          article={article}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
     </Box>
   );

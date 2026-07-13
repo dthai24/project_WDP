@@ -1,18 +1,50 @@
 const NewsModel = require('../Models/newsModel');
 const { saveNewsThumbnailFromDataUrl } = require('../middlewares/newsThumbnailMiddleware');
+const { isAdminRequest } = require('../middlewares/authMiddleware');
+
+const ALLOWED_SORT = new Set(['newest', 'oldest', 'title_asc', 'title_desc']);
+const ALLOWED_STATUS = new Set(['DRAFT', 'PUBLISHED', 'HIDDEN']);
+
+function normalizeSort(sort) {
+  const value = String(sort || 'newest').trim().toLowerCase();
+  return ALLOWED_SORT.has(value) ? value : 'newest';
+}
+
+/**
+ * Public chỉ được xem PUBLISHED.
+ * Admin: status=all → null (mọi status); status hợp lệ → filter; thiếu → all.
+ */
+function resolveListStatusFilter(rawStatus, isAdmin) {
+  if (!isAdmin) {
+    return 'PUBLISHED';
+  }
+  if (rawStatus === 'all' || rawStatus === '' || rawStatus == null) {
+    return null;
+  }
+  const upper = String(rawStatus).trim().toUpperCase();
+  if (ALLOWED_STATUS.has(upper)) {
+    return upper;
+  }
+  return null;
+}
 
 const newsController = {
   /**
    * GET /api/news
-   * Lấy danh sách bài viết (public — chỉ lấy PUBLISHED)
-   * Query: ?status=&categoryId=&search=&page=&pageSize=
+   * Public: chỉ PUBLISHED.
+   * Admin (auth + role): status=all | DRAFT | PUBLISHED | HIDDEN + sort.
+   * Query: ?status=&categoryId=&search=&page=&pageSize=&sort=
    */
   getNewsList: async (req, res) => {
     try {
-      const { status, categoryId, search, page, pageSize } = req.query;
+      const { status, categoryId, search, page, pageSize, sort } = req.query;
+      const isAdmin = await isAdminRequest(req);
+      const filterStatus = resolveListStatusFilter(status, isAdmin);
 
-      // Nếu status = 'all' thì không filter, nếu không có status thì mặc định PUBLISHED
-      const filterStatus = status === 'all' ? null : (status || 'PUBLISHED');
+      // Non-admin không được hỏi status khác PUBLISHED qua query (im lặng force PUBLISHED)
+      if (!isAdmin && status && String(status).toUpperCase() !== 'PUBLISHED' && status !== 'all') {
+        // vẫn trả PUBLISHED — không 403 để tránh dò status
+      }
 
       const result = await NewsModel.getNewsList({
         status: filterStatus,
@@ -20,6 +52,7 @@ const newsController = {
         search: search || '',
         page: parseInt(page, 10) || 1,
         pageSize: Math.min(parseInt(pageSize, 10) || 10, 50),
+        sort: normalizeSort(sort),
       });
 
       return res.json({
@@ -40,7 +73,7 @@ const newsController = {
 
   /**
    * GET /api/news/:id
-   * Lấy chi tiết bài viết
+   * Public: chỉ bài PUBLISHED. Admin: mọi status.
    */
   getNewsById: async (req, res) => {
     try {
@@ -52,6 +85,16 @@ const newsController = {
       const news = await NewsModel.getNewsById(newsId);
       if (!news) {
         return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
+      }
+
+      if (news.status !== 'PUBLISHED') {
+        const isAdmin = await isAdminRequest(req);
+        if (!isAdmin) {
+          return res.status(404).json({
+            success: false,
+            message: 'Không tìm thấy bài viết hoặc bài viết chưa được công bố.',
+          });
+        }
       }
 
       return res.json({ success: true, data: news });
@@ -66,7 +109,7 @@ const newsController = {
 
   /**
    * POST /api/news
-   * Tạo bài viết mới (cần auth)
+   * Tạo bài viết mới (Admin only — middleware)
    */
   createNews: async (req, res) => {
     try {
@@ -77,16 +120,20 @@ const newsController = {
         return res.status(400).json({ success: false, message: 'Tiêu đề bài viết không được để trống.' });
       }
 
+      const safeStatus = ALLOWED_STATUS.has(String(status || '').toUpperCase())
+        ? String(status).toUpperCase()
+        : 'DRAFT';
+
       // Tạo bài viết trước để có newsId
       const newsId = await NewsModel.createNews({
         title: title.trim(),
         categoryId: categoryId || null,
-        status: status || 'DRAFT',
+        status: safeStatus,
         author: author || null,
         excerpt: excerpt || null,
         content: content || null,
-        thumbnail: null, // sẽ cập nhật sau nếu có thumbnail
-        publishedAt: publishedAt || null,
+        thumbnail: null,
+        publishedAt: publishedAt || (safeStatus === 'PUBLISHED' ? new Date() : null),
         createdBy,
       });
 
@@ -97,12 +144,10 @@ const newsController = {
           const saved = saveNewsThumbnailFromDataUrl(thumbnail, newsId);
           if (saved) thumbnailPath = saved;
         } catch (thumbErr) {
-          // Không throw lỗi, chỉ log — bài viết đã được tạo
           console.error('[CreateNews Thumbnail Error]', thumbErr.message);
         }
       }
 
-      // Cập nhật thumbnail nếu có
       if (thumbnailPath !== null) {
         await NewsModel.updateNews(newsId, {
           thumbnail: thumbnailPath,
@@ -125,7 +170,7 @@ const newsController = {
 
   /**
    * PUT /api/news/:id
-   * Cập nhật bài viết (cần auth)
+   * Cập nhật bài viết (Admin only — middleware)
    */
   updateNews: async (req, res) => {
     try {
@@ -145,6 +190,15 @@ const newsController = {
         return res.status(400).json({ success: false, message: 'Tiêu đề bài viết không được để trống.' });
       }
 
+      let nextStatus = existing.status;
+      if (status !== undefined) {
+        const upper = String(status).toUpperCase();
+        if (!ALLOWED_STATUS.has(upper)) {
+          return res.status(400).json({ success: false, message: 'Trạng thái bài viết không hợp lệ.' });
+        }
+        nextStatus = upper;
+      }
+
       // Xử lý thumbnail: nếu là data URL thì lưu xuống disk
       let thumbnailPath = thumbnail !== undefined ? thumbnail : existing.thumbnail;
       if (thumbnail !== undefined) {
@@ -159,15 +213,34 @@ const newsController = {
         }
       }
 
+      let nextPublishedAt =
+        publishedAt !== undefined ? publishedAt : existing.publishedAt;
+      if (status !== undefined) {
+        if (nextStatus === 'PUBLISHED') {
+          nextPublishedAt =
+            publishedAt !== undefined && publishedAt
+              ? publishedAt
+              : existing.publishedAt || new Date();
+        } else if (publishedAt === null || (publishedAt === undefined && nextStatus !== 'PUBLISHED')) {
+          // Unpublish / hide: clear publishedAt only when client sends null or status leaves PUBLISHED without explicit date
+          if (nextStatus !== 'PUBLISHED' && publishedAt === null) {
+            nextPublishedAt = null;
+          } else if (nextStatus !== 'PUBLISHED' && publishedAt === undefined) {
+            // Keep historical publishedAt when hiding (useful for re-publish)
+            nextPublishedAt = existing.publishedAt;
+          }
+        }
+      }
+
       await NewsModel.updateNews(newsId, {
         title: title !== undefined ? title.trim() : existing.title,
         categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
-        status: status !== undefined ? status : existing.status,
+        status: nextStatus,
         author: author !== undefined ? author : existing.author,
         excerpt: excerpt !== undefined ? excerpt : existing.excerpt,
         content: content !== undefined ? content : existing.content,
         thumbnail: thumbnailPath,
-        publishedAt: publishedAt !== undefined ? publishedAt : existing.publishedAt,
+        publishedAt: nextPublishedAt,
       });
 
       return res.json({ success: true, message: 'Cập nhật bài viết thành công.' });
@@ -182,7 +255,7 @@ const newsController = {
 
   /**
    * DELETE /api/news/:id
-   * Xóa bài viết (cần auth)
+   * Xóa bài viết (Admin only — middleware)
    */
   deleteNews: async (req, res) => {
     try {

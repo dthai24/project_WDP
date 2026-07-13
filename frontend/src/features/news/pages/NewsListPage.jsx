@@ -59,6 +59,7 @@ export default function NewsListPage() {
         pageSize: NEWS_LIST_PAGE_SIZE,
         categoryId: filters.category !== 'all' ? filters.category : undefined,
         search: filters.q || undefined,
+        sort: filters.sort,
       });
       if (cancelled) return;
 
@@ -77,7 +78,7 @@ export default function NewsListPage() {
     return () => {
       cancelled = true;
     };
-  }, [filters.page, filters.category, filters.q]);
+  }, [filters.page, filters.category, filters.q, filters.sort]);
 
   const handleRemoveFilterChip = (chip) => {
     if (chip.type === 'q') {

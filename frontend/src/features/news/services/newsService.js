@@ -23,13 +23,20 @@ function normalizeArticle(raw = {}) {
   };
 }
 
-export async function fetchPublishedNewsArticles({ page = 1, pageSize = 10, categoryId, search } = {}) {
+export async function fetchPublishedNewsArticles({
+  page = 1,
+  pageSize = 10,
+  categoryId,
+  search,
+  sort = 'newest',
+} = {}) {
   const result = await apiGetNewsList({
     status: 'PUBLISHED',
     categoryId,
     search,
     page,
     pageSize,
+    sort,
   });
 
   if (!result.ok) {
