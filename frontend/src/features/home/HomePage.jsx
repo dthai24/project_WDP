@@ -36,6 +36,44 @@ const TEXT = "#0F172A";
 const MUTED = "#64748B";
 const BORDER = "rgba(8,145,178,0.08)";
 
+const COURSE_GRID_SX = {
+  display: "grid",
+  gridTemplateColumns: {
+    xs: "1fr",
+    sm: "1fr 1fr",
+    xl: "repeat(4, 1fr)",
+  },
+  gap: 2.5,
+};
+
+function countLessonsFromPaths(paths = []) {
+  return paths.reduce((sum, path) => sum + (path.Nodes?.length ?? 0), 0);
+}
+
+function normalizeThumbnail(value) {
+  if (!value || value === "CHƯA FIX LỖI ẢNH") return null;
+  return value;
+}
+
+function normalizeHomeCourse(c) {
+  const paths = c.Paths || c.paths || [];
+  return {
+    courseId: c.CourseId ?? c.courseId,
+    courseName: c.CourseName ?? c.courseName,
+    category:
+      c.CategoryDisplayName ??
+      c.CategoryName ??
+      c.category ??
+      "Giao tiếp",
+    level: c.LevelDisplayName ?? c.LevelName ?? c.level ?? "Cơ bản",
+    instructor: c.InstructorName ?? c.instructor ?? "",
+    rating: c.Rating ?? c.rating ?? 4.5,
+    studentCount: c.StudentCount ?? c.TotalStudents ?? c.studentCount ?? 0,
+    totalLessons: c.TotalLessons ?? countLessonsFromPaths(paths) ?? 0,
+    thumbnail: normalizeThumbnail(c.thumbnail || c.Thumbnail),
+  };
+}
+
 /**
  * Lấy thông tin người dùng hiện tại từ localStorage.
  */
@@ -145,6 +183,51 @@ function SectionHeader({ label, title, action, onAction }) {
           {action}
           <ArrowForwardRoundedIcon sx={{ fontSize: 16 }} />
         </Box>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Tiêu đề phụ cho từng mục con bên trong một section lớn.
+ */
+function SubsectionHeader({ title, description, icon: Icon }) {
+  return (
+    <Box sx={{ mb: 2.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: description ? 0.5 : 0 }}>
+        {Icon && (
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              borderRadius: "10px",
+              bgcolor: alpha(PRIMARY, 0.1),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Icon sx={{ fontSize: 17, color: PRIMARY }} />
+          </Box>
+        )}
+        <Typography
+          component="h3"
+          sx={{
+            fontSize: { xs: 17, sm: 18 },
+            fontWeight: 700,
+            color: TEXT,
+            letterSpacing: "-0.02em",
+            lineHeight: 1.3,
+          }}
+        >
+          {title}
+        </Typography>
+      </Box>
+      {description && (
+        <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55, pl: Icon ? 5 : 0 }}>
+          {description}
+        </Typography>
       )}
     </Box>
   );
@@ -784,36 +867,154 @@ function NewsSection() {
 
 /* ─── Section 4: Suggested courses ──────────────────────── */
 
+function CourseGrid({ courses, onNavigateCourse }) {
+  return (
+    <Box sx={COURSE_GRID_SX}>
+      {courses.map((course) => (
+        <CourseHomeCard
+          key={course.courseId}
+          course={course}
+          onClick={() => onNavigateCourse(course.courseId)}
+        />
+      ))}
+    </Box>
+  );
+}
+
+function ForYouPlaceholder({ isLoggedIn, learningGoal, onExplore, onLogin }) {
+  return (
+    <Box
+      sx={{
+        p: { xs: 2.5, sm: 3 },
+        borderRadius: "18px",
+        border: `1px dashed ${alpha(PRIMARY, 0.28)}`,
+        bgcolor: alpha(PRIMARY, 0.03),
+        display: "flex",
+        flexDirection: { xs: "column", sm: "row" },
+        alignItems: { xs: "flex-start", sm: "center" },
+        justifyContent: "space-between",
+        gap: 2,
+      }}
+    >
+      <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
+        <Box
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: "12px",
+            bgcolor: alpha(PRIMARY, 0.12),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <AutoAwesomeRoundedIcon sx={{ fontSize: 22, color: PRIMARY }} />
+        </Box>
+        <Box>
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, mb: 0.5 }}>
+            {isLoggedIn
+              ? "Chưa có gợi ý phù hợp"
+              : "Đăng nhập để nhận gợi ý cá nhân"}
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.6, maxWidth: 520 }}>
+            {isLoggedIn
+              ? learningGoal
+                ? "Hãy cập nhật lĩnh vực quan tâm trong hồ sơ để chúng tôi gợi ý khóa học phù hợp hơn."
+                : "Hoàn thành khảo sát hoặc cập nhật mục tiêu học tập để nhận gợi ý khóa học dành riêng cho bạn."
+              : "Chúng tôi sẽ đề xuất khóa học dựa trên mục tiêu và sở thích học tập của bạn."}
+          </Typography>
+        </Box>
+      </Box>
+      <AppButton
+        variant={isLoggedIn ? "outlined" : "contained"}
+        onClick={isLoggedIn ? onExplore : onLogin}
+        sx={{ px: 2.5, py: 1, fontSize: 13, flexShrink: 0, alignSelf: { xs: "stretch", sm: "center" } }}
+      >
+        {isLoggedIn ? "Khám phá khóa học" : "Đăng nhập ngay"}
+      </AppButton>
+    </Box>
+  );
+}
+
 /**
- * Khối hiển thị lưới các khóa học đề xuất nổi bật (được mua/chọn nhiều) trên trang chủ.
+ * Khối hiển thị các khóa học đề xuất: gợi ý cá nhân và khóa học phổ biến.
  */
-function CoursesSection({ courses = [], onExplore, onNavigateCourse }) {
+function CoursesSection({
+  featuredCourses = [],
+  forYouCourses = [],
+  forYouLoading = false,
+  isLoggedIn = false,
+  learningGoal = "",
+  onExplore,
+  onLogin,
+  onNavigateCourse,
+}) {
   return (
     <Box sx={{ mb: { xs: 7, md: 9 } }}>
       <SectionHeader
         label="Khóa học đề xuất"
-        title="Được nhiều học viên chọn"
+        title="Khám phá lộ trình phù hợp với bạn"
         action="Xem tất cả"
         onAction={onExplore}
       />
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "1fr 1fr",
-            xl: "repeat(4, 1fr)",
-          },
-          gap: 2.5,
-        }}
-      >
-        {courses.map((course) => (
-          <CourseHomeCard
-            key={course.courseId}
-            course={course}
-            onClick={() => onNavigateCourse(course.courseId)}
+
+      <Box sx={{ mb: { xs: 5, md: 6 } }}>
+        <SubsectionHeader
+          icon={AutoAwesomeRoundedIcon}
+          title="Dành cho bạn"
+          description="Gợi ý dựa trên mục tiêu học tập và lĩnh vực bạn quan tâm"
+        />
+        {forYouLoading ? (
+          <Box sx={COURSE_GRID_SX}>
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Box
+                key={index}
+                sx={{
+                  borderRadius: "18px",
+                  border: `1px solid ${BORDER}`,
+                  bgcolor: "#fff",
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  sx={{
+                    height: 160,
+                    bgcolor: alpha(PRIMARY, 0.06),
+                    animation: "pulse 1.5s ease-in-out infinite",
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 1 },
+                      "50%": { opacity: 0.45 },
+                    },
+                  }}
+                />
+                <Box sx={{ p: 2 }}>
+                  <Box sx={{ height: 22, width: "55%", borderRadius: "6px", bgcolor: alpha(MUTED, 0.12), mb: 1.25 }} />
+                  <Box sx={{ height: 38, borderRadius: "6px", bgcolor: alpha(MUTED, 0.1), mb: 1.5 }} />
+                  <Box sx={{ height: 14, width: "70%", borderRadius: "6px", bgcolor: alpha(MUTED, 0.08) }} />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        ) : forYouCourses.length > 0 ? (
+          <CourseGrid courses={forYouCourses} onNavigateCourse={onNavigateCourse} />
+        ) : (
+          <ForYouPlaceholder
+            isLoggedIn={isLoggedIn}
+            learningGoal={learningGoal}
+            onExplore={onExplore}
+            onLogin={onLogin}
           />
-        ))}
+        )}
+      </Box>
+
+      <Box>
+        <SubsectionHeader
+          icon={PeopleOutlineRoundedIcon}
+          title="Được nhiều học viên chọn"
+          description="Các khóa học được đăng ký và đánh giá cao nhất"
+        />
+        <CourseGrid courses={featuredCourses} onNavigateCourse={onNavigateCourse} />
       </Box>
     </Box>
   );
@@ -1227,8 +1428,14 @@ export default function HomePage() {
   /** Chuyển sang trang chi tiết của một khóa học cụ thể */
   const handleCourseNav = (courseId) => navigate(`/courses/${courseId}`);
 
+  /** Chuyển sang trang đăng nhập */
+  const handleLogin = () => navigate("/login");
+
   /** State lưu trữ danh sách khóa học đề xuất tải về từ Backend */
-  const [courses, setCourses] = useState([]);
+  const [featuredCourses, setFeaturedCourses] = useState([]);
+  const [forYouCourses, setForYouCourses] = useState([]);
+  const [forYouLoading, setForYouLoading] = useState(Boolean(user?.userId));
+
   /**
    * Effect 4: Tự động gọi API Backend lấy danh sách các khóa học đề xuất nổi bật (Featured Courses).
    */
@@ -1242,22 +1449,65 @@ export default function HomePage() {
         return;
       }
 
-      setCourses(
-        result.data.map((c) => ({
-          courseId: c.CourseId,
-          courseName: c.CourseName,
-          category: c.CategoryName ?? "Giao tiếp",
-          level: c.LevelName ?? "Cơ bản",
-          instructor: c.InstructorName ?? "",
-          rating: c.Rating ?? 4.5,
-          studentCount: c.TotalStudents ?? 0,
-          totalLessons: c.TotalLessons ?? 0,
-          thumbnail: (c.thumbnail || c.Thumbnail) === 'CHƯA FIX LỖI ẢNH' ? null : (c.thumbnail || c.Thumbnail || null),
-        })),
-      );
+      setFeaturedCourses(result.data.map(normalizeHomeCourse));
     };
     getData();
   }, []);
+
+  /**
+   * Effect 5: Lấy khóa học gợi ý cá nhân theo lĩnh vực quan tâm của người dùng.
+   */
+  useEffect(() => {
+    if (!user?.userId) {
+      setForYouCourses([]);
+      setForYouLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setForYouLoading(true);
+
+    (async () => {
+      try {
+        const profileRes = await fetch("http://localhost:5000/api/users/profile", {
+          headers: { "x-user-id": String(user.userId) },
+        });
+        const profileData = await profileRes.json();
+        const categoryIds =
+          profileData?.profile?.categories?.map((c) => c.categoryId) ?? [];
+
+        if (categoryIds.length === 0) {
+          if (!cancelled) setForYouCourses([]);
+          return;
+        }
+
+        const params = new URLSearchParams();
+        categoryIds.forEach((id) => params.append("category", String(id)));
+        params.append("status", "not_enrolled");
+
+        const coursesRes = await fetch(
+          `http://localhost:5000/api/courses/student?${params.toString()}`,
+          { headers: { "x-user-id": String(user.userId) } },
+        );
+        const coursesData = await coursesRes.json();
+
+        if (!cancelled && coursesData.success) {
+          setForYouCourses(
+            (coursesData.data || []).slice(0, 4).map(normalizeHomeCourse),
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching for-you courses:", error);
+        if (!cancelled) setForYouCourses([]);
+      } finally {
+        if (!cancelled) setForYouLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.userId]);
 
   return (
     /* Wide root — hero can breathe at full width */
@@ -1314,8 +1564,13 @@ export default function HomePage() {
         <NewsSection />
 
         <CoursesSection
-          courses={courses}
+          featuredCourses={featuredCourses}
+          forYouCourses={forYouCourses}
+          forYouLoading={forYouLoading}
+          isLoggedIn={Boolean(user?.userId)}
+          learningGoal={learningGoal}
           onExplore={handleExplore}
+          onLogin={handleLogin}
           onNavigateCourse={handleCourseNav}
         />
 
