@@ -5,7 +5,10 @@
 const API_BASE = 'http://localhost:5050/api/admin';
 
 function getAuthHeaders() {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 
+    'Content-Type': 'application/json',
+    'x-role-name': 'admin'
+  };
   try {
     const stored = localStorage.getItem('user');
     if (stored) {

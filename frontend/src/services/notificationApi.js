@@ -5,7 +5,7 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5050').replac
 function getAuthHeaders() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const headers = {};
-  const token = localStorage.getItem('token');
+  const token = user.token || localStorage.getItem('token');
 
   if (token && token !== 'null' && token !== 'undefined') {
     headers.Authorization = `Bearer ${token}`;

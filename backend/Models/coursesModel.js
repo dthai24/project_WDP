@@ -589,7 +589,7 @@ const insertMaterial = async (material, nodeId) => {
   const newMaterial = await NodeMaterial.create({
     nodeId: new ObjectId(nodeId),
     materialType: material.MaterialType,
-    title: material.Title,
+    title: String(material.Title || material.title || '').trim() || 'Học liệu',
     materialUrl: materialUrl,
     materialOrder: Number(material.MaterialOrder),
     sourceType: material.SourceType ?? null,

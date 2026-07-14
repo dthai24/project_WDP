@@ -70,6 +70,9 @@ export function courseDetailToEditCourse(course) {
       || course.isPublished === true
       || course.IsPublished === true
       || course.IsPublished === 1,
+    IsPaid: course.isPaid ?? course.IsPaid ?? false,
+    Price: course.price ?? course.Price ?? 0,
+    DiscountPercentage: course.discountPercentage ?? course.DiscountPercentage ?? 0,
   };
 }
 
@@ -77,20 +80,28 @@ export function courseDetailToEditCourse(course) {
  * Map normalized course detail (camelCase) → form state for MentorCourseCreateForm.
  */
 export function courseDetailToEditForm(course) {
+  const getRawId = (val) => {
+    if (!val) return null;
+    if (typeof val === 'object') return val._id ?? val.id ?? val;
+    return val;
+  };
+
+  const catId = getRawId(course.categoryId ?? course.CategoryId);
+  const lvlId = getRawId(course.levelId ?? course.LevelId);
+
   return {
     CourseName: course.courseName ?? course.CourseName ?? '',
     Description: course.description ?? course.Description ?? '',
-    CategoryId: (course.categoryId ?? course.CategoryId) != null
-      ? String(course.categoryId ?? course.CategoryId)
-      : '',
-    LevelId: (course.levelId ?? course.LevelId) != null
-      ? String(course.levelId ?? course.LevelId)
-      : '',
+    CategoryId: catId != null ? String(catId) : '',
+    LevelId: lvlId != null ? String(lvlId) : '',
     Thumbnail: course.thumbnail ?? course.Thumbnail ?? '',
     IsPublished: course.status === 'published'
       || course.isPublished === true
       || course.IsPublished === true
       || course.IsPublished === 1,
+    IsPaid: course.isPaid ?? course.IsPaid ?? false,
+    Price: course.price ?? course.Price ?? '',
+    DiscountPercentage: course.discountPercentage ?? course.DiscountPercentage ?? 0,
   };
 }
 

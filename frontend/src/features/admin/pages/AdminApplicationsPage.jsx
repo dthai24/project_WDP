@@ -48,15 +48,21 @@ export default function AdminApplicationsPage() {
   const [rejectComment, setRejectComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const getHeaders = () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return {
+      'Authorization': `Bearer ${user.token || ''}`,
+      'x-role-name': 'admin',
+      'x-user-id': String(user.userId || ''),
+      'Content-Type': 'application/json'
+    };
+  };
+
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:5050/api/admin/applications', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin'
-        }
+        headers: getHeaders()
       });
       const data = await res.json();
       if (data.success) {
@@ -89,14 +95,9 @@ export default function AdminApplicationsPage() {
     if (!selectedApp) return;
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`http://localhost:5050/api/admin/applications/${selectedApp._id}/approve`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin',
-          'Content-Type': 'application/json'
-        }
+        headers: getHeaders()
       });
       const data = await res.json();
       if (data.success) {
@@ -126,14 +127,9 @@ export default function AdminApplicationsPage() {
     if (!selectedApp) return;
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`http://localhost:5050/api/admin/applications/${selectedApp._id}/reject`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin',
-          'Content-Type': 'application/json'
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           tags: selectedTags,
           comment: rejectComment

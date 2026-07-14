@@ -49,8 +49,8 @@ export const getTopCoursesApi = (limit = 4) => apiGet(`/courses/top?limit=${limi
 
 // 🔥 ĐÃ FIX: Nhận thẳng 1 cục Object (data) từ Frontend truyền sang
 export const enrollCourseApi = async (data) => {
-  const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const token = user.token || localStorage.getItem('token');
   const headers = { 'Content-Type': 'application/json' };
 
   if (token) headers.Authorization = `Bearer ${token}`;

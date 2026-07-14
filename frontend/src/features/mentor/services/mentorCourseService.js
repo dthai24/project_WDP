@@ -261,8 +261,9 @@ export async function createCourse(payload) {
  */
 export async function fetchMentorCourseDetail(courseId) {
   try {
-    const [courseRes, studentsRes] = await Promise.all([
+    const [courseRes, contentRes, studentsRes] = await Promise.all([
       fetch(`${API_BASE}/courses/my-courses/${courseId}?tab=course`),
+      fetch(`${API_BASE}/courses/my-courses/${courseId}?tab=content`),
       fetch(`${API_BASE}/mentor/courses/${courseId}/students`),
     ]);
     const res = await courseRes.json();
@@ -271,6 +272,15 @@ export async function fetchMentorCourseDetail(courseId) {
     }
 
     const course = Array.isArray(res.data) ? res.data[0] : res.data;
+
+    if (contentRes.ok) {
+      const contentJson = await contentRes.json();
+      if (contentJson.success && contentJson.data) {
+        course.Paths = contentJson.data.Paths || [];
+        course.paths = contentJson.data.Paths || [];
+      }
+    }
+
     if (course && studentsRes.ok) {
       const studentsJson = await studentsRes.json();
       if (studentsJson.success && Array.isArray(studentsJson.data)) {
@@ -278,7 +288,8 @@ export async function fetchMentorCourseDetail(courseId) {
       }
     }
 
-    return { success: true, message: 'Lấy course detail thành công', course };
+    const normalized = normalizeMentorCourseDetail(course);
+    return { success: true, message: 'Lấy course detail thành công', course: normalized };
   } catch (error) {
     return { success: false, message: 'Lỗi Server', course: {} };
   }

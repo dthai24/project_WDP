@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-require("dotenv").config({ path: "/Users/nguyenminhtien/Documents/Documents - Mac Nguyen Minh Tien/Kì 8 - Summer 2026/WDP301/WDP-1/project_WDP/backend/.env" });
+require("dotenv").config();
 
 const Course = require("../Models/MongoDB/Course");
 const Path = require("../Models/MongoDB/Path");

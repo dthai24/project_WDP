@@ -15,6 +15,7 @@ import {
   fetchCourseCategories,
   fetchCourseLevels,
   fetchMentorCourseDetail,
+  updateCourseBasicInfo,
 } from '@/features/mentor/services/mentorCourseService';
 import { getUser } from '@/features/auth/utils/authUtils';
 import {
@@ -118,7 +119,7 @@ export default function MentorEditCoursePage() {
     }
   };
 
-  const handleNext = async (event) => {
+  const handleSave = async (event) => {
     event.preventDefault();
 
     const fieldErrors = validateMentorCourseForm(form, validationOptions);
@@ -135,27 +136,17 @@ export default function MentorEditCoursePage() {
     setSubmitting(true);
     try {
       const payload = buildCreateCourseStep1Payload(form, instructorId);
-      const nextCourse = {
-        ...coursePascal,
-        ...payload,
-        CourseId: courseId,
-      };
-
-      if (hasStudents) {
-        nextCourse.CategoryId = coursePascal?.CategoryId ?? nextCourse.CategoryId;
-        nextCourse.LevelId = coursePascal?.LevelId ?? nextCourse.LevelId;
-        nextCourse.Thumbnail = coursePascal?.Thumbnail ?? nextCourse.Thumbnail;
+      
+      const res = await updateCourseBasicInfo(courseId, payload);
+      if (res.ok) {
+        toast.success('Cập nhật thông tin khóa học thành công!');
+        navigate('/mentor/courses');
+      } else {
+        toast.error(res.message || 'Cập nhật thất bại. Vui lòng thử lại.');
       }
-
-      // Bước 1 → Bước 2: chuyển sang trang sửa nội dung
-      navigate(`/mentor/courses/${courseId}/content/edit`, {
-        state: {
-          editDraft: {
-            course: nextCourse,
-            meta: { profileOnly: false },
-          },
-        },
-      });
+    } catch (err) {
+      console.error(err);
+      toast.error('Có lỗi xảy ra khi cập nhật khóa học.');
     } finally {
       setSubmitting(false);
     }
@@ -180,15 +171,14 @@ export default function MentorEditCoursePage() {
         Hủy
       </AppButton>
       <AppButton
-        onClick={handleNext}
+        onClick={handleSave}
         loading={submitting}
-        endIcon={!submitting ? <ArrowForwardRoundedIcon /> : undefined}
         sx={{
           minWidth: 148, height: 44, borderRadius: '999px', fontWeight: 700,
           bgcolor: PRIMARY, '&:hover': { bgcolor: '#047857' },
         }}
       >
-        Tiếp theo
+        Lưu thay đổi
       </AppButton>
     </Box>
   );
@@ -204,7 +194,7 @@ export default function MentorEditCoursePage() {
         </p>
       </div>
 
-      <MentorCourseCreateStepIndicator currentStep={1} />
+
 
       <Box sx={{ maxWidth: 1080 }}>
         <MentorCourseCreateForm
