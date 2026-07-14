@@ -11,12 +11,13 @@ function computeStreak(dateStrings) {
   if (!dateStrings.length) return { streak: 0, hasStudiedToday: false };
   const set = new Set(dateStrings);
   const cursor = new Date();
-  
+
   const todayStr = ymd(cursor);
   const hasStudiedToday = set.has(todayStr);
-  
+
   if (!hasStudiedToday) {
     cursor.setDate(cursor.getDate() - 1);
+    //1 ngày bất kỳ bị trống
     if (!set.has(ymd(cursor))) return { streak: 0, hasStudiedToday };
   }
   let streak = 0;
@@ -28,8 +29,8 @@ function computeStreak(dateStrings) {
 }
 
 async function getStreak(userId) {
-  const dates = await getCompletionDates(userId);
-  return computeStreak(dates);
+  const dates = await getCompletionDates(userId);// Gọi Model lấy danh sách ngày đã hoàn thành bài học
+  return computeStreak(dates);//tính toán 
 }
 
 module.exports = { getStreak };

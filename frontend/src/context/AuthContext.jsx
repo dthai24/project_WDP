@@ -26,7 +26,7 @@ export function AuthProvider({ children }) {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     if (token) {
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', token); ////CẤT JWT VÀO KÉT SẮT TRÌNH DUYỆT
     }
   };
 

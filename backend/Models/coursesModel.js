@@ -277,7 +277,12 @@ Users.FullName as InStructorName,
                cate.CategoryName,
                cate.DisplayName as CategoryDisplayName,
                CASE WHEN uc.UserId IS NOT NULL THEN 1 ELSE 0 END AS isEnrolled,
-               ISNULL(uc.ProgressPercentage, 0) AS progress
+               ISNULL((
+                   SELECT CASE WHEN T.Total > 0 THEN (C.Completed * 100) / T.Total ELSE 0 END
+                   FROM 
+                   (SELECT COUNT(*) AS Total FROM Path_Nodes pn JOIN Paths p ON pn.PathId = p.PathId WHERE p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) T,
+                   (SELECT COUNT(*) AS Completed FROM User_Nodes un JOIN Path_Nodes pn ON un.NodeId = pn.NodeId JOIN Paths p ON pn.PathId = p.PathId WHERE un.UserId = @userId AND p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) C
+               ), ISNULL(uc.ProgressPercentage, 0)) AS progress
         from courses crs
         join Categories cate on crs.CategoryId = cate.CategoryId
         join Levels on Levels.LevelId = crs.LevelId
@@ -294,16 +299,26 @@ const getContinueCourse = async (userId) => {
   request.input("UserId", sql.Int, userId);
 
   const result = await request.query(`
-    SELECT TOP 1
+    WITH ComputedProgress AS (
+      SELECT 
           c.CourseId,
           c.CourseName,
           c.Thumbnail,
-          uc.ProgressPercentage
+          uc.EnrollmentDate,
+          ISNULL((
+              SELECT CASE WHEN T.Total > 0 THEN (C.Completed * 100) / T.Total ELSE 0 END
+              FROM 
+              (SELECT COUNT(*) AS Total FROM Path_Nodes pn JOIN Paths p ON pn.PathId = p.PathId WHERE p.CourseId = c.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) T,
+              (SELECT COUNT(*) AS Completed FROM User_Nodes un JOIN Path_Nodes pn ON un.NodeId = pn.NodeId JOIN Paths p ON pn.PathId = p.PathId WHERE un.UserId = @UserId AND p.CourseId = c.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) C
+          ), ISNULL(uc.ProgressPercentage, 0)) AS ProgressPercentage
       FROM User_Courses uc
-      INNER JOIN Courses c
-          ON c.CourseId = uc.CourseId
-        WHERE uc.UserId = @UserId AND uc.ProgressPercentage < 100
-        ORDER BY uc.EnrollmentDate DESC`);
+      INNER JOIN Courses c ON c.CourseId = uc.CourseId
+      WHERE uc.UserId = @UserId
+    )
+    SELECT TOP 1 *
+    FROM ComputedProgress
+    WHERE ProgressPercentage < 100
+    ORDER BY EnrollmentDate DESC`);
   return await buildCourse(result.recordset, false);
 };
 
@@ -339,24 +354,33 @@ const getStudentCourses = async (userId, filterStatus = "all") => {
   request.input("userId", sql.Int, userId);
 
   let query = `
-        SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail,
-               crs.Rating, (SELECT COUNT(*) FROM User_Courses uc2 WHERE uc2.CourseId = crs.CourseId) AS StudentCount,
-               crs.TotalLessons,
-               uc.ProgressPercentage, uc.EnrollmentDate
-        FROM User_Courses uc
-        JOIN Courses crs ON uc.CourseId = crs.CourseId
-        WHERE uc.UserId = @userId
+      WITH ComputedProgress AS (
+          SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail,
+                 crs.Rating, (SELECT COUNT(*) FROM User_Courses uc2 WHERE uc2.CourseId = crs.CourseId) AS StudentCount,
+                 crs.TotalLessons,
+                 ISNULL((
+                     SELECT CASE WHEN T.Total > 0 THEN (C.Completed * 100) / T.Total ELSE 0 END
+                     FROM 
+                     (SELECT COUNT(*) AS Total FROM Path_Nodes pn JOIN Paths p ON pn.PathId = p.PathId WHERE p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) T,
+                     (SELECT COUNT(*) AS Completed FROM User_Nodes un JOIN Path_Nodes pn ON un.NodeId = pn.NodeId JOIN Paths p ON pn.PathId = p.PathId WHERE un.UserId = uc.UserId AND p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) C
+                 ), ISNULL(uc.ProgressPercentage, 0)) AS ProgressPercentage,
+                 uc.EnrollmentDate
+          FROM User_Courses uc
+          JOIN Courses crs ON uc.CourseId = crs.CourseId
+          WHERE uc.UserId = @userId
+      )
+      SELECT * FROM ComputedProgress WHERE 1=1
     `;
 
   if (filterStatus === "learning") {
-    query += ` AND uc.ProgressPercentage > 0 AND uc.ProgressPercentage < 100`;
+    query += ` AND ProgressPercentage > 0 AND ProgressPercentage < 100`;
   } else if (filterStatus === "completed") {
-    query += ` AND uc.ProgressPercentage = 100`;
+    query += ` AND ProgressPercentage = 100`;
   } else if (filterStatus === "not_started") {
-    query += ` AND uc.ProgressPercentage = 0`;
+    query += ` AND ProgressPercentage = 0`;
   }
 
-  query += ` ORDER BY uc.EnrollmentDate DESC`;
+  query += ` ORDER BY EnrollmentDate DESC`;
 
   const result = await request.query(query);
   return result.recordset;
@@ -368,28 +392,39 @@ const getMyEnrolledCourses = async (userId, filterStatus = "all") => {
   request.input("UserId", sql.Int, userId);
 
   let query = `
-      SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail, 
-       crs.Rating, (SELECT COUNT(*) FROM User_Courses uc2 WHERE uc2.CourseId = crs.CourseId) AS StudentCount,
-       crs.TotalLessons,
-       uc.ProgressPercentage as progress, uc.EnrollmentDate,
-       cate.CategoryName, cate.DisplayName as CategoryDisplayName,
-       lv.LevelName as levelName, lv.DisplayName as LevelDisplayName
-FROM User_Courses uc
-INNER JOIN Courses crs ON uc.CourseId = crs.CourseId
-LEFT JOIN Categories cate ON crs.CategoryId = cate.CategoryId
-LEFT JOIN Levels lv ON crs.LevelId = lv.LevelId
-WHERE uc.UserId = @UserId
+      WITH ComputedProgress AS (
+          SELECT crs.CourseId, crs.CourseName, crs.Description, crs.Thumbnail, 
+                 crs.Rating, (SELECT COUNT(*) FROM User_Courses uc2 WHERE uc2.CourseId = crs.CourseId) AS StudentCount,
+                 (SELECT COUNT(*) FROM Path_Nodes pn JOIN Paths p ON pn.PathId = p.PathId WHERE p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) AS TotalLessons,
+                 (SELECT COUNT(*) FROM Paths p WHERE p.CourseId = crs.CourseId AND ISNULL(p.IsActive, 1) = 1) AS TotalPaths,
+                 (SELECT COUNT(*) FROM User_Nodes un JOIN Path_Nodes pn ON un.NodeId = pn.NodeId JOIN Paths p ON pn.PathId = p.PathId WHERE un.UserId = uc.UserId AND p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) AS CompletedLessons,
+                 ISNULL((
+                     SELECT CASE WHEN T.Total > 0 THEN (C.Completed * 100) / T.Total ELSE 0 END
+                     FROM 
+                     (SELECT COUNT(*) AS Total FROM Path_Nodes pn JOIN Paths p ON pn.PathId = p.PathId WHERE p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) T,
+                     (SELECT COUNT(*) AS Completed FROM User_Nodes un JOIN Path_Nodes pn ON un.NodeId = pn.NodeId JOIN Paths p ON pn.PathId = p.PathId WHERE un.UserId = uc.UserId AND p.CourseId = crs.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) C
+                 ), ISNULL(uc.ProgressPercentage, 0)) AS progress, 
+                 uc.EnrollmentDate,
+                 cate.CategoryName, cate.DisplayName as CategoryDisplayName,
+                 lv.LevelName as levelName, lv.DisplayName as LevelDisplayName
+          FROM User_Courses uc
+          INNER JOIN Courses crs ON uc.CourseId = crs.CourseId
+          LEFT JOIN Categories cate ON crs.CategoryId = cate.CategoryId
+          LEFT JOIN Levels lv ON crs.LevelId = lv.LevelId
+          WHERE uc.UserId = @UserId
+      )
+      SELECT * FROM ComputedProgress WHERE 1=1
     `;
 
   if (filterStatus === "learning") {
-    query += ` AND uc.ProgressPercentage > 0 AND uc.ProgressPercentage < 100`;
+    query += ` AND progress > 0 AND progress < 100`;
   } else if (filterStatus === "completed") {
-    query += ` AND uc.ProgressPercentage = 100`;
+    query += ` AND progress = 100`;
   } else if (filterStatus === "not_started") {
-    query += ` AND uc.ProgressPercentage = 0`;
+    query += ` AND progress = 0`;
   }
 
-  query += ` ORDER BY uc.EnrollmentDate DESC`;
+  query += ` ORDER BY EnrollmentDate DESC`;
 
   const result = await request.query(query);
   return result.recordset;
@@ -804,6 +839,8 @@ const markNodeAsCompleted = async (courseId, userId, nodeId) => {
                 FROM Path_Nodes pn
                 JOIN Paths p ON pn.PathId = p.PathId
                 WHERE p.CourseId = @courseId
+                  AND ISNULL(pn.IsActive, 1) = 1
+                  AND ISNULL(p.IsActive, 1) = 1
             );
             DECLARE @Completed INT = (
                 SELECT COUNT(un.NodeId) 
@@ -811,6 +848,8 @@ const markNodeAsCompleted = async (courseId, userId, nodeId) => {
                 JOIN Path_Nodes pn ON un.NodeId = pn.NodeId
                 JOIN Paths p ON pn.PathId = p.PathId
                 WHERE un.UserId = @userId AND p.CourseId = @courseId
+                  AND ISNULL(pn.IsActive, 1) = 1
+                  AND ISNULL(p.IsActive, 1) = 1
             );
             
             DECLARE @Percent INT = 0;

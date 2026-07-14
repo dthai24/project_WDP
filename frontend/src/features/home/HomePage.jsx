@@ -24,7 +24,6 @@ import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import ThumbnailImage from "@/shared/ui/ThumbnailImage";
 import LearningGoalStickyNote from "@/features/home/components/LearningGoalStickyNote";
 import heroImg from "@/asset/image/herosection.png";
-// Thêm import
 import { getTopCoursesApi } from "@/features/auth/services/authService";
 import { fetchFeaturedNewsArticles } from "@/features/news/services/newsService";
 import { formatNewsDate } from "@/features/admin/utils/adminNewsUtils";
@@ -466,7 +465,7 @@ function ContinueSection({ course, onContinue, onExplore }) {
             >
               {course.courseName}
             </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 1.5 }}>
+            {/* <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 1.5 }}>
               {course.currentStage != null && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <PlaceOutlinedIcon sx={{ fontSize: 14, color: "#94A3B8" }} />
@@ -500,7 +499,7 @@ function ContinueSection({ course, onContinue, onExplore }) {
                   {course.currentLessonDetail.title}
                 </Box>
               </Typography>
-            )}
+            )} */}
           </Box>
 
           {/* Progress + CTA */}
@@ -546,7 +545,7 @@ function ContinueSection({ course, onContinue, onExplore }) {
           </Box>
         </Box>
       </Box>
-    </Box>
+    </Box >
   );
 }
 
@@ -643,138 +642,138 @@ function NewsSection() {
             : {};
 
           return (
-          <CardRoot
-            key={item.id}
-            {...cardRootProps}
-            sx={{
-              display: "block",
-              textDecoration: "none",
-              color: "inherit",
-              borderRadius: "18px",
-              border: `1px solid ${BORDER}`,
-              bgcolor: "#fff",
-              overflow: "hidden",
-              cursor: isArticle ? "pointer" : "default",
-              transition: "transform 0.22s ease, box-shadow 0.22s ease",
-              "&:hover": {
-                transform: "translateY(-3px)",
-                boxShadow: "0 12px 32px rgba(8,145,178,0.09)",
-              },
-            }}
-          >
-            <Box
+            <CardRoot
+              key={item.id}
+              {...cardRootProps}
               sx={{
-                height: 180,
+                display: "block",
+                textDecoration: "none",
+                color: "inherit",
+                borderRadius: "18px",
+                border: `1px solid ${BORDER}`,
+                bgcolor: "#fff",
                 overflow: "hidden",
-                position: "relative",
-                bgcolor: alpha(PRIMARY, 0.05),
+                cursor: isArticle ? "pointer" : "default",
+                transition: "transform 0.22s ease, box-shadow 0.22s ease",
+                "&:hover": {
+                  transform: "translateY(-3px)",
+                  boxShadow: "0 12px 32px rgba(8,145,178,0.09)",
+                },
               }}
             >
-            <ThumbnailImage
-              src={item.thumbnail}
-              label={item.title}
-              alt={item.title}
-              icon={item.type === "path" ? RouteOutlinedIcon : MenuBookOutlinedIcon}
-              iconSize={36}
-              sx={{ height: 180, width: "100%" }}
-              imgSx={{
-                transition: "transform 0.4s ease",
-                ".MuiBox-root:hover &": { transform: "scale(1.04)" },
-              }}
-            />
-              {item.type === "path" && item.thumbnail && (
-                <Box
-                  sx={{
-                    position: "absolute",
-                    inset: 0,
-                    background: `linear-gradient(135deg, ${alpha(item.accent ?? PRIMARY, 0.35)} 0%, transparent 60%)`,
+              <Box
+                sx={{
+                  height: 180,
+                  overflow: "hidden",
+                  position: "relative",
+                  bgcolor: alpha(PRIMARY, 0.05),
+                }}
+              >
+                <ThumbnailImage
+                  src={item.thumbnail}
+                  label={item.title}
+                  alt={item.title}
+                  icon={item.type === "path" ? RouteOutlinedIcon : MenuBookOutlinedIcon}
+                  iconSize={36}
+                  sx={{ height: 180, width: "100%" }}
+                  imgSx={{
+                    transition: "transform 0.4s ease",
+                    ".MuiBox-root:hover &": { transform: "scale(1.04)" },
                   }}
                 />
-              )}
-            </Box>
-
-            <Box sx={{ p: 2.25 }}>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25, flexWrap: "wrap" }}
-              >
-                <CategoryChip category={item.category} />
-                {item.type === "article" && item.date && (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <CalendarTodayOutlinedIcon sx={{ fontSize: 11, color: MUTED }} />
-                    <Typography sx={{ fontSize: 11, color: MUTED }}>{item.date}</Typography>
-                  </Box>
-                )}
-                {item.type === "path" && (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <RouteOutlinedIcon sx={{ fontSize: 12, color: item.accent ?? PRIMARY }} />
-                    <Typography sx={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>
-                      {item.nodeCount} chương
-                    </Typography>
-                  </Box>
+                {item.type === "path" && item.thumbnail && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      inset: 0,
+                      background: `linear-gradient(135deg, ${alpha(item.accent ?? PRIMARY, 0.35)} 0%, transparent 60%)`,
+                    }}
+                  />
                 )}
               </Box>
 
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: TEXT,
-                  lineHeight: 1.35,
-                  mb: 0.875,
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {item.title}
-              </Typography>
-
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  color: MUTED,
-                  lineHeight: 1.6,
-                  mb: 2,
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {item.excerpt}
-              </Typography>
-
-              {item.type === "article" ? (
+              <Box sx={{ p: 2.25 }}>
                 <Box
-                  component="span"
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25, flexWrap: "wrap" }}
+                >
+                  <CategoryChip category={item.category} />
+                  {item.type === "article" && item.date && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <CalendarTodayOutlinedIcon sx={{ fontSize: 11, color: MUTED }} />
+                      <Typography sx={{ fontSize: 11, color: MUTED }}>{item.date}</Typography>
+                    </Box>
+                  )}
+                  {item.type === "path" && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <RouteOutlinedIcon sx={{ fontSize: 12, color: item.accent ?? PRIMARY }} />
+                      <Typography sx={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>
+                        {item.nodeCount} chương
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+
+                <Typography
+                  sx={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: TEXT,
+                    lineHeight: 1.35,
+                    mb: 0.875,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {item.title}
+                </Typography>
+
+                <Typography
                   sx={{
                     fontSize: 13,
-                    fontWeight: 600,
-                    color: PRIMARY,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.4,
-                    opacity: 0.7,
-                  }}
-                >
-                  Đọc thêm <ArrowForwardRoundedIcon sx={{ fontSize: 14 }} />
-                </Box>
-              ) : (
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: 12,
-                    fontWeight: 600,
                     color: MUTED,
-                    opacity: 0.65,
+                    lineHeight: 1.6,
+                    mb: 2,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
                   }}
                 >
-                  Sắp ra mắt
-                </Box>
-              )}
-            </Box>
-          </CardRoot>
+                  {item.excerpt}
+                </Typography>
+
+                {item.type === "article" ? (
+                  <Box
+                    component="span"
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: PRIMARY,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0.4,
+                      opacity: 0.7,
+                    }}
+                  >
+                    Đọc thêm <ArrowForwardRoundedIcon sx={{ fontSize: 14 }} />
+                  </Box>
+                ) : (
+                  <Box
+                    component="span"
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: MUTED,
+                      opacity: 0.65,
+                    }}
+                  >
+                    Sắp ra mắt
+                  </Box>
+                )}
+              </Box>
+            </CardRoot>
           );
         })}
       </Box>
@@ -918,9 +917,9 @@ function CourseHomeCard({ course, onClick }) {
             </Typography>
           </Box>
         </Box>
-           
+
         <Divider sx={{ borderColor: BORDER, mb: 1.5 }} />
-         {/* 4. Giảng viên */}
+        {/* 4. Giảng viên */}
         <Typography sx={{ fontSize: 12, color: MUTED }}>
           {course.instructor}
         </Typography>
@@ -1126,26 +1125,29 @@ export default function HomePage() {
         );
         const result = await res.json();
         console.log("Kết quả API trả về thực tế:", result);
+
+        // Trường hợp A: Học viên CÓ khóa học đang học dở dang (< 100%)
         if (result.success && result.data && result.data.length > 0) {
-       
+
           const row = result.data[0];
           setContinueCourseData({
-            courseId: row.CourseId, 
+            courseId: row.CourseId,
             courseName: row.CourseName,
             category: row.CategoryName ?? "",
             level: row.LevelName ?? "",
             progressPercentage: row.ProgressPercentage ?? 0,
             thumbnail: (row.thumbnail || row.Thumbnail) === 'CHƯA FIX LỖI ẢNH' ? null : (row.thumbnail || row.Thumbnail || null),
-            currentStage: null,
-            currentLesson: null,
-            lastActivity: null,
-            currentLessonDetail: null,
+
           });
-        } else {
-          // Nếu Backend báo thành công nhưng không có khóa học dở dang, kiểm tra xem có cờ đã hoàn thành trước đây không
+
+        }// Trường hợp B: Học viên KHÔNG CÓ khóa học học dở dang
+        else {
+          // Nếu học viên đã hoàn thành 100% tất cả các khóa đã đăng ký 
           if (result.success && (result.hasCompletedBefore === true || result.isCompletedAll === true)) {
             setContinueCourseData({ isCompletedAll: true });
-          } else {
+          }
+          // chưa từng đăng ký/học khóa học nào
+          else {
             setContinueCourseData(null);
           }
         }
@@ -1168,7 +1170,7 @@ export default function HomePage() {
       .then((data) => {
         if (data.success) setStreak(data.streak || 0);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [user?.userId]);
 
   /**
@@ -1210,20 +1212,20 @@ export default function HomePage() {
   // ============================================================
   // CÁC HÀM XỬ LÝ ĐIỀU HƯỚNG CHUYỂN TRANG (NAVIGATION HANDLERS)
   // ============================================================
-  
+
   /** Chuyển sang trang danh mục tất cả khóa học */
   const handleExplore = () => navigate("/courses");
-  
+
   /** Chuyển sang trang danh sách tin tức */
   const handleViewNews = () => navigate("/news");
-  
+
   /** Chuyển sang trang danh sách khóa học cá nhân của học viên */
   const handleMyCourses = () => navigate("/my-courses");
-  
+
   /** Chuyển thẳng học viên vào bài học đang dang dở để học tiếp */
   const handleContinue = (course) =>
     navigate(`/my-courses/${course.courseId}/learn`);
-    
+
   /** Chuyển sang trang chi tiết của một khóa học cụ thể */
   const handleCourseNav = (courseId) => navigate(`/courses/${courseId}`);
 
@@ -1246,9 +1248,9 @@ export default function HomePage() {
         result.data.map((c) => ({
           courseId: c.CourseId,
           courseName: c.CourseName,
-          category: c.CategoryName ?? "Giao tiếp",
-          level: c.LevelName ?? "Cơ bản",
-          instructor: c.InstructorName ?? "",
+          category: c.CategoryName,
+          level: c.LevelName,
+          instructor: c.InstructorName,
           rating: c.Rating ?? 4.5,
           studentCount: c.TotalStudents ?? 0,
           totalLessons: c.TotalLessons ?? 0,

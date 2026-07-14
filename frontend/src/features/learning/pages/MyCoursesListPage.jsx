@@ -183,7 +183,9 @@ export default function MyCoursesListPage() {
 
           // 1. Kiểm tra tiến độ học
           let currentProgress = 0;
-          if (dbCourse.progress != null) {
+          if (dbCourse.TotalLessons > 0 && dbCourse.CompletedLessons != null) {
+            currentProgress = Math.floor((dbCourse.CompletedLessons / dbCourse.TotalLessons) * 100);
+          } else if (dbCourse.progress != null) {
             currentProgress = dbCourse.progress;
           }
           // 2. Kiểm tra trạng thái
@@ -192,7 +194,7 @@ export default function MyCoursesListPage() {
             status = "completed";
           }
           // 3. Đếm số chương học (Paths)
-          let stageCount = 0;
+          let stageCount = dbCourse.TotalPaths || 0;
           if (dbCourse.Paths) {
             stageCount = dbCourse.Paths.length;
           }

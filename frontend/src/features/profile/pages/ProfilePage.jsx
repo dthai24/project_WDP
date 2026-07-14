@@ -49,7 +49,7 @@ import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 
 
 /* ==========================================================================
-   Constants
+   Hằng số màu sắc và cấu hình mặc định
    ========================================================================== */
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
@@ -75,9 +75,9 @@ const INITIAL_PROFILE = {
 };
 
 
-/* ─── Small inline helpers ───────────────────────────────────────────────── */
+/* ─── Các Component trợ giúp giao diện nhỏ ───────────────────────────────── */
 
-/** Section card wrapper */
+/** Khung bọc thẻ cho từng phần nội dung */
 function SectionCard({ children, sx = {} }) {
   return (
     <Box
@@ -95,7 +95,7 @@ function SectionCard({ children, sx = {} }) {
   );
 }
 
-/** Section heading row */
+/** Tiêu đề của từng phần nội dung */
 function SectionHead({ title, icon: Icon, iconColor = PRIMARY, action }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2.25 }}>
@@ -110,7 +110,6 @@ function SectionHead({ title, icon: Icon, iconColor = PRIMARY, action }) {
   );
 }
 
-const LEVEL_OPTIONS = ["Mới bắt đầu", "Cơ bản", "Trung cấp", "Nâng cao"];
 
 function formatDateDisplay(value) {
   if (!value) return "—";
@@ -120,7 +119,7 @@ function formatDateDisplay(value) {
   return `${d}/${m}/${y}`;
 }
 
-/** Label/value info field — read or inline edit */
+/** Hiển thị nhãn/giá trị thông tin — hỗ trợ chế độ chỉ đọc hoặc chỉnh sửa tại chỗ */
 function InfoRow({
   icon: Icon,
   iconColor = MUTED,
@@ -130,7 +129,7 @@ function InfoRow({
   name,
   onChange,
   inputType = "text",
-  selectOptions = LEVEL_OPTIONS,
+  selectOptions = [],
   readOnly = false,
   placeholder,
 }) {
@@ -242,7 +241,7 @@ function InfoRow({
   );
 }
 
-/** Learning stat row */
+/** Dòng hiển thị số liệu thống kê học tập */
 function StatRow({ icon: Icon, iconColor, label, value, last = false, children }) {
   return (
     <Box
@@ -436,7 +435,7 @@ export default function ProfilePage() {
     setCropperOpen(true);
   };
 
-  
+
   const handleAvatarSelected = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -576,7 +575,7 @@ export default function ProfilePage() {
 
   return (
     <Box sx={{ maxWidth: 1280, mx: "auto" }}>
-      {/* ── Breadcrumb ── */}
+      {/* ── Thanh điều hướng Breadcrumb ── */}
       <Breadcrumbs
         separator="/"
         sx={{ mb: 2.5, "& .MuiBreadcrumbs-separator": { color: MUTED, mx: 0.5 } }}
@@ -603,7 +602,7 @@ export default function ProfilePage() {
         </Typography>
       </Breadcrumbs>
 
-      {/* ── Profile Header ── */}
+      {/* ── Phần đầu hồ sơ (Header) ── */}
       <Box
         sx={{
           bgcolor: alpha(PRIMARY, 0.02),
@@ -617,7 +616,7 @@ export default function ProfilePage() {
           gap: { xs: 2, md: 3 },
         }}
       >
-        {/* Avatar */}
+        {/* Ảnh đại diện */}
         <Tooltip title="Đổi ảnh đại diện" placement="bottom">
           <Box
             onClick={handleAvatarClick}
@@ -659,7 +658,7 @@ export default function ProfilePage() {
                 {initials}
               </Avatar>
             )}
-            {/* Camera hover overlay */}
+            {/* Lớp phủ biểu tượng máy ảnh khi di chuột qua avatar */}
             <Box
               className="avatar-cam-overlay"
               sx={{
@@ -681,7 +680,7 @@ export default function ProfilePage() {
           </Box>
         </Tooltip>
 
-        {/* Info */}
+        {/* Thông tin cơ bản */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1, mb: 0.5 }}>
             <Typography
@@ -690,7 +689,7 @@ export default function ProfilePage() {
               {profile.name}
             </Typography>
             <Chip
-               label={currentUser?.roles?.includes('Mentor') ? 'Giảng viên' : 'Học viên'}
+              label={currentUser?.roles?.includes('Mentor') ? 'Giảng viên' : 'Học viên'}
               size="small"
               sx={{
                 height: 22,
@@ -714,7 +713,7 @@ export default function ProfilePage() {
         </Box>
       </Box>
 
-      {/* ── 2-column layout ── */}
+      {/* ── Bố cục chia làm 2 cột ── */}
       <Box
         sx={{
           display: "flex",
@@ -723,7 +722,7 @@ export default function ProfilePage() {
           alignItems: "flex-start",
         }}
       >
-        {/* ── Left column ── */}
+        {/* ── Cột bên trái ── */}
         <Box sx={{ flex: "1 1 65%", minWidth: 0, width: "100%" }}>
           {/* Thông tin cá nhân */}
           <SectionCard>

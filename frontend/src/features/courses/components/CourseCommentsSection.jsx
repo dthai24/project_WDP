@@ -68,7 +68,7 @@ function buildCommentTree(flatComments) {
 // COMPONENT: GIAO DIỆN 1 DÒNG BÌNH LUẬN 
 // //depth (độ sâu thụt lề), onReply (hàm bấm gửi), replyingToId (ID đang bị bấm), setReplyingToId (đổi trạng thái)
 // -------------------------------------------------------------------------------------------------
-function CommentItem({ comment, depth = 0, onReply, replyingToId, setReplyingToId, isMentorUser }) {
+function CommentItem({ comment, depth = 0, onReply, replyingToId, setReplyingToId, isMentorUser, canEdit, onEdit }) {
   const avatarSrc = resolveAvatarSrc(comment.avatarUrl);
   const [replyContent, setReplyContent] = useState('');
 
@@ -107,6 +107,9 @@ function CommentItem({ comment, depth = 0, onReply, replyingToId, setReplyingToI
             {comment.isInstructor && (
               <Chip size="small" label="Giảng viên" sx={{ height: 22, fontSize: 11, fontWeight: 600, bgcolor: alpha(PRIMARY, 0.1), color: PRIMARY, border: `1px solid ${alpha(PRIMARY, 0.22)}`, '& .MuiChip-label': { px: 0.85 } }} />
             )}
+            {!comment.isInstructor && comment.progressPercentage > 0 && (
+              <Chip size="small" label={`Đã học: ${comment.progressPercentage}%`} sx={{ height: 22, fontSize: 11, fontWeight: 600, bgcolor: alpha('#10B981', 0.1), color: '#10B981', border: `1px solid ${alpha('#10B981', 0.22)}`, '& .MuiChip-label': { px: 0.85 } }} />
+            )}
             <Typography sx={{ fontSize: 12.5, color: MUTED }}>
               {formatCommentDate(comment.createdAt)}
             </Typography>
@@ -122,12 +125,19 @@ function CommentItem({ comment, depth = 0, onReply, replyingToId, setReplyingToI
             {comment.content}
           </Typography>
 
-          {/* NÚT BẤM "Trả lời" / "Hủy" - CHỈ HIỂN THỊ KHI LÀ MENTOR */}
-          {isMentorUser && (
-            <Box sx={{ mt: 1 }}>
-              <Typography component="span" onClick={() => setReplyingToId(isReplying ? null : comment.id)} sx={{ fontSize: 12, fontWeight: 600, color: PRIMARY, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
-                {isReplying ? 'Hủy' : 'Trả lời'}
-              </Typography>
+          {/* NÚT BẤM "Trả lời" / "Hủy" / "Sửa đánh giá" */}
+          {(isMentorUser || (canEdit && depth === 0)) && (
+            <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+              {isMentorUser && (
+                <Typography component="span" onClick={() => setReplyingToId(isReplying ? null : comment.id)} sx={{ fontSize: 12, fontWeight: 600, color: PRIMARY, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                  {isReplying ? 'Hủy' : 'Trả lời'}
+                </Typography>
+              )}
+              {canEdit && depth === 0 && (
+                <Typography component="span" onClick={onEdit} sx={{ ml: 'auto', mr: 1, fontSize: 12, fontWeight: 600, color: PRIMARY, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                  Sửa đánh giá
+                </Typography>
+              )}
             </Box>
           )}
 
@@ -154,6 +164,8 @@ function CommentItem({ comment, depth = 0, onReply, replyingToId, setReplyingToI
                   replyingToId={replyingToId}
                   setReplyingToId={setReplyingToId}
                   isMentorUser={isMentorUser}
+                  canEdit={canEdit}
+                  onEdit={onEdit}
                 />
               ))}
             </Box>
@@ -300,7 +312,17 @@ export default function CourseCommentsSection({ courseId, isEnrolled = false, pr
   };
 
   // KÍCH HOẠT ĐỆ QUY (Build mảng 1 chiều thành mảng lồng nhau nhiều chiều)
-  const nestedComments = useMemo(() => buildCommentTree(comments), [comments]);
+  const nestedComments = useMemo(() => {
+    const tree = buildCommentTree(comments);
+    if (user?.userId) {
+      const myReviewIndex = tree.findIndex(c => c.userId === user.userId && !c.parentCommentId && c.rating !== null);
+      if (myReviewIndex > -1) {
+        const [mine] = tree.splice(myReviewIndex, 1);
+        tree.unshift(mine);
+      }
+    }
+    return tree;
+  }, [comments, user]);
 
   return (
     <Box>
@@ -358,30 +380,7 @@ export default function CourseCommentsSection({ courseId, isEnrolled = false, pr
               </AppButton>
             </Box>
           </Box>
-        ) : (
-          // TRẠNG THÁI 2: KHUNG HIỂN THỊ CHỈ ĐỌC (Khi đã review xong và không bấm Edit)
-          <Box sx={{ mt: 2.5, mb: 3, p: 2.25, borderRadius: '16px', border: `1px solid ${DIVIDER}`, bgcolor: alpha(PRIMARY, 0.02) }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1.25 }}>Đánh giá của bạn</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
-              <Rating value={myReview.rating} readOnly size="small" icon={<StarRoundedIcon sx={{ fontSize: 20 }} />} emptyIcon={<StarRoundedIcon sx={{ fontSize: 20, opacity: 0.28 }} />} sx={{ color: '#F59E0B' }} />
-            </Box>
-            <Typography sx={{ fontSize: 14, color: TEXT, mb: 1.5, whiteSpace: 'pre-wrap' }}>
-              {myReview.content}
-            </Typography>
-            
-            {/* Nếu chưa sửa lần nào thì mới hiện nút Sửa đánh giá */}
-            {myReview.editCount === 0 && (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Typography 
-                  onClick={() => setOpenEditWarning(true)}
-                  sx={{ fontSize: 13, fontWeight: 600, color: PRIMARY, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                >
-                  Sửa đánh giá
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        )
+        ) : null
       ) : (
         <Typography sx={{ mt: 2, mb: 2.5, fontSize: 13.5, color: MUTED }}>Bạn cần đăng ký khóa học để đánh giá.</Typography>
       )}
@@ -402,6 +401,8 @@ export default function CourseCommentsSection({ courseId, isEnrolled = false, pr
               replyingToId={replyingToId}
               setReplyingToId={setReplyingToId}
               isMentorUser={mentorStatus}
+              canEdit={myReview && comment.id === myReview.id && myReview.editCount === 0}
+              onEdit={() => setOpenEditWarning(true)}
             />
           ))}
         </Box>
