@@ -14,7 +14,13 @@ const getCourseComments = async (courseId) => {
                cc.EditCount,
                u.FullName,
                u.AvatarUrl,
-               CASE WHEN cc.UserId = c.InstructorId THEN 1 ELSE 0 END AS IsInstructor
+               CASE WHEN cc.UserId = c.InstructorId THEN 1 ELSE 0 END AS IsInstructor,
+               ISNULL((
+                   SELECT CASE WHEN T.Total > 0 THEN (C.Completed * 100) / T.Total ELSE 0 END
+                   FROM 
+                   (SELECT COUNT(*) AS Total FROM Path_Nodes pn JOIN Paths p ON pn.PathId = p.PathId WHERE p.CourseId = c.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) T,
+                   (SELECT COUNT(*) AS Completed FROM User_Nodes un JOIN Path_Nodes pn ON un.NodeId = pn.NodeId JOIN Paths p ON pn.PathId = p.PathId WHERE un.UserId = cc.UserId AND p.CourseId = c.CourseId AND ISNULL(pn.IsActive, 1) = 1 AND ISNULL(p.IsActive, 1) = 1) C
+               ), 0) AS ProgressPercentage
         FROM Course_Comments cc
         INNER JOIN Users u ON u.UserId = cc.UserId
         INNER JOIN Courses c ON c.CourseId = cc.CourseId

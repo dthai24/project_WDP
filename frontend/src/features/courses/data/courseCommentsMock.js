@@ -11,6 +11,7 @@ export function mapApiComment(row) {
     isInstructor: Boolean(row.IsInstructor),
     parentCommentId: row.ParentCommentId || null,
     editCount: row.EditCount || 0,
+    progressPercentage: row.ProgressPercentage || 0,
   };
 }
 export function getCommentInitials(name = '') {

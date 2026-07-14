@@ -109,38 +109,31 @@ export default function LoginPage() {
     setErrors(prev => ({ ...prev, [e.target.name]: '' }));
   };
 
-  /**
-   * Hàm xử lý khi người dùng nhấn nút Đăng nhập:
-   * 1. Chặn hành động reload trang mặc định.
-   * 2. Gọi hàm validate.
-   * 3. Gọi API Đăng nhập và nhận về JWT Token cùng thông tin User.
-   * 4. Ghi nhớ/Xoá Email ghi nhớ đăng nhập trong localStorage.
-   * 5. Lưu JWT và thông tin người dùng vào AuthContext.
-   * 6. Điều hướng đến trang tương ứng với Role của User.
-   */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
 
+  const handleSubmit = async (e) => {
+    // 1. Chặn hành động reload trang mặc định.
+    e.preventDefault();
     // Chống spam click 
     if (submittingRef.current) return;
-
+    // 2. Gọi hàm validate.
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-
     submittingRef.current = true;
     setIsSubmitting(true);
-
     try {
+      // 3. Gọi API Đăng nhập và nhận về JWT Token cùng thông tin User.
       const { ok, data, token } = await loginApi(form.email.trim(), form.password);
       if (ok) {
+        // 4. Ghi nhớ/Xoá Email ghi nhớ đăng nhập trong localStorage.
         if (remember) {
           localStorage.setItem(REMEMBER_KEY, form.email.trim());
-
         } else {
           localStorage.removeItem(REMEMBER_KEY);
         }
+        // 5. Lưu JWT và thông tin người dùng vào AuthContext.
         login(data, token);
         toast.success('Đăng nhập thành công!');
+        // 6. Điều hướng đến trang tương ứng với Role của User.
         navigate(getPostLoginPath(data, { isFirstLogin: data.isFirstLogin }));
       } else {
         toast.error(data?.message);
@@ -153,7 +146,6 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="auth-page">
       <div className="auth-card">
