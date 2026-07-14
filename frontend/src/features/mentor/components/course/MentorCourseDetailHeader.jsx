@@ -18,6 +18,7 @@ import MentorCourseMetricsInline from './MentorCourseMetricsInline';
 import { PRIMARY, TEXT, MUTED, DETAIL_ENTITY_TITLE_SX } from './mentorCourseCreateStyles';
 import { isCoursePublished } from '@/features/mentor/utils/mentorCourseUtils';
 import { MENTOR_COURSE_DETAIL_TABS } from '@/features/mentor/utils/mentorCourseDetailUtils';
+import { buildQuestionBankCoursePath } from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 const PILL_CHIP_SX = {
   borderRadius: '999px',
@@ -64,7 +65,7 @@ export default function MentorCourseDetailHeader({
   const navigate = useNavigate();
   const published = isCoursePublished(course);
   const statusChip = getStatusChip(published);
-  const questionsPath = `/mentor/courses/${course.CourseId ?? course.courseId}/questions`;
+  const questionBankPath = buildQuestionBankCoursePath(course.CourseId ?? course.courseId);
 
   // console.log(course)
   return (
@@ -165,7 +166,7 @@ export default function MentorCourseDetailHeader({
             <AppButton
               variant="outlined"
               startIcon={<QuizOutlinedIcon sx={{ fontSize: 16 }} />}
-              onClick={() => navigate(questionsPath)}
+              onClick={() => navigate(questionBankPath)}
               sx={{
                 height: 38,
                 borderRadius: '999px',
