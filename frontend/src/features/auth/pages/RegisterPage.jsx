@@ -28,8 +28,13 @@
  *
  *   Sau khi gửi thành công → navigate('/verify-otp', { state: { email } })
  */
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
+import 'dayjs/locale/vi';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
@@ -61,6 +66,7 @@ export default function RegisterPage() {
     const errs = {};
     if (!form.fullName.trim())           errs.fullName        = 'Họ và tên không được để trống.';
     if (!form.dateOfBirth)               errs.dateOfBirth     = 'Ngày sinh không được để trống.';
+    else if (new Date(form.dateOfBirth) > new Date()) errs.dateOfBirth = 'Ngày sinh không được lớn hơn ngày hiện tại.';
     if (!form.phone.trim())              errs.phone           = 'Số điện thoại không được để trống.';
     else if (!validatePhone(form.phone)) errs.phone           = 'Số điện thoại không hợp lệ (9-11 chữ số).';
     if (!form.email.trim())              errs.email           = 'Email không được để trống.';
@@ -142,9 +148,39 @@ export default function RegisterPage() {
               <span className="input-icon" aria-hidden="true">
                 <CakeOutlinedIcon />
               </span>
-              <input id="reg-dob" type="date" name="dateOfBirth"
-                value={form.dateOfBirth} onChange={handleChange}
-                disabled={isSubmitting} />
+              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
+                <DatePicker
+                  format="DD/MM/YYYY"
+                  maxDate={dayjs()}
+                  value={form.dateOfBirth ? dayjs(form.dateOfBirth) : null}
+                  onChange={(newVal) => {
+                    setForm(prev => ({ ...prev, dateOfBirth: newVal ? newVal.format('YYYY-MM-DD') : '' }));
+                    setErrors(prev => ({ ...prev, dateOfBirth: '' }));
+                  }}
+                  disabled={isSubmitting}
+                  slotProps={{
+                    textField: {
+                      id: "reg-dob",
+                      placeholder: "DD/MM/YYYY",
+                      fullWidth: true,
+                      error: !!errors.dateOfBirth,
+                      sx: {
+                        "& .MuiInputBase-root": {
+                          height: "46px",
+                          borderRadius: "10px",
+                          backgroundColor: "transparent",
+                          fontSize: "15px",
+                          transition: "all 0.2s ease",
+                          "& fieldset": { border: "none" }
+                        },
+                        "& .MuiOutlinedInput-input": {
+                          padding: "0 14px 0 44px",
+                        }
+                      }
+                    }
+                  }}
+                />
+              </LocalizationProvider>
             </div>
             {errors.dateOfBirth && <p className="field-error">{errors.dateOfBirth}</p>}
           </div>

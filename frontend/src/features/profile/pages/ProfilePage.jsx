@@ -1,4 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
+import 'dayjs/locale/vi';
 import {
   Avatar,
   Box,
@@ -177,28 +182,36 @@ function InfoRow({
               ))}
             </Select>
           ) : inputType === "date" ? (
-            <InputBase
-              name={name}
-              value={value}
-              onChange={onChange}
-              type="date"
-              fullWidth
-              sx={{
-                ...valueUnderlineSx,
-                fontSize: 13.5,
-                fontWeight: 600,
-                color: TEXT,
-                lineHeight: 1.4,
-                "& .MuiInputBase-input": {
-                  p: 0,
-                  height: "auto",
-                },
-                "& input[type='date']::-webkit-calendar-picker-indicator": {
-                  opacity: 0.55,
-                  cursor: "pointer",
-                },
-              }}
-            />
+            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
+              <DatePicker
+                format="DD/MM/YYYY"
+                maxDate={dayjs()}
+                value={value ? dayjs(value) : null}
+                onChange={(newVal) => {
+                  if (onChange) {
+                    onChange({ target: { name, value: newVal ? newVal.format('YYYY-MM-DD') : '' } });
+                  }
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    variant: "standard",
+                    InputProps: { disableUnderline: true },
+                    sx: {
+                      ...valueUnderlineSx,
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      color: TEXT,
+                      lineHeight: 1.4,
+                      "& .MuiInputBase-input": {
+                        p: 0,
+                        height: "auto",
+                      },
+                    }
+                  }
+                }}
+              />
+            </LocalizationProvider>
           ) : (
             <InputBase
               name={name}
@@ -398,6 +411,11 @@ export default function ProfilePage() {
   // Mở form sửa Tên, SĐT, Ngày sinh -> Gọi API lưu lại (PUT /api/users/profile)
   const handleSave = async () => {
     if (!currentUser?.userId) return;
+
+    if (formData.dateOfBirth && new Date(formData.dateOfBirth) > new Date()) {
+      alert("Ngày sinh không được lớn hơn ngày hiện tại.");
+      return;
+    }
 
     try {
       const response = await fetch("http://localhost:5000/api/users/profile", {
