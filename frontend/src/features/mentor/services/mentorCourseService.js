@@ -475,8 +475,8 @@ export async function createCourse(payload) {
 export async function fetchMentorCourseDetail(courseId) {
   try {
     const [courseRes, studentsRes] = await Promise.all([
-      fetch(`${API_BASE}/courses/my-courses/${courseId}?tab=course`),
-      fetch(`${API_BASE}/mentor/courses/${courseId}/students`),
+      fetch(`${API_BASE}/courses/my-courses/${courseId}?tab=course`, { headers: getMentorAuthHeaders() }),
+      fetch(`${API_BASE}/mentor/courses/${courseId}/students`, { headers: getMentorAuthHeaders() }),
     ]);
     const res = await courseRes.json();
     if (!res.success) {

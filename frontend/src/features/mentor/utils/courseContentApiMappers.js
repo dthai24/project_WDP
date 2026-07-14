@@ -105,7 +105,7 @@ function buildNodeUpdateSet(current = {}, baseline = {}) {
   if (currentFields.Description !== baselineFields.Description) {
     set.Description = currentFields.Description;
   }
-  if (currentFields.IsActive !== baselineFields.IsActive) {
+  if (currentFields.IsActive !== baselineFields.IsActive || Object.keys(baseline).length === 0) {
     set.IsActive = currentFields.IsActive;
   }
 
@@ -123,7 +123,7 @@ function buildPathUpdateSet(current = {}, baseline = {}, pathOrder = null) {
   if (currentFields.Description !== baselineFields.Description) {
     set.Description = currentFields.Description;
   }
-  if (currentFields.IsActive !== baselineFields.IsActive) {
+  if (currentFields.IsActive !== baselineFields.IsActive || Object.keys(baseline).length === 0) {
     set.IsActive = currentFields.IsActive;
   }
   if (pathOrder != null && Number(pathOrder) !== Number(baseline?.Order ?? baseline?.PathOrder ?? pathOrder)) {

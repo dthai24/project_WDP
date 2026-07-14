@@ -417,13 +417,11 @@ export default function CourseDetailPage() {
 
   // 2. Tự động gọi API lấy data từ Database khi mở trang
   useEffect(() => {
-    // Luôn cuộn lên đầu trang khi mới vào trang chi tiết
     window.scrollTo(0, 0);
     const fetchCourseData = async () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const headers = user.userId ? { 'x-user-id': user.userId } : {};
-        // Vẫn dùng API cũ vì Backend của bạn chỉ có API này cho Detail
         const res = await fetch(`http://localhost:5000/api/courses/my-courses/${id}?tab=course`, { headers });
         const result = await res.json();
         // Kiểm tra xem có dữ liệu không
