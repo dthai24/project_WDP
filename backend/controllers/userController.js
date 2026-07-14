@@ -28,7 +28,7 @@ const getProfile = async (req, res) => {
     const catReq = new sql.Request();
     catReq.input('userId', sql.Int, userId);
     const catResult = await catReq.query(`
-       SELECT c.CategoryId, c.DisplayName, c.DisplayName 
+       SELECT c.CategoryId, c.DisplayName 
       FROM User_Categories uc
       INNER JOIN Categories c ON uc.CategoryId = c.CategoryId
       WHERE uc.UserId = @userId
@@ -81,7 +81,7 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   const userId = req.user.userId;
   // SECURITY RULE: Ignoring Email if sent to prevent malicious updates
-  const { name, phone, dateOfBirth } = req.body;
+  const { name, phone, dateOfBirth, currentLevel } = req.body;
 
   if (!name || !phone || !dateOfBirth) {
     return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ tên, số điện thoại và ngày sinh.' });
@@ -93,12 +93,24 @@ const updateProfile = async (req, res) => {
     updateReq.input('name', sql.NVarChar(100), name);
     updateReq.input('phone', sql.NVarChar(20), phone);
     updateReq.input('dateOfBirth', sql.Date, new Date(dateOfBirth));
+    updateReq.input('currentLevel', sql.NVarChar(100), currentLevel || null);
 
     await updateReq.query(`
+      DECLARE @levelId INT;
+      IF @currentLevel IS NOT NULL
+      BEGIN
+        SELECT TOP 1 @levelId = LevelId FROM Levels WHERE LTRIM(RTRIM(DisplayName)) LIKE '%' + LTRIM(RTRIM(@currentLevel)) + '%';
+        IF @levelId IS NULL
+        BEGIN
+          THROW 51000, 'Không tìm thấy ID của Trình độ này trong Database', 1;
+        END
+      END
+
       UPDATE Users 
       SET FullName = @name, 
           Phone = @phone, 
           DateOfBirth = @dateOfBirth,
+          CurrentLevelId = ISNULL(@levelId, CurrentLevelId),
           UpdatedAt = GETDATE()
       WHERE UserId = @userId
     `);

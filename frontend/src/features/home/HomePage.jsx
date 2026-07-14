@@ -1494,8 +1494,30 @@ export default function HomePage() {
         const coursesData = await coursesRes.json();
 
         if (!cancelled && coursesData.success) {
+          const myLevel = profileData?.profile?.currentLevel || "";
+          
+          const sortedCourses = (coursesData.data || []).sort((a, b) => {
+            const aLevel = a.LevelDisplayName || a.LevelName || a.level || "";
+            const bLevel = b.LevelDisplayName || b.LevelName || b.level || "";
+            
+            // 1. Trùng Level của User đẩy lên đầu (1 = trùng, 0 = không trùng)
+            const aMatch = (aLevel === myLevel) ? 1 : 0;
+            const bMatch = (bLevel === myLevel) ? 1 : 0;
+            if (aMatch !== bMatch) return bMatch - aMatch;
+            
+            // 2. Nếu bằng mức ưu tiên Level, xếp theo Rating giảm dần (từ cao xuống thấp)
+            const aRating = a.Rating ?? 0;
+            const bRating = b.Rating ?? 0;
+            if (aRating !== bRating) return bRating - aRating;
+            
+            // 3. Nếu Rating bằng nhau, xếp theo tên A-Z (Alphabetical)
+            const aName = a.CourseName || "";
+            const bName = b.CourseName || "";
+            return aName.localeCompare(bName);
+          });
+
           setForYouCourses(
-            (coursesData.data || []).slice(0, 4).map(normalizeHomeCourse),
+            sortedCourses.slice(0, 4).map(normalizeHomeCourse),
           );
         }
       } catch (error) {

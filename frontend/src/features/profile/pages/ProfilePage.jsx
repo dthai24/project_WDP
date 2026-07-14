@@ -16,7 +16,9 @@ import {
   TextField,
   FormGroup,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Select,
+  MenuItem
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 
@@ -149,32 +151,31 @@ function InfoRow({
         </Typography>
         {editing && !readOnly ? (
           inputType === "select" ? (
-            <InputBase
+            <Select
               name={name}
               value={value}
               onChange={onChange}
               fullWidth
-              component="select"
+              variant="standard"
+              disableUnderline
               sx={{
                 ...valueUnderlineSx,
                 fontSize: 13.5,
                 fontWeight: 600,
                 color: TEXT,
                 lineHeight: 1.4,
-                "& select": {
+                "& .MuiSelect-select": {
                   p: 0,
-                  font: "inherit",
-                  color: "inherit",
-                  background: "transparent",
-                },
+                  pb: "4px"
+                }
               }}
             >
               {selectOptions.map((opt) => (
-                <option key={opt} value={opt}>
+                <MenuItem key={opt} value={opt} sx={{ fontSize: 13.5 }}>
                   {opt}
-                </option>
+                </MenuItem>
               ))}
-            </InputBase>
+            </Select>
           ) : inputType === "date" ? (
             <InputBase
               name={name}
@@ -315,6 +316,7 @@ export default function ProfilePage() {
     dateOfBirth: INITIAL_PROFILE.dateOfBirth,
     currentLevel: INITIAL_PROFILE.currentLevel,
   });
+  const [activeLevels, setActiveLevels] = useState([]);
 
   useEffect(() => {
     // Lấy dữ liệu an toàn bên trong useEffect để tránh lỗi theo dõi dependency (tránh vòng lặp vô tận)
@@ -357,13 +359,28 @@ export default function ProfilePage() {
             name: p.name || prevForm.name,
             phone: p.phone || prevForm.phone,
             dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : prevForm.dateOfBirth,
+            currentLevel: data.profile.currentLevel || prevForm.currentLevel,
           }));
         }
       } catch (err) {
         console.error("Lỗi khi tải hồ sơ:", err);
       }
     };
+
+    const fetchLevels = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/levels");
+        const data = await res.json();
+        if (data.success) {
+          setActiveLevels(data.data.map(l => l.displayName));
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải danh sách trình độ:", err);
+      }
+    };
+
     fetchProfile();
+    fetchLevels();
   }, []);
   //tạo Avatar chữ cái khi chưa có ảnh đại diện
   const initials = (profile?.name || "Người dùng")
@@ -392,12 +409,14 @@ export default function ProfilePage() {
         body: JSON.stringify({
           name: formData.name,
           phone: formData.phone,
-          dateOfBirth: formData.dateOfBirth
+          dateOfBirth: formData.dateOfBirth,
+          currentLevel: formData.currentLevel
         })
       });
 
       const data = await response.json();
       if (data.success) {
+        // Sau khi lưu thành công, cập nhật luôn profile.currentLevel
         setProfile((prev) => ({ ...prev, ...formData }));
         setEditMode(false);
 
@@ -800,6 +819,17 @@ export default function ProfilePage() {
                 name="dateOfBirth"
                 onChange={handleFormChange}
                 inputType="date"
+              />
+              <InfoRow
+                icon={AutoAwesomeIcon}
+                iconColor={SUCCESS}
+                label="Trình độ"
+                value={editMode ? formData.currentLevel : profile.currentLevel}
+                editing={editMode}
+                name="currentLevel"
+                onChange={handleFormChange}
+                inputType="select"
+                selectOptions={Array.from(new Set([profile.currentLevel, ...activeLevels].filter(Boolean)))}
               />
             </Box>
           </SectionCard>
