@@ -31,7 +31,7 @@
  *     total: number
  *   }
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -68,6 +68,24 @@ export default function MentorCoursesPage() {
     setDeleteCourseId(courseId);
   };
 
+  const loadMentorCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetchMentorCourses();
+      if (res.ok) {
+        setCourses(Array.isArray(res.courses) ? res.courses : []);
+      } else {
+        console.error(res.message || "Không lấy được khóa học mentor");
+        setCourses([]);
+      }
+    } catch (error) {
+      console.error("LOAD MENTOR COURSES ERROR:", error);
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const handleConfirmDelete = async () => {
     if (!deleteCourseId) return;
     setDeleting(true);
@@ -78,10 +96,7 @@ export default function MentorCoursesPage() {
         return;
       }
       toast.success('Xóa khóa học thành công!');
-      setCourses(prev => prev.filter(c => {
-        const id = c.CourseId ?? c.courseId ?? c._id;
-        return String(id) !== String(deleteCourseId);
-      }));
+      await loadMentorCourses();
     } catch (err) {
       console.error(err);
       toast.error('Có lỗi xảy ra khi xóa khóa học.');
@@ -99,46 +114,9 @@ export default function MentorCoursesPage() {
 
   const showReset = hasActiveMentorCourseFilters(queryState);
 
-  // TODO: replace mock with real API call — fetchMentorCourses(queryState)
   useEffect(() => {
-    let isMounted = true;
-
-    const loadMentorCourses = async () => {
-      try {
-        setLoading(true);
-
-        // console.log("START FETCH MENTOR COURSES");
-
-        const res = await fetchMentorCourses();
-
-        if (!isMounted) return;
-
-        if (!res.ok) {
-          console.error(res.message || "Không lấy được khóa học mentor");
-          setCourses([]);
-          return;
-        }
-
-        setCourses(Array.isArray(res.courses) ? res.courses : []);
-      } catch (error) {
-        console.error("LOAD MENTOR COURSES ERROR:", error);
-
-        if (isMounted) {
-          setCourses([]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
     loadMentorCourses();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  }, [loadMentorCourses]);
 
   const updateQuery = (patch) => {
     const next = buildMentorCourseListSearchParams(

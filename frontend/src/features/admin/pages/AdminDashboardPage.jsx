@@ -27,10 +27,11 @@ export default function AdminDashboardPage() {
   const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
       const res = await fetch('http://localhost:5050/api/admin/dashboard', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${user.token || ''}`,
+          'x-user-id': String(user.userId || ''),
           'x-role-name': 'admin'
         }
       });

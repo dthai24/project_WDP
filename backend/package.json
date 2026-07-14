@@ -21,6 +21,7 @@
     "express": "^4.22.2",
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.5.0",
     "mongoose": "^8.0.0",
     "mssql": "^10.0.4",
     "multer": "^2.2.0",

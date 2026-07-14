@@ -132,7 +132,7 @@ const login = async (req, res) => {
     }
 
     // So sánh mật khẩu (plain text hoặc bcrypt)
-    const isPasswordValid = user.password === password;
+    const isPasswordValid = user.password === password || await bcrypt.compare(password, user.password).catch(() => false);
     if (!isPasswordValid)
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng.' });
 

@@ -24,6 +24,27 @@ async function userHasCourseAccess(userId, courseId) {
     return false;
   }
 
+  // 1. Nếu là Giảng viên tạo khóa học
+  if (course.instructorId && course.instructorId.toString() === userId.toString()) {
+    return true;
+  }
+
+  // 2. Nếu là Admin
+  try {
+    const Role = require('../models/MongoDB/Role');
+    const UserRole = require('../models/MongoDB/UserRole');
+    const adminRole = await Role.findOne({ roleName: { $regex: /^admin$/i } }).lean();
+    if (adminRole) {
+      const userRole = await UserRole.findOne({ userId, roleId: adminRole._id }).lean();
+      if (userRole) {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error('Check admin access error:', err);
+  }
+
+  // 3. Kiểm tra đăng ký học
   const enrollment = await UserCourse.findOne({ userId, courseId });
   if (enrollment) {
     return true;
@@ -817,7 +838,7 @@ const createFinalCourse = async (req, res) => {
               await NodeMaterial.create({
                 nodeId: node._id,
                 materialType: materialType,
-                title: String(matData.Title || matData.title || '').trim(),
+                title: String(matData.Title || matData.title || '').trim() || 'Học liệu',
                 materialUrl: matData.MaterialUrl || matData.materialUrl || null,
                 materialOrder: matData.MaterialOrder || matData.materialOrder || 1,
                 sourceType: matData.SourceType || matData.sourceType || null,

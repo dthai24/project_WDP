@@ -93,7 +93,7 @@ const setPublishCourse = async (req, res) => {
             });
         }
 
-        await Course.findByIdAndUpdate(courseId, { isPublished: true, updatedAt: new Date() });
+        await Course.findByIdAndUpdate(courseId, { status: 'pending', isPublished: false, updatedAt: new Date() });
 
         return res.status(200).json({
             success: true,
@@ -121,7 +121,7 @@ const setDraftCourse = async (req, res) => {
             });
         }
 
-        await Course.findByIdAndUpdate(courseId, { isPublished: false, updatedAt: new Date() });
+        await Course.findByIdAndUpdate(courseId, { status: 'inactive', isPublished: false, updatedAt: new Date() });
 
         return res.status(200).json({
             success: true,
@@ -343,7 +343,7 @@ const updateCourseContent = async (req, res) => {
                     await NodeMaterial.create({
                         nodeId: node._id,
                         materialType: materialType,
-                        title: String(matData.Title || matData.title || '').trim(),
+                        title: String(matData.Title || matData.title || '').trim() || 'Học liệu',
                         materialUrl: matData.MaterialUrl || matData.materialUrl || null,
                         materialOrder: matData.MaterialOrder || matData.materialOrder || 1,
                         sourceType: matData.SourceType || matData.sourceType || null,

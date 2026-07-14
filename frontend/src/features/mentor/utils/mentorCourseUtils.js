@@ -18,7 +18,7 @@ export function normalizeMentorCourse(raw = {}) {
     status = isPublished === true || isPublished === 1 ? 'published' : 'draft';
   }
 
-  const courseId = raw.courseId ?? raw.CourseId;
+  const courseId = raw.courseId ?? raw.CourseId ?? raw._id;
   const courseName = pickNonEmpty(raw.courseName, raw.CourseName);
   const description = pickNonEmpty(raw.description, raw.Description);
   const thumbnail = raw.thumbnail ?? raw.Thumbnail ?? null;
@@ -26,25 +26,29 @@ export function normalizeMentorCourse(raw = {}) {
   const categoryName = pickNonEmpty(
     raw.categoryName,
     raw.CategoryName,
+    raw.categoryId?.displayName,
     raw.CategoryDisplayName,
     raw.category,
   );
   const categoryDisplayName = pickNonEmpty(
     raw.CategoryDisplayName,
+    raw.categoryId?.displayName,
     raw.categoryName,
     raw.CategoryName,
     raw.category,
   );
   const levelId = raw.levelId ?? raw.LevelId ?? null;
-  const levelName = pickNonEmpty(raw.levelName, raw.LevelName, raw.LevelDisplayName, raw.level);
+  const levelName = pickNonEmpty(raw.levelName, raw.LevelName, raw.levelId?.displayName, raw.LevelDisplayName, raw.level);
   const levelDisplayName = pickNonEmpty(
     raw.LevelDisplayName,
+    raw.levelId?.displayName,
     raw.levelName,
     raw.LevelName,
     raw.level,
   );
 
   return {
+    _id: courseId,
     courseId,
     CourseId: courseId,
     courseName,
@@ -67,8 +71,9 @@ export function normalizeMentorCourse(raw = {}) {
     LevelDisplayName: levelDisplayName,
     instructorId: raw.instructorId ?? raw.InstructorId ?? null,
     InstructorId: raw.instructorId ?? raw.InstructorId ?? null,
-    instructorName: pickNonEmpty(raw.instructorName, raw.InstructorName, raw.instructor),
-    InstructorName: pickNonEmpty(raw.instructorName, raw.InstructorName, raw.instructor),
+    instructorName: pickNonEmpty(raw.instructorName, raw.InstructorName, raw.InStructorName, raw.instructorId?.fullName, raw.instructor),
+    InstructorName: pickNonEmpty(raw.instructorName, raw.InstructorName, raw.InStructorName, raw.instructorId?.fullName, raw.instructor),
+    InStructorName: pickNonEmpty(raw.instructorName, raw.InstructorName, raw.InStructorName, raw.instructorId?.fullName, raw.instructor),
     rating: raw.rating ?? raw.Rating ?? null,
     Rating: raw.rating ?? raw.Rating ?? null,
     totalLessons: raw.totalLessons ?? raw.TotalLessons ?? 0,
@@ -83,16 +88,18 @@ export function normalizeMentorCourse(raw = {}) {
     IsPublished: isPublished === true || isPublished === 1,
     createdAt: raw.createdAt ?? raw.CreatedAt ?? null,
     CreatedAt: raw.createdAt ?? raw.CreatedAt ?? null,
+    CourseCreateAt: raw.createdAt ?? raw.CreatedAt ?? null,
     updatedAt: raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt ?? null,
     UpdatedAt: raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt ?? null,
+    CourseUpdateAt: raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt ?? null,
     paths: raw.paths ?? raw.Paths ?? [],
     Paths: raw.paths ?? raw.Paths ?? [],
   };
 }
 
 function courseIsPublished(course) {
-  if (course?.status === 'published') return true;
-  if (course?.status === 'draft') return false;
+  if (course?.status === 'published' || course?.status === 'active') return true;
+  if (course?.status === 'draft' || course?.status === 'inactive' || course?.status === 'pending') return false;
   const value = course?.IsPublished ?? course?.isPublished;
   return value === true || value === 1;
 }

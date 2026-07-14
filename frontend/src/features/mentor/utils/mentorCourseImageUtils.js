@@ -38,7 +38,9 @@ export function validateThumbnailDataUrl(dataUrl) {
     } catch {
       // fall through
     }
-    if (trimmed.startsWith('/assets/')) return null;
+    const lower = trimmed.toLowerCase();
+    if (lower.startsWith('/assets/') || lower.startsWith('assets/')) return null;
+    if (lower.startsWith('/uploads/') || lower.startsWith('uploads/')) return null;
     return THUMBNAIL_FORMAT_ERROR;
   }
 

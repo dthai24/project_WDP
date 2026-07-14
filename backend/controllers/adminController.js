@@ -13,6 +13,7 @@ const Path = require('../models/MongoDB/Path');
 const PathNode = require('../models/MongoDB/PathNode');
 const NodeMaterial = require('../models/MongoDB/NodeMaterial');
 const { logAction } = require('../services/auditService');
+const AuditLog = require('../models/MongoDB/AuditLog');
 const bcrypt = require('bcryptjs');
 
 // ==========================================
@@ -815,6 +816,7 @@ const approveCourse = async (req, res) => {
     }
 
     course.status = 'active';
+    course.isPublished = true;
     await course.save();
 
     logAction({
@@ -852,6 +854,7 @@ const rejectCourse = async (req, res) => {
     }
 
     course.status = 'inactive';
+    course.isPublished = false;
     course.rejectionTags = tags || [];
     course.rejectionComment = comment || '';
     await course.save();
@@ -995,7 +998,7 @@ const approveCourseUpdates = async (req, res) => {
           await NodeMaterial.create({
             nodeId: node._id,
             materialType: matData.materialType,
-            title: matData.title,
+            title: String(matData.title || '').trim() || 'Học liệu',
             materialUrl: matData.materialUrl,
             materialOrder: matData.materialOrder || 1,
             sourceType: matData.sourceType,

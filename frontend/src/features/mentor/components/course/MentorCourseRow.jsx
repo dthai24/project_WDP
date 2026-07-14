@@ -73,8 +73,18 @@ const PILL_CHIP_SX = {
   },
 };
 
-function getStatusChip(IsPublished) {
-  if (IsPublished === true) {
+function getStatusChip(status, IsPublished) {
+  if (status === 'pending') {
+    return {
+      label: 'Chờ duyệt',
+      sx: {
+        bgcolor: 'rgba(217,119,6,0.12)',
+        color: '#D97706',
+        border: '1px solid rgba(217,119,6,0.24)',
+      },
+    };
+  }
+  if (status === 'active' || IsPublished === true) {
     return {
       label: 'Đã xuất bản',
       sx: {
@@ -111,7 +121,7 @@ function MetricItem({ icon: Icon, label, value, iconColor }) {
 export default function MentorCourseRow({ course, onDelete }) {
   const theme = useTheme();
   const navigate = useNavigate();
-  const statusChip = getStatusChip(course.IsPublished);
+  const statusChip = getStatusChip(course.status, course.IsPublished);
   const detailPath = `/mentor/courses/${course.CourseId}?tab=course`;
   const totalChapters = (course.Paths ?? course.paths ?? []).length;
   const totalLessons = countCourseLessons(course);

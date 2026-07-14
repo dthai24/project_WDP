@@ -100,14 +100,7 @@ export default function App() {
         <Route path="home" element={<RoleAwareHome />} />
         <Route
           path="become-mentor"
-          element={
-            <ProtectedRoute
-              allowedRoles={['Student']}
-              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
-            >
-              <BecomeMentor />
-            </ProtectedRoute>
-          }
+          element={<BecomeMentor />}
         />
 
         <Route

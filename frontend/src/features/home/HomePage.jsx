@@ -501,6 +501,74 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ===== BECOME A MENTOR ===== */}
+      <section className="relative overflow-hidden my-16 sm:my-24 rounded-[2rem] max-w-7xl mx-auto px-6 sm:px-12 py-12 sm:py-20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border border-slate-800 shadow-xl">
+        <div className="absolute inset-0 bg-cover bg-center opacity-10" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=1470&auto=format&fit=crop')` }} />
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-brand-500/10 to-transparent rounded-full blur-3xl" />
+        
+        <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 mb-6 backdrop-blur-sm">
+              <Sparkle size={14} className="text-brand-300 animate-pulse" />
+              <span className="text-xs font-bold text-brand-200 uppercase tracking-wider">
+                Teach & Inspire
+              </span>
+            </div>
+            
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+              Trở thành Giảng viên tại <br className="hidden sm:inline" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-300 to-accent-300">English Master</span>
+            </h2>
+            
+            <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
+              Chia sẻ chuyên môn, xây dựng lộ trình học tập độc đáo và truyền lửa đam mê tiếng Anh đến hàng ngàn học viên năng động. Chúng tôi đồng hành cùng bạn trên mọi bước đường giảng dạy.
+            </p>
+            
+            <div className="space-y-4 mb-8">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-brand-500/20 border border-brand-400/40 flex items-center justify-center shrink-0 mt-0.5 text-brand-300 font-bold">
+                  ✓
+                </div>
+                <p className="text-sm sm:text-base text-slate-300 font-medium">Tự do xây dựng bài giảng & đặt giá khóa học linh hoạt</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-brand-500/20 border border-brand-400/40 flex items-center justify-center shrink-0 mt-0.5 text-brand-300 font-bold">
+                  ✓
+                </div>
+                <p className="text-sm sm:text-base text-slate-300 font-medium">Công cụ quản lý bài tập, ngân hàng câu hỏi thông minh</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-brand-500/20 border border-brand-400/40 flex items-center justify-center shrink-0 mt-0.5 text-brand-300 font-bold">
+                  ✓
+                </div>
+                <p className="text-sm sm:text-base text-slate-300 font-medium">Thu nhập hấp dẫn và cơ hội mở rộng tầm ảnh hưởng</p>
+              </div>
+            </div>
+
+            <Link
+              to="/become-mentor"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-slate-900 rounded-2xl text-base font-bold hover:bg-brand-50 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-black/20"
+            >
+              Đăng ký ứng tuyển ngay
+              <ArrowRight size={18} weight="bold" className="text-slate-900" />
+            </Link>
+          </div>
+          
+          <div className="hidden lg:block relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
+            <img 
+              src="https://images.unsplash.com/photo-1513258496099-48168024aec0?q=80&w=800&auto=format&fit=crop" 
+              alt="Become a Mentor"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6">
+              <p className="text-lg font-bold text-white mb-1">“Giảng dạy không chỉ là truyền đạt kiến thức, đó là kiến tạo tương lai.”</p>
+              <p className="text-xs text-brand-300 font-bold uppercase tracking-wider">Le Minh Tuan — English Master Mentor</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== CTA ===== */}
       <section className="py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

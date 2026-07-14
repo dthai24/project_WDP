@@ -496,20 +496,7 @@ export function validateCourseDraft(draft) {
           }
         }
 
-        if (material.MaterialType === 'VIDEO') {
-          const hasUrl = Boolean(String(material.MaterialUrl ?? '').trim());
-          const hasEmbed = Boolean(String(material.EmbedUrl ?? '').trim());
-          if (!hasUrl && !hasEmbed) {
-            const alreadyReported = errors.some((item) => item.targetId === material.tempId);
-            if (!alreadyReported) {
-              errors.push({
-                type: 'material',
-                message: `${materialLabel}: Video chưa có link hoặc mã nhúng.`,
-                targetId: material.tempId,
-              });
-            }
-          }
-        }
+
 
       });
     });
@@ -551,9 +538,7 @@ export function buildReviewChecklist(draft, validation) {
   const docOk = !validation.errors.some(
     (item) => item.type === 'material' && item.message.includes('Tài liệu'),
   );
-  const videoOk = !validation.errors.some(
-    (item) => item.type === 'material' && item.message.includes('Video'),
-  );
+
 
   return [
     {
@@ -589,11 +574,6 @@ export function buildReviewChecklist(draft, validation) {
       id: 'doc-content',
       label: 'Tài liệu có file hoặc link',
       status: materialCounts.DOC === 0 ? 'ok' : docOk ? 'ok' : 'error',
-    },
-    {
-      id: 'video-content',
-      label: 'Video có link hoặc mã nhúng',
-      status: materialCounts.VIDEO === 0 ? 'ok' : videoOk ? 'ok' : 'error',
     },
   ];
 }

@@ -46,6 +46,12 @@ const IDS = {
   catTuVung: id(),
   catBusiness: id(),
 
+  // Levels
+  levelBeginner: id(),
+  levelElementary: id(),
+  levelIntermediate: id(),
+  levelAdvanced: id(),
+
   // Courses
   courseToeicBasic: id(),
   courseToeicAdvanced: id(),
@@ -320,17 +326,26 @@ async function seedUsers() {
   ];
 }
 
+function seedLevels() {
+  return [
+    { _id: IDS.levelBeginner, levelName: "Beginner", displayName: "Người mới bắt đầu", sortOrder: 1, isActive: true, createdAt: daysAgo(360) },
+    { _id: IDS.levelElementary, levelName: "Elementary", displayName: "Cơ bản", sortOrder: 2, isActive: true, createdAt: daysAgo(360) },
+    { _id: IDS.levelIntermediate, levelName: "Intermediate", displayName: "Trung cấp", sortOrder: 3, isActive: true, createdAt: daysAgo(360) },
+    { _id: IDS.levelAdvanced, levelName: "Advanced", displayName: "Cao cấp", sortOrder: 4, isActive: true, createdAt: daysAgo(360) },
+  ];
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. CATEGORIES
 // ═══════════════════════════════════════════════════════════════════════════════
 function seedCategories() {
   return [
-    { _id: IDS.catToeic, name: "TOEIC", slug: "toeic", code: "TOEIC", description: "Luyện thi TOEIC Listening & Reading chuẩn ETS", color: "bg-blue-50 text-blue-600", count: 12, createdAt: daysAgo(360), updatedAt: daysAgo(10) },
-    { _id: IDS.catIelts, name: "IELTS", slug: "ielts", code: "IELTS", description: "Luyện thi IELTS Academic & General Training", color: "bg-green-50 text-green-600", count: 8, createdAt: daysAgo(360), updatedAt: daysAgo(15) },
-    { _id: IDS.catGiaoTiep, name: "Giao tiếp", slug: "giao-tiep", code: "COMMUNICATION", description: "Tiếng Anh giao tiếp hàng ngày, tự tin nói chuyện", color: "bg-yellow-50 text-yellow-600", count: 10, createdAt: daysAgo(350), updatedAt: daysAgo(20) },
-    { _id: IDS.catNguPhap, name: "Ngữ pháp", slug: "ngu-phap", code: "GRAMMAR", description: "Hệ thống ngữ pháp tiếng Anh từ cơ bản đến nâng cao", color: "bg-purple-50 text-purple-600", count: 6, createdAt: daysAgo(350), updatedAt: daysAgo(25) },
-    { _id: IDS.catTuVung, name: "Từ vựng", slug: "tu-vung", code: "VOCABULARY", description: "Học từ vựng theo chủ đề với flashcard và spaced repetition", color: "bg-pink-50 text-pink-600", count: 9, createdAt: daysAgo(340), updatedAt: daysAgo(30) },
-    { _id: IDS.catBusiness, name: "Business English", slug: "business-english", code: "BUSINESS", description: "Tiếng Anh thương mại, email, thuyết trình chuyên nghiệp", color: "bg-orange-50 text-orange-600", count: 5, createdAt: daysAgo(320), updatedAt: daysAgo(12) },
+    { _id: IDS.catToeic, categoryName: "TOEIC", displayName: "TOEIC", name: "TOEIC", slug: "toeic", code: "TOEIC", description: "Luyện thi TOEIC Listening & Reading chuẩn ETS", color: "bg-blue-50 text-blue-600", count: 12, isActive: true, createdAt: daysAgo(360), updatedAt: daysAgo(10) },
+    { _id: IDS.catIelts, categoryName: "IELTS", displayName: "IELTS", name: "IELTS", slug: "ielts", code: "IELTS", description: "Luyện thi IELTS Academic & General Training", color: "bg-green-50 text-green-600", count: 8, isActive: true, createdAt: daysAgo(360), updatedAt: daysAgo(15) },
+    { _id: IDS.catGiaoTiep, categoryName: "Giao tiếp", displayName: "Giao tiếp", name: "Giao tiếp", slug: "giao-tiep", code: "COMMUNICATION", description: "Tiếng Anh giao tiếp hàng ngày, tự tin nói chuyện", color: "bg-yellow-50 text-yellow-600", count: 10, isActive: true, createdAt: daysAgo(350), updatedAt: daysAgo(20) },
+    { _id: IDS.catNguPhap, categoryName: "Ngữ pháp", displayName: "Ngữ pháp", name: "Ngữ pháp", slug: "ngu-phap", code: "GRAMMAR", description: "Hệ thống ngữ pháp tiếng Anh từ cơ bản đến nâng cao", color: "bg-purple-50 text-purple-600", count: 6, isActive: true, createdAt: daysAgo(350), updatedAt: daysAgo(25) },
+    { _id: IDS.catTuVung, categoryName: "Từ vựng", displayName: "Từ vựng", name: "Từ vựng", slug: "tu-vung", code: "VOCABULARY", description: "Học từ vựng theo chủ đề với flashcard và spaced repetition", color: "bg-pink-50 text-pink-600", count: 9, isActive: true, createdAt: daysAgo(340), updatedAt: daysAgo(30) },
+    { _id: IDS.catBusiness, categoryName: "Business English", displayName: "Business English", name: "Business English", slug: "business-english", code: "BUSINESS", description: "Tiếng Anh thương mại, email, thuyết trình chuyên nghiệp", color: "bg-orange-50 text-orange-600", count: 5, isActive: true, createdAt: daysAgo(320), updatedAt: daysAgo(12) },
   ];
 }
 
@@ -351,7 +366,7 @@ function seedCourses() {
       category: "TOEIC",
       categoryId: IDS.catToeic,
       level: "Cơ bản - Nâng cao",
-      levelId: 1,
+      levelId: IDS.levelElementary,
       tags: [{ tagId: id(), tagName: "TOEIC" }, { tagId: id(), tagName: "Luyện thi" }],
       tag: "Phổ biến",
       badge: "ETS 2026",
@@ -383,7 +398,7 @@ function seedCourses() {
       category: "TOEIC",
       categoryId: IDS.catToeic,
       level: "Nâng cao",
-      levelId: 3,
+      levelId: IDS.levelAdvanced,
       tags: [{ tagId: id(), tagName: "TOEIC 900" }, { tagId: id(), tagName: "Nâng cao" }],
       tag: "Bán chạy",
       badge: "ETS 2026",
@@ -413,7 +428,7 @@ function seedCourses() {
       category: "IELTS",
       categoryId: IDS.catIelts,
       level: "Trung cấp - Nâng cao",
-      levelId: 2,
+      levelId: IDS.levelIntermediate,
       tags: [{ tagId: id(), tagName: "IELTS" }, { tagId: id(), tagName: "Academic" }],
       tag: "Mới nhất",
       badge: "IELTS 7.5+",
@@ -443,7 +458,7 @@ function seedCourses() {
       category: "Giao tiếp",
       categoryId: IDS.catGiaoTiep,
       level: "Cơ bản",
-      levelId: 1,
+      levelId: IDS.levelElementary,
       tags: [{ tagId: id(), tagName: "Giao tiếp" }, { tagId: id(), tagName: "Phát âm" }],
       tag: "Phổ biến",
       badge: null,
@@ -473,7 +488,7 @@ function seedCourses() {
       category: "Business English",
       categoryId: IDS.catBusiness,
       level: "Trung cấp",
-      levelId: 2,
+      levelId: IDS.levelIntermediate,
       tags: [{ tagId: id(), tagName: "Business" }, { tagId: id(), tagName: "Email" }],
       tag: "Bán chạy",
       badge: null,
@@ -505,7 +520,7 @@ function seedCourses() {
       category: "Từ vựng",
       categoryId: IDS.catTuVung,
       level: "Cơ bản",
-      levelId: 1,
+      levelId: IDS.levelElementary,
       tags: [{ tagId: id(), tagName: "Từ vựng" }, { tagId: id(), tagName: "Origami" }],
       tag: "Mentor",
       badge: null,
@@ -1446,7 +1461,7 @@ async function main() {
     // Drop existing collections for clean seed
     const existingCollections = (await db.listCollections().toArray()).map((c) => c.name);
     const collections = [
-      "users", "categories", "courses", "modules", "lessons",
+      "users", "categories", "levels", "courses", "modules", "lessons",
       "quiz_questions", "documents", "enrollments", "learning_progress",
       "streaks", "payments", "mentor_applications", "category_history",
       "reviews", "notifications", "achievements",
@@ -1463,6 +1478,7 @@ async function main() {
     const steps = [
       ["users",               await seedUsers()],
       ["categories",          seedCategories()],
+      ["levels",              seedLevels()],
       ["courses",             seedCourses()],
       ["modules",             seedModules()],
       ["lessons",             seedLessons()],

@@ -32,8 +32,18 @@ const PILL_CHIP_SX = {
   },
 };
 
-function getStatusChip(isPublished) {
-  if (isPublished) {
+function getStatusChip(status, isPublished) {
+  if (status === 'pending') {
+    return {
+      label: 'Chờ duyệt',
+      sx: {
+        bgcolor: 'rgba(217,119,6,0.12)',
+        color: '#D97706',
+        border: '1px solid rgba(217,119,6,0.24)',
+      },
+    };
+  }
+  if (status === 'active' || isPublished) {
     return {
       label: 'Đã xuất bản',
       sx: {
@@ -63,7 +73,8 @@ export default function MentorCourseDetailHeader({
   const theme = useTheme();
   const navigate = useNavigate();
   const published = isCoursePublished(course);
-  const statusChip = getStatusChip(published);
+  const statusChip = getStatusChip(course.status, published);
+  const isPendingOrPublished = course.status === 'pending' || published;
   const questionsPath = `/mentor/courses/${course.CourseId ?? course.courseId}/questions`;
 
   // console.log(course)
@@ -191,7 +202,7 @@ export default function MentorCourseDetailHeader({
 
             <AppButton
               startIcon={
-                published ? (
+                isPendingOrPublished ? (
                   <UnpublishedRoundedIcon sx={{ fontSize: 16 }} />
                 ) : (
                   <PublishRoundedIcon sx={{ fontSize: 16 }} />
@@ -213,7 +224,7 @@ export default function MentorCourseDetailHeader({
                 '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
               }}
             >
-              {published ? 'Hủy xuất bản' : 'Xuất bản'}
+              {isPendingOrPublished ? 'Hủy xuất bản' : 'Xuất bản'}
             </AppButton>
           </Box>
         </Box>

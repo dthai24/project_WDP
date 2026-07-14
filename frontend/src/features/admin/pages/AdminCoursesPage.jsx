@@ -68,15 +68,21 @@ export default function AdminCoursesPage() {
   const [detailsTab, setDetailsTab] = useState('current');
   const [isUpdateAction, setIsUpdateAction] = useState(false);
 
+  const getHeaders = () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return {
+      'Authorization': `Bearer ${user.token || ''}`,
+      'x-role-name': 'admin',
+      'x-user-id': String(user.userId || ''),
+      'Content-Type': 'application/json'
+    };
+  };
+
   const fetchCourses = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:5050/api/admin/courses', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin'
-        }
+        headers: getHeaders()
       });
       const data = await res.json();
       if (data.success) {
@@ -103,7 +109,9 @@ export default function AdminCoursesPage() {
     setDetailsLoading(true);
     setCourseDetails(null);
     try {
-      const res = await fetch(`http://localhost:5050/api/courses/${course._id}/learning`);
+      const res = await fetch(`http://localhost:5050/api/courses/${course._id}/learning`, {
+        headers: getHeaders()
+      });
       const data = await res.json();
       if (data.success) {
         setCourseDetails(data);
@@ -132,18 +140,13 @@ export default function AdminCoursesPage() {
     if (!selectedCourse) return;
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const url = isUpdateAction
         ? `http://localhost:5050/api/admin/courses/${selectedCourse._id}/approve-updates`
         : `http://localhost:5050/api/admin/courses/${selectedCourse._id}/approve`;
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin',
-          'Content-Type': 'application/json'
-        }
+        headers: getHeaders()
       });
       const data = await res.json();
       if (data.success) {
@@ -184,18 +187,13 @@ export default function AdminCoursesPage() {
     if (!selectedCourse) return;
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const url = isUpdateAction
         ? `http://localhost:5050/api/admin/courses/${selectedCourse._id}/reject-updates`
         : `http://localhost:5050/api/admin/courses/${selectedCourse._id}/reject`;
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin',
-          'Content-Type': 'application/json'
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           tags: selectedTags,
           comment: rejectComment
@@ -233,14 +231,9 @@ export default function AdminCoursesPage() {
     const targetStatus = isCurrentlyActive ? 'inactive' : 'active';
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`http://localhost:5050/api/admin/courses/${courseToToggle._id}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin',
-          'Content-Type': 'application/json'
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           CourseName: courseToToggle.courseName,
           Description: courseToToggle.description,
@@ -254,11 +247,7 @@ export default function AdminCoursesPage() {
       // Also update its status in the DB
       const res2 = await fetch(`http://localhost:5050/api/admin/courses/${courseToToggle._id}/${targetStatus === 'active' ? 'approve' : 'reject'}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-role-name': 'admin',
-          'Content-Type': 'application/json'
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           tags: targetStatus === 'inactive' ? ['quản trị viên khóa trạng thái'] : [],
           comment: ''
