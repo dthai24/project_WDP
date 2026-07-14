@@ -148,7 +148,7 @@ const getStudentCoursesList = async (filters, userId) => {
 
   const coursesResult = await request.query(selectQuery);
   // Đắp thêm cấu trúc Path -> Node -> Material vào từng khóa học
-  const coursesWithPaths = await buildCourse(coursesResult.recordset);
+  const coursesWithPaths = await buildCourse(coursesResult.recordset, false);
   return { courses: coursesWithPaths, totalCount };
 };
 
@@ -157,14 +157,14 @@ const getStudentCoursesList = async (filters, userId) => {
 // ==========================================
 
 // Ghép nối cấu trúc: Course -> Paths -> Nodes -> Materials
-const buildCourse = async (courses) => {
+const buildCourse = async (courses, isMentor = false) => {
   return await Promise.all(
     courses.map(async (course) => {
-      const coursePaths = await getCoursePaths(course.CourseId);
+      const coursePaths = await getCoursePaths(course.CourseId, isMentor);
       const pathsWithNodes = await Promise.all(
         coursePaths.map(async (path) => {
           const pathId = path.PathId;
-          const nodes = await getPathNodes(pathId);
+          const nodes = await getPathNodes(pathId, isMentor);
 
           const nodesWithMaterials = await Promise.all(
             nodes.map(async (node) => {
@@ -182,11 +182,12 @@ const buildCourse = async (courses) => {
   );
 };
 
-const getCoursePaths = async (courseId) => {
+const getCoursePaths = async (courseId, isMentor = false) => {
   const request = new sql.Request();
   request.input("courseId", sql.Int, courseId);
+  const activeCondition = !isMentor ? "AND ISNULL(IsActive, 1) = 1" : "";
   const result = await request.query(
-    `Select * From Paths Where CourseId = @courseId ORDER BY [Order] ASC`,
+    `Select * From Paths Where CourseId = @courseId ${activeCondition} ORDER BY [Order] ASC`,
   );
   return result.recordset;
 };
@@ -202,10 +203,10 @@ const getCourseChaptersOutline = async (courseId) => {
     return null;
   }
 
-  const paths = await getCoursePaths(Number(courseId));
+  const paths = await getCoursePaths(Number(courseId), true);
   return Promise.all(
     paths.map(async (path) => {
-      const nodes = await getPathNodes(path.PathId);
+      const nodes = await getPathNodes(path.PathId, true);
       return {
         PathId: path.PathId,
         PathName: path.PathName,
@@ -222,11 +223,12 @@ const getCourseChaptersOutline = async (courseId) => {
   );
 };
 
-const getPathNodes = async (pathId) => {
+const getPathNodes = async (pathId, isMentor = false) => {
   const request = new sql.Request();
   request.input("pathId", sql.Int, pathId);
+  const activeCondition = !isMentor ? "AND ISNULL(IsActive, 1) = 1" : "";
   const result = await request.query(
-    `SELECT * FROM [dbo].[Path_Nodes] Where PathId = @pathId Order by NodeOrder Asc`,
+    `SELECT * FROM [dbo].[Path_Nodes] Where PathId = @pathId ${activeCondition} Order by NodeOrder Asc`,
   );
   return result.recordset;
 };
@@ -283,7 +285,8 @@ Users.FullName as InStructorName,
 		 left join User_Courses uc on crs.CourseId = uc.CourseId and uc.UserId = @userId
         Where crs.CourseId = @courseId
     `);
-  return await buildCourse(result.recordset);
+  const isMentor = userId != null && result.recordset.length > 0 && Number(result.recordset[0].InstructorId) === Number(userId);
+  return await buildCourse(result.recordset, isMentor);
 };
 // lay khoa hoc dang hoc hien thi o homepage
 const getContinueCourse = async (userId) => {
@@ -301,7 +304,7 @@ const getContinueCourse = async (userId) => {
           ON c.CourseId = uc.CourseId
         WHERE uc.UserId = @UserId AND uc.ProgressPercentage < 100
         ORDER BY uc.EnrollmentDate DESC`);
-  return await buildCourse(result.recordset);
+  return await buildCourse(result.recordset, false);
 };
 
 const getMentorCourses = async (userId) => {
@@ -324,7 +327,7 @@ const getMentorCourses = async (userId) => {
         join Levels on Levels.LevelId = crs.LevelId
         Where InstructorId = @InstructorId
     `);
-  return await buildCourse(result.recordset);
+  return await buildCourse(result.recordset, true);
 };
 
 // ==========================================

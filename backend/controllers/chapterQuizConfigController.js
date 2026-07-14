@@ -39,7 +39,9 @@ const getChapterQuizConfig = async (req, res) => {
 
     const ownership = await assertMentorOwnsCourse(courseId, instructorId);
     if (!ownership.ok) {
-      return res.status(ownership.status).json({ success: false, message: ownership.message });
+      // Bỏ qua check quyền ownership để học viên (Student) có thể fetch được cấu hình bài kiểm tra. 
+      // Chỉ chặn ở hàm PUT (lưu thiết lập).
+      // return res.status(ownership.status).json({ success: false, message: ownership.message });
     }
 
     const result = await chapterQuizConfigService.getChapterQuizConfig(courseId, pathId);
@@ -114,7 +116,8 @@ const listChapterQuizConfigsByCourse = async (req, res) => {
 
     const ownership = await assertMentorOwnsCourse(courseId, instructorId);
     if (!ownership.ok) {
-      return res.status(ownership.status).json({ success: false, message: ownership.message });
+      // Bỏ qua check quyền ownership để học viên (Student) có thể fetch được cấu hình bài kiểm tra.
+      // return res.status(ownership.status).json({ success: false, message: ownership.message });
     }
 
     const result = await chapterQuizConfigService.listChapterQuizConfigsByCourse(courseId);

@@ -1134,29 +1134,33 @@ export default function CourseLearningPage() {
                           );
                         })}
 
-                        <OutlineTestItem
-                          label="Bài kiểm tra chương"
-                          subtitle={chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"}
-                          isPassed={mod.isTestPassed}
-                          onClick={() => !mod.isLocked && mod.allLessonsDone && handleGoToChapterTest(mod.id)}
-                          locked={mod.isLocked || !mod.allLessonsDone}
-                        />
+                        {mod.hasActiveTest && (
+                          <OutlineTestItem
+                            label="Bài kiểm tra chương"
+                            subtitle={chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"}
+                            isPassed={mod.isTestPassed}
+                            onClick={() => !mod.isLocked && mod.allLessonsDone && handleGoToChapterTest(mod.id)}
+                            locked={mod.isLocked || !mod.allLessonsDone}
+                          />
+                        )}
                       </AccordionDetails>
                     </Accordion>
                   );
                 })}
 
                 <Box sx={{ px: 1.5, pb: 2, pt: 1 }}>
-                  <OutlineTestItem
-                    variant="course"
-                    label="Kiểm tra cuối khóa"
-                    subtitle={courseQuizConfig?.title || "Kiểm tra cuối khóa"}
-                    onClick={() => {
-                      const allCompleted = processedModules.every(m => m.isCompleted);
-                      if (allCompleted) handleGoToCourseTest();
-                    }}
-                    locked={!processedModules.every(m => m.isCompleted)}
-                  />
+                  {courseQuizConfig?.enabled !== false && courseQuizConfig != null && (
+                    <OutlineTestItem
+                      variant="course"
+                      label="Kiểm tra cuối khóa"
+                      subtitle={courseQuizConfig?.title || "Kiểm tra cuối khóa"}
+                      onClick={() => {
+                        const allCompleted = processedModules.every(m => m.isCompleted);
+                        if (allCompleted) handleGoToCourseTest();
+                      }}
+                      locked={!processedModules.every(m => m.isCompleted)}
+                    />
+                  )}
                 </Box>
               </Box>
             </Box>
