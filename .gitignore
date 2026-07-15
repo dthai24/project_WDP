@@ -26,3 +26,4 @@ backend/config/db.js
 /.agents
 skills-lock.json
 backend/config/db.js
+/backend

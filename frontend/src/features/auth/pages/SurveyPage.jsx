@@ -136,7 +136,7 @@ export default function SurveyPage() {
 
           {step === 3 && (
             <div style={{ textAlign: 'center', maxWidth: '400px', margin: '0 auto' }}>
-              <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="VD: Lấy vợ Tây, Kiếm 100 củ/tháng..."
+              <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="VD: Đạt bằng B2, TOEIC 800+..."
                 style={{ width: '100%', padding: '16px', fontSize: '18px', borderRadius: '12px', border: '2px solid #a78bfa', background: '#f8fafc', color: '#334155', outline: 'none' }}
               />
             </div>

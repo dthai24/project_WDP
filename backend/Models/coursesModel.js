@@ -28,7 +28,12 @@ const getFeaturedCourses = async () => {
       c.Description,
       c.Thumbnail,
       c.Rating,
-      c.TotalLessons,
+      (SELECT COUNT(pn.NodeId) 
+       FROM Paths p 
+       JOIN Path_Nodes pn ON p.PathId = pn.PathId 
+       WHERE p.CourseId = c.CourseId 
+         AND ISNULL(p.IsActive, 1) = 1 
+         AND ISNULL(pn.IsActive, 1) = 1) AS TotalLessons,
       cat.DisplayName AS CategoryName,
       lv.DisplayName  AS LevelName,
       u.FullName      AS InstructorName,
@@ -41,7 +46,7 @@ const getFeaturedCourses = async () => {
     WHERE c.IsPublished = 1
     GROUP BY
       c.CourseId, c.CourseName, c.Description,
-      c.Thumbnail, c.Rating, c.TotalLessons,
+      c.Thumbnail, c.Rating,
       cat.DisplayName, lv.DisplayName, u.FullName
       ORDER BY TotalStudents DESC, c.Rating DESC, c.CourseName ASC
   `);
@@ -53,7 +58,13 @@ const getFeaturedPaths = async () => {
   const result = await request.query(`
     SELECT TOP 4
       c.CourseId, c.CourseName, c.Description, c.Thumbnail,
-      c.Rating, c.TotalLessons,
+      c.Rating,
+      (SELECT COUNT(pn.NodeId) 
+       FROM Paths p 
+       JOIN Path_Nodes pn ON p.PathId = pn.PathId 
+       WHERE p.CourseId = c.CourseId 
+         AND ISNULL(p.IsActive, 1) = 1 
+         AND ISNULL(pn.IsActive, 1) = 1) AS TotalLessons,
       cat.DisplayName AS CategoryName,
       lv.DisplayName  AS LevelName,
       u.FullName      AS InstructorName,
@@ -66,7 +77,7 @@ const getFeaturedPaths = async () => {
     WHERE c.IsPublished = 1
     GROUP BY
       c.CourseId, c.CourseName, c.Description,
-      c.Thumbnail, c.Rating, c.TotalLessons,
+      c.Thumbnail, c.Rating,
       cat.DisplayName, lv.DisplayName, u.FullName
     ORDER BY c.Rating DESC          -- ← chỗ duy nhất khác mục 3
   `);
@@ -263,12 +274,20 @@ Users.FullName as InStructorName,
                crs.CreatedAt as CourseCreateAt,
 			        crs.UpdatedAt,
                crs.Thumbnail,
-               crs.TotalLessons,
-                (SELECT COUNT(nm.MaterialId) 
+               (SELECT COUNT(*) FROM Paths p WHERE p.CourseId = crs.CourseId AND ISNULL(p.IsActive, 1) = 1) AS TotalPaths,
+               (SELECT COUNT(pn.NodeId) 
+                FROM Paths p 
+                JOIN Path_Nodes pn ON p.PathId = pn.PathId 
+                WHERE p.CourseId = crs.CourseId 
+                  AND ISNULL(p.IsActive, 1) = 1 
+                  AND ISNULL(pn.IsActive, 1) = 1) AS TotalLessons,
+               (SELECT COUNT(nm.MaterialId) 
                 FROM Paths p 
                 JOIN Path_Nodes pn ON p.PathId = pn.PathId 
                 JOIN Node_Materials nm ON pn.NodeId = nm.NodeId 
-                WHERE p.CourseId = crs.CourseId) AS TotalMaterials, 
+                WHERE p.CourseId = crs.CourseId
+                  AND ISNULL(p.IsActive, 1) = 1
+                  AND ISNULL(pn.IsActive, 1) = 1) AS TotalMaterials, 
                Users.FullName,
                Levels.LevelId,
                Levels.LevelName,

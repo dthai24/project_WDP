@@ -297,6 +297,7 @@ function StatRow({ icon: Icon, iconColor, label, value, last = false, children }
 
 
 //  CÁC HÀM HỖ TRỢ KHỞI TẠO GIÁ TRỊ AN TOÀN 
+// Lấy dữ liệu người dùng từ localStorage
 const getInitialUser = () => {
   try {
     const userRaw = localStorage.getItem("user");
@@ -362,7 +363,7 @@ export default function ProfilePage() {
             rawCategories: data.profile.categories || [],
 
             goals: [
-              ...(data.profile.learningGoal ? [`Mục tiêu: ${data.profile.learningGoal}`] : []),
+              ...(data.profile.learningGoal ? [`Mục tiêu của bạn: ${data.profile.learningGoal}`] : []),
               ...(data.profile.categories ? data.profile.categories.map(c => c.displayName) : [])
             ],
           }));
@@ -534,7 +535,7 @@ export default function ProfilePage() {
     });
   };
 
-  // 3. ĐỔI ẢNH ĐẠI DIỆN TÍCH HỢP AI (FACE API)
+  // 3. ĐỔI ẢNH ĐẠI DIỆN 
   // Nhận diện khuôn mặt, tự động cắt và ghép với Khung viền (Avatar Frame) -> Gọi API upload (POST /api/users/avatar)
   const handleAvatarUpload = async ({ faceBase64, frameUrl }) => {
     if (!currentUser?.userId) {
@@ -606,7 +607,7 @@ export default function ProfilePage() {
       headers: { "Content-Type": "application/json", "x-user-id": currentUser.userId },
       body: JSON.stringify({ learningGoal: goalInput, categoryIds: selectedCats })
     });
-    window.location.reload(); // Lưu xong thì tự F5 trang cho mới
+    window.location.reload();
   };
 
 
@@ -838,17 +839,19 @@ export default function ProfilePage() {
                 onChange={handleFormChange}
                 inputType="date"
               />
-              <InfoRow
-                icon={AutoAwesomeIcon}
-                iconColor={SUCCESS}
-                label="Trình độ"
-                value={editMode ? formData.currentLevel : profile.currentLevel}
-                editing={editMode}
-                name="currentLevel"
-                onChange={handleFormChange}
-                inputType="select"
-                selectOptions={Array.from(new Set([profile.currentLevel, ...activeLevels].filter(Boolean)))}
-              />
+              {currentUser?.roles?.includes('Student') && (
+                <InfoRow
+                  icon={AutoAwesomeIcon}
+                  iconColor={SUCCESS}
+                  label="Trình độ"
+                  value={editMode ? formData.currentLevel : profile.currentLevel}
+                  editing={editMode}
+                  name="currentLevel"
+                  onChange={handleFormChange}
+                  inputType="select"
+                  selectOptions={Array.from(new Set([profile.currentLevel, ...activeLevels].filter(Boolean)))}
+                />
+              )}
             </Box>
           </SectionCard>
 

@@ -74,7 +74,7 @@ function formatStudentCount(count) {
   return String(count);
 }
 
-/* ─── Sub-components (Giữ nguyên 100% Component giao diện của bạn) ─── */
+/* ─── Sub-components ─── */
 
 function SectionTitle({ children, sx }) {
   return (
@@ -83,7 +83,7 @@ function SectionTitle({ children, sx }) {
     </Typography>
   );
 }
-
+// Hiển thị 4 thông số cơ bản của khóa học theo hàng ngang
 function CourseMetaRow({ course }) {
   const items = [
     { icon: RouteOutlinedIcon, label: "Chương", value: `${course.stageCount} chương` },
@@ -124,7 +124,7 @@ function CourseMetaRow({ course }) {
     </Box>
   );
 }
-
+//Hiển thị tiến độ học tập dưới dạng phần trăm kèm thanh tiến trình
 function CourseProgressBlock({ progress, sx }) {
   const value = Math.min(Math.max(progress, 0), 100);
   const textColor = getProgressColor(value);
@@ -143,7 +143,7 @@ function CourseProgressBlock({ progress, sx }) {
     </Box>
   );
 }
-
+//Hiển thị phần giới thiệu đầu trang chi tiết khóa học.
 function CourseIntro({ course, isEnrolled }) {
   const [searchParams] = useSearchParams();
   const coursesListPath = buildCourseListPath(searchParams);
@@ -185,7 +185,7 @@ function CourseIntro({ course, isEnrolled }) {
     </Box>
   );
 }
-
+// thanh Giảng viên
 function CTAInfoRow({ icon: Icon, label, children, showDivider }) {
   return (
     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.25, py: 1.25, borderTop: showDivider ? `1px solid ${DIVIDER}` : "none" }}>
@@ -197,7 +197,7 @@ function CTAInfoRow({ icon: Icon, label, children, showDivider }) {
     </Box>
   );
 }
-
+//hộp chức năng chính (đăng ký/học tiếp)
 function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = true }) {
   const [searchParams] = useSearchParams();
   const prerequisites = course.prerequisites ?? [];
@@ -254,18 +254,18 @@ function CourseStickyCTA({ course, isEnrolled, onEnroll, onContinue, sticky = tr
     </Box>
   );
 }
-
+// Hiển thị icon bài học (video hoặc text)
 function LessonIcon({ type }) {
   const Icon = type === "video" ? PlayCircleOutlineOutlinedIcon : ArticleRoundedIcon;
   return <Icon sx={{ fontSize: 15, color: MUTED, flexShrink: 0 }} />;
 }
-
+//Hiển thị cây thư mục bài học (Chương trình học) chi tiết
 function CurriculumSection({ modules, isEnrolled, course }) {
   const [expandedIds, setExpandedIds] = useState(() => new Set(modules[0]?.id ? [modules[0].id] : []));
   if (!modules?.length) return null;
-
+  // Kiểm tra xem tất cả các module có đang mở hay không
   const allExpanded = modules.every((m) => expandedIds.has(m.id));
-
+  //Hàm đóng/mở một chương đơn lẻ
   const toggleModule = (id) => (_, isOpen) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -273,7 +273,7 @@ function CurriculumSection({ modules, isEnrolled, course }) {
       return next;
     });
   };
-
+  //Hàm đóng/mở toàn bộ các chương cùng lúc
   const toggleAll = () => {
     if (allExpanded) setExpandedIds(new Set());
     else setExpandedIds(new Set(modules.map((m) => m.id)));
@@ -328,7 +328,7 @@ function CurriculumSection({ modules, isEnrolled, course }) {
     </Box>
   );
 }
-
+// Tìm kiếm và đề xuất các khóa học liên quan ở cuối trang
 function RelatedCoursesSection({ course }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -343,8 +343,8 @@ function RelatedCoursesSection({ course }) {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const headers = user.userId ? { 'x-user-id': user.userId } : {};
 
-        // Lấy tất cả khóa học
-        const res = await fetch('http://localhost:5000/api/courses/student', { headers });
+        // Lấy tất cả khóa học chưa đăng ký
+        const res = await fetch('http://localhost:5000/api/courses/student?status=not_enrolled', { headers });
         const data = await res.json();
 
         if (data.success) {
@@ -357,15 +357,25 @@ function RelatedCoursesSection({ course }) {
             String(c.LevelId) === String(course.levelId)
           );
 
-          // 2. Lọc khóa học khớp 1 TRONG 2 (nhưng không lấy trùng với mảng ở bước 1)
-          let partialMatch = allCourses.filter(c =>
-            (String(c.CategoryId) === String(course.categoryId) || String(c.LevelId) === String(course.levelId)) &&
+          // 2. Lọc khóa học khớp danh mục 
+          let catMatch = allCourses.filter(c =>
+            (String(c.CategoryId) === String(course.categoryId)) &&
             !exactMatch.some(e => String(e.CourseId) === String(c.CourseId))
           );
 
-          // 3. Gộp lại và CHỈ LẤY TỐI ĐA 5 khóa học
-          let finalRelated = [...exactMatch, ...partialMatch].slice(0, 5);
-          setRelatedCourses(finalRelated);
+          // 3. Lọc khóa học khớp trình độ
+          let lvlMatch = allCourses.filter(c =>
+            (String(c.LevelId) === String(course.levelId)) &&
+            !exactMatch.some(e => String(e.CourseId) === String(c.CourseId)) &&
+            !catMatch.some(e => String(e.CourseId) === String(c.CourseId))
+          );
+
+          let finalRelated = [...exactMatch, ...catMatch, ...lvlMatch];
+          //  if (finalRelated.length < 4) {
+          //   const others = allCourses.filter(c => !finalRelated.some(f => String(f.CourseId) === String(c.CourseId)));
+          //   finalRelated = [...finalRelated, ...others];
+          // }
+          setRelatedCourses(finalRelated.slice(0, 4)); // Hiển thị tối đa 4 khóa học
         }
       } catch (error) {
         console.error("Lỗi lấy khóa học liên quan:", error);
@@ -392,7 +402,7 @@ function RelatedCoursesSection({ course }) {
       </Box>
       <Grid container spacing={2.5} alignItems="stretch">
         {relatedCourses.map((c) => (
-          <Grid key={c.CourseId} size={{ xs: 12, sm: 6, md: 4 }} sx={{ display: "flex" }}>
+          <Grid key={c.CourseId} size={{ xs: 12, sm: 6, md: 4, lg: 3 }} sx={{ display: "flex" }}>
             <CourseCard
               course={c}
               sx={{ width: "100%" }}
@@ -455,7 +465,7 @@ export default function CourseDetailPage() {
             }
           }
 
-          // Gán dữ liệu (Hỗ trợ đọc 2 kiểu: cả HOA lẫn thường từ DB)
+          // Gán dữ liệu 
           const mappedCourse = {
             id: dbData.CourseId,
             title: dbData.CourseName,
@@ -470,7 +480,7 @@ export default function CourseDetailPage() {
             isEnrolled: Boolean(dbData.isEnrolled),
             progress: dbData.progress,
             lessonCount: dbData.TotalLessons || 0,
-            stageCount: dbData.Paths ? dbData.Paths.length : 0,
+            stageCount: dbData.TotalPaths ?? (dbData.Paths ? dbData.Paths.length : 0),
             materialCount: dbData.TotalMaterials ?? dbData.totalMaterials ?? totalMat,
             updatedAt: dbData.UpdatedAt
               ? new Date(dbData.UpdatedAt).toLocaleDateString("vi-VN")

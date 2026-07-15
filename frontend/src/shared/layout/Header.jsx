@@ -50,13 +50,18 @@ const ERROR = "#DC2626";
 const USER_MENU_ITEMS = [
   { key: "profile", label: "Hồ sơ cá nhân", icon: PersonOutlineRoundedIcon, path: "/profile" },
 ];
-
+/**
+ * Hàm hỗ trợ lấy chữ cái viết tắt từ tên người dùng để hiển thị làm Avatar chữ.
+ * 
+ * @param {Object} user - Đối tượng thông tin người dùng
+ * @returns {string} Chuỗi 2 ký tự viết tắt viết hoa
+ */
 function getUserInitials(user) {
   const name = user?.fullName || user?.email || "?";
   return name
     .split(" ")
     .filter(Boolean)
-    .slice(0, 2)
+    .slice(-2)
     .map((w) => w[0].toUpperCase())
     .join("");
 }
@@ -87,6 +92,17 @@ const logoutItemSx = {
   },
 };
 
+/**
+ * Component Header (Thanh điều hướng trên cùng toàn cục).
+ * 
+ * @param {boolean} [showUser=true] - Có hiển thị khu vực người dùng (Avatar, Tên, Menu) hay không.
+ * @param {Function} [onLogout] - Hàm callback tùy biến khi người dùng bấm Đăng xuất.
+ * @param {number} [logoHeight=36] - Chiều cao của ảnh Logo.
+ * @param {string} [logoTo="/home"] - Đường dẫn điều hướng khi click vào Logo.
+ * @param {string} [profilePath="/profile"] - Đường dẫn tới trang Profile.
+ * @param {boolean} [showMyCoursesButton=true] - Có hiển thị nút "Khóa học của tôi" hay không.
+ * @param {boolean} [hideProfileMenuItem=false] - Có ẩn tùy chọn "Hồ sơ cá nhân" trong Menu hay không.
+ */
 export default function Header({
   showUser = true,
   onLogout,
@@ -145,7 +161,7 @@ export default function Header({
   const { user, logout } = useAuth();
   const { requestGuardedNavigation } = useNavigationGuard() ?? {};
 
-  // (Vẫn giữ logic Avatar của ông trong trường hợp ông có update lẻ avatar)
+  // (Vẫn giữ logic Avatar của ông trong trường hợp user có update avatar)
   const [avatarUrl, setAvatarUrl] = useState(() => getStoredAvatarUrl());
 
   useEffect(() => {
@@ -161,6 +177,7 @@ export default function Header({
     return () => window.removeEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated);
   }, []);
 
+  // Xóa bộ đếm thời gian (timer) đóng menu tự động đang chạy (nếu có)
   const clearCloseTimer = () => {
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
@@ -168,11 +185,13 @@ export default function Header({
     }
   };
 
+  // Mở menu người dùng, neo vị trí menu (Anchor) vào vùng chứa nút Avatar
   const openUserMenu = () => {
     clearCloseTimer();
     if (userZoneRef.current) setUserMenuAnchor(userZoneRef.current);
   };
 
+  // Lên lịch đóng menu sau một khoảng trễ nhỏ khi người dùng rê chuột ra ngoài (để tránh menu biến mất lập tức)
   const scheduleCloseUserMenu = () => {
     clearCloseTimer();
     closeTimer.current = setTimeout(() => {
@@ -180,11 +199,13 @@ export default function Header({
     }, MENU_CLOSE_DELAY);
   };
 
+  // Đóng menu người dùng lập tức
   const closeUserMenu = () => {
     clearCloseTimer();
     setUserMenuAnchor(null);
   };
 
+  // Chuyển hướng người dùng sang trang Hồ sơ cá nhân (kiểm tra điều hướng an toàn trước nếu có)
   const handleGoProfile = () => {
     closeUserMenu();
     const go = () => navigate(profilePath);
@@ -195,6 +216,7 @@ export default function Header({
     go();
   };
 
+  // Xử lý sự kiện click vào nút Avatar: Mở menu nếu là thiết bị di động, chuyển tới trang Profile nếu là máy tính
   const handleProfileTriggerClick = (event) => {
     event.stopPropagation();
     if (isMobile) {
@@ -204,6 +226,7 @@ export default function Header({
     handleGoProfile();
   };
 
+  // Xử lý sự kiện nhấn phím Enter/Space khi đang focus vào vùng nút Avatar để mở menu hoặc xem Profile
   const handleUserZoneKeyDown = (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     e.preventDefault();
@@ -211,11 +234,13 @@ export default function Header({
     else handleGoProfile();
   };
 
+  // Bật/tắt trạng thái mở/đóng của menu người dùng
   const toggleUserMenu = () => {
     if (userMenuOpen) closeUserMenu();
     else openUserMenu();
   };
 
+  // Thực thi nghiệp vụ đăng xuất (xóa session, chuyển hướng về trang Login, hiện thông báo)
   const performLogout = () => {
     closeUserMenu();
     if (onLogout) {
@@ -227,6 +252,7 @@ export default function Header({
     }
   };
 
+  // Xử lý sự kiện nhấn Đăng xuất (kiểm tra điều hướng an toàn tránh mất dữ liệu dở dang trước khi đăng xuất)
   const handleLogout = () => {
     if (requestGuardedNavigation) {
       requestGuardedNavigation(performLogout);
@@ -235,6 +261,7 @@ export default function Header({
     performLogout();
   };
 
+  // Xử lý điều hướng khi người dùng nhấp chọn một mục trong Menu người dùng (ví dụ: Xem profile)
   const handleMenuNavigate = (item) => {
     if (item.disabled) return;
     if (item.path === "/profile") handleGoProfile();
@@ -316,9 +343,9 @@ export default function Header({
   const userZoneHandlers = isMobile
     ? {}
     : {
-        onMouseEnter: openUserMenu,
-        onMouseLeave: scheduleCloseUserMenu,
-      };
+      onMouseEnter: openUserMenu,
+      onMouseLeave: scheduleCloseUserMenu,
+    };
 
   return (
     <AppBar
@@ -386,10 +413,10 @@ export default function Header({
                         : isAdminNewsPage
                           ? "Tìm theo tiêu đề, danh mục..."
                           : isMyCoursesPage
-                          ? "Tìm trong khóa học của tôi..."
-                          : isCoursePage
-                            ? "Tìm khóa học..."
-                            : "Tìm kiếm khóa học, lộ trình..."
+                            ? "Tìm trong khóa học của tôi..."
+                            : isCoursePage
+                              ? "Tìm khóa học..."
+                              : "Tìm kiếm khóa học, lộ trình..."
             }
             sx={{ width: "100%", maxWidth: 480 }}
           />

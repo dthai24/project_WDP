@@ -880,7 +880,7 @@ function CourseGrid({ courses, onNavigateCourse }) {
   );
 }
 
-function ForYouPlaceholder({ isLoggedIn, learningGoal, onExplore, onLogin }) {
+function ForYouPlaceholder({ isLoggedIn, learningGoal, hasCategories, onExplore, onLogin }) {
   return (
     <Box
       sx={{
@@ -913,14 +913,18 @@ function ForYouPlaceholder({ isLoggedIn, learningGoal, onExplore, onLogin }) {
         <Box>
           <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, mb: 0.5 }}>
             {isLoggedIn
-              ? "Chưa có gợi ý phù hợp"
+              ? hasCategories
+                ? "Bạn đã hoàn thành hoặc đăng ký các khóa học quan tâm"
+                : "Chưa có gợi ý phù hợp"
               : "Đăng nhập để nhận gợi ý cá nhân"}
           </Typography>
           <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.6, maxWidth: 520 }}>
             {isLoggedIn
-              ? learningGoal
-                ? "Hãy cập nhật lĩnh vực quan tâm trong hồ sơ để chúng tôi gợi ý khóa học phù hợp hơn."
-                : "Hoàn thành khảo sát hoặc cập nhật mục tiêu học tập để nhận gợi ý khóa học dành riêng cho bạn."
+              ? hasCategories
+                ? "Bạn đã đăng ký toàn bộ khóa học trong lĩnh vực quan tâm của mình. Hãy khám phá thêm các khóa học bổ ích khác nhé!"
+                : learningGoal
+                  ? "Hãy cập nhật lĩnh vực quan tâm trong hồ sơ để chúng tôi gợi ý khóa học phù hợp hơn."
+                  : "Hoàn thành khảo sát hoặc cập nhật mục tiêu học tập để nhận gợi ý khóa học dành riêng cho bạn."
               : "Chúng tôi sẽ đề xuất khóa học dựa trên mục tiêu và sở thích học tập của bạn."}
           </Typography>
         </Box>
@@ -945,6 +949,7 @@ function CoursesSection({
   forYouLoading = false,
   isLoggedIn = false,
   learningGoal = "",
+  userCategories = [],
   onExplore,
   onLogin,
   onNavigateCourse,
@@ -1001,6 +1006,7 @@ function CoursesSection({
           <ForYouPlaceholder
             isLoggedIn={isLoggedIn}
             learningGoal={learningGoal}
+            hasCategories={userCategories.length > 0}
             onExplore={onExplore}
             onLogin={onLogin}
           />
@@ -1307,6 +1313,8 @@ export default function HomePage() {
   const [streak, setStreak] = useState(0);
   const [learningGoal, setLearningGoal] = useState("");
   const [learningGoalLoading, setLearningGoalLoading] = useState(false);
+  const [userCategories, setUserCategories] = useState([]);
+  const [userLevel, setUserLevel] = useState("");
 
   /**
    * Effect 1: Tự động gọi API Backend lấy thông tin khóa học đang học dở gần đây nhất của học viên.
@@ -1380,6 +1388,8 @@ export default function HomePage() {
   useEffect(() => {
     if (!user?.userId) {
       setLearningGoal("");
+      setUserCategories([]);
+      setUserLevel("");
       return;
     }
 
@@ -1394,12 +1404,20 @@ export default function HomePage() {
         if (cancelled) return;
         if (data.success && data.profile) {
           setLearningGoal(String(data.profile.learningGoal ?? "").trim());
+          setUserCategories(data.profile.categories || []);
+          setUserLevel(data.profile.currentLevel || "");
         } else {
           setLearningGoal("");
+          setUserCategories([]);
+          setUserLevel("");
         }
       })
       .catch(() => {
-        if (!cancelled) setLearningGoal("");
+        if (!cancelled) {
+          setLearningGoal("");
+          setUserCategories([]);
+          setUserLevel("");
+        }
       })
       .finally(() => {
         if (!cancelled) setLearningGoalLoading(false);
@@ -1466,25 +1484,19 @@ export default function HomePage() {
       return;
     }
 
+    if (userCategories.length === 0) {
+      setForYouCourses([]);
+      setForYouLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setForYouLoading(true);
 
     (async () => {
       try {
-        const profileRes = await fetch("http://localhost:5000/api/users/profile", {
-          headers: { "x-user-id": String(user.userId) },
-        });
-        const profileData = await profileRes.json();
-        const categoryIds =
-          profileData?.profile?.categories?.map((c) => c.categoryId) ?? [];
-
-        if (categoryIds.length === 0) {
-          if (!cancelled) setForYouCourses([]);
-          return;
-        }
-
         const params = new URLSearchParams();
-        categoryIds.forEach((id) => params.append("category", String(id)));
+        userCategories.forEach((c) => params.append("category", String(c.categoryId)));
         params.append("status", "not_enrolled");
 
         const coursesRes = await fetch(
@@ -1494,15 +1506,13 @@ export default function HomePage() {
         const coursesData = await coursesRes.json();
 
         if (!cancelled && coursesData.success) {
-          const myLevel = profileData?.profile?.currentLevel || "";
-          
           const sortedCourses = (coursesData.data || []).sort((a, b) => {
             const aLevel = a.LevelDisplayName || a.LevelName || a.level || "";
             const bLevel = b.LevelDisplayName || b.LevelName || b.level || "";
             
             // 1. Trùng Level của User đẩy lên đầu (1 = trùng, 0 = không trùng)
-            const aMatch = (aLevel === myLevel) ? 1 : 0;
-            const bMatch = (bLevel === myLevel) ? 1 : 0;
+            const aMatch = (aLevel === userLevel) ? 1 : 0;
+            const bMatch = (bLevel === userLevel) ? 1 : 0;
             if (aMatch !== bMatch) return bMatch - aMatch;
             
             // 2. Nếu bằng mức ưu tiên Level, xếp theo Rating giảm dần (từ cao xuống thấp)
@@ -1531,7 +1541,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.userId]);
+  }, [user?.userId, userCategories, userLevel]);
 
   return (
     /* Wide root — hero can breathe at full width */
@@ -1593,6 +1603,7 @@ export default function HomePage() {
           forYouLoading={forYouLoading}
           isLoggedIn={Boolean(user?.userId)}
           learningGoal={learningGoal}
+          userCategories={userCategories}
           onExplore={handleExplore}
           onLogin={handleLogin}
           onNavigateCourse={handleCourseNav}
