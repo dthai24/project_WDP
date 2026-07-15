@@ -443,7 +443,8 @@ export default function CourseLearningPage() {
     return modulesWithStatus.map((mod, index) => {
       if (index === 0) return { ...mod, isLocked: false };
       const prevMod = modulesWithStatus[index - 1];
-      return { ...mod, isLocked: !prevMod.isCompleted };
+      // MỞ KHÓA LIÊN CHƯƠNG: Luôn trả về false để cho phép học viên học nhảy cóc chương
+      return { ...mod, isLocked: false };
     });
   }, [modules, chapterQuizConfigs]);
 
