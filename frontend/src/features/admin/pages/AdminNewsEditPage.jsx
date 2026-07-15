@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -20,7 +20,7 @@ import {
   saveAdminNewsEditDraft,
   saveAdminNewsEditStep1ToStorage,
 } from '@/features/admin/utils/adminNewsEditStorage';
-import { buildAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
+import { fetchAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
 import { CREATE_CARD_SX, MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 function BreadcrumbLink({ to, children, onClick }) {
@@ -54,8 +54,23 @@ export default function AdminNewsEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const categoryOptions = useMemo(() => buildAdminNewsCategoryFormOptions(), []);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const editBasePath = `/admin/news/${newsId}/edit`;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const res = await fetchAdminNewsCategoryFormOptions();
+      if (!cancelled && res.ok) {
+        setCategoryOptions(res.options);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

@@ -60,6 +60,7 @@ export default function NewsCard({ article, listSearchParams }) {
         src={article.thumbnail}
         label={article.title}
         alt={article.title}
+        cacheKey={article.updatedAt || article.id}
         iconSize={36}
         sx={{ height: 180, width: '100%' }}
         imgSx={{

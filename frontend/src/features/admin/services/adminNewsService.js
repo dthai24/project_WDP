@@ -8,6 +8,7 @@ import {
   apiUpdateNews,
   apiDeleteNews,
 } from '@/features/news/services/newsApiClient';
+import { normalizeNewsThumbnailForApi } from '@/shared/utils/thumbnailUtils';
 
 function normalizeArticle(raw = {}) {
   return {
@@ -68,7 +69,7 @@ export async function createNewsArticle(payload = {}) {
     author: payload.author || undefined,
     excerpt: payload.excerpt || undefined,
     content: payload.content || undefined,
-    thumbnail: payload.thumbnail || undefined,
+    thumbnail: normalizeNewsThumbnailForApi(payload.thumbnail) || undefined,
     publishedAt: payload.status === 'PUBLISHED' ? new Date().toISOString() : null,
   });
 
@@ -82,6 +83,31 @@ export async function createNewsArticle(payload = {}) {
     ok: true,
     article: articleResult.ok ? articleResult.article : normalizeArticle({ newsId: result.data?.newsId, title, categoryId }),
   };
+}
+
+function buildUpdateNewsPayload(existingArticle, payload = {}) {
+  const nextStatus = payload.status ?? existingArticle.status;
+  const body = {
+    title: String(payload.title ?? existingArticle.title ?? '').trim(),
+    categoryId: Number(payload.categoryId ?? existingArticle.categoryId),
+    status: nextStatus,
+    author: payload.author !== undefined ? payload.author : existingArticle.author,
+    excerpt: payload.excerpt !== undefined ? payload.excerpt : existingArticle.excerpt,
+  };
+
+  if (payload.content !== undefined) {
+    body.content = payload.content;
+  }
+
+  if (payload.thumbnail !== undefined) {
+    body.thumbnail = normalizeNewsThumbnailForApi(payload.thumbnail);
+  }
+
+  if (nextStatus === 'PUBLISHED') {
+    body.publishedAt = existingArticle.publishedAt || new Date().toISOString();
+  }
+
+  return body;
 }
 
 export async function updateNewsArticle(id, payload = {}) {
@@ -100,18 +126,7 @@ export async function updateNewsArticle(id, payload = {}) {
     return { ok: false, message: 'Vui lòng chọn danh mục' };
   }
 
-  const result = await apiUpdateNews(id, {
-    title,
-    categoryId: Number(categoryId),
-    status: payload.status ?? existingResult.article.status,
-    author: payload.author !== undefined ? payload.author : existingResult.article.author,
-    excerpt: payload.excerpt !== undefined ? payload.excerpt : existingResult.article.excerpt,
-    content: payload.content !== undefined ? payload.content : existingResult.article.content,
-    thumbnail: payload.thumbnail !== undefined ? payload.thumbnail : existingResult.article.thumbnail,
-    publishedAt: payload.status === 'PUBLISHED'
-      ? (existingResult.article.publishedAt || new Date().toISOString())
-      : null,
-  });
+  const result = await apiUpdateNews(id, buildUpdateNewsPayload(existingResult.article, payload));
 
   if (!result.ok) {
     return { ok: false, message: result.message ?? 'Không thể cập nhật bài viết.' };
@@ -140,17 +155,14 @@ export async function updateNewsArticleBasicInfo(id, payload = {}) {
     return { ok: false, message: 'Vui lòng chọn danh mục' };
   }
 
-  const result = await apiUpdateNews(id, {
+  const result = await apiUpdateNews(id, buildUpdateNewsPayload(existingResult.article, {
     title,
-    categoryId: Number(categoryId),
-    status: payload.status ?? existingResult.article.status,
-    author: payload.author !== undefined ? payload.author : existingResult.article.author,
-    excerpt: payload.excerpt !== undefined ? payload.excerpt : existingResult.article.excerpt,
-    thumbnail: payload.thumbnail !== undefined ? payload.thumbnail : existingResult.article.thumbnail,
-    publishedAt: payload.status === 'PUBLISHED'
-      ? (existingResult.article.publishedAt || new Date().toISOString())
-      : null,
-  });
+    categoryId,
+    status: payload.status,
+    author: payload.author,
+    excerpt: payload.excerpt,
+    thumbnail: payload.thumbnail,
+  }));
 
   if (!result.ok) {
     return { ok: false, message: result.message ?? 'Không thể cập nhật bài viết.' };
@@ -171,7 +183,6 @@ export async function updateNewsArticleContent(id, content = '') {
 
   const result = await apiUpdateNews(id, {
     content: String(content ?? '').trim(),
-    status: existingResult.article.status,
   });
 
   if (!result.ok) {

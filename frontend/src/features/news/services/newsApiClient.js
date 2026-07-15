@@ -1,9 +1,9 @@
 /**
  * News API client — gọi backend thật tại /api/news
  */
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${String(import.meta.env.VITE_API_URL).replace(/\/$/, '')}/api/news`
-  : 'http://localhost:5000/api/news';
+import { getApiOrigin } from '@/shared/utils/apiOrigin';
+
+const API_BASE = `${getApiOrigin()}/api/news`;
 
 function normalizeRoleName(role) {
   if (typeof role === 'string') return role.trim();

@@ -19,7 +19,7 @@ import {
   loadAdminNewsCreateDraft,
   saveAdminNewsContentToStorage,
 } from '@/features/admin/utils/adminNewsCreateStorage';
-import { buildAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
+import { fetchAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
 import { CREATE_CARD_SX, MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 function BreadcrumbLink({ to, children, onClick }) {
@@ -55,7 +55,23 @@ export default function AdminNewsCreateContentPage() {
   const [savingDraft, setSavingDraft] = useState(false);
   const [ready, setReady] = useState(false);
 
-  const categoryOptions = useMemo(() => buildAdminNewsCategoryFormOptions(), []);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const res = await fetchAdminNewsCategoryFormOptions();
+      if (cancelled) return;
+      if (res.ok) {
+        setCategoryOptions(res.options);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const categoryLabel = useMemo(
     () => categoryOptions.find((item) => String(item.value) === String(step1?.categoryId))?.label ?? '',

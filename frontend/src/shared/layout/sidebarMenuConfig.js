@@ -2,7 +2,6 @@ import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import NewspaperOutlinedIcon from "@mui/icons-material/NewspaperOutlined";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
-import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
 import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
@@ -89,13 +88,6 @@ export function getMentorMenuItems() {
       Icon: QuizOutlinedIcon,
       disabled: false,
       isActiveMatch: isMentorQuestionBankActive,
-    },
-    {
-      id: "mentor-news",
-      label: "Tin tức",
-      to: "/mentor/news",
-      Icon: ArticleRoundedIcon,
-      disabled: false,
     },
     {
       id: "mentor-student-progress",

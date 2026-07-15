@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +17,7 @@ import {
   loadAdminNewsCreateDraft,
   saveAdminNewsStep1ToStorage,
 } from '@/features/admin/utils/adminNewsCreateStorage';
-import { buildAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
+import { fetchAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
 import { CREATE_CARD_SX, MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 function BreadcrumbLink({ to, children, onClick }) {
@@ -63,7 +63,30 @@ export default function AdminNewsCreatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
 
-  const categoryOptions = useMemo(() => buildAdminNewsCategoryFormOptions(), []);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setCategoriesLoading(true);
+      const res = await fetchAdminNewsCategoryFormOptions();
+      if (cancelled) return;
+
+      if (!res.ok) {
+        setCategoryOptions([]);
+        toast.error(res.message || 'Không tải được danh mục.');
+      } else {
+        setCategoryOptions(res.options);
+      }
+      setCategoriesLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const draft = loadAdminNewsCreateDraft();
@@ -135,7 +158,7 @@ export default function AdminNewsCreatePage() {
             setForm(nextForm);
             setErrors({});
           }}
-          disabled={submitting || savingDraft}
+          disabled={submitting || savingDraft || categoriesLoading}
         />
 
         <AdminNewsCreateFooter
