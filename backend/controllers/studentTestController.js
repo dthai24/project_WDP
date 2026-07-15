@@ -36,7 +36,8 @@ async function checkPrerequisites(courseId, userId, scope, chapterId) {
             const targetMod = modules.find(m => m.id === Number(chapterId));
             if (targetMod) {
                 const targetIndex = modules.findIndex(m => m.id === Number(chapterId));
-                const isLocked = targetIndex > 0 ? !modules[targetIndex - 1].isCompleted : false;
+                // MỞ KHÓA LIÊN CHƯƠNG: Tắt điều kiện chặn nếu chương trước chưa học xong, cho phép nhảy cóc
+                const isLocked = false;
 
                 if (isLocked) {
                     prerequisitesMet = false;
