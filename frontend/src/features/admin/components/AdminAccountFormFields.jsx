@@ -182,6 +182,7 @@ export function FormFieldSelect({
   onChange,
   error = '',
   colorMap = {},
+  disabledOptions = [],
 }) {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -256,11 +257,14 @@ export function FormFieldSelect({
         {options.map((option) => {
           const isSelected = option.value === value;
           const optionColors = colorMap[option.value];
+          const isDisabled = disabledOptions.includes(option.value);
           return (
             <MenuItem
               key={option.value}
               selected={isSelected}
+              disabled={isDisabled}
               onClick={() => {
+                if (isDisabled) return;
                 onChange(option.value);
                 setAnchorEl(null);
               }}
@@ -287,6 +291,11 @@ export function FormFieldSelect({
                 '&:hover': {
                   bgcolor: optionColors?.bgcolor ?? alpha(theme.palette.primary.main, 0.06),
                 },
+                ...(isDisabled && {
+                  opacity: 0.45,
+                  cursor: 'not-allowed',
+                  '&:hover': { bgcolor: 'transparent' },
+                }),
               }}
             >
               {optionColors ? (

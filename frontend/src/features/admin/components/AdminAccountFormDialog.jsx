@@ -120,6 +120,7 @@ export default function AdminAccountFormDialog({
   account,
   onSubmit,
   saving = false,
+  currentUserId = null,
 }) {
   const [role, setRole] = useState('Student');
   const [status, setStatus] = useState('ACTIVE');
@@ -164,6 +165,8 @@ export default function AdminAccountFormDialog({
     await onSubmit?.({ role, status });
     setConfirmOpen(false);
   };
+
+  const isSelf = currentUserId && account?.id === currentUserId;
 
   if (!account) return null;
 
@@ -217,6 +220,7 @@ export default function AdminAccountFormDialog({
               value={status}
               options={ADMIN_ACCOUNT_FORM_STATUS_OPTIONS}
               colorMap={ADMIN_ACCOUNT_STATUS_CHIP_SX}
+              disabledOptions={isSelf ? ['LOCKED'] : []}
               onChange={(value) => {
                 setStatus(value);
                 setErrors((prev) => {
