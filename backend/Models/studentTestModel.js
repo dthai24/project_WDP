@@ -92,11 +92,78 @@ const getAttemptCountByUserAndTest = async (userId, testId) => {
     `);
     return result.recordset[0].count;
 };
+// Lưu chi tiết lịch sử làm bài của học viên vào Database.
+const saveTestAttemptAnswers = async (attemptId, questionResults) => {
+    const { sql } = require('../config/db');
+    const request = new sql.Request();
+    
+    // Nếu không có kết quả câu hỏi nào thì bỏ qua
+    if (!questionResults || questionResults.length === 0) return true;
+    let values = [];
+    const safeAttemptId = Number(attemptId);
+    for (const result of questionResults) {
+        // Xử lý câu học viên bỏ trống (không chọn gì) -> gán mảng chứa giá trị null
+        const choices = (result.userChoiceIds && result.userChoiceIds.length > 0) 
+                        ? result.userChoiceIds 
+                        : [null];
+        
+        const isCorrectBit = result.isCorrect ? 1 : 0;
+        const qId = Number(result.questionId);
+        for (const choiceId of choices) {
+            // Nếu là null thì in chữ NULL ra cho câu SQL, ngược lại thì ép kiểu Số
+            const cStr = choiceId === null ? 'NULL' : Number(choiceId);
+            values.push(`(${safeAttemptId}, ${qId}, ${cStr}, ${isCorrectBit}, GETDATE())`);
+        }
+    }
+    if (values.length > 0) {
+        // Gộp lại thành 1 câu lệnh INSERT duy nhất
+        const insertQuery = `
+            INSERT INTO dbo.Test_Attempt_Answers (AttemptId, QuestionId, ChoiceId, IsCorrect, AnsweredAt)
+            VALUES ${values.join(', ')};
+        `;
+        await request.query(insertQuery);
+    }
+    
+    return true;
+};
+// lấy chi tiết các câu trả lời sai của học viên dựa vào AttemptId
+const getWrongAnswersDetail = async (attemptId) => {
+    const { sql } = require('../config/db');
+    const request = new sql.Request();
+    request.input('attemptId', sql.Int, Number(attemptId));
+    
+    const result = await request.query(`
+        SELECT 
+            t.PathId AS ChapterId,
+            p.PathName AS ChapterName,
+            q.SectionId,
+            qs.Title AS SectionTitle,
+            q.QuestionId,
+            q.Title AS QuestionTitle,
+            taa.ChoiceId AS UserChoiceId,
+            qc.Title AS UserChoiceText,
+            taa.IsCorrect
+        FROM dbo.Test_Attempt_Answers taa
+        JOIN dbo.Questions q ON taa.QuestionId = q.QuestionId
+        JOIN dbo.Question_Sections qs ON q.SectionId = qs.SectionId
+        JOIN dbo.Test_Attempts ta ON taa.AttemptId = ta.AttemptId
+        JOIN dbo.Tests t ON ta.TestId = t.TestId
+        LEFT JOIN dbo.Paths p ON t.PathId = p.PathId
+        LEFT JOIN dbo.Question_Choices qc ON taa.ChoiceId = qc.ChoiceId
+        WHERE taa.AttemptId = @attemptId 
+          
+    `);
+    
+    return result.recordset;
+};
+
 module.exports = {
     createTestAttempt,
     submitTestAttemptModel,
     getTestIdByCourseAndPath,   
     getTestInfoByAttempt,
     getAttemptCountByUserAndTest,
-    getTestAttemptsHistory
+    getTestAttemptsHistory,
+    saveTestAttemptAnswers, 
+    getWrongAnswersDetail
 };

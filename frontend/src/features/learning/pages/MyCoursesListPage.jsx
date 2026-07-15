@@ -29,19 +29,19 @@ const DEFAULT_FILTERS = {
 };
 
 
-
+//Xác định hiển thị dòng khóa học là "completed" hay "learning"
 function getRowVariant(course) {
   if (course.enrollmentStatus === "completed") return "completed";
   return "learning";
 }
-
+//Kiểm tra trạng thái khóa học khớp với tab được lựa chọn.
 function matchesStatusTab(course, tab) {
   if (tab === "all") return true;
   if (tab === "learning") return course.enrollmentStatus === "learning";
   if (tab === "completed") return course.enrollmentStatus === "completed";
   return true;
 }
-
+// Xác định xem có bất kỳ bộ lọc nào đang được kích hoạt hay không.
 function hasActiveFilters(filters, keyword = "") {
   return (
     Boolean(keyword) ||
@@ -49,7 +49,7 @@ function hasActiveFilters(filters, keyword = "") {
     filters.levels.length > 0
   );
 }
-
+// Kiểm tra trùng khớp từ khóa tìm kiếm trong tên khóa học, danh mục, hoặc giảng viên.
 function matchesKeyword(course, keyword) {
   if (!keyword) return true;
   const kw = keyword.toLowerCase();
@@ -59,7 +59,7 @@ function matchesKeyword(course, keyword) {
     (course.instructor?.toLowerCase().includes(kw) ?? false)
   );
 }
-
+//hiện khoá học dở và gần nhất
 function pickContinueCourse(courses) {
   const learning = courses
     .filter((c) => c.enrollmentStatus === "learning")
@@ -118,20 +118,14 @@ export default function MyCoursesListPage() {
     const getData = async () => {
       try {
         const rawUser = localStorage.getItem("user");
-
         console.log("RAW USER:", rawUser);
-
         if (!rawUser) {
           console.error("Chưa có user trong localStorage");
           return;
         }
-
         const user = JSON.parse(rawUser);
-
         console.log("PARSED USER:", user);
-
         const userId = user.userId || user.UserId || user.id || user.Id;
-
         const roleName = Array.isArray(user.roles)
           ? (
             typeof user.roles[0] === "string"
@@ -139,12 +133,10 @@ export default function MyCoursesListPage() {
               : user.roles[0]?.roleName || user.roles[0]?.RoleName
           )
           : user.roles || user.roleName || user.RoleName || user.role;
-
         console.log("SEND TO BACKEND:", {
           userId,
           roleName,
         });
-
         if (!userId || !roleName) {
           console.error("Thiếu userId hoặc roleName sau khi đọc localStorage", {
             userId,
@@ -153,7 +145,6 @@ export default function MyCoursesListPage() {
           });
           return;
         }
-
         const res = await fetch("http://localhost:5000/api/courses/my-courses", {
           method: "POST",
           headers: {
@@ -242,11 +233,11 @@ export default function MyCoursesListPage() {
     () => buildActiveFilterChips({ ...filters, keyword, statuses: [] }),
     [filters, keyword]
   );
-
+// Cập nhật trạng thái bộ lọc (state).
   const updateFilters = (patch) => {
     setFilters((prev) => ({ ...prev, ...patch }));
   };
-
+//Lọc danh sách khóa học dựa trên các bộ lọc và từ khóa tìm kiếm.
   const filteredCourses = useMemo(() => {
     let list = allCourses.filter((course) => matchesStatusTab(course, filters.statusTab));
 
@@ -261,12 +252,15 @@ export default function MyCoursesListPage() {
     }
 
     list.sort((a, b) => {
+      //Sắp xếp theo tiến độ học tập
       if (filters.sort === "progress") {
         return b.progressPercentage - a.progressPercentage;
       }
+      //Sắp xếp theo tên
       if (filters.sort === "name") {
         return a.courseName.localeCompare(b.courseName, "vi");
       }
+      // Sắp xếp mặc định / Gần đây nhất
       const orderA = a.lastActivityOrder ?? a.savedAtOrder ?? 99;
       const orderB = b.lastActivityOrder ?? b.savedAtOrder ?? 99;
       return orderA - orderB;
@@ -291,7 +285,7 @@ export default function MyCoursesListPage() {
   useEffect(() => {
     if (filters.page !== currentPage) updateFilters({ page: currentPage });
   }, [filters.page, currentPage]);
-
+// xoá  filter
   const handleRemoveFilterChip = (chip) => {
     if (chip.type === "keyword") {
       const next = new URLSearchParams(searchParams);
@@ -307,7 +301,7 @@ export default function MyCoursesListPage() {
       updateFilters({ levels: filters.levels.filter((v) => v !== chip.value), page: 1 });
     }
   };
-
+//Đưa tất cả bộ lọc và từ khóa về giá trị trống mặc định
   const handleResetFilters = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("keyword");
@@ -315,11 +309,11 @@ export default function MyCoursesListPage() {
     setSearchParams(next, { replace: true });
     updateFilters({ categories: [], levels: [], page: 1 });
   };
-
+//chuyển tới trang learning
   const handleLearningAction = (course) => {
     navigate(`/my-courses/${course.courseId}/learn`);
   };
-
+//hiển thị thông báo khi không có khoá học phùhop
   const renderEmptyState = () => (
     <Box sx={{ py: 7, textAlign: "center", borderRadius: 3, border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}` }}>
       <MenuBookOutlinedIcon sx={{ fontSize: 48, color: "primary.main", opacity: 0.3, mb: 1.5 }} />

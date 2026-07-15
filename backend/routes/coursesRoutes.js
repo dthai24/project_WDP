@@ -17,6 +17,8 @@ const {
     getStreak,
     getCourseComments,
     createCourseComment,
+
+
 } = require('../controllers/coursesController');
 
 
@@ -83,7 +85,6 @@ router.get('/:id/learning', getLearningPath);
 router.post('/:id/progress', updateProgress);
 // lay treak
 router.get("/streak", getStreak);
-module.exports = router;
 
 const studentTestController = require('../controllers/studentTestController');
 // Lấy thông tin giới thiệu bài thi (tên bài, thời gian, số câu...)
@@ -92,5 +93,6 @@ router.get('/:courseId/tests/:scope/meta', studentTestController.getTestMeta);
 router.post('/:courseId/tests/:scope/start', studentTestController.startTestAttempt);
 // Nộp bài thi (tính điểm, lưu trạng thái hoàn thành)
 router.post('/:courseId/tests/attempts/:attemptId/submit', studentTestController.submitTestAttempt);
-
-
+// Tạo đường dẫn API mới (bạn có thể đổi tên route theo ý thích)
+router.get('/attempts/:attemptId/wrong-answers', studentTestController.getWrongAnswersStats);
+module.exports = router;

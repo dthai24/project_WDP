@@ -220,7 +220,7 @@ export default function CourseCommentsSection({ courseId, isEnrolled = false, pr
         setComments(result.data.map(mapApiComment));
       }
     } catch {
-      // lờ đi nếu lỗi
+      // bỏ qua nếu lỗi
     } finally {
       setLoading(false);
     }

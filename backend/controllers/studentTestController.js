@@ -1,6 +1,6 @@
 const studentTestModel = require('../Models/studentTestModel');
-const questionBankModel = require('../Models/questionBankModel'); 
-const chapterQuizConfigService = require('../services/chapterQuizConfigService'); 
+const questionBankModel = require('../Models/questionBankModel');
+const chapterQuizConfigService = require('../services/chapterQuizConfigService');
 const courseModel = require('../models/coursesModel');
 
 async function checkPrerequisites(courseId, userId, scope, chapterId) {
@@ -18,7 +18,7 @@ async function checkPrerequisites(courseId, userId, scope, chapterId) {
                 modulesMap.get(row.PathId).lessons.push({ isCompleted: row.IsCompleted });
             }
         }
-        
+
         const modules = Array.from(modulesMap.values());
         for (let i = 0; i < modules.length; i++) {
             const mod = modules[i];
@@ -34,7 +34,7 @@ async function checkPrerequisites(courseId, userId, scope, chapterId) {
             if (targetMod) {
                 const targetIndex = modules.findIndex(m => m.id === Number(chapterId));
                 const isLocked = targetIndex > 0 ? !modules[targetIndex - 1].isCompleted : false;
-                
+
                 if (isLocked) {
                     prerequisitesMet = false;
                     prerequisiteBlockers.push("Chương này đang bị khóa do chưa hoàn thành chương trước đó.");
@@ -59,7 +59,7 @@ const getTestMeta = async (req, res) => {
         const { courseId, scope } = req.params;
         const chapterId = req.query.chapterId;
         const userId = req.headers['x-user-id'] || req.user?.userId || 1; // Lấy ID Học viên
-        
+
         const prereq = await checkPrerequisites(courseId, userId, scope, chapterId);
 
         let meta = {
@@ -84,14 +84,14 @@ const getTestMeta = async (req, res) => {
                 meta.timeLimitMinutes = configResult.config.timeLimitMinutes || 15;
                 meta.passingScore = configResult.config.passingScore || 70;
                 meta.maxAttempts = configResult.config.maxAttempts || 3;
-                
+
                 // 3. TÍNH TOÁN LƯỢT CÒN LẠI THEO THỜI GIAN THỰC
                 meta.remainingAttempts = Math.max(0, meta.maxAttempts - meta.attemptsUsed);
-                
+
                 let includedSkills = new Set();
                 const qConfigs = configResult.config.questionConfigs || [];
                 const hasConfig = qConfigs.some(c => c.sectionCount > 0 || (c.sectionQuestionCounts && c.sectionQuestionCounts.length > 0));
-                
+
                 // NẾU BÀI BỊ TẮT HOẶC CHƯA CẤU HÌNH -> Gom kỹ năng của các câu đang bật
                 if (!hasConfig) {
                     const sections = await questionBankModel.getSectionsByPath(courseId, chapterId);
@@ -118,7 +118,7 @@ const getTestMeta = async (req, res) => {
                         }
                     }
                 }
-                meta.skills = Array.from(includedSkills); 
+                meta.skills = Array.from(includedSkills);
             }
         }
         res.json({ ok: true, meta });
@@ -128,31 +128,31 @@ const getTestMeta = async (req, res) => {
 };
 const startTestAttempt = async (req, res) => {
     try {
-        const { courseId, scope } = req.params; 
+        const { courseId, scope } = req.params;
         const userId = req.headers['x-user-id'] || req.user?.userId || 1;
         let pathId = req.body.chapterId;
-        
+
         const prereq = await checkPrerequisites(courseId, userId, scope, pathId);
         if (!prereq.prerequisitesMet) {
             return res.status(403).json({ ok: false, message: prereq.prerequisiteBlockers.join(" ") });
         }
 
         let testId = null;
-        let config = {}; 
+        let config = {};
         if (scope === 'final') {
-            testId = 2; 
-            config = { timeLimitMinutes: req.body.timeLimitMinutes || 45 }; 
+            testId = 2;
+            config = { timeLimitMinutes: req.body.timeLimitMinutes || 45 };
         } else {
             if (!pathId) return res.status(400).json({ ok: false, message: "Thiếu chapterId" });
             testId = await studentTestModel.getTestIdByCourseAndPath(courseId, pathId);
             if (!testId) return res.status(404).json({ ok: false, message: "Giảng viên chưa tạo bài kiểm tra!" });
             const configResult = await chapterQuizConfigService.getChapterQuizConfig(courseId, pathId);
-            config = configResult.config || {}; 
+            config = configResult.config || {};
         }
         const timeLimitSeconds = (config.timeLimitMinutes || 15) * 60;
         const attempt = await studentTestModel.createTestAttempt(userId, testId, timeLimitSeconds);
         const sectionsData = await questionBankModel.getSectionsByPath(courseId, pathId);
-        
+
         let formattedSections = [];
         let totalQuestionsCount = 0;
         const qConfigs = config.questionConfigs || [];
@@ -179,10 +179,10 @@ const startTestAttempt = async (req, res) => {
             let questions = Array.from(questionsMap.values()).map(q => {
                 q.isMultipleChoice = q.correctCount > 1; delete q.correctCount; return q;
             });
-            
+
             questions = questions.sort(() => 0.5 - Math.random());
             if (limitCount !== null) questions = questions.slice(0, limitCount);
-            
+
             if (questions.length > 0) {
                 formattedSections.push({
                     sectionId: sec.SectionId.toString(),
@@ -207,9 +207,9 @@ const startTestAttempt = async (req, res) => {
                 if (pickCount <= 0) continue;
                 let skillSections = sectionsData.filter(s => s.SkillType === skill);
                 skillSections = skillSections.sort(() => 0.5 - Math.random()).slice(0, pickCount);
-                
+
                 for (const sec of skillSections) {
-                    await fetchSectionQuestions(sec, null); 
+                    await fetchSectionQuestions(sec, null);
                 }
             }
             // 2. NHẶT TỪ VỰNG & NGỮ PHÁP (Cắt đúng số câu yêu cầu)
@@ -241,8 +241,8 @@ const startTestAttempt = async (req, res) => {
 const submitTestAttempt = async (req, res) => {
     try {
         const { courseId, attemptId } = req.params;
-        const { answers, timeSpentSeconds, totalQuestions, chapterId } = req.body; 
-        
+        const { answers, timeSpentSeconds, totalQuestions, chapterId } = req.body;
+
         const questionIds = Object.keys(answers || {}).map(id => Number(id)).filter(id => !isNaN(id));
         let correctCount = 0;
         const questionResults = [];
@@ -255,21 +255,21 @@ const submitTestAttempt = async (req, res) => {
                 FROM dbo.Question_Choices 
                 WHERE IsTrue = 1 AND QuestionId IN (${questionIds.join(',')})
             `);
-            
+
             const correctAnswersMap = {};
             result.recordset.forEach(row => {
                 if (!correctAnswersMap[row.QuestionId]) correctAnswersMap[row.QuestionId] = [];
                 correctAnswersMap[row.QuestionId].push(row.ChoiceId);
             });
-            
+
             for (const qId of questionIds) {
                 // Ép kiểu về String để tránh lỗi '1' !== 1
                 const userChoiceIds = Array.isArray(answers[qId]) ? answers[qId].map(String) : [String(answers[qId])];
                 const correctChoiceIds = (correctAnswersMap[qId] || []).map(String);
-                
+
                 let isCorrect = false;
                 let isBlank = false;
-                
+
                 // Kiểm tra xem có bị bỏ trống không (null, undefined, mảng rỗng)
                 if (userChoiceIds.length === 0 || (userChoiceIds.length === 1 && (userChoiceIds[0] === 'null' || userChoiceIds[0] === 'undefined' || !userChoiceIds[0]))) {
                     isBlank = true;
@@ -277,7 +277,7 @@ const submitTestAttempt = async (req, res) => {
                     isCorrect = correctChoiceIds.every(id => userChoiceIds.includes(id));
                     if (isCorrect) correctCount++;
                 }
-                
+
                 // Thêm kết quả chi tiết từng câu
                 questionResults.push({
                     questionId: Number(qId),
@@ -292,7 +292,7 @@ const submitTestAttempt = async (req, res) => {
         const totalQ = totalQuestions || questionIds.length || 1;
         const wrongCount = totalQ - correctCount;
         const percentage = Math.round((correctCount / totalQ) * 100);
-        
+
         // Lấy điểm đạt từ config Mentor
         let passingScore = 70;
         if (chapterId && courseId) {
@@ -304,7 +304,8 @@ const submitTestAttempt = async (req, res) => {
         const passed = percentage >= passingScore;
         const isPassBit = passed ? 1 : 0;
 
-        await studentTestModel.submitTestAttemptModel(attemptId, percentage, 'submitted', isPassBit); 
+        await studentTestModel.submitTestAttemptModel(attemptId, percentage, 'submitted', isPassBit);
+        await studentTestModel.saveTestAttemptAnswers(attemptId, questionResults);
 
         res.json({
             ok: true,
@@ -324,4 +325,76 @@ const submitTestAttempt = async (req, res) => {
         res.status(500).json({ ok: false, message: error.message });
     }
 };
-module.exports = { getTestMeta, startTestAttempt, submitTestAttempt };
+
+//tính toán câu sai
+const getWrongAnswersStats = async (req, res) => {
+    try {
+        const { attemptId } = req.params;
+        const allAnswers = await studentTestModel.getWrongAnswersDetail(attemptId);
+        
+        // Trải nghiệm người dùng: Nếu làm đúng 100%, trả về thông báo khen ngợi
+        if (!allAnswers || allAnswers.length === 0) {
+            return res.json({ ok: false, message: "Không tìm thấy dữ liệu lượt thi!" });
+        }
+        
+        // 1. Đếm tổng số câu hỏi (Dùng Set để không bị đếm trùng)
+        const uniqueQuestions = new Set(allAnswers.map(a => a.QuestionId));
+        const totalQuestionsCount = uniqueQuestions.size;
+        
+        // 2. Lọc ra CHỈ NHỮNG DÒNG BỊ ĐÁNH DẤU SAI (Dòng code này sẽ loại bỏ câu Futsal ĐÚNG của bạn)
+        const wrongAnswersRows = allAnswers.filter(a => a.IsCorrect === 0 || a.IsCorrect === false);
+
+        // 3. Gộp các đáp án của câu bị lặp (Ví dụ câu 53 có 2 đáp án sai)
+        const wrongQuestionsMap = new Map();
+        for (const row of wrongAnswersRows) {
+            if (!wrongQuestionsMap.has(row.QuestionId)) {
+                wrongQuestionsMap.set(row.QuestionId, { ...row, userChoices: [] });
+            }
+            wrongQuestionsMap.get(row.QuestionId).userChoices.push(row.UserChoiceText || 'Bỏ trống');
+        }
+        
+        // Chuyển lại thành mảng (Lúc này mỗi câu chỉ còn 1 dòng duy nhất)
+        const wrongAnswers = Array.from(wrongQuestionsMap.values());
+
+        // 4. Tạo khung sườn JSON chuẩn bị trả về cho Frontend
+        const stats = {
+            chapterId: allAnswers[0].ChapterId,
+            chapterName: allAnswers[0].ChapterName,
+            totalQuestions: totalQuestionsCount,
+            totalWrong: wrongAnswers.length, // Đã đếm chuẩn xác số lượng câu sai
+            sections: []
+        };
+        const sectionMap = new Map();
+
+        // 5. Chạy vòng lặp để nhét từng câu sai vào đúng cái Section của nó
+        for (const row of wrongAnswers) {
+            // Nếu Section này chưa có trong Map, thì tạo mới 1 cụm
+            if (!sectionMap.has(row.SectionId)) {
+                sectionMap.set(row.SectionId, {
+                    sectionId: row.SectionId,
+                    sectionTitle: row.SectionTitle,
+                    wrongCount: 0,
+                    wrongQuestions: []
+                });
+            }
+
+            // Tìm đúng cụm Section đó và nhét câu hỏi sai này vào
+            const sec = sectionMap.get(row.SectionId);
+            sec.wrongCount++; // Đếm số câu sai +1
+            sec.wrongQuestions.push({
+                questionId: row.QuestionId,
+                questionTitle: row.QuestionTitle,
+                // Gộp các đáp án thành 1 chuỗi với câu nhiều đáp án
+                userChoiceText: row.userChoices.join(', ') 
+            });
+        }
+
+        // Chuyển Map thành Array để Frontend dễ đọc hơn
+        stats.sections = Array.from(sectionMap.values());
+
+        res.json({ ok: true, data: stats });
+    } catch (error) {
+        res.status(500).json({ ok: false, message: error.message });
+    }
+};
+module.exports = { getTestMeta, startTestAttempt, submitTestAttempt, getWrongAnswersStats };
