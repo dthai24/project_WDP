@@ -95,6 +95,10 @@ const toggleUserActive = async (req, res) => {
     if (IsActive === undefined) {
       return res.status(400).json({ success: false, message: 'Thiếu trạng thái IsActive' });
     }
+    // Không cho admin tự khóa tài khoản của mình
+    if (userId === req.user.userId && IsActive === false) {
+      return res.status(400).json({ success: false, message: 'Bạn không thể tự khóa tài khoản của chính mình' });
+    }
     await adminModel.toggleUserActive(userId, IsActive);
     return res.json({ success: true, message: 'Cập nhật trạng thái tài khoản thành công' });
   } catch (err) {

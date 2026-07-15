@@ -25,11 +25,13 @@ import {
   resetAdminAccountListParams,
 } from '@/features/admin/utils/adminAccountListParams';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
 const PAGE_SIZE = ADMIN_ACCOUNT_LIST_PAGE_SIZE;
 
 export default function AdminAccountManagementPage() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -245,6 +247,7 @@ export default function AdminAccountManagementPage() {
         account={editingAccount}
         onSubmit={handleFormSubmit}
         saving={saving}
+        currentUserId={user?.userId}
       />
 
       <AdminAccountCreateDialog

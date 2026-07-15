@@ -172,10 +172,7 @@ export default function App() {
           element={
             <ProtectedRoute
               allowedRoles={['Student']}
-              roleRedirects={{
-                ...STUDENT_SHELL_BLOCK_REDIRECTS,
-                Admin: '/admin/profile',
-              }}
+              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
             >
               <ProfilePage />
             </ProtectedRoute>
@@ -201,7 +198,6 @@ export default function App() {
         <Route path="news/:newsId/edit/content" element={<AdminNewsEditContentPage />} />
         <Route path="news/:newsId/edit" element={<AdminNewsEditPage />} />
         <Route path="news" element={<AdminNewsManagementPage />} />
-        <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<AdminShellFallbackRedirect />} />
       </Route>
 

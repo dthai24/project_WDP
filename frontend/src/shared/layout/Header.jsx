@@ -94,6 +94,7 @@ export default function Header({
   logoTo = "/home",
   profilePath = "/profile",
   showMyCoursesButton = true,
+  hideProfileMenuItem = false,
 }) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -641,7 +642,7 @@ export default function Header({
 
                   <Divider sx={{ my: 0.5, borderColor: "rgba(8,145,178,0.08)" }} />
 
-                  {USER_MENU_ITEMS.map((item) => {
+                  {!hideProfileMenuItem && USER_MENU_ITEMS.map((item) => {
                     const Icon = item.icon;
                     return (
                       <MenuItem
