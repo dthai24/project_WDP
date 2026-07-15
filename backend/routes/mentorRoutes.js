@@ -29,6 +29,8 @@ const {
 const {
     getChapterQuizConfig,
     saveChapterQuizConfig,
+    getCourseQuizConfig,
+    saveCourseQuizConfig,
     listChapterQuizConfigsByCourse,
 } = require('../controllers/chapterQuizConfigController');
 
@@ -51,6 +53,8 @@ router.patch('/courses/:courseId/comments/:commentId/reply', optionalAuth, reply
 router.patch('/courses/:courseId', optionalAuth, updateCourse);
 router.put('/courses/:courseId/content', optionalAuth, updateCourseContent);
 router.get('/courses/:courseId/chapter-quiz-configs', optionalAuth, listChapterQuizConfigsByCourse);
+router.get('/courses/:courseId/course-quiz-config', optionalAuth, getCourseQuizConfig);
+router.put('/courses/:courseId/course-quiz-config', optionalAuth, saveCourseQuizConfig);
 router.get('/courses/:courseId/paths/:pathId/chapter-quiz-config', optionalAuth, getChapterQuizConfig);
 router.put('/courses/:courseId/paths/:pathId/chapter-quiz-config', optionalAuth, saveChapterQuizConfig);
 router.post('/courses/:courseId/paths', optionalAuth, createPath);

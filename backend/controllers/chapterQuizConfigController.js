@@ -132,8 +132,80 @@ const listChapterQuizConfigsByCourse = async (req, res) => {
   }
 };
 
+const getCourseQuizConfig = async (req, res) => {
+  try {
+    const courseId = parsePositiveInt(req.params.courseId, 'courseId');
+    const instructorId = req.user?.userId ?? null;
+
+    await assertMentorOwnsCourse(courseId, instructorId);
+
+    const result = await chapterQuizConfigService.getCourseQuizConfig(courseId);
+    if (!result.ok) {
+      return res.status(result.status ?? 400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        config: result.config,
+        courseMeta: result.courseMeta ?? null,
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, 'getCourseQuizConfig error:');
+  }
+};
+
+const saveCourseQuizConfig = async (req, res) => {
+  try {
+    const courseId = parsePositiveInt(req.params.courseId, 'courseId');
+    const instructorId = req.user?.userId ?? null;
+    const config = req.body?.config ?? req.body ?? {};
+
+    const ownership = await assertMentorOwnsCourse(courseId, instructorId);
+    if (!ownership.ok) {
+      return res.status(ownership.status).json({ success: false, message: ownership.message });
+    }
+
+    if (!instructorId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Thiếu thông tin mentor (x-user-id).',
+      });
+    }
+
+    const result = await chapterQuizConfigService.saveCourseQuizConfig(
+      courseId,
+      config,
+      instructorId,
+    );
+
+    if (!result.ok) {
+      return res.status(result.status ?? 400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đã lưu thiết lập kiểm tra toàn khóa.',
+      data: {
+        config: result.config,
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, 'saveCourseQuizConfig error:');
+  }
+};
+
 module.exports = {
   getChapterQuizConfig,
   saveChapterQuizConfig,
+  getCourseQuizConfig,
+  saveCourseQuizConfig,
   listChapterQuizConfigsByCourse,
 };

@@ -65,13 +65,25 @@ const getTestIdByCourseAndPath = async (courseId, pathId) => {
     // Nếu có bài test, trả về ID. Nếu không có trả về null
     return result.recordset.length > 0 ? result.recordset[0].TestId : null;
 };
+
+const getTestIdByCourseForFinal = async (courseId) => {
+    const request = new sql.Request();
+    request.input('courseId', sql.Int, Number(courseId));
+    const result = await request.query(`
+        SELECT TOP 1 TestId
+        FROM dbo.Tests
+        WHERE CourseId = @courseId
+          AND ISNULL(IsCourseTest, 0) = 1
+    `);
+    return result.recordset.length > 0 ? result.recordset[0].TestId : null;
+};
 // Lấy thông tin TestId, CourseId, PathId từ AttemptId
 
 const getTestInfoByAttempt = async (attemptId) => {
     const request = new sql.Request();
     request.input('attemptId', sql.Int, Number(attemptId));
     const result = await request.query(`
-        SELECT t.TestId, t.CourseId, t.PathId 
+        SELECT t.TestId, t.CourseId, t.PathId, ISNULL(t.IsCourseTest, 0) AS IsCourseTest
         FROM dbo.Test_Attempts ta
         INNER JOIN dbo.Tests t ON t.TestId = ta.TestId
         WHERE ta.AttemptId = @attemptId
@@ -91,6 +103,38 @@ const getAttemptCountByUserAndTest = async (userId, testId) => {
         WHERE UserId = @userId AND TestId = @testId
     `);
     return result.recordset[0].count;
+};
+
+const getSubmittedAttemptCountByUserAndTest = async (userId, testId) => {
+    const request = new sql.Request();
+    request.input('userId', sql.Int, Number(userId));
+    request.input('testId', sql.Int, Number(testId));
+
+    const result = await request.query(`
+        SELECT COUNT(*) AS count
+        FROM dbo.Test_Attempts
+        WHERE UserId = @userId
+          AND TestId = @testId
+          AND Status = 'submitted'
+    `);
+    return Number(result.recordset[0]?.count ?? 0);
+};
+
+const getLatestSubmittedAttemptId = async (userId, testId) => {
+    const request = new sql.Request();
+    request.input('userId', sql.Int, Number(userId));
+    request.input('testId', sql.Int, Number(testId));
+
+    const result = await request.query(`
+        SELECT TOP 1 AttemptId
+        FROM dbo.Test_Attempts
+        WHERE UserId = @userId
+          AND TestId = @testId
+          AND Status = 'submitted'
+        ORDER BY AttemptId DESC
+    `);
+
+    return result.recordset[0]?.AttemptId ?? null;
 };
 // Lưu chi tiết lịch sử làm bài của học viên vào Database.
 const saveTestAttemptAnswers = async (attemptId, questionResults) => {
@@ -157,13 +201,74 @@ const getWrongAnswersDetail = async (attemptId) => {
     return result.recordset;
 };
 
+const saveAttemptSectionStats = async (attemptId, courseId, rows = []) => {
+    if (!rows.length) return true;
+
+    const request = new sql.Request();
+    const safeAttemptId = Number(attemptId);
+    const safeCourseId = Number(courseId);
+
+    await request.query(`
+        DELETE FROM dbo.Test_Attempt_Section_Stats
+        WHERE AttemptId = ${safeAttemptId}
+    `);
+
+    const values = rows.map((row) => {
+        const title = String(row.sectionTitle ?? '')
+            .replace(/'/g, "''")
+            .slice(0, 255);
+        const titleSql = title ? `N'${title}'` : 'NULL';
+
+        return `(${safeAttemptId}, ${safeCourseId}, ${Number(row.pathId)}, ${Number(row.typeId)}, '${String(row.skillType).replace(/'/g, "''")}', ${Number(row.sectionId)}, ${titleSql}, ${Number(row.correctCount) || 0}, ${Number(row.wrongCount) || 0}, ${Number(row.totalCount) || 0})`;
+    });
+
+    await request.query(`
+        INSERT INTO dbo.Test_Attempt_Section_Stats (
+            AttemptId, CourseId, PathId, TypeId, SkillType, SectionId, SectionTitle,
+            CorrectCount, WrongCount, TotalCount
+        )
+        VALUES ${values.join(', ')}
+    `);
+
+    return true;
+};
+
+const getAttemptSectionStats = async (attemptId) => {
+    const request = new sql.Request();
+    request.input('attemptId', sql.Int, Number(attemptId));
+    const result = await request.query(`
+        SELECT
+            AttemptSectionStatId,
+            AttemptId,
+            CourseId,
+            PathId,
+            TypeId,
+            SkillType,
+            SectionId,
+            SectionTitle,
+            CorrectCount,
+            WrongCount,
+            TotalCount,
+            CreatedAt
+        FROM dbo.Test_Attempt_Section_Stats
+        WHERE AttemptId = @attemptId
+        ORDER BY TypeId, PathId, SectionId
+    `);
+    return result.recordset;
+};
+
 module.exports = {
     createTestAttempt,
     submitTestAttemptModel,
-    getTestIdByCourseAndPath,   
+    getTestIdByCourseAndPath,
+    getTestIdByCourseForFinal,
     getTestInfoByAttempt,
     getAttemptCountByUserAndTest,
+    getSubmittedAttemptCountByUserAndTest,
+    getLatestSubmittedAttemptId,
     getTestAttemptsHistory,
-    saveTestAttemptAnswers, 
-    getWrongAnswersDetail
+    saveTestAttemptAnswers,
+    getWrongAnswersDetail,
+    saveAttemptSectionStats,
+    getAttemptSectionStats,
 };

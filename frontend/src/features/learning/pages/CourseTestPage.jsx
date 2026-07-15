@@ -19,13 +19,21 @@ import {
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import TestSkillSection from '@/features/learning/components/test/TestSkillSection';
 import TestSectionToolbar from '@/features/learning/components/test/TestSectionToolbar';
+import TestSectionNav from '@/features/learning/components/test/TestSectionNav';
 import {
   getTestMeta,
   startTestAttempt,
   submitTestAttempt,
+  getFinalTestRecommendationPreview,
 } from '@/features/learning/services/courseTestService';
 import TestResultPanel from '@/features/learning/components/test/TestResultPanel';
-import { flattenPaperQuestions, getSectionQuestionGroups } from '@/features/learning/utils/courseTestPaperUtils';
+import TestRecommendationPreviewPanel from '@/features/learning/components/test/TestRecommendationPreviewPanel';
+import {
+  flattenPaperQuestions,
+  getSectionQuestionGroups,
+  normalizeTestPaper,
+} from '@/features/learning/utils/courseTestPaperUtils';
+import { buildPaperSectionsPayload } from '@/features/learning/utils/testAttemptSectionStatsPayload';
 import { TEST_LEAVE_DIALOG, useTestLeaveGuard } from '@/features/learning/hooks/useTestLeaveGuard';
 import { TEST_MUTED, TEST_TEXT } from '@/features/learning/components/test/testTheme';
 
@@ -58,8 +66,11 @@ export default function CourseTestPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [activeSkillType, setActiveSkillType] = useState(TEST_SKILL_LISTENING);
+  const [activeSkillType, setActiveSkillType] = useState(null);
   const [activeGroupIndex, setActiveGroupIndex] = useState(0);
+  const [recommendationPreview, setRecommendationPreview] = useState(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState('');
 
   const autoSubmittedRef = useRef(false);
   const submitInFlightRef = useRef(false);
@@ -67,9 +78,14 @@ export default function CourseTestPage() {
   const normalizedScope = scope === 'final' ? 'final' : 'chapter';
   const resolvedChapterId = normalizedScope === 'final' ? null : chapterId;
 
-  const allQuestions = useMemo(
-    () => flattenPaperQuestions(paper),
+  const displayPaper = useMemo(
+    () => normalizeTestPaper(paper),
     [paper],
+  );
+
+  const allQuestions = useMemo(
+    () => flattenPaperQuestions(displayPaper),
+    [displayPaper],
   );
 
   const answeredCount = useMemo(
@@ -80,11 +96,13 @@ export default function CourseTestPage() {
   const unansweredCount = allQuestions.length - answeredCount;
 
   const activeSection = useMemo(
-    () => (paper?.sections ?? []).find((section) => section.skillType === activeSkillType) ?? null,
-    [paper, activeSkillType],
+    () => (displayPaper?.sections ?? []).find((section) => section.skillType === activeSkillType) ?? null,
+    [displayPaper, activeSkillType],
   );
 
   const activeSectionColors = TEST_SKILL_CHIP_COLORS[activeSkillType]
+    ?? TEST_SKILL_CHIP_COLORS[meta?.skills?.[0]]
+    ?? TEST_SKILL_CHIP_COLORS[displayPaper?.sections?.[0]?.skillType]
     ?? TEST_SKILL_CHIP_COLORS[TEST_SKILL_LISTENING];
 
   const questionGroups = useMemo(
@@ -93,8 +111,6 @@ export default function CourseTestPage() {
   );
 
   const activeGroup = questionGroups[activeGroupIndex] ?? null;
-  const canGoGroupBack = activeGroupIndex > 0;
-  const canGoGroupNext = activeGroupIndex < questionGroups.length - 1;
 
   useEffect(() => {
     setActiveGroupIndex(0);
@@ -135,6 +151,31 @@ export default function CourseTestPage() {
     loadMeta();
   }, [loadMeta]);
 
+  useEffect(() => {
+    if (normalizedScope !== 'final' || pageState !== PAGE_STATE.INTRO) return undefined;
+
+    let cancelled = false;
+    setRecommendationLoading(true);
+    setRecommendationError('');
+
+    (async () => {
+      const res = await getFinalTestRecommendationPreview(courseId);
+      if (cancelled) return;
+
+      setRecommendationLoading(false);
+      if (!res.ok) {
+        setRecommendationError(res.message ?? 'Không tải được thống kê đề xuất.');
+        setRecommendationPreview(null);
+        return;
+      }
+      setRecommendationPreview(res.preview);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId, normalizedScope, pageState]);
+
   /**
    * Cập nhật danh sách câu trả lời của học viên khi họ chọn hoặc thay đổi phương án của một câu hỏi.
    */
@@ -156,7 +197,19 @@ export default function CourseTestPage() {
     setConfirmSubmitOpen(false);
 
     const timeSpentSeconds = totalSeconds - remainingSeconds;
-    const res = await submitTestAttempt(courseId, resolvedChapterId, attempt.attemptId, answers, timeSpentSeconds, allQuestions.length);
+    const paperSections = buildPaperSectionsPayload(displayPaper, resolvedChapterId);
+    const res = await submitTestAttempt(
+      courseId,
+      resolvedChapterId,
+      attempt.attemptId,
+      answers,
+      timeSpentSeconds,
+      allQuestions.length,
+      {
+        scope: normalizedScope,
+        paperSections,
+      },
+    );
 
     submitInFlightRef.current = false;
 
@@ -171,7 +224,7 @@ export default function CourseTestPage() {
     setResult(res.result);
     allowLeave();
     setPageState(PAGE_STATE.RESULT);
-  }, [attempt, answers, allowLeave]);
+  }, [attempt, answers, allowLeave, courseId, resolvedChapterId, displayPaper, normalizedScope, allQuestions.length, totalSeconds, remainingSeconds]);
 
   useEffect(() => {
     if (pageState !== PAGE_STATE.IN_PROGRESS || !attempt?.attemptId) return undefined;
@@ -213,11 +266,15 @@ export default function CourseTestPage() {
     }
 
     setMeta(res.meta);
-    setPaper(res.paper);
+    const normalizedPaper = normalizeTestPaper(res.paper);
+    setPaper(normalizedPaper);
     setAttempt(res.attempt);
     setAnswers({});
     setResult(null);
-    setActiveSkillType(res.paper?.sections?.[0]?.skillType ?? TEST_SKILL_LISTENING);
+    const initialSkill = res.meta?.skills?.[0]
+      ?? normalizedPaper?.sections?.[0]?.skillType
+      ?? null;
+    setActiveSkillType(initialSkill);
     setActiveGroupIndex(0);
     setRemainingSeconds(res.attempt.remainingSeconds ?? res.meta.timeLimitMinutes * 60);
     setTotalSeconds((res.meta.timeLimitMinutes ?? res.attempt.timeLimitMinutes ?? 15) * 60);
@@ -313,16 +370,25 @@ export default function CourseTestPage() {
 
       {/* Màn hình giới thiệu thông tin bài thi trước khi bắt đầu (tên bài, thời gian, số câu, điểm tối thiểu...) */}
       {pageState === PAGE_STATE.INTRO && (
-        <TestIntroPanel
-          meta={meta}
-          loading={starting}
-          onStart={handleStart}
-          onBack={handleBackToLearn}
-        />
+        <>
+          <TestIntroPanel
+            meta={meta}
+            loading={starting}
+            onStart={handleStart}
+            onBack={handleBackToLearn}
+          />
+          {normalizedScope === 'final' && (
+            <TestRecommendationPreviewPanel
+              preview={recommendationPreview}
+              loading={recommendationLoading}
+              errorMessage={recommendationError}
+            />
+          )}
+        </>
       )}
 
       {/* Màn hình phòng thi (khi đang làm bài hoặc đang nộp bài) */}
-      {(pageState === PAGE_STATE.IN_PROGRESS || pageState === PAGE_STATE.SUBMITTING) && paper && (
+      {(pageState === PAGE_STATE.IN_PROGRESS || pageState === PAGE_STATE.SUBMITTING) && displayPaper && (
         <>
           {/* Thanh tiêu đề thi chứa tên bài, đồng hồ đếm ngược và nút nộp bài */}
           <TestHeader
@@ -345,7 +411,8 @@ export default function CourseTestPage() {
           >
             {/* Thanh menu bên trái — Nghe / Đọc / Từ vựng–Ngữ pháp */}
             <TestSkillNav
-              sections={paper.sections ?? []}
+              sections={displayPaper.sections ?? []}
+              configuredSkillTypes={meta?.skills ?? []}
               activeSkillType={activeSkillType}
               answers={answers}
               onSelect={setActiveSkillType}
@@ -355,25 +422,23 @@ export default function CourseTestPage() {
             <Box sx={{ flex: 1, minWidth: 0 }}>
               {activeSection && activeGroup && (
                 <>
-                  {/* Thanh điều khiển nhóm câu hỏi đang hiển thị (nhóm 1/3...) kèm nút chuyển trang trước/sau */}
+                  {questionGroups.length > 1 && (
+                    <TestSectionNav
+                      groups={questionGroups}
+                      activeIndex={activeGroupIndex}
+                      answers={answers}
+                      accentColor={activeSectionColors.color}
+                      accentBg={activeSectionColors.bg}
+                      onSelect={setActiveGroupIndex}
+                    />
+                  )}
+
                   <TestSectionToolbar
                     title={SKILL_SHORT_LABELS[activeSection.skillType] ?? activeSection.displayName}
-                    groupLabel={
-                      questionGroups.length > 1
-                        ? `Nhóm ${activeGroupIndex + 1}/${questionGroups.length}: ${activeGroup.displayName}`
-                        : activeGroup.displayName
-                    }
+                    groupLabel={activeGroup.displayName}
                     groupMeta={`${activeGroup.questions?.length ?? 0} câu`}
                     accentColor={activeSectionColors.color}
                     accentBg={activeSectionColors.bg}
-                    canGoBack={canGoGroupBack}
-                    canGoNext={canGoGroupNext}
-                    onBack={() => setActiveGroupIndex((prev) => Math.max(0, prev - 1))}
-                    onNext={() =>
-                      setActiveGroupIndex((prev) =>
-                        Math.min(questionGroups.length - 1, prev + 1),
-                      )
-                    }
                   />
 
                   {/* Danh sách các câu hỏi cụ thể và các phương án chọn lựa trắc nghiệm */}
@@ -396,7 +461,7 @@ export default function CourseTestPage() {
         <TestResultPanel
           meta={meta}
           result={result}
-          paper={paper}
+          paper={displayPaper ?? paper}
           onRetry={handleRetry}
           onBack={handleBackToLearn}
         />

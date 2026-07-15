@@ -20,9 +20,10 @@ import {
   evaluateQuizPrerequisites,
 } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import {
-  buildTestPaper,
+  normalizeTestPaper,
   gradeTestAnswers,
 } from '@/features/learning/utils/courseTestPaperUtils';
+import { getConfiguredSkillTypes } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import {
   createDemoTestMeta,
   createDemoTestPaper,
@@ -213,55 +214,107 @@ function buildDemoGradingQuestions(paper) {
   );
 }
 
-// 1. Lấy thông tin bài kiểm tra
+function enrichMetaWithConfig(meta = {}, config = {}, paper = null) {
+  const configuredSkills = getConfiguredSkillTypes(config);
+  const resolvedSkills = configuredSkills.length > 0
+    ? configuredSkills
+    : (meta.skills ?? []);
+  const totalQuestions = paper?.totalQuestions
+    ?? meta.totalQuestions
+    ?? getChapterQuizConfigTotal(config);
+
+  return {
+    ...meta,
+    skills: resolvedSkills,
+    totalQuestions,
+    title: config?.title || meta.title,
+  };
+}
+
 export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   try {
-    // Nếu là Toàn khóa thì mượn LocalStorage của Mentor
+    const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
+
     if (scope === 'final') {
-      const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
       if (!configRes.ok) return configRes;
-      let finalMeta = buildMetaFromConfig(configRes.config, scope, { courseId, chapterId, ...meta });
-      return { ok: true, meta: finalMeta };
+      const finalMeta = buildMetaFromConfig(configRes.config, scope, { courseId, chapterId, ...meta });
+      return { ok: true, meta: enrichMetaWithConfig(finalMeta, configRes.config) };
     }
-    // Nếu là bài Chương thì gọi API chuẩn của Học sinh (Không bị lỗi 403)
+
     const url = `${API_BASE}/courses/${courseId}/tests/${scope}/meta`;
     const { data } = await axios.get(url, { params: { chapterId }, headers: getAuthHeaders() });
-    return data; 
+
+    if (!data?.ok) return data;
+
+    return {
+      ...data,
+      meta: configRes.ok
+        ? enrichMetaWithConfig(data.meta, configRes.config)
+        : data.meta,
+    };
   } catch (error) {
     console.error('getTestMeta error:', error);
     return { ok: false, message: 'Không tải được thông tin bài kiểm tra.' };
   }
 }
 
-// 2. Bắt đầu làm bài (Backend sẽ random câu hỏi từ Question Bank và trả về đề)
-
-// 2. Bắt đầu làm bài (Backend sẽ random câu hỏi từ Question Bank và trả về đề)
+export async function getFinalTestRecommendationPreview(courseId) {
+  try {
+    const url = `${API_BASE}/courses/${courseId}/tests/final/recommendation-preview`;
+    const { data } = await axios.get(url, { headers: getAuthHeaders() });
+    if (!data?.ok) {
+      return { ok: false, message: data?.message ?? 'Không tải được thống kê đề xuất.' };
+    }
+    return { ok: true, preview: data.data };
+  } catch (error) {
+    console.error('getFinalTestRecommendationPreview error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải thống kê đề xuất.',
+    };
+  }
+}
 
 export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
   try {
     let body = { chapterId };
+    const configResult = await loadQuizConfig(courseId, scope, chapterId, meta);
+    const config = configResult.ok ? configResult.config : null;
+
     if (scope === 'final') {
-      const configResult = await loadQuizConfig(courseId, scope, chapterId, meta);
-      const config = configResult.config || {};
-      body.timeLimitMinutes = config.timeLimitMinutes || 45;
-      body.sources = config.sources || [];
+      const finalConfig = config || {};
+      body.timeLimitMinutes = finalConfig.timeLimitMinutes || 45;
+      body.sources = finalConfig.sources || [];
     }
+
     const url = `${API_BASE}/courses/${courseId}/tests/${scope}/start`;
     const { data } = await axios.post(url, body, { headers: getAuthHeaders() });
-    
+
     if (!data.ok) return data;
-    // DÒNG QUAN TRỌNG NHẤT: Gọi lại getTestMeta để lấy đầy đủ gói thông tin meta đưa cho React
+
+    const paper = data.paper ? normalizeTestPaper(data.paper) : null;
+
     const metaRes = await getTestMeta(courseId, scope, chapterId, meta);
+    const resolvedMeta = enrichMetaWithConfig(
+      metaRes.ok ? metaRes.meta : data.meta,
+      config,
+      paper,
+    );
+
+    if (data.meta?.recommendation) {
+      resolvedMeta.recommendation = data.meta.recommendation;
+    }
+
     return {
       ok: true,
-      meta: metaRes.ok ? metaRes.meta : data.meta, // TRẢ VỀ META ĐỂ REACT KHÔNG BỊ XÓA TRẮNG UI
+      meta: resolvedMeta,
       attempt: {
         attemptId: data.attempt.attemptId,
         expiresAt: data.attempt.expiresAt,
-        timeLimitMinutes: data.meta?.timeLimitMinutes || body.timeLimitMinutes, 
+        timeLimitMinutes: resolvedMeta?.timeLimitMinutes || body.timeLimitMinutes,
         status: 'in_progress',
       },
-      paper: data.paper,
+      paper,
     };
   } catch (error) {
     console.error('startTestAttempt error:', error);
@@ -270,12 +323,27 @@ export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
 }
 
 // 3. Nộp bài (Gửi đáp án xuống Backend chấm điểm)
-export async function submitTestAttempt(courseId, chapterId, attemptId, answers, timeSpentSeconds, totalQuestions) {
+export async function submitTestAttempt(
+  courseId,
+  chapterId,
+  attemptId,
+  answers,
+  timeSpentSeconds,
+  totalQuestions,
+  options = {},
+) {
   try {
     const url = `${API_BASE}/courses/${courseId}/tests/attempts/${attemptId}/submit`;
     const { data } = await axios.post(
       url,
-      { answers, timeSpentSeconds, chapterId, totalQuestions },
+      {
+        answers,
+        timeSpentSeconds,
+        chapterId,
+        totalQuestions,
+        scope: options.scope ?? 'chapter',
+        paperSections: options.paperSections ?? [],
+      },
       { headers: getAuthHeaders() }
     );
     return data;

@@ -2,6 +2,9 @@ const studentTestModel = require('../Models/studentTestModel');
 const questionBankModel = require('../Models/questionBankModel');
 const chapterQuizConfigService = require('../services/chapterQuizConfigService');
 const courseModel = require('../models/coursesModel');
+const studentTestPaperService = require('../services/studentTestPaperService');
+const courseTestRecommendationService = require('../services/courseTestRecommendationService');
+const testAttemptSectionStatsService = require('../services/testAttemptSectionStatsService');
 
 async function checkPrerequisites(courseId, userId, scope, chapterId) {
     const learningPath = await courseModel.getCourseLearningPath(courseId, userId);
@@ -88,37 +91,30 @@ const getTestMeta = async (req, res) => {
                 // 3. TÍNH TOÁN LƯỢT CÒN LẠI THEO THỜI GIAN THỰC
                 meta.remainingAttempts = Math.max(0, meta.maxAttempts - meta.attemptsUsed);
 
-                let includedSkills = new Set();
-                const qConfigs = configResult.config.questionConfigs || [];
-                const hasConfig = qConfigs.some(c => c.sectionCount > 0 || (c.sectionQuestionCounts && c.sectionQuestionCounts.length > 0));
-
-                // NẾU BÀI BỊ TẮT HOẶC CHƯA CẤU HÌNH -> Gom kỹ năng của các câu đang bật
-                if (!hasConfig) {
-                    const sections = await questionBankModel.getSectionsByPath(courseId, chapterId);
-                    for (const s of sections) {
-                        const raw = await questionBankModel.getQuestionsBySection(s.SectionId);
-                        const unique = new Set(raw.filter(r => r.IsUseForTest !== false && r.IsUseForTest !== 0).map(r => r.QuestionId));
-                        if (unique.size > 0) includedSkills.add(s.SkillType);
-                    }
-                } else {
-                    for (const qc of qConfigs) {
-                        if (qc.part === 'VOCABULARY') {
-                            const count = (qc.sectionQuestionCounts || []).reduce((sum, item) => sum + (item.questionCount || 0), 0);
-                            if (count > 0) includedSkills.add('VOCABULARY');
-                        } else if (qc.sectionCount > 0) {
-                            const sections = await questionBankModel.getSectionsByPath(courseId, chapterId);
-                            const skillSecs = sections.filter(s => s.SkillType === qc.part).slice(0, qc.sectionCount);
-                            let partHasQuestions = false;
-                            for (const s of skillSecs) {
-                                const raw = await questionBankModel.getQuestionsBySection(s.SectionId);
-                                const unique = new Set(raw.filter(r => r.IsUseForTest !== false && r.IsUseForTest !== 0).map(r => r.QuestionId));
-                                if (unique.size > 0) { partHasQuestions = true; break; }
-                            }
-                            if (partHasQuestions) includedSkills.add(qc.part);
-                        }
-                    }
+                if (studentTestPaperService.hasConfiguredQuizSources(configResult.config)) {
+                    meta.skills = studentTestPaperService.getConfiguredSkillTypes(configResult.config);
                 }
-                meta.skills = Array.from(includedSkills);
+            }
+        } else if (scope === 'final') {
+            const configResult = await chapterQuizConfigService.getCourseQuizConfig(courseId);
+            if (configResult.ok && configResult.config) {
+                meta.title = configResult.config.title || meta.title;
+                meta.timeLimitMinutes = configResult.config.timeLimitMinutes || 45;
+                meta.passingScore = configResult.config.passingScore || 70;
+                meta.maxAttempts = configResult.config.maxAttempts || 3;
+                meta.enabled = configResult.config.enabled !== false;
+
+                const testId = configResult.config.id
+                    ?? await studentTestModel.getTestIdByCourseForFinal(courseId);
+                if (testId) {
+                    meta.attemptsUsed = await studentTestModel.getAttemptCountByUserAndTest(userId, testId);
+                    meta.history = await studentTestModel.getTestAttemptsHistory(userId, testId);
+                }
+                meta.remainingAttempts = Math.max(0, meta.maxAttempts - meta.attemptsUsed);
+
+                if (studentTestPaperService.hasConfiguredQuizSources(configResult.config)) {
+                    meta.skills = studentTestPaperService.getConfiguredSkillTypes(configResult.config);
+                }
             }
         }
         res.json({ ok: true, meta });
@@ -139,97 +135,121 @@ const startTestAttempt = async (req, res) => {
 
         let testId = null;
         let config = {};
+        let paper = null;
+
         if (scope === 'final') {
-            testId = 2;
-            config = { timeLimitMinutes: req.body.timeLimitMinutes || 45 };
+            const configResult = await chapterQuizConfigService.getCourseQuizConfig(courseId);
+            if (!configResult.ok) {
+                return res.status(400).json({ ok: false, message: configResult.message });
+            }
+            if (!configResult.config?.enabled) {
+                return res.status(400).json({
+                    ok: false,
+                    message: 'Bài kiểm tra toàn khóa chưa được bật.',
+                });
+            }
+
+            config = configResult.config;
+            testId = config.id ?? await studentTestModel.getTestIdByCourseForFinal(courseId);
+            if (!testId) {
+                return res.status(404).json({
+                    ok: false,
+                    message: 'Giảng viên chưa tạo bài kiểm tra toàn khóa!',
+                });
+            }
+
+            try {
+                const generationPlan = await courseTestRecommendationService.resolveCourseTestGenerationPlan({
+                    userId,
+                    courseId,
+                    baseConfig: config,
+                    testId,
+                });
+
+                paper = await studentTestPaperService.buildCourseTestPaper(
+                    generationPlan.config,
+                    courseId,
+                    { chapterWeights: generationPlan.chapterWeights },
+                );
+
+                config = {
+                    ...generationPlan.config,
+                    recommendationMeta: generationPlan.recommendationMeta,
+                };
+            } catch (paperError) {
+                if (paperError.code === 'INSUFFICIENT_TEST_QUESTIONS') {
+                    return res.status(400).json({ ok: false, message: paperError.message });
+                }
+                throw paperError;
+            }
         } else {
             if (!pathId) return res.status(400).json({ ok: false, message: "Thiếu chapterId" });
             testId = await studentTestModel.getTestIdByCourseAndPath(courseId, pathId);
             if (!testId) return res.status(404).json({ ok: false, message: "Giảng viên chưa tạo bài kiểm tra!" });
+
             const configResult = await chapterQuizConfigService.getChapterQuizConfig(courseId, pathId);
-            config = configResult.config || {};
+            if (!configResult.ok) {
+                return res.status(400).json({ ok: false, message: configResult.message });
+            }
+            if (!configResult.config) {
+                return res.status(400).json({
+                    ok: false,
+                    message: 'Giảng viên chưa thiết lập bài kiểm tra cho chương này.',
+                });
+            }
+            if (!configResult.config.enabled) {
+                return res.status(400).json({
+                    ok: false,
+                    message: 'Bài kiểm tra chương chưa được bật.',
+                });
+            }
+
+            config = configResult.config;
+
+            const sectionsData = await questionBankModel.getSectionsByPath(courseId, pathId);
+            try {
+                paper = await studentTestPaperService.buildChapterTestPaper(config, sectionsData);
+            } catch (paperError) {
+                if (paperError.code === 'INSUFFICIENT_TEST_QUESTIONS') {
+                    return res.status(400).json({ ok: false, message: paperError.message });
+                }
+                throw paperError;
+            }
+
+            paper.sections = (paper.sections ?? []).map((section) => ({
+                ...section,
+                pathId: Number(pathId),
+            }));
         }
+
         const timeLimitSeconds = (config.timeLimitMinutes || 15) * 60;
         const attempt = await studentTestModel.createTestAttempt(userId, testId, timeLimitSeconds);
-        const sectionsData = await questionBankModel.getSectionsByPath(courseId, pathId);
+        const formattedSections = paper?.sections ?? [];
+        const totalQuestionsCount = paper?.totalQuestions ?? 0;
 
-        let formattedSections = [];
-        let totalQuestionsCount = 0;
-        const qConfigs = config.questionConfigs || [];
-        const hasConfig = qConfigs.some(c => c.sectionCount > 0 || (c.sectionQuestionCounts && c.sectionQuestionCounts.length > 0));
-        const fetchSectionQuestions = async (sec, limitCount = null) => {
-            const rawQuestions = await questionBankModel.getQuestionsBySection(sec.SectionId);
-            const questionsMap = new Map();
-            for (const row of rawQuestions) {
-                if (row.IsUseForTest === false || row.IsUseForTest === 0) continue;
-                if (!questionsMap.has(row.QuestionId)) {
-                    questionsMap.set(row.QuestionId, {
-                        tempId: row.QuestionId.toString(),
-                        questionText: row.Title,
-                        skillType: row.SkillType,
-                        options: [], correctCount: 0
-                    });
-                }
-                if (row.ChoiceId) {
-                    const q = questionsMap.get(row.QuestionId);
-                    q.options.push({ tempId: row.ChoiceId.toString(), optionText: row.ChoiceTitle });
-                    if (row.IsTrue) q.correctCount++;
-                }
-            }
-            let questions = Array.from(questionsMap.values()).map(q => {
-                q.isMultipleChoice = q.correctCount > 1; delete q.correctCount; return q;
+        if (formattedSections.length === 0) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Không đủ câu hỏi để tạo đề kiểm tra theo cấu hình mentor.',
             });
-
-            questions = questions.sort(() => 0.5 - Math.random());
-            if (limitCount !== null) questions = questions.slice(0, limitCount);
-
-            if (questions.length > 0) {
-                formattedSections.push({
-                    sectionId: sec.SectionId.toString(),
-                    title: sec.Title,
-                    skillType: sec.SkillType,
-                    audioUrl: sec.SourceUrl || null, // FIX LỖI AUDIO/VIDEO CHÍNH LÀ CHỖ NÀY!
-                    questions: questions
-                });
-                totalQuestionsCount += questions.length;
-            }
-        };
-        if (!hasConfig) {
-            // NẾU BÀI BỊ TẮT HOẶC CHƯA CẤU HÌNH -> Bốc tất cả các câu đang bật
-            for (const sec of sectionsData) {
-                await fetchSectionQuestions(sec, null);
-            }
-        } else {
-            // 1. NHẶT NGHE & ĐỌC (Lấy nguyên đoạn văn)
-            for (const skill of ['LISTENING', 'READING']) {
-                const partConfig = qConfigs.find(c => c.part === skill);
-                const pickCount = partConfig?.sectionCount || 0;
-                if (pickCount <= 0) continue;
-                let skillSections = sectionsData.filter(s => s.SkillType === skill);
-                skillSections = skillSections.sort(() => 0.5 - Math.random()).slice(0, pickCount);
-
-                for (const sec of skillSections) {
-                    await fetchSectionQuestions(sec, null);
-                }
-            }
-            // 2. NHẶT TỪ VỰNG & NGỮ PHÁP (Cắt đúng số câu yêu cầu)
-            const vocabConfig = qConfigs.find(c => c.part === 'VOCABULARY');
-            const sqCounts = vocabConfig?.sectionQuestionCounts || [];
-            const vocabSections = sectionsData.filter(s => s.SkillType === 'VOCABULARY' || !['LISTENING', 'READING'].includes(s.SkillType));
-            for (const sec of vocabSections) {
-                const sqc = sqCounts.find(sq => String(sq.sectionTempId) === `section_${sec.SectionId}`);
-                const limitCount = sqc?.questionCount || 0;
-                if (limitCount <= 0) continue;
-                await fetchSectionQuestions(sec, limitCount);
-            }
         }
+
+        const configuredSkills = studentTestPaperService.getConfiguredSkillTypes(config);
+
         res.json({
             ok: true,
-            meta: { timeLimitMinutes: config.timeLimitMinutes || 15 },
+            meta: {
+                timeLimitMinutes: config.timeLimitMinutes || 15,
+                skills: configuredSkills,
+                totalQuestions: totalQuestionsCount,
+                recommendation: config.recommendationMeta ?? null,
+            },
             attempt: attempt,
             paper: {
                 paperId: `paper_${testId}`,
-                title: scope === 'final' ? "Bài kiểm tra toàn khóa" : "Bài kiểm tra cuối chương",
+                title: scope === 'final'
+                    ? (config.title || "Bài kiểm tra toàn khóa")
+                    : (config.title || "Bài kiểm tra cuối chương"),
                 totalQuestions: totalQuestionsCount,
                 sections: formattedSections
             }
@@ -241,7 +261,7 @@ const startTestAttempt = async (req, res) => {
 const submitTestAttempt = async (req, res) => {
     try {
         const { courseId, attemptId } = req.params;
-        const { answers, timeSpentSeconds, totalQuestions, chapterId } = req.body;
+        const { answers, timeSpentSeconds, totalQuestions, chapterId, paperSections } = req.body;
 
         const questionIds = Object.keys(answers || {}).map(id => Number(id)).filter(id => !isNaN(id));
         let correctCount = 0;
@@ -295,7 +315,13 @@ const submitTestAttempt = async (req, res) => {
 
         // Lấy điểm đạt từ config Mentor
         let passingScore = 70;
-        if (chapterId && courseId) {
+        const testInfo = await studentTestModel.getTestInfoByAttempt(attemptId);
+        if (testInfo?.IsCourseTest) {
+            const configResult = await chapterQuizConfigService.getCourseQuizConfig(courseId);
+            if (configResult.ok && configResult.config) {
+                passingScore = configResult.config.passingScore || 70;
+            }
+        } else if (chapterId && courseId) {
             const configResult = await chapterQuizConfigService.getChapterQuizConfig(courseId, chapterId);
             if (configResult.ok && configResult.config) {
                 passingScore = configResult.config.passingScore || 70;
@@ -306,6 +332,26 @@ const submitTestAttempt = async (req, res) => {
 
         await studentTestModel.submitTestAttemptModel(attemptId, percentage, 'submitted', isPassBit);
         await studentTestModel.saveTestAttemptAnswers(attemptId, questionResults);
+
+        let sectionStats = null;
+        if (Array.isArray(paperSections) && paperSections.length > 0) {
+            try {
+                const statRows = testAttemptSectionStatsService.buildSectionStatsRows(
+                    paperSections,
+                    questionResults,
+                );
+                if (statRows.length > 0) {
+                    await studentTestModel.saveAttemptSectionStats(
+                        attemptId,
+                        Number(courseId),
+                        statRows,
+                    );
+                    sectionStats = testAttemptSectionStatsService.buildAttemptSectionStatsSummary(statRows);
+                }
+            } catch (statsError) {
+                console.error('saveAttemptSectionStats error:', statsError);
+            }
+        }
 
         res.json({
             ok: true,
@@ -318,7 +364,8 @@ const submitTestAttempt = async (req, res) => {
                 totalQuestions: totalQ,
                 timeSpentSeconds: timeSpentSeconds || 0,
                 passingScore: passingScore,
-                questionResults: questionResults // Trả về chi tiết các câu hỏi
+                questionResults: questionResults,
+                sectionStats,
             }
         });
     } catch (error) {
@@ -397,4 +444,74 @@ const getWrongAnswersStats = async (req, res) => {
         res.status(500).json({ ok: false, message: error.message });
     }
 };
-module.exports = { getTestMeta, startTestAttempt, submitTestAttempt, getWrongAnswersStats };
+const getAttemptSectionStats = async (req, res) => {
+    try {
+        const { attemptId } = req.params;
+        const rows = await studentTestModel.getAttemptSectionStats(attemptId);
+        if (!rows.length) {
+            return res.json({ ok: true, data: testAttemptSectionStatsService.buildAttemptSectionStatsSummary([]) });
+        }
+
+        const mappedRows = rows.map((row) => ({
+            pathId: row.PathId,
+            typeId: row.TypeId,
+            skillType: row.SkillType,
+            sectionId: row.SectionId,
+            sectionTitle: row.SectionTitle,
+            correctCount: row.CorrectCount,
+            wrongCount: row.WrongCount,
+            totalCount: row.TotalCount,
+        }));
+
+        res.json({
+            ok: true,
+            data: testAttemptSectionStatsService.buildAttemptSectionStatsSummary(mappedRows),
+        });
+    } catch (error) {
+        res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+const getFinalTestRecommendationPreview = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const userId = req.headers['x-user-id'] || req.user?.userId || 1;
+
+        const configResult = await chapterQuizConfigService.getCourseQuizConfig(courseId);
+        if (!configResult.ok || !configResult.config?.enabled) {
+            return res.status(400).json({
+                ok: false,
+                message: configResult.message ?? 'Bài kiểm tra toàn khóa chưa được bật.',
+            });
+        }
+
+        const testId = configResult.config.id
+            ?? await studentTestModel.getTestIdByCourseForFinal(courseId);
+        if (!testId) {
+            return res.status(404).json({
+                ok: false,
+                message: 'Giảng viên chưa tạo bài kiểm tra toàn khóa!',
+            });
+        }
+
+        const preview = await courseTestRecommendationService.getCourseTestRecommendationPreview({
+            userId,
+            courseId,
+            baseConfig: configResult.config,
+            testId,
+        });
+
+        return res.json({ ok: true, data: preview });
+    } catch (error) {
+        res.status(500).json({ ok: false, message: error.message });
+    }
+};
+
+module.exports = {
+    getTestMeta,
+    startTestAttempt,
+    submitTestAttempt,
+    getWrongAnswersStats,
+    getAttemptSectionStats,
+    getFinalTestRecommendationPreview,
+};

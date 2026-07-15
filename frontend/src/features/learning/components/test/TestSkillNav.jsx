@@ -25,8 +25,15 @@ const SKILL_SHORT_LABELS = {
   [TEST_SKILL_VOCABULARY]: 'Từ vựng / Ngữ pháp',
 };
 
+function getSectionQuestions(section) {
+  if (section?.questions?.length) {
+    return section.questions;
+  }
+  return (section?.questionGroups ?? []).flatMap((group) => group.questions ?? []);
+}
+
 function getSectionProgress(section, answers = {}) {
-  const questions = section?.questions ?? [];
+  const questions = getSectionQuestions(section);
   const total = questions.length;
   const answered = questions.filter((q) => (answers[q.tempId] ?? []).length > 0).length;
   return { answered, total };
@@ -34,6 +41,7 @@ function getSectionProgress(section, answers = {}) {
 
 export default function TestSkillNav({
   sections = [],
+  configuredSkillTypes = [],
   activeSkillType,
   answers = {},
   onSelect,
@@ -42,7 +50,9 @@ export default function TestSkillNav({
     sections.map((section) => [section.skillType, section]),
   );
 
-  const availableSkills = CHAPTER_QUIZ_SKILLS.filter((skill) => sectionMap[skill]);
+  const availableSkills = (configuredSkillTypes.length > 0
+    ? configuredSkillTypes
+    : CHAPTER_QUIZ_SKILLS.filter((skill) => sectionMap[skill]));
 
   if (!availableSkills.length) return null;
 
@@ -85,16 +95,18 @@ export default function TestSkillNav({
             const colors = TEST_SKILL_CHIP_COLORS[skillType];
             const Icon = SKILL_ICONS[skillType];
             const isActive = activeSkillType === skillType;
-            const { answered, total } = getSectionProgress(section, answers);
-            const isComplete = total > 0 && answered === total;
+            const isAvailable = Boolean(section);
+            const { answered, total } = getSectionProgress(section ?? {}, answers);
+            const isComplete = isAvailable && total > 0 && answered === total;
 
             return (
               <Box
                 key={skillType}
                 component="button"
                 type="button"
-                onClick={() => onSelect(skillType)}
+                onClick={() => isAvailable && onSelect(skillType)}
                 aria-current={isActive ? 'true' : undefined}
+                disabled={!isAvailable}
                 sx={{
                   display: 'flex',
                   alignItems: { xs: 'center', md: 'flex-start' },
@@ -106,7 +118,8 @@ export default function TestSkillNav({
                   border: `1.5px solid ${isActive ? colors.color : 'transparent'}`,
                   borderRadius: '12px',
                   bgcolor: isActive ? colors.bg : 'transparent',
-                  cursor: 'pointer',
+                  cursor: isAvailable ? 'pointer' : 'not-allowed',
+                  opacity: isAvailable ? 1 : 0.45,
                   textAlign: 'left',
                   transition: 'background-color 0.15s, border-color 0.15s',
                   flexShrink: { xs: 0, md: 1 },
@@ -142,7 +155,7 @@ export default function TestSkillNav({
                     {SKILL_SHORT_LABELS[skillType] ?? TEST_SKILL_LABELS[skillType]}
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: TEST_MUTED, mt: 0.25 }}>
-                    {answered}/{total} câu
+                    {isAvailable ? `${answered}/${total} câu` : 'Chưa có đề'}
                   </Typography>
                 </Box>
 

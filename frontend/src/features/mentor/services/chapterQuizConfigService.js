@@ -1,5 +1,5 @@
 /**
- * Cấu hình Quiz/Test theo chương — chapter: API; course quiz: localStorage (tạm).
+ * Cấu hình Quiz/Test theo chương và kiểm tra toàn khóa — lưu qua API mentor.
  */
 import axios from 'axios';
 import { getUser } from '@/features/auth/utils/authUtils';
@@ -117,37 +117,77 @@ export async function saveChapterQuizConfig(config) {
 }
 
 export async function getCourseQuizConfig(courseId, meta = {}) {
-  const map = loadAllConfigs();
-  const key = configKey(courseId, COURSE_QUIZ_CHAPTER_ID);
-  const stored = map[key];
-
-  if (stored) {
-    return { ok: true, config: stored };
+  if (courseId == null) {
+    return {
+      ok: false,
+      message: 'Thiếu thông tin khóa học',
+    };
   }
 
-  return {
-    ok: true,
-    config: getDefaultCourseQuizConfig({
-      courseId,
-      courseTitle: meta.courseTitle,
-    }),
-  };
+  try {
+    const { data: payload } = await axios.get(
+      `${API_BASE}/mentor/courses/${encodeURIComponent(courseId)}/course-quiz-config`,
+      { headers: getAuthHeaders() },
+    );
+
+    if (payload.success === false) {
+      return {
+        ok: false,
+        message: payload.message ?? 'Không tải được thiết lập kiểm tra toàn khóa.',
+      };
+    }
+
+    const stored = payload.data?.config;
+    if (stored) {
+      return { ok: true, config: stored };
+    }
+
+    return {
+      ok: true,
+      config: getDefaultCourseQuizConfig({
+        courseId,
+        courseTitle: meta.courseTitle,
+      }),
+    };
+  } catch (error) {
+    console.error('getCourseQuizConfig error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải thiết lập kiểm tra toàn khóa.',
+    };
+  }
 }
 
 export async function saveCourseQuizConfig(config) {
-  const map = loadAllConfigs();
-  const key = configKey(config.courseId, COURSE_QUIZ_CHAPTER_ID);
-  const now = new Date().toISOString();
-  const existing = map[key];
-  const saved = {
-    ...config,
-    chapterId: COURSE_QUIZ_CHAPTER_ID,
-    id: existing?.id ?? null,
-    updatedAt: now,
-  };
-  map[key] = saved;
-  saveAllConfigs(map);
-  return { ok: true, config: saved };
+  if (config?.courseId == null) {
+    return { ok: false, message: 'Thiếu thông tin khóa học' };
+  }
+
+  try {
+    const { data: payload } = await axios.put(
+      `${API_BASE}/mentor/courses/${encodeURIComponent(config.courseId)}/course-quiz-config`,
+      { config },
+      { headers: getAuthHeaders() },
+    );
+
+    if (payload.success === false) {
+      return {
+        ok: false,
+        message: payload.message ?? 'Không thể lưu thiết lập kiểm tra toàn khóa',
+      };
+    }
+
+    return {
+      ok: true,
+      config: payload.data?.config ?? config,
+    };
+  } catch (error) {
+    console.error('saveCourseQuizConfig error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Lỗi kết nối khi lưu thiết lập kiểm tra toàn khóa.',
+    };
+  }
 }
 
 export async function getChapterQuizConfigsByCourse(courseId) {

@@ -66,9 +66,10 @@ async function getNextPassConfigId(transaction) {
 async function insertTestRow(transaction, row) {
   const request = new sql.Request(transaction);
   request.input('testId', sql.Int, row.TestId);
-  request.input('pathId', sql.Int, row.PathId);
+  request.input('pathId', sql.Int, row.PathId ?? null);
   request.input('courseId', sql.Int, row.CourseId);
   request.input('instructorId', sql.Int, row.InstructorId);
+  request.input('isCourseTest', sql.Bit, row.IsCourseTest ? 1 : 0);
   request.input('testName', sql.NVarChar(200), row.TestName);
   request.input('testOrder', sql.Int, row.TestOrder);
   request.input('isActive', sql.Bit, row.IsActive ? 1 : 0);
@@ -79,7 +80,7 @@ async function insertTestRow(transaction, row) {
       TestName, TestOrder, IsActive, HasPrerequisite
     )
     VALUES (
-      @testId, @pathId, @courseId, @instructorId, 0,
+      @testId, @pathId, @courseId, @instructorId, @isCourseTest,
       @testName, @testOrder, @isActive, @hasPrerequisite
     )
   `);
@@ -160,12 +161,13 @@ async function replaceTestConfigSections(transaction, configId, rows = []) {
     insertRequest.input('typeId', sql.Int, Number(row.TypeId));
     insertRequest.input('questionQuantity', sql.Int, row.QuestionQuantity ?? null);
     insertRequest.input('bankSectionId', sql.Int, row.BankSectionId ?? null);
+    insertRequest.input('pathId', sql.Int, row.PathId ?? null);
     await insertRequest.query(`
       INSERT INTO dbo.Test_Config_Section (
-        ConfigId, TypeId, QuestionQuantity, BankSectionId
+        ConfigId, TypeId, QuestionQuantity, BankSectionId, PathId
       )
       VALUES (
-        @configId, @typeId, @questionQuantity, @bankSectionId
+        @configId, @typeId, @questionQuantity, @bankSectionId, @pathId
       )
     `);
   }
@@ -180,7 +182,8 @@ async function getTestConfigSections(configId, transaction = null) {
       cs.ConfigId,
       cs.TypeId,
       cs.QuestionQuantity,
-      cs.BankSectionId
+      cs.BankSectionId,
+      cs.PathId
     FROM dbo.Test_Config_Section cs
     WHERE cs.ConfigId = @configId
     ORDER BY cs.TypeId, cs.BankSectionId, cs.ConfigSectionId
@@ -264,6 +267,94 @@ async function getPrerequisitePathIds(testId, transaction = null) {
   return result.recordset.map((row) => String(row.PathId));
 }
 
+async function getCourseMeta(courseId, transaction = null) {
+  const request = transaction ? new sql.Request(transaction) : new sql.Request();
+  request.input('courseId', sql.Int, Number(courseId));
+  const result = await request.query(`
+    SELECT TOP 1
+      c.CourseId,
+      c.CourseName,
+      c.InstructorId
+    FROM dbo.Courses c
+    WHERE c.CourseId = @courseId
+  `);
+  return result.recordset[0] ?? null;
+}
+
+async function getCourseTestByCourseId(courseId, transaction = null) {
+  const request = transaction ? new sql.Request(transaction) : new sql.Request();
+  request.input('courseId', sql.Int, Number(courseId));
+  const result = await request.query(`
+    SELECT TOP 1
+      t.TestId,
+      t.PathId,
+      t.CourseId,
+      t.InstructorId,
+      t.IsCourseTest,
+      t.TestName,
+      t.TestOrder,
+      t.IsActive,
+      t.HasPrerequisite
+    FROM dbo.Tests t
+    WHERE t.CourseId = @courseId
+      AND ISNULL(t.IsCourseTest, 0) = 1
+  `);
+  return result.recordset[0] ?? null;
+}
+
+async function getCourseChapterIds(testId, transaction = null) {
+  const request = transaction ? new sql.Request(transaction) : new sql.Request();
+  request.input('testId', sql.Int, Number(testId));
+  const result = await request.query(`
+    SELECT PathId
+    FROM dbo.Test_Course_Chapters
+    WHERE TestId = @testId
+    ORDER BY PathId
+  `);
+  return result.recordset.map((row) => String(row.PathId));
+}
+
+async function replaceTestCourseChapters(transaction, testId, pathIds = []) {
+  const request = new sql.Request(transaction);
+  request.input('testId', sql.Int, Number(testId));
+  await request.query(`
+    DELETE FROM dbo.Test_Course_Chapters
+    WHERE TestId = @testId
+  `);
+
+  for (const pathId of pathIds) {
+    const insertRequest = new sql.Request(transaction);
+    insertRequest.input('testId', sql.Int, Number(testId));
+    insertRequest.input('pathId', sql.Int, Number(pathId));
+    await insertRequest.query(`
+      INSERT INTO dbo.Test_Course_Chapters (TestId, PathId)
+      VALUES (@testId, @pathId)
+    `);
+  }
+}
+
+async function getCourseQuizConfigBundle(courseId) {
+  const test = await getCourseTestByCourseId(courseId);
+  if (!test) return null;
+
+  const config = await getTestConfigByTestId(test.TestId);
+  const passConfig = await getPassConfigByTestId(test.TestId);
+  const configSections = config
+    ? await getTestConfigSections(config.ConfigId)
+    : [];
+  const selectedChapterIds = await getCourseChapterIds(test.TestId);
+
+  return {
+    test,
+    config,
+    passConfig,
+    configSections,
+    selectedChapterIds,
+    courseId: Number(courseId),
+    pathId: null,
+  };
+}
+
 async function getChapterQuizConfigBundle(courseId, pathId) {
   const test = await getChapterTestByPathId(pathId);
   if (!test) return null;
@@ -288,7 +379,9 @@ async function getChapterQuizConfigBundle(courseId, pathId) {
 
 module.exports = {
   getPathMeta,
+  getCourseMeta,
   getChapterTestByPathId,
+  getCourseTestByCourseId,
   getTestIdByPathId,
   getNextTestId,
   insertTestRow,
@@ -300,6 +393,9 @@ module.exports = {
   getPassConfigByTestId,
   upsertPassConfig,
   replaceTestPrerequisites,
+  replaceTestCourseChapters,
+  getCourseChapterIds,
   getPrerequisitePathIds,
   getChapterQuizConfigBundle,
+  getCourseQuizConfigBundle,
 };

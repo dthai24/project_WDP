@@ -16,6 +16,7 @@ import {
   TEST_TEXT,
   formatTimeSpent,
 } from './testTheme';
+import TestResultStatsTable from './TestResultStatsTable';
 
 function formatScoreValue(score = 0) {
   const value = Number(score) || 0;
@@ -113,6 +114,10 @@ export default function TestResultPanel({
           )}
         </Box>
       </Box>
+
+      {paper && result?.questionResults && (
+        <TestResultStatsTable paper={paper} questionResults={result.questionResults} />
+      )}
 
       {/* Hiển thị chi tiết từng câu hỏi đúng/sai */}
       {paper && paper.sections && result?.questionResults && (

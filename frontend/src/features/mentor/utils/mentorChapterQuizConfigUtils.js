@@ -179,6 +179,16 @@ export function getSectionCountForPart(config = {}, part) {
   return Math.max(0, Number(item?.sectionCount ?? 0));
 }
 
+/** Các kỹ năng được mentor bật trong config bài kiểm tra. */
+export function getConfiguredSkillTypes(config = {}) {
+  return CHAPTER_QUIZ_SKILLS.filter((part) => {
+    if (isSkillSectionRandomPick(part)) {
+      return getSectionCountForPart(config, part) > 0;
+    }
+    return getSectionQuestionCountsForPart(config, part).some((entry) => entry.questionCount > 0);
+  });
+}
+
 export function getSectionQuestionCountsForPart(config = {}, part) {
   const item = (config.questionConfigs ?? []).find((entry) => entry.part === part);
   return (item?.sectionQuestionCounts ?? []).map((entry) => ({

@@ -1,16 +1,20 @@
 import { Box, Typography } from '@mui/material';
-import { TEST_SKILL_LISTENING } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  TEST_SKILL_LISTENING,
+  TEST_SKILL_READING,
+} from '@/features/mentor/utils/mentorTestContentUtils';
 import TestQuestionCard from './TestQuestionCard';
+import TestReadingContent from './TestReadingContent';
 import { TEST_DIVIDER, TEST_MUTED } from './testTheme';
 
-export default function TestQuestionGroup({
-  group,
+export default function TestQuestionGroup({  group,
   skillType,
   answers = {},
   onAnswerChange,
   hideTitle = false,
 }) {
   const audioUrl = group?.audioUrl ?? null;
+  const readingUrl = group?.readingUrl ?? null;
 
   return (
     <Box>
@@ -42,6 +46,23 @@ export default function TestQuestionGroup({
             sx={{ width: '100%' }}
           />
         </Box>
+      )}
+
+      {skillType === TEST_SKILL_READING && readingUrl && (
+        <Box
+          sx={{
+            bgcolor: '#fff',
+            borderRadius: '14px',
+            border: `1px solid ${TEST_DIVIDER}`,
+            px: 2,
+            py: 1.5,
+            mb: 1.5,
+          }}
+        >
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEST_MUTED, mb: 1 }}>
+            Bài đọc
+          </Typography>
+          <TestReadingContent readingUrl={readingUrl} title={group?.displayName ?? 'Bài đọc'} />        </Box>
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
