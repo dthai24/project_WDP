@@ -9,7 +9,6 @@ import TestPage from '@/features/dev/Test';
 import CourseListPage from '@/features/courses/pages/CourseListPage';
 import CourseDetailPage from '@/features/courses/pages/CourseDetailPage';
 import CourseLearningPage from '@/features/learning/pages/CourseLearningPage';
-import CourseTestPage from '@/features/learning/pages/CourseTestPage';
 import MyCoursesListPage from '@/features/learning/pages/MyCoursesListPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
@@ -131,17 +130,6 @@ export default function App() {
               roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
             >
               <CourseLearningPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="my-courses/:courseId/test/:scope/:chapterId?"
-          element={
-            <ProtectedRoute
-              allowedRoles={['Student']}
-              roleRedirects={STUDENT_SHELL_BLOCK_REDIRECTS}
-            >
-              <CourseTestPage />
             </ProtectedRoute>
           }
         />

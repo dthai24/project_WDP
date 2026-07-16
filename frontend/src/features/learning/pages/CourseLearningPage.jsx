@@ -177,14 +177,11 @@ function computeProgress(mods) {
   );
 }
 
-function OutlineTestItem({ label, subtitle, onClick, variant = "chapter", isPassed = false, locked = false }) {
+function OutlineTestItem({ label, subtitle, variant = "chapter", isPassed = false, locked = false }) {
   const isCourse = variant === "course";
 
   return (
     <Box
-      component="button"
-      type="button"
-      onClick={onClick}
       sx={{
         width: "100%",
         display: "flex",
@@ -195,16 +192,11 @@ function OutlineTestItem({ label, subtitle, onClick, variant = "chapter", isPass
         mt: isCourse ? 0.5 : 0.25,
         border: "none",
         borderRadius: "10px",
-        cursor: locked ? "not-allowed" : "pointer",
         textAlign: "left",
         fontFamily: "inherit",
         opacity: locked ? 0.6 : 1,
         bgcolor: isPassed ? alpha("#7C3AED", 0.08) : (isCourse ? alpha("#7C3AED", 0.08) : alpha("#7C3AED", 0.05)),
         borderTop: isCourse ? "none" : `1px dashed ${alpha("#7C3AED", 0.22)}`,
-        transition: "background-color 0.15s ease",
-        "&:hover": {
-          bgcolor: locked ? undefined : (isPassed ? alpha("#7C3AED", 0.12) : alpha("#7C3AED", isCourse ? 0.12 : 0.1)),
-        },
       }}
     >
       <Box sx={{ pt: 0.1, flexShrink: 0 }}>
@@ -525,14 +517,6 @@ export default function CourseLearningPage() {
   const handleNext = () => {
     if (currentIndex < allLessons.length - 1)
       handleSelectLesson(allLessons[currentIndex + 1].id);
-  };
-
-  const handleGoToChapterTest = (chapterId) => {
-    navigate(`/my-courses/${courseId}/test/chapter/${chapterId}`);
-  };
-
-  const handleGoToCourseTest = () => {
-    navigate(`/my-courses/${courseId}/test/final`);
   };
 
   const TypeIcon = TYPE_ICON[currentLesson?.type] ?? ArticleRoundedIcon;
@@ -1139,7 +1123,6 @@ export default function CourseLearningPage() {
                             label="Bài kiểm tra chương"
                             subtitle={chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"}
                             isPassed={mod.isTestPassed}
-                            onClick={() => !mod.isLocked && mod.allLessonsDone && handleGoToChapterTest(mod.id)}
                             locked={mod.isLocked || !mod.allLessonsDone}
                           />
                         )}
@@ -1154,10 +1137,6 @@ export default function CourseLearningPage() {
                       variant="course"
                       label="Kiểm tra cuối khóa"
                       subtitle={courseQuizConfig?.title || "Kiểm tra cuối khóa"}
-                      onClick={() => {
-                        const allCompleted = processedModules.every(m => m.isCompleted);
-                        if (allCompleted) handleGoToCourseTest();
-                      }}
                       locked={!processedModules.every(m => m.isCompleted)}
                     />
                   )}
