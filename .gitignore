@@ -1,6 +1,21 @@
 node_modules/
 .env
 backend/.env.example
+src/frontend/public/asset/avatars/courses/course_tmp_1780866266307_693087878.jpg
+src/frontend/public/asset/avatars/courses/course_avt_56.jpg
+src/frontend/public/asset/avatars/courses/course_avt_57.jpg
+src/frontend/public/asset/avatars/courses/course_avt_58.jpg
+src/frontend/public/asset/avatars/courses/course_tmp_1780866657278_115525756.jpg
+src/frontend/public/asset/avatars/courses/course_tmp_1780866921222_837557392.jpg
+src/frontend/public/asset/avatars/courses/course_tmp_1780867039096_133102125.jpg
+backend/public/assets/avatars/courses/course_avt_1.jpg
+backend/public/assets/avatars/courses/course_avt_2.jpg
+backend/public/assets/avatars/courses/course_avt_4.jpg
+backend/public/assets/avatars/courses/course_avt_3.jpg
+backend/scripts/add-material-content-column.js
+backend/scripts/add-material-content-column.js
+backend/scripts/applySchema.js
+backend/scripts/add-material-content-column.js
 /.agents
 skills-lock.json
 /backend/public/assets
@@ -11,3 +26,4 @@ backend/config/db.js
 /.agents
 skills-lock.json
 backend/config/db.js
+/backend
