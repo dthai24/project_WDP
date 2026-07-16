@@ -228,7 +228,7 @@ function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, start
 }
 
 function buildPaperFromBanks(config, bankList, options = {}) {
-  const shuffleAnswers = false;
+  const shuffleAnswers = true; //luôn đảo đáp án
 
   const pickedBySkill = Object.fromEntries(
     CHAPTER_QUIZ_SKILLS.map((skill) => [
