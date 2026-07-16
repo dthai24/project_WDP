@@ -39,6 +39,7 @@ import {
   findInitialSectionQuestion,
   isQuestionContentChangedFromInitial,
   restoreQuestionFromInitial,
+  validateTestQuestion,
   SCORING_MODE_AUTO,
   hasQuestionUseForTestInSection,
   SECTION_USE_FOR_TEST_REQUIRES_QUESTION_MESSAGE,
@@ -905,7 +906,9 @@ export default function MentorTestSectionCard({
                   : null;
                 const contentChanged = questionBankMode
                   && isQuestionContentChangedFromInitial(question, section.InitialQuestions);
-                const questionErrors = errors.Questions?.[question.tempId] ?? {};
+                const questionErrors = questionBankMode && isFilledTestQuestion(question)
+                  ? validateTestQuestion(question)
+                  : (errors.Questions?.[question.tempId] ?? {});
                 const hideDelete = questionBankMode && isQuestionPersistedInDatabase(question);
                 const questionPublishLocked = questionBankMode
                   && isVocabularyQuestionBank
@@ -966,7 +969,16 @@ export default function MentorTestSectionCard({
       destructive
     />
 
-      {questionBankMode ? <MentorQuestionBankQuestionChangesDialog /> : null}
+      {questionBankMode ? (
+        <MentorQuestionBankQuestionChangesDialog
+          open={Boolean(changedQuestionDialog)}
+          onClose={() => setChangedQuestionDialog(null)}
+          onRestore={handleRestoreChangedQuestion}
+          questionIndex={changedQuestionDialog?.index ?? 0}
+          oldQuestion={changedQuestionDialog?.initial}
+          newQuestion={changedQuestionDialog?.current}
+        />
+      ) : null}
   </>
   );
 }

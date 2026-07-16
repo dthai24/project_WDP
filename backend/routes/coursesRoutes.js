@@ -86,4 +86,15 @@ router.post('/:id/progress', updateProgress);
 // lay treak
 router.get("/streak", getStreak);
 
+const studentTestController = require('../controllers/studentTestController');
+router.get('/:courseId/tests/final/recommendation-preview', studentTestController.getFinalTestRecommendationPreview);
+// Lấy thông tin giới thiệu bài thi (tên bài, thời gian, số câu...)
+router.get('/:courseId/tests/:scope/meta', studentTestController.getTestMeta);
+// Khởi tạo lượt thi mới, lấy ngẫu nhiên câu hỏi tạo thành đề thi
+router.post('/:courseId/tests/:scope/start', studentTestController.startTestAttempt);
+// Nộp bài thi (tính điểm, lưu trạng thái hoàn thành)
+router.post('/:courseId/tests/attempts/:attemptId/submit', studentTestController.submitTestAttempt);
+router.get('/:courseId/tests/attempts/:attemptId/section-stats', studentTestController.getAttemptSectionStats);
+// Tạo đường dẫn API mới (bạn có thể đổi tên route theo ý thích)
+router.get('/attempts/:attemptId/wrong-answers', studentTestController.getWrongAnswersStats);
 module.exports = router;
