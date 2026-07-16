@@ -241,22 +241,9 @@ export default function MentorTestMaterialEditor({
 
       <Box sx={{ mb: 1.5 }}>
         {isChapterQuiz ? (
-          <MentorTestQuestionBankSelector
-            courseId={courseId}
-            chapterId={chapterId}
-            value={material.QuestionBankId}
-            onChange={handleBankChange}
-            disabled={disabled}
-            error={errors.QuestionBankId}
-          />
+          <MentorTestQuestionBankSelector />
         ) : (
-          <MentorFinalTestConfigEditor
-            courseId={courseId}
-            config={material.FinalTestConfig ?? {}}
-            errors={errors.FinalTestConfig ?? {}}
-            disabled={disabled}
-            onChange={handleFinalConfigChange}
-          />
+          <MentorFinalTestConfigEditor />
         )}
       </Box>
 

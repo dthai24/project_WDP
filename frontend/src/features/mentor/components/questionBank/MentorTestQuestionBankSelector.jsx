@@ -1,58 +1,13 @@
 /**
- * Chọn / hiển thị bank chương cho Quiz — UI only, chưa gắn API.
+ * Chọn bank chương cho Quiz — UI shell.
  */
-import { Box, Typography, alpha } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
-import { Link as RouterLink } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
-import { buildQuestionBankChapterManagePath } from '@/features/mentor/utils/mentorQuestionBankListParams';
-
-function buildManageUrl(courseId, chapterId) {
-  return buildQuestionBankChapterManagePath(courseId, chapterId);
-}
-
-export default function MentorTestQuestionBankSelector({
-  courseId,
-  chapterId = null,
-  error,
-}) {
-  if (!courseId) {
-    return (
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: '14px',
-          bgcolor: alpha(PRIMARY, 0.04),
-          border: `1px dashed ${alpha(PRIMARY, 0.2)}`,
-        }}
-      >
-        <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
-          Lưu khóa học trước, sau đó gắn quiz chương với ngân hàng câu hỏi của chương đó.
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (chapterId == null || chapterId === '') {
-    return (
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: '14px',
-          bgcolor: alpha('#7C3AED', 0.04),
-          border: `1px dashed ${alpha('#7C3AED', 0.2)}`,
-        }}
-      >
-        <Typography sx={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>
-          Lưu chương trước khi gắn quiz. Quiz chương lấy câu hỏi từ bank của chương tương ứng.
-        </Typography>
-      </Box>
-    );
-  }
-
+export default function MentorTestQuestionBankSelector() {
   return (
     <Box
       sx={{
@@ -71,8 +26,6 @@ export default function MentorTestQuestionBankSelector({
         Mỗi chương có một bank riêng. Tạo bank cho chương này trước khi thêm quiz.
       </Typography>
       <AppButton
-        component={RouterLink}
-        to={buildManageUrl(courseId, chapterId)}
         startIcon={<AddRoundedIcon />}
         sx={{
           height: 36,
@@ -88,9 +41,6 @@ export default function MentorTestQuestionBankSelector({
       >
         Tạo bank cho chương
       </AppButton>
-      {error && (
-        <Typography sx={{ fontSize: 11, color: '#DC2626', mt: 1.25 }}>{error}</Typography>
-      )}
     </Box>
   );
 }

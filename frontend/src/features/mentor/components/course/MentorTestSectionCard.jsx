@@ -966,16 +966,7 @@ export default function MentorTestSectionCard({
       destructive
     />
 
-      {questionBankMode ? (
-        <MentorQuestionBankQuestionChangesDialog
-          open={Boolean(changedQuestionDialog)}
-          onClose={() => setChangedQuestionDialog(null)}
-          onRestore={handleRestoreChangedQuestion}
-          questionIndex={changedQuestionDialog?.index ?? 0}
-          oldQuestion={changedQuestionDialog?.initial}
-          newQuestion={changedQuestionDialog?.current}
-        />
-      ) : null}
+      {questionBankMode ? <MentorQuestionBankQuestionChangesDialog /> : null}
   </>
   );
 }
