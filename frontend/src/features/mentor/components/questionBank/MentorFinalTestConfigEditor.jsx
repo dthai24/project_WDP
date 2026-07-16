@@ -1,4 +1,11 @@
 /**
+ * =============================================================================
+ * MentorFinalTestConfigEditor — Cấu hình bài kiểm tra cuối khóa
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Nhập số câu hỏi random theo kỹ năng cho bài test cuối khóa.
+ * LUỒNG: User nhập số → onChange(config) → parent lưu cấu hình.
+ *
  * Cấu hình bài kiểm tra cuối khóa — UI only, stats = 0.
  */
 import { Box, InputBase, Typography, alpha } from '@mui/material';
@@ -50,6 +57,7 @@ export default function MentorFinalTestConfigEditor({
 
   const total = getFinalTestConfigTotal(config);
 
+  // Handler: cập nhật số câu theo kỹ năng (đảm bảo >= 0)
   const handleFieldChange = (key, rawValue) => {
     const value = Math.max(0, Number.parseInt(String(rawValue), 10) || 0);
     onChange?.({ ...config, [key]: value });

@@ -1,4 +1,11 @@
 /**
+ * =============================================================================
+ * MentorTestQuestionBankSelector — Gợi ý tạo bank cho quiz chương
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị trong form tạo quiz khi chương chưa có ngân hàng câu hỏi.
+ * LUỒNG: Link "Tạo bank cho chương" → /mentor/question-banks/:courseId/:chapterId
+ *
  * Chọn / hiển thị bank chương cho Quiz — UI only, chưa gắn API.
  */
 import { Box, Typography, alpha } from '@mui/material';

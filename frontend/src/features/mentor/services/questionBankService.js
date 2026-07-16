@@ -1,4 +1,16 @@
 /**
+ * =============================================================================
+ * questionBankService.js — API client cho ngân hàng câu hỏi
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Tập trung mọi lời gọi REST API liên quan question bank.
+ *
+ * CÁC NHÓM HÀM CHÍNH:
+ *   - fetchChapterSections / fetchSectionQuestions: TẢI dữ liệu
+ *   - getChapterQuestionBankActiveStats / getCourseQuestionBankActiveStats: THỐNG KÊ
+ *   - saveQuestionBankSection: LƯU section (insert/update/delete questions, choices)
+ *   - ensureQuestionPathForChapter: đảm bảo bản ghi Questions_Path tồn tại
+ *
  * Question bank service — API client.
  */
 
@@ -8,6 +20,9 @@ const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').repla
 
 const TODO = 'Question bank API chưa được implement.';
 
+// ===== TẢI DỮ LIỆU =====
+
+/** Tải danh sách section của một chương (path) trong khóa học. */
 export async function fetchChapterSections(courseId, pathId) {
   try {
     const { data: payload } = await axios.get(
@@ -37,6 +52,7 @@ export async function fetchChapterSections(courseId, pathId) {
   }
 }
 
+/** Tải danh sách câu hỏi của một section (theo SectionId). */
 export async function fetchSectionQuestions(sectionId, { courseId, pathId } = {}) {
   try {
     const params = {};
@@ -69,6 +85,8 @@ export async function fetchSectionQuestions(sectionId, { courseId, pathId } = {}
     };
   }
 }
+
+// ===== THỐNG KÊ =====
 
 const emptyStats = {
   ok: true,
@@ -155,6 +173,7 @@ function mapCourseActiveStatsPayload(payload = {}) {
 
 export function invalidateQuestionBankListCache() {}
 
+/** Thống kê câu hỏi active theo chương (dùng cho quiz config). */
 export async function getChapterQuestionBankActiveStats(courseId, pathId) {
   try {
     const { data: payload } = await axios.get(
@@ -180,6 +199,7 @@ export async function getChapterQuestionBankActiveStats(courseId, pathId) {
   }
 }
 
+/** Thống kê câu hỏi active toàn khóa học (tổng hợp tất cả chương). */
 export async function getCourseQuestionBankActiveStats(courseId) {
   try {
     const { data: payload } = await axios.get(
@@ -212,6 +232,8 @@ export async function getCourseQuestionBankActiveStats(courseId) {
     };
   }
 }
+
+// ===== STUB — API chưa implement =====
 
 export async function getQuestionBanks() {
   return { ok: true, banks: [] };
@@ -288,6 +310,9 @@ export async function updatePathQuestions() {
   return { ok: false, message: TODO };
 }
 
+// ===== LƯU DỮ LIỆU =====
+
+/** Đảm bảo bản ghi Questions_Path tồn tại trước khi lưu section mới. */
 export async function ensureQuestionPathForChapter(courseId, pathId) {
   try {
     const { data } = await axios.post(
@@ -318,6 +343,11 @@ export async function ensureQuestionPathForChapter(courseId, pathId) {
   }
 }
 
+/**
+ * Lưu thay đổi section lên server.
+ * Luồng: serialize payload → ensure question path → delete questions →
+ *         update source URL → update section → update/insert/delete questions & choices → insert section
+ */
 export async function saveQuestionBankSection(savePayload) {
   try {
     let body;
@@ -546,6 +576,7 @@ export async function saveQuestionBankSection(savePayload) {
   }
 }
 
+/** Cập nhật URL nguồn (audio/reading) của section. */
 export async function updateQuestionBankSectionSourceUrl(
   sectionId,
   sourceUrl,
@@ -583,6 +614,7 @@ export async function updateQuestionBankSectionSourceUrl(
   }
 }
 
+/** Bật/tắt isUseForTest cho một câu hỏi. */
 export async function updateQuestionUseForTest(questionId, isUseForTest) {
   try {
     const { data } = await axios.patch(
@@ -612,6 +644,8 @@ export async function updateQuestionUseForTest(questionId, isUseForTest) {
     };
   }
 }
+
+// ===== STUB tiếp — fetch courses/chapters =====
 
 export async function updateQuestionBank() {
   return { ok: false, message: TODO };

@@ -1,4 +1,11 @@
 /**
+ * =============================================================================
+ * MentorQuestionBankRow — Một dòng khóa học trong danh sách QB
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị thông tin khóa học + metrics câu hỏi; nút "Quản lý câu hỏi".
+ * LUỒNG: Click "Quản lý câu hỏi" → navigate /mentor/question-banks/:courseId
+ *
  * MentorQuestionBankRow — layout mirror MentorCourseRow, metrics tập trung câu hỏi.
  */
 import {
@@ -80,6 +87,8 @@ export default function MentorQuestionBankRow({ bankItem }) {
   const theme = useTheme();
   const navigate = useNavigate();
   const statusChip = getStatusChip(bankItem.IsPublished);
+
+  // Handler: chuyển sang trang chọn chương của khóa học
   const handleManageQuestions = () => {
     if (!bankItem.BankId || !bankItem.CourseId) {
       toast.info('Không xác định được Question Bank hoặc Khóa học.');
@@ -209,6 +218,7 @@ export default function MentorQuestionBankRow({ bankItem }) {
           Quản lý câu hỏi
         </AppButton>
       </Box>
+      {/* Chip trạng thái xuất bản khóa học */}
       <Box
         sx={{
           position: { xs: 'absolute', md: 'static' },

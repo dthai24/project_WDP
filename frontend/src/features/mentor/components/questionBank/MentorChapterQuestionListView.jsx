@@ -1,4 +1,11 @@
 /**
+ * =============================================================================
+ * MentorChapterQuestionListView — Danh sách câu hỏi theo chương
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Xem/sửa/xóa/bật public câu hỏi của một chương (view riêng).
+ * LUỒNG: Lọc theo kỹ năng → thao tác từng câu hoặc hàng loạt.
+ *
  * Quản lý câu hỏi theo chương — xem, sửa, xóa, public/private.
  */
 import { useMemo, useState } from 'react';
@@ -313,10 +320,15 @@ export default function MentorChapterQuestionListView({
   onAddQuestion,
 }) {
   const theme = useTheme();
+  // busyId: QuestionId đang xử lý (toggle/delete)
   const [busyId, setBusyId] = useState(null);
+  // bulkBusy: đang thực hiện thao tác hàng loạt
   const [bulkBusy, setBulkBusy] = useState(false);
+  // detailQuestion: câu hỏi đang xem chi tiết trong dialog
   const [detailQuestion, setDetailQuestion] = useState(null);
+  // deleteTarget: câu hỏi chờ xác nhận xóa
   const [deleteTarget, setDeleteTarget] = useState(null);
+  // skillFilter: bộ lọc kỹ năng (ALL | LISTENING | READING | VOCABULARY)
   const [skillFilter, setSkillFilter] = useState(SKILL_FILTER_ALL);
   const [bulkAnchor, setBulkAnchor] = useState(null);
 

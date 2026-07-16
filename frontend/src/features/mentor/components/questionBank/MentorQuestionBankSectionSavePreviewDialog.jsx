@@ -14,6 +14,15 @@ import { ContentFieldLabel } from '@/features/mentor/components/course/MentorCon
 import { MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
 
+/**
+ * =============================================================================
+ * MentorQuestionBankSectionSavePreviewDialog — Preview payload trước khi lưu
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị JSON payload sẽ gửi API + tóm tắt số thao tác insert/update/delete.
+ * LUỒNG: User xem preview → bấm "Lưu thay đổi" → onConfirm() → parent gọi API.
+ */
+
 const PREVIEW_CONTENT_SX = {
   minHeight: 120,
   maxHeight: 'min(40vh, 360px)',
@@ -76,6 +85,7 @@ export default function MentorQuestionBankSectionSavePreviewDialog({
     >
       <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Payload lưu section (API / DB)</DialogTitle>
       <DialogContent sx={{ pt: 0.5 }}>
+        {/* Preview HTML bài đọc (Reading) nếu có */}
         {showReadingText ? (
           <Box sx={{ mb: 1.5 }}>
             <ContentFieldLabel sx={{ mb: 0.75, fontSize: 12, fontWeight: 700, color: '#64748B' }}>

@@ -1,4 +1,11 @@
 /**
+ * =============================================================================
+ * MentorQuestionBankOutlinePanel — Mục lục nội dung (cột phải workspace)
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Cây mục lục skill → section → câu hỏi; click để nhảy nhanh.
+ * LUỒNG: Click mục → onNavigateToItem(target) → parent scroll + đổi active section.
+ *
  * Mục lục nội dung + mục lục khóa học — cột phải workspace question bank.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -432,8 +439,11 @@ export default function MentorQuestionBankOutlinePanel({
   onChapterQuizSetup,
   onCourseQuizSetup,
 }) {
+  // expandedSkills: Set các kỹ năng đang mở rộng trong mục lục
   const [expandedSkills, setExpandedSkills] = useState(() => new Set());
+  // expandedSections: Set các section đang mở rộng
   const [expandedSections, setExpandedSections] = useState(() => new Set());
+  // selectedQuestionId: câu hỏi đang được highlight trong mục lục
   const [selectedQuestionId, setSelectedQuestionId] = useState('');
 
   const sectionsForUseForTestFilter = useMemo(
@@ -511,6 +521,7 @@ export default function MentorQuestionBankOutlinePanel({
       }}
     >
       <Box sx={{ ...BUILDER_PANEL_SX, p: 2 }}>
+        {/* Tiêu đề mục lục nội dung */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.85, mb: 1.25 }}>
           <Box
             sx={{

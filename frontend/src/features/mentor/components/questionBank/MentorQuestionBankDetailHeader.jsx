@@ -1,7 +1,13 @@
 /**
+ * =============================================================================
+ * MentorQuestionBankDetailHeader — Header trang Question Bank
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Breadcrumb, tiêu đề chương/khóa học, chip trạng thái, nút quay lại.
+ * Dùng cho cả Create mode và Manage workspace.
+ *
  * Header trang Question Bank (Create & Detail).
- */
-import {
+ */import {
   Box,
   Breadcrumbs,
   Chip,
@@ -61,6 +67,7 @@ export default function MentorQuestionBankDetailHeader({
   const backLabel = courseId
     ? (isCreateMode ? 'Quay lại' : 'Quay lại khóa học')
     : 'Quay lại danh sách';
+  // Navigate có guard (kiểm tra unsaved changes) nếu parent truyền onNavigateRequest
   const guardedNavigate = (to) => {
     const go = () => navigate(to);
     if (onNavigateRequest) {
@@ -87,6 +94,7 @@ export default function MentorQuestionBankDetailHeader({
   const breadcrumbLabel = isCreateMode && !bankTitle ? 'Tạo mới' : displayTitle;
   return (
     <Box sx={{ mb: 2.5 }}>
+      {/* Phần breadcrumb + nút quay lại */}
       <Box
         sx={{
           display: 'flex',
@@ -191,6 +199,7 @@ export default function MentorQuestionBankDetailHeader({
           {backLabel}
         </AppButton>
       </Box>
+      {/* Card thông tin: tiêu đề, chip trạng thái, tổng câu hỏi */}
       <Box
         sx={{
           p: { xs: 2, sm: 2.25 },

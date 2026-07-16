@@ -1,7 +1,13 @@
 /**
+ * =============================================================================
+ * MentorQuestionBankSkillNav — Tabbar kỹ năng (cột trái workspace)
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Chọn kỹ năng Listening / Reading / Vocabulary.
+ * LUỒNG: Click kỹ năng → onSkillChange(skill) → parent đổi activeSkill.
+ *
  * Tabbar kỹ năng — cột trái workspace question bank.
- */
-import { Box, Typography, alpha } from '@mui/material';
+ */import { Box, Typography, alpha } from '@mui/material';
 import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
@@ -111,6 +117,7 @@ export default function MentorQuestionBankSkillNav({
   chapterQuizConfig = null,
   onSkillChange,
 }) {
+  // Đếm số bài/nhóm và số câu hỏi theo từng kỹ năng
   const baiCountBySkill = SKILL_NAV_ITEMS.reduce((acc, { skill }) => {
     acc[skill] = getSectionsBySkill(sections, skill).length;
     return acc;

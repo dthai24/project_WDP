@@ -1,4 +1,11 @@
 /**
+ * =============================================================================
+ * MentorSelectCourseForQBDialog — Dialog chọn khóa học để tạo bank mới
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị danh sách khóa học chưa có ngân hàng câu hỏi.
+ * LUỒNG: Tìm kiếm → chọn khóa → onSelect(course) → navigate sang trang chi tiết.
+ *
  * Chọn khóa học — chọn chương trên trang tạo (mục lục bên phải).
  */
 import { useMemo, useState } from 'react';
@@ -26,8 +33,10 @@ export default function MentorSelectCourseForQBDialog({
   onSelect,
 }) {
   const theme = useTheme();
+  // search: từ khóa tìm kiếm trong dialog
   const [search, setSearch] = useState('');
 
+  // Lọc khóa học theo tên, sắp xếp mới nhất trước
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     // if (!q) return courses;
@@ -38,6 +47,7 @@ export default function MentorSelectCourseForQBDialog({
       });
   }, [courses, search]);
 
+  // Handler: chọn khóa → gọi callback parent → đóng dialog
   const handleSelect = (course) => {
     onSelect?.(course);
     setSearch('');

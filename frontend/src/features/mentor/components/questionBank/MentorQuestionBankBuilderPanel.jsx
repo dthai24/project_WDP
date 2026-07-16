@@ -1,4 +1,11 @@
 /**
+ * =============================================================================
+ * MentorQuestionBankBuilderPanel — Editor câu hỏi (cột giữa workspace)
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Tab bài/section, filter useForTest, nút Lưu, MentorTestSectionCard.
+ * LUỒNG: Chọn section → sửa trong TestSectionCard → onSectionChange → parent state.
+ *
  * Editor câu hỏi — cột giữa workspace question bank.
  */
 import { useEffect, useState } from 'react';
@@ -216,6 +223,7 @@ export default function MentorQuestionBankBuilderPanel({
   onUpdateSection,
   onRegisterSectionControls,
 }) {
+  // deletedDialogOpen: mở dialog danh sách câu hỏi đã xóa tạm
   const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
   const accentColor = TEST_SKILL_CHIP_COLORS[activeSkill]?.color ?? PRIMARY;
   const isVocabularySkill = isQuestionBankVocabularySkill(activeSkill);
@@ -227,6 +235,7 @@ export default function MentorQuestionBankBuilderPanel({
     ? getQuestionBankSectionTabLabel(activeSection, sections)
     : '';
 
+  // Handler: khôi phục câu hỏi đã xóa tạm trong section
   const handleRestoreDeletedQuestion = (question) => {
     if (!activeSection || !question) return;
     const prevDeletedCount = deletedQuestions.length;
@@ -250,6 +259,7 @@ export default function MentorQuestionBankBuilderPanel({
   return (
     <Box id="question-bank-builder-root" sx={{ minWidth: 0, width: '100%' }}>
       <Box sx={{ ...CREATE_CARD_SX, mb: { xs: 2, lg: 0 } }}>
+        {/* Cảnh báo khi khóa học đã xuất bản */}
         {publishedHint ? (
           <Typography
             sx={{
@@ -285,6 +295,7 @@ export default function MentorQuestionBankBuilderPanel({
 
         <Box id="qb-questions" sx={{ opacity: disabled ? 0.6 : 1, scrollMarginTop: 24 }}>
           <Box sx={{ pointerEvents: disabled ? 'none' : 'auto' }}>
+            {/* Bộ lọc section theo "dùng trong test" */}
             {skillSectionsAllCount > 0 ? (
               <SectionUseForTestFilterRow
                 value={sectionUseForTestFilter}
@@ -331,6 +342,7 @@ export default function MentorQuestionBankBuilderPanel({
 
             {activeSection ? (
               <>
+                {/* Tab chọn bài/section trong kỹ năng hiện tại */}
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mb: 2 }}>
                   {skillSections.map((section) => {
                     const sectionTestUsage = isVocabularySkill
@@ -388,6 +400,7 @@ export default function MentorQuestionBankBuilderPanel({
                   )}
                 </Box>
 
+                {/* Thanh trạng thái dirty + nút Lưu / Xem câu đã xóa */}
                 <Box
                   sx={{
                     display: 'flex',

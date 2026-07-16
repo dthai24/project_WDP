@@ -1,6 +1,17 @@
 /**
- * MentorQuestionBankListPage
- * Route: /mentor/question-banks
+ * =============================================================================
+ * MentorQuestionBankListPage — Trang danh sách ngân hàng câu hỏi
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị danh sách khóa học có ngân hàng câu hỏi của mentor.
+ *
+ * ROUTE URL: /mentor/question-banks
+ *
+ * LUỒNG CHÍNH:
+ *   1. Tải danh sách bank + khóa học chưa có bank từ API
+ *   2. Lọc/sắp xếp theo query params trên URL (status, questionStatus, sort, q)
+ *   3. Click "Quản lý câu hỏi" → chuyển sang trang chi tiết chương
+ *
  * Search: Header SearchBox (param q) — không nằm trong toolbar.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -33,11 +44,18 @@ const PAGE_SIZE = 8;
 export default function MentorQuestionBankListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // ===== STATE =====
+  // listQuestionBank: danh sách khóa học có ngân hàng câu hỏi từ API
   const [listQuestionBank, setListQuestionBank] = useState([]);
+  // loading: true khi đang gọi API lần đầu
   const [loading, setLoading] = useState(true);
+  // selectDialogOpen: mở dialog chọn khóa học để tạo bank mới
   const [selectDialogOpen, setSelectDialogOpen] = useState(false);
+  // coursesWithoutQB: khóa học chưa có ngân hàng câu hỏi (dùng trong dialog tạo mới)
   const [coursesWithoutQB, setCoursesWithoutQB] = useState([]);
 
+  // ===== DERIVED STATE từ URL query params =====
   const queryState = useMemo(() => parseQBListParams(searchParams), [searchParams]);
   const showReset = hasActiveQBFilters(queryState);
   const activeFilterChips = useMemo(
@@ -45,6 +63,9 @@ export default function MentorQuestionBankListPage() {
     [queryState],
   );
 
+  // ===== useEffect: TẢI DỮ LIỆU KHI VÀO TRANG =====
+  // Gọi 2 API song song: danh sách bank của mentor + tất cả khóa học của mentor
+  // → lọc ra khóa học chưa có bank để hiện trong dialog "Tạo bộ câu hỏi"
   useEffect(() => {
     let isMounted = true;
 
@@ -91,6 +112,7 @@ export default function MentorQuestionBankListPage() {
     };
   }, []);
 
+  // Cập nhật query params trên URL (replace để không tạo history entry mới)
   const updateQuery = (patch) => {
     setSearchParams(
       buildQBListSearchParams({ ...queryState, ...patch }, searchParams),
@@ -98,35 +120,40 @@ export default function MentorQuestionBankListPage() {
     );
   };
 
+  // Lọc + sắp xếp danh sách theo queryState (keyword, status, questionStatus, sort)
   const filteredItems = useMemo(
     () => filterAndSortQBItems(listQuestionBank, queryState),
     [listQuestionBank, queryState],
   );
 
+  // Phân trang: cắt mảng theo page hiện tại
   const pagination = useMemo(
     () => paginateQBItems(filteredItems, queryState.page, PAGE_SIZE),
     [filteredItems, queryState.page],
   );
 
+  // Đồng bộ page trên URL nếu vượt quá tổng số trang sau khi lọc
   useEffect(() => {
     if (!loading && queryState.page !== pagination.page) {
       updateQuery({ page: pagination.page });
     }
   }, [loading, queryState.page, pagination.page]);
 
+  // ===== HANDLERS — thay đổi bộ lọc (reset về trang 1) =====
   const handleStatusChange = (v) => updateQuery({ status: v, page: 1 });
-
   const handleQuestionStatusChange = (v) => updateQuery({ questionStatus: v, page: 1 });
-
   const handleSortChange = (v) => updateQuery({ sort: v, page: 1 });
 
+  // Đổi trang + scroll lên đầu
   const handlePageChange = (page) => {
     updateQuery({ page });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Xóa tất cả bộ lọc, trở về mặc định
   const handleReset = () => setSearchParams(resetQBListParams(searchParams), { replace: true });
 
+  // Xóa từng chip lọc (từ khóa, trạng thái KH, trạng thái câu hỏi)
   const handleRemoveChip = ({ type }) => {
     const defaults = {
       q: '',
@@ -136,6 +163,7 @@ export default function MentorQuestionBankListPage() {
     if (type in defaults) updateQuery({ [type]: defaults[type], page: 1 });
   };
 
+  // Render danh sách: loading / empty / danh sách row
   const renderList = () => {
     if (loading) {
       return <Loading message="Đang tải ngân hàng câu hỏi..." />;
@@ -181,6 +209,7 @@ export default function MentorQuestionBankListPage() {
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto' }}>
+      {/* Phần header: breadcrumb + nút Tạo bộ câu hỏi */}
       <Box
         sx={{
           display: 'flex',
@@ -229,6 +258,7 @@ export default function MentorQuestionBankListPage() {
         </AppButton>
       </Box>
 
+      {/* Toolbar: bộ lọc trạng thái KH, trạng thái câu hỏi, sắp xếp */}
       <MentorQuestionBankToolbar
         statusFilter={queryState.status}
         onStatusChange={handleStatusChange}
@@ -243,8 +273,10 @@ export default function MentorQuestionBankListPage() {
         onRemoveFilterChip={handleRemoveChip}
       />
 
+      {/* Danh sách khóa học (hoặc loading/empty) */}
       {renderList()}
 
+      {/* Phân trang — chỉ hiện khi có nhiều hơn 1 trang */}
       {!loading && pagination.totalPages > 1 && (
         <>
           <Typography
@@ -262,6 +294,7 @@ export default function MentorQuestionBankListPage() {
         </>
       )}
 
+      {/* Dialog chọn khóa học chưa có bank để tạo mới */}
       <MentorSelectCourseForQBDialog
         open={selectDialogOpen}
         onClose={() => setSelectDialogOpen(false)}

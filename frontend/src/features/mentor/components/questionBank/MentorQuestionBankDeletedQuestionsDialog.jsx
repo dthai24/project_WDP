@@ -18,6 +18,15 @@ import AppButton from '@/shared/ui/AppButton';
 import EmptyState from '@/shared/ui/EmptyState';
 import { MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
+/**
+ * =============================================================================
+ * MentorQuestionBankDeletedQuestionsDialog — Dialog câu hỏi đã xóa tạm
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Liệt kê câu hỏi đã xóa trong phiên chỉnh sửa (chưa lưu API).
+ * LUỒNG: User bấm "Khôi phục" → onRestoreQuestion(question) → parent cập nhật section.
+ */
+
 function truncateText(text, max = 120) {
   const trimmed = String(text ?? '').trim();
   if (!trimmed) return 'Chưa có nội dung';

@@ -13,6 +13,15 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import AppButton from '@/shared/ui/AppButton';
 import { MUTED, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
+/**
+ * =============================================================================
+ * MentorQuestionBankQuestionChangesDialog — So sánh Old vs New question
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị song song câu hỏi cũ và mới khi user sửa câu đã lưu DB.
+ * LUỒNG: User có thể "Khôi phục" về bản cũ hoặc "Đóng" giữ bản mới.
+ */
+
 function QuestionPreviewChoices({ options = [] }) {
   const filledOptions = options.filter((item) => String(item?.OptionText ?? '').trim());
 
@@ -159,6 +168,7 @@ export default function MentorQuestionBankQuestionChangesDialog({
       </DialogTitle>
 
       <DialogContent sx={{ pt: 0.5, pb: 2.5 }}>
+        {/* Hai cột: Old Question | New Question */}
         <Box
           sx={{
             display: 'grid',

@@ -1,3 +1,19 @@
+/**
+ * =============================================================================
+ * mentorQuestionBankListParams.js — Utils query params trang danh sách QB
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Parse/build/reset query params URL cho MentorQuestionBankListPage.
+ * Các param: q, status, questionStatus, sort, page, pageSize
+ *
+ * LUỒNG:
+ *   1. parseQBListParams: đọc URL → object filter
+ *   2. filterAndSortQBItems: lọc + sắp xếp danh sách
+ *   3. paginateQBItems: phân trang
+ *   4. buildQBListSearchParams: cập nhật URL khi đổi filter
+ */
+
+// Giá trị mặc định khi không có query param trên URL
 export const QB_LIST_DEFAULTS = {
   q: '',
   status: 'all',
@@ -16,6 +32,7 @@ function parsePage(value) {
   return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
+/** Đọc query params từ URLSearchParams → object filter đã validate. */
 export function parseQBListParams(searchParams) {
   const status = searchParams.get('status') ?? QB_LIST_DEFAULTS.status;
   const questionStatus = searchParams.get('questionStatus') ?? QB_LIST_DEFAULTS.questionStatus;
@@ -32,6 +49,7 @@ export function parseQBListParams(searchParams) {
   };
 }
 
+/** Kiểm tra có bộ lọc nào khác mặc định không (để hiện nút Reset). */
 export function hasActiveQBFilters(filters) {
   return (
     Boolean(filters.q) ||
@@ -106,6 +124,7 @@ const normalizationStatus = (bankStatus) => {
   return bankStatus;
 };
 
+/** Lọc theo keyword/trạng thái KH/trạng thái câu hỏi + sắp xếp. */
 export function filterAndSortQBItems(items, query = {}) {
   const { q = '', status = 'all', questionStatus = 'all', sort = 'updated_desc' } = query;
   const keyword = q.trim().toLowerCase();
@@ -135,6 +154,7 @@ export function filterAndSortQBItems(items, query = {}) {
   return result;
 }
 
+/** Cắt mảng theo trang, trả về metadata phân trang. */
 export function paginateQBItems(items, page, pageSize) {
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));

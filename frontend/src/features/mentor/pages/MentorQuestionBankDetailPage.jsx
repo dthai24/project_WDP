@@ -1,5 +1,19 @@
 /**
- * MentorQuestionBankDetailPage — UI shell (paths list + editor), không fetch API.
+ * =============================================================================
+ * MentorQuestionBankDetailPage — Trang chọn chương để quản lý câu hỏi
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị danh sách chương của một khóa học; mentor chọn chương
+ *            để vào workspace chỉnh sửa ngân hàng câu hỏi.
+ *
+ * ROUTE URL: /mentor/question-banks/:courseId
+ *
+ * LUỒNG CHÍNH:
+ *   1. Tải thông tin khóa học + danh sách chương từ API
+ *   2. Hiển thị grid các thẻ chương (PathChapterCard)
+ *   3. Click chương → navigate sang /mentor/question-banks/:courseId/:pathId
+ *
+ * MentorQuestionBankDetailPage — UI shell (paths list + editor), không fetch API đầy đủ.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, alpha, useTheme } from '@mui/material';
@@ -30,7 +44,8 @@ import {
 } from '@/features/mentor/data/mentorQuestionBankMock';
 import axios from 'axios';
 
-//________ChapTer Card__________
+//________Component con: thẻ hiển thị một chương trong danh sách__________
+// Trigger click → gọi onOpen(path) để parent navigate sang trang workspace
 function PathChapterCard({ path, index, onOpen }) {
   const theme = useTheme();
   const label = path.displayLabel || path.PathName || `Chương #${path.PathId}`;
@@ -106,20 +121,18 @@ function PathChapterCard({ path, index, onOpen }) {
   );
 }
 //________________________________________________________
-//________________________________________________________
 export default function MentorQuestionBankDetailPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  // const courseId = searchParams.get('courseId') ?? '3';
-  const chapterId = searchParams.get('chapterId') ?? '';
-  // const isEditorMode = searchParams.get('mode') === 'editor';
-  // const isPathListMode = !chapterId;
 
-  // const course = getMockCourseFromQuestionBank(courseId);
+  // ===== STATE =====
+  // course: thông tin khóa học từ API
   const [course, setCourse] = useState();
-  // const [questionBankPaths, setQuestionBankPaths] = useState([])
+  // coursePaths: danh sách chương (paths) của khóa học
   const [coursePaths, setCoursePaths] = useState([])
+
+  // ===== useEffect: TẢI KHÓA HỌC + DANH SÁCH CHƯƠNG =====
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -142,6 +155,12 @@ export default function MentorQuestionBankDetailPage() {
     fetchData();
 
   }, [courseId])
+
+  const chapterId = searchParams.get('chapterId') ?? '';
+  // const isEditorMode = searchParams.get('mode') === 'editor';
+  // const isPathListMode = !chapterId;
+
+  // const course = getMockCourseFromQuestionBank(courseId);
   const courseChapters = getMockChaptersForCourse(courseId);
   const selectedChapter = courseChapters.find(
     (item) => String(item.PathId) === String(chapterId),
@@ -199,6 +218,7 @@ export default function MentorQuestionBankDetailPage() {
     [course],
   );
 
+  // Handler: click thẻ chương → chuyển sang workspace chỉnh sửa câu hỏi
   const openPath = (path) => {
     navigate(`/mentor/question-banks/${courseId}/${path.PathId}`, {
       state: {
@@ -251,6 +271,7 @@ export default function MentorQuestionBankDetailPage() {
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1280, mx: 'auto', py: 2 }}>
+      {/* Nút quay lại danh sách ngân hàng câu hỏi */}
       <Box sx={{ mb: 2 }}>
         <AppButton
           variant="text"
@@ -269,6 +290,7 @@ export default function MentorQuestionBankDetailPage() {
         </AppButton>
       </Box>
 
+      {/* Banner tiêu đề khóa học */}
       <Box
         sx={{
           mb: 2.5,
@@ -312,6 +334,7 @@ export default function MentorQuestionBankDetailPage() {
           onAction={() => navigate(`/mentor/question-banks/manage?courseId=${courseId}`)}
         />
       ) : ( */}
+      {/* Grid danh sách chương — click để mở workspace */}
       <Box
         sx={{
           display: 'grid',

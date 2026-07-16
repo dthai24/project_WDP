@@ -20,6 +20,22 @@ import {
 import { isHtmlContentEmpty } from '@/features/mentor/utils/mentorCourseContentUtils';
 import { fetchTextMaterialHtml } from '@/features/mentor/services/materialUploadService';
 
+/**
+ * =============================================================================
+ * questionBankApiMappers.js — Chuyển đổi dữ liệu API ↔ Editor format
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Map dữ liệu từ REST API sang format editor (và ngược lại khi lưu).
+ *
+ * CÁC NHÓM HÀM:
+ *   - mapApiSectionToEditorSection / mapApiQuestionToEditorQuestion: API → editor
+ *   - mergeQuestionsIntoSection / hydrateReadingSectionFromSourceUrl: bổ sung dữ liệu
+ *   - buildSectionEditorSnapshot / buildSectionBaselinesMap: baseline so sánh thay đổi
+ *   - hasSectionUnsavedChanges / hasQuestionBankWorkspaceChanges: phát hiện dirty
+ *   - buildQuestionBankSectionSavePayload / serializeQuestionBankSavePayload: editor → API payload
+ *   - revertSectionToSavedBaseline: hoàn tác thay đổi chưa lưu
+ */
+
 function toBooleanDefaultTrue(value) {
   if (value == null) return true;
   return Boolean(value);
@@ -51,6 +67,9 @@ function buildQuestionSaveSnapshot(question) {
   });
 }
 
+// ===== API → EDITOR =====
+
+/** Chuyển object section từ API response sang format editor (tempId, Questions, SkillType...). */
 export function mapApiSectionToEditorSection(apiSection) {
   const skillType = normalizeQuestionBankSkillType(
     apiSection.skillType ?? TEST_SKILL_VOCABULARY,
@@ -115,6 +134,7 @@ export async function hydrateReadingSectionFromSourceUrl(section) {
   }
 }
 
+/** Chuyển object question từ API sang format editor. */
 export function mapApiQuestionToEditorQuestion(apiQuestion, section = {}) {
   const choices = (apiQuestion.choices ?? []).map((choice) => ({
     tempId: `choice_${choice.choiceId}`,
@@ -142,6 +162,7 @@ export function mapApiQuestionToEditorQuestion(apiQuestion, section = {}) {
   };
 }
 
+/** Gộp mảng câu hỏi API vào section editor. */
 export function mergeQuestionsIntoSection(section, apiQuestions = []) {
   const activeQuestions = (apiQuestions ?? []).filter((item) => item.isActive !== false);
   const questions = activeQuestions.map((item) => mapApiQuestionToEditorQuestion(item, section));
@@ -166,6 +187,8 @@ export function mergeQuestionsIntoSection(section, apiQuestions = []) {
 
   return nextSection;
 }
+
+// ===== BASELINE & DIRTY DETECTION =====
 
 export function getSectionDisplayQuestionCount(section) {
   const loadedCount = (section?.Questions ?? []).filter(
@@ -295,10 +318,12 @@ export function isSectionSyncedWithBaseline(section, baselines = {}, sourceBasel
   return !isSectionSaveDirty(section, baselines, sourceBaselines);
 }
 
+/** Kiểm tra section có thay đổi chưa lưu (so với baseline). */
 export function hasSectionUnsavedChanges(section, baselines = {}, sourceBaselines = {}) {
   return !isSectionSyncedWithBaseline(section, baselines, sourceBaselines);
 }
 
+/** Kiểm tra workspace có thay đổi chưa lưu (dựa trên section đang active). */
 export function hasQuestionBankWorkspaceChanges(
   _sections = [],
   activeSection,
@@ -822,6 +847,7 @@ export function shouldUploadReadingComposeText(section, sourceBaselines = {}) {
   return Boolean(String(normalized.Description ?? '').trim());
 }
 
+/** Build payload đầy đủ để gọi saveQuestionBankSection (insert/update/delete). */
 export function buildQuestionBankSectionSavePayload(
   section,
   {

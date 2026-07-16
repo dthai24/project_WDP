@@ -1,6 +1,25 @@
 /**
+ * =============================================================================
+ * MentorQuestionBankManagePage — Trang workspace chỉnh sửa ngân hàng câu hỏi
+ * =============================================================================
+ *
+ * MỤC ĐÍCH:
+ *   Trang chính để mentor tạo/sửa câu hỏi theo từng chương (path) của khóa học.
+ *   Mỗi chương có các section theo kỹ năng: Listening, Reading, Vocabulary.
+ *
+ * ROUTE URL:
+ *   /mentor/question-banks/:courseId/:pathId
+ *   Ví dụ: /mentor/question-banks/3/10  → khóa học #3, chương #10
+ *
+ * LUỒNG CHÍNH (3 bước):
+ *   1. TẢI DỮ LIỆU — Gọi API lấy thông tin khóa học, danh sách chương,
+ *      các section và câu hỏi; lưu vào state `sections` + baseline để so sánh thay đổi.
+ *   2. CHỈNH SỬA SECTION — Mentor chọn kỹ năng → chọn bài/section → sửa đề + câu hỏi
+ *      trong `MentorQuestionBankBuilderPanel`; thay đổi lưu tạm trong state (chưa gửi API).
+ *   3. LƯU SECTION — Bấm "Cập nhật section" → xem preview payload → xác nhận
+ *      → gọi `saveQuestionBankSection` → cập nhật baseline sau khi lưu thành công.
+ *
  * Workspace question bank — axios tại trang.
- * Route: /mentor/question-banks/:courseId/:pathId
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@mui/material';
@@ -63,49 +82,80 @@ import { getChapterQuizConfig } from '@/features/mentor/services/chapterQuizConf
 import { validateListeningReadingPublishedSectionQuota, validateVocabularySectionQuestionQuota, isSkillSectionRandomPick } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import { useNavigationGuard } from '@/context/NavigationGuardContext';
 
+// URL gốc của backend API (lấy từ biến môi trường hoặc localhost mặc định)
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 export default function MentorQuestionBankManagePage() {
   const navigate = useNavigate();
+  // Lấy courseId và pathId (chương) từ URL, ví dụ /mentor/question-banks/3/10
   const { courseId, pathId } = useParams();
 
+  // ===== 1. KHAI BÁO STATE =====
+
+  // loading: true khi đang tải dữ liệu ban đầu từ API
   const [loading, setLoading] = useState(true);
+  // errors: lưu lỗi theo key (ví dụ pathId khi chọn chương không hợp lệ)
   const [errors, setErrors] = useState({});
+  // course: thông tin khóa học (tên, trạng thái xuất bản, category...)
   const [course, setCourse] = useState(null);
+  // coursePaths: danh sách tất cả chương (paths) của khóa học
   const [coursePaths, setCoursePaths] = useState([]);
+  // sections: mảng tất cả section (bài) của 3 kỹ năng — state trung tâm của editor
   const [sections, setSections] = useState(() => createQuestionBankSkillSections());
+  // sectionsRef: ref giữ giá trị sections mới nhất (dùng trong callback/async tránh stale closure)
   const sectionsRef = useRef(sections);
+  // sectionBaselines: snapshot JSON của từng section đã lưu — dùng phát hiện thay đổi chưa lưu
   const [sectionBaselines, setSectionBaselines] = useState({});
   const sectionBaselinesRef = useRef(sectionBaselines);
+  // initialSectionBaselines: baseline ban đầu khi tải trang (dùng khi khôi phục câu hỏi)
   const [initialSectionBaselines, setInitialSectionBaselines] = useState({});
   const initialSectionBaselinesRef = useRef(initialSectionBaselines);
+  // sectionSourceBaselines: baseline URL nguồn (audio/reading) — tách riêng vì upload file
   const [sectionSourceBaselines, setSectionSourceBaselines] = useState({});
   const sectionSourceBaselinesRef = useRef(sectionSourceBaselines);
+  // unsavedNavDialogOpen: hiện dialog cảnh báo khi rời trang có thay đổi chưa lưu
   const [unsavedNavDialogOpen, setUnsavedNavDialogOpen] = useState(false);
+  // savePreviewOpen: mở dialog xem trước payload trước khi gửi API lưu
   const [savePreviewOpen, setSavePreviewOpen] = useState(false);
+  // savePreviewPayload: object payload sẽ gửi lên server (insert/update/delete)
   const [savePreviewPayload, setSavePreviewPayload] = useState(null);
+  // savePreviewReadingText: HTML bài đọc (Reading) hiển thị trong preview
   const [savePreviewReadingText, setSavePreviewReadingText] = useState(null);
   const savePayloadRef = useRef(null);
   const savePreviewReadingTextRef = useRef(null);
+  // confirmSaveInFlightRef: chặn double-click khi đang gọi API lưu
   const confirmSaveInFlightRef = useRef(false);
+  // pendingNavigationRef: lưu hàm navigate chờ user xác nhận bỏ thay đổi
   const pendingNavigationRef = useRef(null);
   const requestNavigationRef = useRef(null);
+  // registerNavigationGuard: đăng ký guard chặn chuyển route khi có thay đổi chưa lưu
   const { registerNavigationGuard } = useNavigationGuard() ?? {};
+  // questionPathId: ID bản ghi Questions_Path trên DB (liên kết course + chapter)
   const [questionPathId, setQuestionPathId] = useState(null);
+  // sectionErrors: lỗi validate theo tempId của section (hiển thị dưới form)
   const [sectionErrors, setSectionErrors] = useState({});
+  // updatingSectionId: tempId section đang được lưu (hiện loading trên nút Lưu)
   const [updatingSectionId, setUpdatingSectionId] = useState('');
+  // activeSkill: kỹ năng đang chọn (LISTENING | READING | VOCABULARY)
   const [activeSkill, setActiveSkill] = useState(TEST_SKILL_LISTENING);
+  // activeSectionId: tempId của section (bài) đang được chỉnh sửa
   const [activeSectionId, setActiveSectionId] = useState('');
+  // sectionUseForTestFilter: bộ lọc section theo "dùng trong test" hay không
   const [sectionUseForTestFilter, setSectionUseForTestFilter] = useState(
     SECTION_USE_FOR_TEST_FILTER.ALL,
   );
+  // chapterQuizConfig: cấu hình quiz của chương (quota số section/câu hỏi trong test)
   const [chapterQuizConfig, setChapterQuizConfig] = useState(null);
+  // Hook quản lý flush editor + chặn navigate khi đang upload file
   const {
     bindSectionControls,
     flushActiveSection,
     isActiveSectionBusy,
     prepareSectionNavigation,
   } = useQuestionBankSectionCommit();
+
+  // ===== 2. ĐỒNG BỘ REF VỚI STATE =====
+  // Mỗi khi state thay đổi, cập nhật ref tương ứng để callback async luôn đọc giá trị mới nhất
 
   useEffect(() => {
     sectionsRef.current = sections;
@@ -123,14 +173,20 @@ export default function MentorQuestionBankManagePage() {
     sectionSourceBaselinesRef.current = sectionSourceBaselines;
   }, [sectionSourceBaselines]);
 
+  // ===== 3. TẢI DỮ LIỆU BAN ĐẦU (useEffect chính) =====
+  // Chạy khi courseId hoặc pathId thay đổi (vào trang hoặc đổi chương).
+  // Gọi song song 4 API: khóa học, danh sách chương, sections, cấu hình quiz.
+  // Sau đó tải câu hỏi từng section và hydrate nội dung Reading từ Cloudinary.
+
   useEffect(() => {
     if (!courseId || !pathId) return undefined;
 
-    let cancelled = false;
+    let cancelled = false; // cờ hủy request nếu component unmount hoặc đổi params
 
     (async () => {
       setLoading(true);
       try {
+        // Gọi 4 API song song để tải nhanh hơn
         const [resCourse, resPaths, resSections, resQuizConfig] = await Promise.all([
           axios.get(`${API_BASE}/api/courses/my-courses/${courseId}`, { params: { tab: 'course' } }),
           axios.get(`${API_BASE}/api/courses/my-courses/${courseId}/chapters`),
@@ -151,6 +207,7 @@ export default function MentorQuestionBankManagePage() {
           return;
         }
 
+        // Map dữ liệu API → format editor, sắp xếp theo order
         let mappedSections = (sectionPayload?.data?.sections ?? [])
           .slice()
           .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
@@ -159,6 +216,7 @@ export default function MentorQuestionBankManagePage() {
           mappedSections = createQuestionBankSkillSections();
         }
 
+        // Tải câu hỏi cho từng section đã có SectionId trên DB
         const sectionsWithQuestions = (
           await Promise.all(
             mappedSections.map(async (section) => {
@@ -173,12 +231,14 @@ export default function MentorQuestionBankManagePage() {
           )
         ).map(attachInitialQuestionsToSection);
 
+        // Với Reading: tải HTML bài đọc từ MaterialUrl nếu Description còn trống
         const hydratedSections = await Promise.all(
           sectionsWithQuestions.map((section) => hydrateReadingSectionFromSourceUrl(section)),
         );
 
         if (cancelled) return;
 
+        // Lưu state và tạo baseline ban đầu để so sánh thay đổi sau này
         setQuestionPathId(sectionPayload?.data?.questionPathId ?? null);
         const baselines = buildSectionBaselinesMap(hydratedSections);
         setSections(hydratedSections);
@@ -188,6 +248,7 @@ export default function MentorQuestionBankManagePage() {
         setSectionSourceBaselines(buildSectionSourceBaselinesMap(hydratedSections));
         setSectionErrors({});
 
+        // Tự chọn section Listening đầu tiên (hoặc section đầu tiên nếu không có Listening)
         const firstSection =
           getSectionsBySkill(hydratedSections, TEST_SKILL_LISTENING)[0]
           ?? hydratedSections[0];
@@ -210,6 +271,9 @@ export default function MentorQuestionBankManagePage() {
       cancelled = true;
     };
   }, [courseId, pathId]);
+
+  // ===== 4. HYDRATE NỘI DUNG READING KHI CHUYỂN SANG KỸ NĂNG READING =====
+  // Khi user chọn tab Reading, tải HTML từ Cloudinary cho các section có MaterialUrl nhưng chưa có Description
 
   useEffect(() => {
     if (activeSkill !== TEST_SKILL_READING) return undefined;
@@ -281,21 +345,28 @@ export default function MentorQuestionBankManagePage() {
     };
   }, [activeSkill]);
 
+  // ===== 5. DERIVED STATE (useMemo & biến tính toán) =====
+  // Các giá trị phụ thuộc sections/activeSkill — không cần state riêng
+
+  // Danh sách section của kỹ năng đang chọn (chưa lọc useForTest)
   const skillSectionsAll = useMemo(
     () => getVisibleSectionsBySkill(sections, activeSkill),
     [sections, activeSkill],
   );
 
+  // Danh sách section sau khi lọc theo "dùng trong test"
   const skillSections = useMemo(
     () => filterSectionsByUseForTest(skillSectionsAll, sectionUseForTestFilter),
     [skillSectionsAll, sectionUseForTestFilter],
   );
 
+  // Đếm số section trong từng nhóm lọc (tất cả / trong test / không trong test)
   const sectionUseForTestCounts = useMemo(
     () => countSectionsByUseForTest(skillSectionsAll),
     [skillSectionsAll],
   );
 
+  // Tự chọn section đầu tiên nếu section hiện tại không còn trong danh sách đã lọc
   useEffect(() => {
     if (skillSections.length === 0) return;
     if (!skillSections.some((section) => section.tempId === activeSectionId)) {
@@ -305,21 +376,25 @@ export default function MentorQuestionBankManagePage() {
 
   const visibleSections = sections;
 
+  // Section đang active (đang được chỉnh sửa trong builder panel)
   const activeSection = useMemo(() => {
     const picked = sections.find((s) => s.tempId === activeSectionId);
     if (picked?.SkillType === activeSkill) return picked;
     return skillSections[0] ?? null;
   }, [sections, activeSkill, activeSectionId, skillSections]);
 
+  // Số thứ tự bài (Bài 1, Bài 2...) trong kỹ năng hiện tại
   const activeSectionIndex = activeSection
     ? getSectionBaiNumber(activeSection, visibleSections) - 1
     : 0;
 
+  // Thông tin hiển thị header: chương đang chọn, tên khóa học, tổng câu hỏi...
   const selectedPath = coursePaths.find((item) => String(item.PathId) === String(pathId));
   const bankTitle = selectedPath?.PathName?.trim() ?? `Path #${pathId}`;
   const courseCategory = [course?.CategoryDisplayName, course?.LevelDisplayName].filter(Boolean).join(' · ');
   const questionCount = getFilledQuestionCount(visibleSections);
   const questionCountBySkill = countActiveQuestionsBySkill(visibleSections);
+  // Kiểm tra section active có thay đổi chưa lưu không
   const activeSectionUnsaved = activeSection
     ? hasSectionUnsavedChanges(activeSection, sectionBaselines, sectionSourceBaselines)
     : false;
@@ -330,6 +405,10 @@ export default function MentorQuestionBankManagePage() {
     || (activeSectionUnsaved && Boolean(activeSection));
   const activeSectionDirty = canSaveSection;
 
+  // ===== 6. HANDLERS — CẬP NHẬT SECTION TRONG STATE =====
+
+  // Trigger: user sửa nội dung section trong MentorTestSectionCard
+  // Làm gì: thay section tương ứng trong mảng sections; xóa lỗi validate nếu có
   const handleSectionChange = (tempId, nextSection) => {
     const next = sectionsRef.current.map((s) => (s.tempId === tempId ? nextSection : s));
     sectionsRef.current = next;
@@ -339,6 +418,8 @@ export default function MentorQuestionBankManagePage() {
     }
   };
 
+  // Trigger: khôi phục hết câu hỏi đã xóa trong section
+  // Kết quả: cập nhật baseline câu hỏi ban đầu
   const handleQuestionsFullyRestored = (tempId, nextSection) => {
     const finalized = finalizeSectionAfterFullQuestionRestore(nextSection);
     handleSectionChange(tempId, finalized);
@@ -347,6 +428,7 @@ export default function MentorQuestionBankManagePage() {
     );
   };
 
+  // Tạo baseline cho section mới thêm (chưa có trong sectionBaselines)
   const appendSectionBaselines = (nextSections) => {
     const missing = nextSections.filter((s) => s?.tempId);
     setSectionBaselines((prev) => {
@@ -362,6 +444,7 @@ export default function MentorQuestionBankManagePage() {
     }));
   };
 
+  // Hoàn tác mọi thay đổi chưa lưu của section đang active — trả về baseline đã lưu
   const revertActiveSectionChanges = () => {
     const section = sectionsRef.current.find((s) => s.tempId === activeSectionId);
     if (!section) return;
@@ -377,6 +460,10 @@ export default function MentorQuestionBankManagePage() {
     setSectionErrors((prev) => ({ ...prev, [section.tempId]: undefined }));
   };
 
+  // ===== 7. HANDLERS — NAVIGATION GUARD (chặn rời trang khi chưa lưu) =====
+
+  // Trigger: user muốn chuyển skill/section/chương hoặc quay lại
+  // Làm gì: nếu có thay đổi chưa lưu → hiện dialog; nếu không → navigate ngay
   const requestNavigation = (navigateFn) => {
     const section = sectionsRef.current.find((s) => s.tempId === activeSectionId) ?? activeSection;
     if (!prepareSectionNavigation(section)) return;
@@ -397,11 +484,13 @@ export default function MentorQuestionBankManagePage() {
     navigateFn();
   };
 
+  // User bấm Hủy trên dialog → giữ nguyên trang, tiếp tục chỉnh sửa
   const handleUnsavedNavCancel = () => {
     pendingNavigationRef.current = null;
     setUnsavedNavDialogOpen(false);
   };
 
+  // User bấm Tiếp tục → hoàn tác thay đổi section active rồi thực hiện navigate
   const handleUnsavedNavContinue = () => {
     const navigateFn = pendingNavigationRef.current;
     pendingNavigationRef.current = null;
@@ -410,12 +499,14 @@ export default function MentorQuestionBankManagePage() {
     navigateFn?.();
   };
 
+  // Wrapper: mọi navigation đều đi qua requestNavigation để kiểm tra unsaved changes
   const withSavedSection = (navigateFn) => {
     requestNavigation(navigateFn);
   };
 
   requestNavigationRef.current = requestNavigation;
 
+  // Tạo section mới với sectionOrder tiếp theo trong cùng kỹ năng
   const createSectionWithNextOrder = (skill, currentSections = []) => {
     const newSection = attachInitialQuestionsToSection(createQuestionBankSection(skill));
     const maxOrder = currentSections
@@ -427,6 +518,7 @@ export default function MentorQuestionBankManagePage() {
     };
   };
 
+  // Đăng ký navigation guard toàn app (chặn click link sidebar khi có thay đổi chưa lưu)
   useEffect(() => {
     if (!registerNavigationGuard) return undefined;
     return registerNavigationGuard((navigateFn) => {
@@ -434,6 +526,10 @@ export default function MentorQuestionBankManagePage() {
     });
   }, [registerNavigationGuard]);
 
+  // ===== 8. HANDLERS — LƯU SECTION (SAVE FLOW) =====
+
+  // Trigger: bấm nút "Cập nhật section" trên BuilderPanel
+  // Làm gì: flush editor → kiểm tra thay đổi → build payload → mở dialog preview
   const handleUpdateSection = () => {
     if (!activeSection) return;
 
@@ -478,6 +574,7 @@ export default function MentorQuestionBankManagePage() {
     setSavePreviewOpen(true);
   };
 
+  // Đóng dialog preview (không lưu) — chỉ khi không đang gọi API
   const handleSavePreviewClose = () => {
     if (updatingSectionId) return;
     setSavePreviewOpen(false);
@@ -486,6 +583,8 @@ export default function MentorQuestionBankManagePage() {
     savePayloadRef.current = null;
   };
 
+  // Trigger: bấm "Lưu thay đổi" trên dialog preview
+  // Luồng: validate → upload Reading HTML nếu cần → gọi saveQuestionBankSection → cập nhật baseline + state
   const handleConfirmSaveSection = async () => {
     if (confirmSaveInFlightRef.current) return;
 
@@ -745,6 +844,9 @@ export default function MentorQuestionBankManagePage() {
     }
   };
 
+  // ===== 9. HANDLERS — CHUYỂN KỸ NĂNG / SECTION / CHƯƠNG =====
+
+  // Trigger: click tab kỹ năng bên trái (Listening/Reading/Vocabulary)
   const handleSkillSelect = (skill) => {
     if (skill === activeSkill) return;
     withSavedSection(() => {
@@ -763,6 +865,7 @@ export default function MentorQuestionBankManagePage() {
     });
   };
 
+  // Trigger: click tab bài (Bài 1, Bài 2...) trên BuilderPanel
   const handleSectionSelect = (tempId) => {
     if (tempId === activeSectionId) return;
     withSavedSection(() => {
@@ -773,6 +876,7 @@ export default function MentorQuestionBankManagePage() {
     });
   };
 
+  // Trigger: bấm "Thêm bài" / "Thêm nhóm câu hỏi"
   const handleAddBai = () => {
     withSavedSection(() => {
       const newSection = createSectionWithNextOrder(activeSkill, sectionsRef.current);
@@ -794,6 +898,7 @@ export default function MentorQuestionBankManagePage() {
     });
   };
 
+  // Trigger: click mục trong mục lục bên phải (OutlinePanel) — nhảy tới skill/section/câu hỏi
   const handleOutlineNavigate = (target) => {
     const isSameSection = target.sectionTempId && target.sectionTempId === activeSectionId;
     const isSameSkillOnly = !target.sectionTempId && target.skill === activeSkill;
@@ -830,6 +935,7 @@ export default function MentorQuestionBankManagePage() {
     withSavedSection(navigate);
   };
 
+  // Trigger: chọn chương khác từ OutlinePanel → đổi URL pathId
   const handlePathSelect = (nextPathId) => {
     if (String(nextPathId) === String(pathId)) return;
     withSavedSection(() => {
@@ -838,10 +944,14 @@ export default function MentorQuestionBankManagePage() {
     });
   };
 
+  // Trigger: bấm "Quay lại" trên header → về trang danh sách chương của khóa học
   const handleBack = () => {
     withSavedSection(() => navigate(`/mentor/question-banks/${courseId}`));
   };
 
+  // ===== 10. RENDER =====
+
+  // Thiếu params URL → hiện thông báo hướng dẫn
   if (!courseId || !pathId) {
     return (
       <Box sx={{ py: 8, textAlign: 'center', color: '#64748B' }}>
@@ -854,6 +964,7 @@ export default function MentorQuestionBankManagePage() {
 
   return (
     <Box sx={{ width: '100%', maxWidth: { xs: '100%', lg: 1520 }, mx: 'auto' }}>
+      {/* Phần header: breadcrumb, tên chương, tổng câu hỏi, nút quay lại */}
       <MentorQuestionBankDetailHeader
         isCreateMode
         breadcrumbMode="coursePath"
@@ -867,6 +978,7 @@ export default function MentorQuestionBankManagePage() {
         onNavigateRequest={requestNavigation}
       />
 
+      {/* Layout 3 cột: SkillNav (trái) | BuilderPanel + OutlinePanel (giữa/phải) */}
       <Box
         sx={{
           display: 'flex',
@@ -875,6 +987,7 @@ export default function MentorQuestionBankManagePage() {
           alignItems: 'start',
         }}
       >
+        {/* Cột trái: tab chọn kỹ năng Listening / Reading / Vocabulary */}
         <MentorQuestionBankSkillNav
           sections={visibleSections}
           activeSkill={activeSkill}
@@ -894,6 +1007,7 @@ export default function MentorQuestionBankManagePage() {
             alignItems: 'start',
           }}
         >
+          {/* Cột giữa: editor section + câu hỏi */}
           {/*_________________Phần ở giữa gồm các câu hỏi theo section_______________*/}
           <MentorQuestionBankBuilderPanel
             sections={sections}
@@ -922,6 +1036,7 @@ export default function MentorQuestionBankManagePage() {
             onRegisterSectionControls={bindSectionControls}
           />
 
+          {/* Cột phải: mục lục nội dung + danh sách chương */}
           <MentorQuestionBankOutlinePanel
             sections={visibleSections}
             activeSkill={activeSkill}
@@ -943,6 +1058,7 @@ export default function MentorQuestionBankManagePage() {
 
       <ScrollToTopButton avoidSelectors={['#app-site-footer']} />
 
+      {/* Dialog cảnh báo khi rời trang có thay đổi chưa lưu */}
       <ConfirmDialog
         open={unsavedNavDialogOpen}
         onClose={handleUnsavedNavCancel}
@@ -953,6 +1069,7 @@ export default function MentorQuestionBankManagePage() {
         cancelLabel="Hủy"
       />
 
+      {/* Dialog xem trước payload API trước khi lưu section */}
       <MentorQuestionBankSectionSavePreviewDialog
         open={savePreviewOpen}
         payload={savePreviewPayload}

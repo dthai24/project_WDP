@@ -18,6 +18,15 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import { mentorQuestionBankFilterOptionsMock } from '@/features/mentor/data/mentorQuestionBankMock';
 import { QB_LIST_DEFAULTS } from '@/features/mentor/utils/mentorQuestionBankListParams';
+
+/**
+ * =============================================================================
+ * MentorQuestionBankToolbar — Thanh bộ lọc trang danh sách QB
+ * =============================================================================
+ *
+ * MỤC ĐÍCH: Hiển thị dropdown lọc trạng thái KH, trạng thái câu hỏi, sắp xếp.
+ * Toolbar filter/sort — search xử lý qua Header SearchBox (param q).
+ */
 const MUTED = '#64748B';
 const ICON = '#94A3B8';
 function getMenuPaperSx(theme) {
@@ -170,7 +179,6 @@ function ActiveFilterChip({ label, onDelete }) {
     />
   );
 }
-/** Toolbar filter/sort — search xử lý qua Header SearchBox (param q). */
 export default function MentorQuestionBankToolbar({
   statusFilter = 'all',
   onStatusChange,

@@ -1,6 +1,12 @@
 /**
  * Mock data cho Ngân hàng câu hỏi của Mentor.
  * Replace bằng API khi backend sẵn sàng.
+ *
+ * CẤU TRÚC:
+ *   - mentorQuestionBankMock: danh sách khóa học demo
+ *   - mentorCourseChaptersOutlineMock: mục lục chương theo courseId
+ *   - mentorCourseChapterBanksMock: bank theo chương
+ *   - mentorQuestionBankFilterOptionsMock: options cho toolbar lọc
  */
 
 export const mentorQuestionBankMock = [
