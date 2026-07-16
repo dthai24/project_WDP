@@ -1,6 +1,7 @@
 const NewsModel = require('../Models/newsModel');
 const { saveNewsThumbnailFromDataUrl } = require('../middlewares/newsThumbnailMiddleware');
 const { isAdminRequest } = require('../middlewares/authMiddleware');
+const { enrichNewsRecord } = require('../utils/newsThumbnailResolver');
 
 const ALLOWED_SORT = new Set(['newest', 'oldest', 'title_asc', 'title_desc']);
 const ALLOWED_STATUS = new Set(['DRAFT', 'PUBLISHED', 'HIDDEN']);
@@ -57,7 +58,7 @@ const newsController = {
 
       return res.json({
         success: true,
-        data: result.data,
+        data: result.data.map(enrichNewsRecord),
         total: result.total,
         page: parseInt(page, 10) || 1,
         pageSize: Math.min(parseInt(pageSize, 10) || 10, 50),
@@ -97,7 +98,7 @@ const newsController = {
         }
       }
 
-      return res.json({ success: true, data: news });
+      return res.json({ success: true, data: enrichNewsRecord(news) });
     } catch (err) {
       console.error('[GetNewsById Error]', err.message);
       return res.status(500).json({
@@ -137,14 +138,18 @@ const newsController = {
         createdBy,
       });
 
-      // Xử lý thumbnail: nếu là data URL thì lưu xuống disk
+      // Xử lý thumbnail: upload Cloudinary và lưu secure URL vào DB
       let thumbnailPath = thumbnail || null;
       if (thumbnail) {
         try {
-          const saved = saveNewsThumbnailFromDataUrl(thumbnail, newsId);
+          const saved = await saveNewsThumbnailFromDataUrl(thumbnail, newsId);
           if (saved) thumbnailPath = saved;
         } catch (thumbErr) {
           console.error('[CreateNews Thumbnail Error]', thumbErr.message);
+          return res.status(thumbErr.statusCode || 400).json({
+            success: false,
+            message: thumbErr.message || 'Không thể lưu ảnh thumbnail.',
+          });
         }
       }
 
@@ -199,17 +204,25 @@ const newsController = {
         nextStatus = upper;
       }
 
-      // Xử lý thumbnail: nếu là data URL thì lưu xuống disk
+      // Xử lý thumbnail: upload Cloudinary và lưu secure URL vào DB
       let thumbnailPath = thumbnail !== undefined ? thumbnail : existing.thumbnail;
       if (thumbnail !== undefined) {
-        try {
-          const saved = saveNewsThumbnailFromDataUrl(thumbnail, newsId, { replaceExisting: true });
-          if (saved) thumbnailPath = saved;
-        } catch (thumbErr) {
-          return res.status(400).json({
-            success: false,
-            message: thumbErr.message || 'Thumbnail không hợp lệ.',
-          });
+        const trimmedThumbnail = String(thumbnail ?? '').trim();
+        if (!trimmedThumbnail) {
+          thumbnailPath = null;
+        } else {
+          try {
+            const saved = await saveNewsThumbnailFromDataUrl(trimmedThumbnail, newsId, {
+              replaceExisting: true,
+              previousThumbnail: existing.thumbnail,
+            });
+            if (saved) thumbnailPath = saved;
+          } catch (thumbErr) {
+            return res.status(400).json({
+              success: false,
+              message: thumbErr.message || 'Thumbnail không hợp lệ.',
+            });
+          }
         }
       }
 

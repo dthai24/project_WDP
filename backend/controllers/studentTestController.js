@@ -6,6 +6,7 @@ const studentTestPaperService = require('../services/studentTestPaperService');
 const courseTestRecommendationService = require('../services/courseTestRecommendationService');
 const testAttemptSectionStatsService = require('../services/testAttemptSectionStatsService');
 
+//check xem học viên có đủ điều kiện làm bài kiểm tra hay không
 async function checkPrerequisites(courseId, userId, scope, chapterId) {
     const learningPath = await courseModel.getCourseLearningPath(courseId, userId);
     let prerequisitesMet = true;
@@ -36,7 +37,8 @@ async function checkPrerequisites(courseId, userId, scope, chapterId) {
             const targetMod = modules.find(m => m.id === Number(chapterId));
             if (targetMod) {
                 const targetIndex = modules.findIndex(m => m.id === Number(chapterId));
-                const isLocked = targetIndex > 0 ? !modules[targetIndex - 1].isCompleted : false;
+                // MỞ KHÓA LIÊN CHƯƠNG
+                const isLocked = false;
 
                 if (isLocked) {
                     prerequisitesMet = false;
@@ -165,7 +167,7 @@ const startTestAttempt = async (req, res) => {
                     baseConfig: config,
                     testId,
                 });
-
+                //laasy ra đề thi dựa trên kế hoạch đã được đề xuất
                 paper = await studentTestPaperService.buildCourseTestPaper(
                     generationPlan.config,
                     courseId,

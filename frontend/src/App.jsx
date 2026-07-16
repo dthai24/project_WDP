@@ -15,7 +15,6 @@ import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 import UnauthorizedPage from '@/features/auth/pages/UnauthorizedPage';
 import MentorCoursesPage from '@/features/mentor/pages/MentorCoursesPage';
-import MentorNewsPage from '@/features/mentor/pages/MentorNewsPage';
 import MentorStudentProgressPage from '@/features/mentor/pages/MentorStudentProgressPage';
 import MentorCreateCoursePage from '@/features/mentor/pages/MentorCreateCoursePage';
 import MentorCreateCourseContentPage from '@/features/mentor/pages/MentorCreateCourseContentPage';
@@ -225,7 +224,6 @@ export default function App() {
         <Route path="question-banks/:courseId/:pathId" element={<MentorQuestionBankManagePage />} />
         <Route path="question-banks/:courseId" element={<MentorQuestionBankDetailPage />} />
         <Route path="question-banks" element={<MentorQuestionBankListPage />} />
-        <Route path="news" element={<MentorNewsPage />} />
         <Route path="student-progress" element={<MentorStudentProgressPage />} />
         <Route path="paths" element={<MentorShellFallbackRedirect />} />
         <Route path="*" element={<MentorShellFallbackRedirect />} />

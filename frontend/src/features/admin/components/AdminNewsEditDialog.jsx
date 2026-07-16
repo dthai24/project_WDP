@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Dialog,
@@ -30,7 +30,7 @@ import {
   loadAdminNewsEditDraft,
   saveAdminNewsEditDraft,
 } from '@/features/admin/utils/adminNewsEditStorage';
-import { buildAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
+import { fetchAdminNewsCategoryFormOptions } from '@/features/admin/utils/adminNewsUtils';
 import { toast } from '@/shared/ui/Toast';
 import { MUTED, PRIMARY } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
@@ -57,8 +57,23 @@ export default function AdminNewsEditDialog({
   const [navigatingContent, setNavigatingContent] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
-  const categoryOptions = useMemo(() => buildAdminNewsCategoryFormOptions(), []);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const busy = saving || navigatingContent;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const res = await fetchAdminNewsCategoryFormOptions();
+      if (!cancelled && res.ok) {
+        setCategoryOptions(res.options);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!open || !articleId) return;

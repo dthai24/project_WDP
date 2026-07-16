@@ -1,12 +1,15 @@
 const cloudinary = require('../config/cloudinary');
 
 const MATERIALS_FOLDER = 'learning-path/materials';
+const NEWS_FOLDER = 'learning-path/news';
 const TEXT_FOLDER = `${MATERIALS_FOLDER}/text`;
 const AUDIO_FOLDER = `${MATERIALS_FOLDER}/audio`;
 const AUDIO_EXTENSIONS = new Set(['mp3', 'mp4']);
 
 /** Giới hạn Cloudinary free tier — 10 MB. */
 const MATERIAL_MAX_BYTES = 10 * 1024 * 1024;
+const NEWS_THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024;
+const NEWS_THUMBNAIL_MAX_SIZE_MESSAGE = 'Ảnh đại diện không được vượt quá 5MB.';
 
 const DOC_EXTENSIONS = new Set(['pdf', 'doc', 'docx']);
 const READING_DOC_EXTENSIONS = new Set(['pdf', 'doc', 'docx']);
@@ -237,6 +240,46 @@ async function uploadAudioFile(file) {
   };
 }
 
+async function deleteCloudinaryAssetByUrl(url) {
+  if (!isCloudinaryDeliveryUrl(url)) return;
+  try {
+    const { publicId, resourceType } = extractPublicIdFromUrl(url);
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+      invalidate: true,
+    });
+  } catch (err) {
+    console.warn('[Cloudinary delete]', err.message);
+  }
+}
+
+async function uploadNewsThumbnailBuffer(buffer, { newsId, ext }) {
+  const size = Number(buffer?.length ?? 0);
+  if (size <= 0) {
+    const error = new Error('Dữ liệu ảnh thumbnail không hợp lệ.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (size > NEWS_THUMBNAIL_MAX_BYTES) {
+    const error = new Error(NEWS_THUMBNAIL_MAX_SIZE_MESSAGE);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const format = ext === 'jpeg' ? 'jpg' : ext;
+  const publicId = `news_thumb_${newsId}_${Date.now()}`;
+
+  const result = await uploadBuffer(buffer, {
+    resource_type: 'image',
+    folder: NEWS_FOLDER,
+    public_id: publicId,
+    format,
+    transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+  });
+
+  return buildDeliveryUrl(result.secure_url);
+}
+
 async function uploadTextHtml(html, title = 'text-material') {
   const trimmed = String(html ?? '').trim();
   if (!trimmed) {
@@ -381,12 +424,16 @@ module.exports = {
   READING_DOC_EXTENSIONS,
   MATERIAL_MAX_BYTES,
   MATERIAL_MAX_SIZE_MESSAGE,
+  NEWS_THUMBNAIL_MAX_BYTES,
+  NEWS_THUMBNAIL_MAX_SIZE_MESSAGE,
   buildDeliveryUrl,
+  deleteCloudinaryAssetByUrl,
   isCloudinaryDeliveryUrl,
   buildPrivateDownloadUrl,
   fetchCloudinaryAssetBuffer,
   uploadAudioFile,
   uploadDocumentFile,
+  uploadNewsThumbnailBuffer,
   uploadReadingDocumentFile,
   uploadTextHtml,
 };

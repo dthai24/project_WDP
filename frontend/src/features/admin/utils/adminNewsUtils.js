@@ -1,4 +1,28 @@
 import { getCatalogCategories } from '@/shared/catalog/catalogRegistry';
+import { getCategories } from '@/features/admin/services/adminCategoryService';
+
+export async function fetchAdminNewsCategoryFormOptions({ activeOnly = true } = {}) {
+  const res = await getCategories();
+  if (!res.ok) {
+    return {
+      ok: false,
+      options: [],
+      message: res.message || 'Không tải được danh mục',
+    };
+  }
+
+  const categories = (res.categories ?? []).filter(
+    (category) => !activeOnly || category.status === 'ACTIVE',
+  );
+
+  return {
+    ok: true,
+    options: categories.map((category) => ({
+      value: String(category.id),
+      label: category.displayName,
+    })),
+  };
+}
 
 export const ADMIN_NEWS_TABLE_GRID_COLUMNS =
   'minmax(220px, 1.8fr) minmax(100px, auto) minmax(108px, auto) minmax(108px, auto) minmax(108px, auto) 96px';

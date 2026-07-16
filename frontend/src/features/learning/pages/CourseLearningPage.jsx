@@ -359,8 +359,9 @@ export default function CourseLearningPage() {
             courseTitle: result.courseTitle,
             instructor: result.instructor
           });
-          // ĐÂY LÀ ĐOẠN "DỊCH THUẬT" SIÊU HAY
+          // ĐÂY LÀ ĐOẠN "DỊCH THUẬT" 
           const mappedModules = result.data.map((mod, chapterIndex) => {
+            // Debug log để kiểm tra dữ liệu từ BE
             console.log("Module:", mod.PathName, "IsTestPassed from BE:", mod.IsTestPassed);
             return {
               id: mod.PathId,
@@ -394,7 +395,7 @@ export default function CourseLearningPage() {
     };
     fetchLearningData();
   }, [courseId]);
-
+// lấy cái config của mentor ra 
   useEffect(() => {
     if (!courseId || modules.length === 0) return;
 
@@ -433,8 +434,11 @@ export default function CourseLearningPage() {
     
     // Pass 1: compute isCompleted for each module
     const modulesWithStatus = modules.map((mod) => {
+      //chỉ trả về true nếu tất cả là completed
       const allLessonsDone = mod.lessons.every((l) => l.status === "completed");
+      // true nếu chương có bài kiểm tra và bài kiểm tra đang mở 
       const hasActiveTest = chapterQuizConfigs[mod.id]?.enabled !== false && chapterQuizConfigs[mod.id] != null;
+      //trả về true nếu học hết và nếu có test thfi pass thfi tính là đã hoàn thành chương  
       const isCompleted = allLessonsDone && (!hasActiveTest || mod.isTestPassed);
       return { ...mod, isCompleted, hasActiveTest, allLessonsDone };
     });
@@ -443,7 +447,8 @@ export default function CourseLearningPage() {
     return modulesWithStatus.map((mod, index) => {
       if (index === 0) return { ...mod, isLocked: false };
       const prevMod = modulesWithStatus[index - 1];
-      return { ...mod, isLocked: !prevMod.isCompleted };
+      // MỞ KHÓA LIÊN CHƯƠNG: Luôn trả về false để cho phép học viên học nhảy cóc chương
+      return { ...mod, isLocked: false };
     });
   }, [modules, chapterQuizConfigs]);
 
@@ -473,7 +478,7 @@ export default function CourseLearningPage() {
 
       const result = await response.json();
       if (result.success) {
-        // Dispatch sự kiện để cập nhật streak trên header
+        //Cập nhật streak trên header
         window.dispatchEvent(new CustomEvent("streakUpdate", { detail: { hasStudiedToday: true } }));
 
         // Cập nhật giao diện thành xanh
@@ -671,11 +676,12 @@ export default function CourseLearningPage() {
                           color: MUTED,
                           lineHeight: 1.3,
                         }}
-                      >
+                      >{/* tên Mentor */}
                         {rawData.instructor}
                       </Typography>
                     </HeaderMetaItem>
                   )}
+                  {/*thể loại*/ }
                   {currentLesson.type && (
                     <LessonChip
                       icon={TypeIcon}
@@ -792,27 +798,6 @@ export default function CourseLearningPage() {
                   iconColor={ICON_COLORS.duration}
                   label={currentLesson.duration}
                 />
-              </Box>
-            )}
-
-            {/* Mục tiêu — chỉ hiển thị khi có dữ liệu mock/objectives */}
-            {currentLesson?.content?.objectives?.length > 0 && (
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: TEXT, mb: 1.25 }}>
-                  Mục tiêu bài học
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {currentLesson.content.objectives.map((item, i) => (
-                    <Box key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                      <CheckCircleRoundedIcon
-                        sx={{ fontSize: 18, color: ICON_COLORS.objective, mt: 0.15, flexShrink: 0 }}
-                      />
-                      <Typography sx={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>
-                        {item}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
               </Box>
             )}
 
@@ -998,7 +983,7 @@ export default function CourseLearningPage() {
                 </Typography>
               </Box>
 
-              {/* Accordion module list */}
+                {/* Accordion module list */}
               <Box
                 sx={{
                   px: 1,
@@ -1067,7 +1052,7 @@ export default function CourseLearningPage() {
                         {mod.lessons.map((lesson) => {
                           const isActive = lesson.id === currentLessonId;
                           const LIcon = TYPE_ICON[lesson.type] ?? ArticleRoundedIcon;
-
+                        
                           return (
                             <Box
                               key={lesson.id}
@@ -1133,7 +1118,7 @@ export default function CourseLearningPage() {
                             </Box>
                           );
                         })}
-
+      
                         {mod.hasActiveTest && (
                           <OutlineTestItem
                             label="Bài kiểm tra chương"
