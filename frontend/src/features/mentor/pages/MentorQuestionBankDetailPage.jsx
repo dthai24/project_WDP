@@ -1,7 +1,7 @@
 /**
  * MentorQuestionBankDetailPage — UI shell (paths list + editor), không fetch API.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
@@ -24,11 +24,6 @@ import {
   getFilledQuestionCount,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
-import {
-  getMockChaptersForCourse,
-  getMockCourseFromQuestionBank,
-} from '@/features/mentor/data/mentorQuestionBankMock';
-import axios from 'axios';
 
 //________ChapTer Card__________
 function PathChapterCard({ path, index, onOpen }) {
@@ -116,33 +111,11 @@ export default function MentorQuestionBankDetailPage() {
   // const isEditorMode = searchParams.get('mode') === 'editor';
   // const isPathListMode = !chapterId;
 
-  // const course = getMockCourseFromQuestionBank(courseId);
-  const [course, setCourse] = useState();
-  // const [questionBankPaths, setQuestionBankPaths] = useState([])
-  const [coursePaths, setCoursePaths] = useState([])
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-
-        const [resCourse, resCoursePaths] = await Promise.all(
-          [
-            axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}?tab=course`),
-            // axios.get(`http://localhost:5000/api/question-bank/getBankPaths/${questionBankId}`),
-            axios.get(`http://localhost:5000/api/courses/my-courses/${courseId}/chapters`)
-          ]
-        )
-
-        setCourse(resCourse.data.data[0])
-        // setQuestionBankPaths(resQuestionBankPaths.data.data)
-        setCoursePaths(resCoursePaths.data.data.Paths)
-      } catch (error) {
-        console.error(error.message)
-      }
-    }
-    fetchData();
-
-  }, [courseId])
-  const courseChapters = getMockChaptersForCourse(courseId);
+  const course = courseId
+    ? { CourseId: Number(courseId), CourseName: `Khóa học #${courseId}`, IsPublished: false }
+    : null;
+  const coursePaths = [];
+  const courseChapters = coursePaths;
   const selectedChapter = courseChapters.find(
     (item) => String(item.PathId) === String(chapterId),
   );
@@ -303,15 +276,15 @@ export default function MentorQuestionBankDetailPage() {
         </AppButton>
       </Box> */}
 
-      {/* {bankPaths.length === 0 ? (
+      {coursePaths.length === 0 ? (
         <EmptyState
           icon={MenuBookOutlinedIcon}
           title="Chưa có chương nào trong ngân hàng"
           description="Tạo ngân hàng câu hỏi cho một chương để bắt đầu."
-          actionLabel="Thêm chương"
-          onAction={() => navigate(`/mentor/question-banks/manage?courseId=${courseId}`)}
+          actionLabel="Quay lại danh sách"
+          onAction={() => navigate('/mentor/question-banks')}
         />
-      ) : ( */}
+      ) : (
       <Box
         sx={{
           display: 'grid',
@@ -328,7 +301,7 @@ export default function MentorQuestionBankDetailPage() {
           />
         ))}
       </Box>
-      {/* )} */}
+      )}
     </Box>
   );
 

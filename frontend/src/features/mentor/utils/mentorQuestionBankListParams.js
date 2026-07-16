@@ -7,6 +7,26 @@ export const QB_LIST_DEFAULTS = {
   pageSize: 8,
 };
 
+/** Nhãn filter toolbar — UI config, không phải dữ liệu nghiệp vụ. */
+export const QUESTION_BANK_LIST_FILTER_OPTIONS = {
+  statusOptions: [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'published', label: 'Đã xuất bản' },
+    { value: 'draft', label: 'Bản nháp' },
+  ],
+  questionStatusOptions: [
+    { value: 'all', label: 'Tất cả câu hỏi' },
+    { value: 'has_draft', label: 'Có câu hỏi nháp' },
+    { value: 'all_published', label: 'Xuất bản hết' },
+    { value: 'empty', label: 'Chưa có câu hỏi' },
+  ],
+  sortOptions: [
+    { value: 'updated_desc', label: 'Mới cập nhật' },
+    { value: 'name_asc', label: 'Tên A-Z' },
+    { value: 'questions_desc', label: 'Nhiều câu hỏi nhất' },
+  ],
+};
+
 const QB_PARAM_KEYS = ['q', 'status', 'questionStatus', 'sort', 'page', 'pageSize'];
 const VALID_QUESTION_STATUS = new Set(['all', 'has_draft', 'all_published', 'empty']);
 const VALID_SORT = new Set(['updated_desc', 'name_asc', 'questions_desc']);

@@ -8,15 +8,12 @@ import { Box, Breadcrumbs, Link as MuiLink, Typography, alpha } from '@mui/mater
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
 import AppButton from '@/shared/ui/AppButton';
 import AppPagination from '@/shared/ui/AppPagination';
 import EmptyState from '@/shared/ui/EmptyState';
-import Loading from '@/shared/ui/Loading';
 import MentorQuestionBankRow from '@/features/mentor/components/questionBank/MentorQuestionBankRow';
 import MentorQuestionBankToolbar from '@/features/mentor/components/questionBank/MentorQuestionBankToolbar';
 import MentorSelectCourseForQBDialog from '@/features/mentor/components/questionBank/MentorSelectCourseForQBDialog';
-import { mentorQuestionBankFilterOptionsMock } from '@/features/mentor/data/mentorQuestionBankMock';
 import {
   parseQBListParams,
   hasActiveQBFilters,
@@ -26,6 +23,7 @@ import {
   filterAndSortQBItems,
   paginateQBItems,
   QB_LIST_DEFAULTS,
+  QUESTION_BANK_LIST_FILTER_OPTIONS,
 } from '@/features/mentor/utils/mentorQuestionBankListParams';
 
 const PAGE_SIZE = 8;
@@ -34,62 +32,16 @@ export default function MentorQuestionBankListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [listQuestionBank, setListQuestionBank] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectDialogOpen, setSelectDialogOpen] = useState(false);
   const [coursesWithoutQB, setCoursesWithoutQB] = useState([]);
 
   const queryState = useMemo(() => parseQBListParams(searchParams), [searchParams]);
   const showReset = hasActiveQBFilters(queryState);
   const activeFilterChips = useMemo(
-    () => buildQBActiveChips(queryState, mentorQuestionBankFilterOptionsMock),
+    () => buildQBActiveChips(queryState, QUESTION_BANK_LIST_FILTER_OPTIONS),
     [queryState],
   );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadItems = async () => {
-      try {
-        const userRaw = localStorage.getItem('user');
-        const user = JSON.parse(userRaw);
-        setLoading(true);
-
-        const [bankRes, courseRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/question-bank/getAllBankOfMentor', {
-            params: { userId: user.userId },
-          }),
-          axios.post('http://localhost:5000/api/courses/my-courses', {
-            userId: user.userId,
-            roleName: user.roles[0],
-          }),
-        ]);
-
-        if (!isMounted) return;
-
-        setListQuestionBank(bankRes.data.questionBanks);
-
-        const listAllCourse = courseRes.data.data;
-        const listCourseWithBank = bankRes.data.questionBanks;
-        const listCourseNoBank = listAllCourse.filter(
-          (course) =>
-            !listCourseWithBank.some((item) => item.CourseId === course.CourseId),
-        );
-        setCoursesWithoutQB(listCourseNoBank);
-      } catch (err) {
-        console.error(err.message);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadItems();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const updateQuery = (patch) => {
     setSearchParams(
@@ -137,10 +89,6 @@ export default function MentorQuestionBankListPage() {
   };
 
   const renderList = () => {
-    if (loading) {
-      return <Loading message="Đang tải ngân hàng câu hỏi..." />;
-    }
-
     if (pagination.listQuestionBank.length === 0) {
       return (
         <Box

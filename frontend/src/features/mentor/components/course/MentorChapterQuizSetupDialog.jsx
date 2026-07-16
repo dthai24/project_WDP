@@ -20,18 +20,6 @@ import { ContentFieldLabel } from './MentorContentSectionHeading';
 import { MUTED, PRIMARY, TEXT } from './mentorCourseCreateStyles';
 import { contentInputSx } from './mentorCourseContentStyles';
 import {
-  getChapterQuizConfig,
-  saveChapterQuizConfig,
-  getCourseQuizConfig,
-  saveCourseQuizConfig,
-  getChapterQuizConfigsByCourse,
-} from '@/features/mentor/services/chapterQuizConfigService';
-import {
-  getChapterQuestionBankActiveStats,
-  getCourseQuestionBankActiveStats,
-  fetchChapterSections,
-} from '@/features/mentor/services/questionBankService';
-import {
   CHAPTER_QUIZ_SKILLS,
   COURSE_QUIZ_CHAPTER_ID,
   QUIZ_SETUP_SCOPE_CHAPTER,
@@ -39,11 +27,9 @@ import {
   getChapterQuizConfigTotal,
   getDefaultChapterQuizConfig,
   getDefaultCourseQuizConfig,
-  hasChapterQuizConfigErrors,
   syncChapterQuizConfigWithStats,
   patchSectionCountConfig,
   patchSectionQuestionCountConfig,
-  validateChapterQuizConfig,
   getSectionCountForPart,
   getSectionQuestionCountForSection,
   getChapterQuizConfigSummary,
@@ -53,7 +39,6 @@ import {
   initCourseQuizChapterSelection,
   patchCourseChapterSelection,
   getSkillSectionGroupsFromStats,
-  buildSectionGroupsFromChapterSections,
   normalizeQuizQuestionConfigs,
   isFirstChapterQuiz,
   getRequiredChapterIdsFromConfig,
@@ -64,14 +49,30 @@ import {
 import {
   TEST_SKILL_CHIP_COLORS,
   TEST_SKILL_QB_LABELS,
-  TEST_SKILL_LISTENING,
-  TEST_SKILL_READING,
-  TEST_SKILL_VOCABULARY,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import {
   buildQuestionBankChapterManagePath,
   buildQuestionBankCoursePath,
 } from '@/features/mentor/utils/mentorQuestionBankListParams';
+
+const EMPTY_CHAPTER_STATS = {
+  ok: true,
+  hasBank: false,
+  questionCountBySkill: { LISTENING: 0, READING: 0, VOCABULARY: 0 },
+  listeningSectionGroups: [],
+  readingSectionGroups: [],
+  vocabularySectionGroups: [],
+  totalActive: 0,
+};
+
+const EMPTY_COURSE_STATS = {
+  ok: true,
+  hasBank: false,
+  bankCount: 0,
+  chapters: [],
+  questionCountBySkill: { LISTENING: 0, READING: 0, VOCABULARY: 0 },
+  totalActive: 0,
+};
 
 const countInputSx = (hasError) => ({
   ...contentInputSx(hasError),
@@ -368,109 +369,36 @@ export default function MentorChapterQuizSetupDialog({
   const configSummary = getChapterQuizConfigSummary(config ?? {});
   const courseHasSelectedChapters = !isCourseScope || selectedChapterIds.length > 0;
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(() => {
     if (!open || courseId == null) return;
     if (!isCourseScope && chapterId == null) return;
 
     setLoading(true);
     setErrors({});
 
-    try {
-      if (isCourseScope) {
-        const [configRes, statsRes] = await Promise.all([
-          getCourseQuizConfig(courseId, { courseTitle }),
-          getCourseQuestionBankActiveStats(courseId),
-        ]);
-
-        setAllCourseStats(statsRes.ok ? statsRes : { hasBank: false, chapters: [] });
-
-        let nextConfig = getDefaultCourseQuizConfig({ courseId, courseTitle });
-        if (configRes.ok) {
-          nextConfig = configRes.config;
-        }
-
-        const chapterOptions = statsRes.ok ? statsRes.chapters ?? [] : [];
-        nextConfig = initCourseQuizChapterSelection(nextConfig, chapterOptions);
-
-        const filteredStats = aggregateCourseStatsByChapterIds(
-          chapterOptions,
-          getSelectedChapterIdsFromConfig(nextConfig),
-        );
-        if (filteredStats.hasBank) {
-          nextConfig = syncChapterQuizConfigWithStats(nextConfig, filteredStats);
-        }
-
-        setConfig(nextConfig);
-        return;
-      }
-
-      const [configRes, statsResRaw, courseConfigsRes] = await Promise.all([
-        getChapterQuizConfig(courseId, chapterId, { chapterTitle, chapterIndex }),
-        getChapterQuestionBankActiveStats(courseId, chapterId),
-        showPrerequisiteConfig
-          ? getChapterQuizConfigsByCourse(courseId)
-          : Promise.resolve({ ok: true, configs: [] }),
-      ]);
-
-      let statsRes = statsResRaw;
-      if (statsRes.ok && statsRes.hasBank) {
-        const needsSectionFallback =
-          !(statsRes.listeningSectionGroups?.length > 0)
-          || !(statsRes.readingSectionGroups?.length > 0)
-          || !(statsRes.vocabularySectionGroups?.length > 0);
-
-        if (needsSectionFallback) {
-          const sectionsRes = await fetchChapterSections(courseId, chapterId);
-          if (sectionsRes.ok) {
-            const sections = sectionsRes.sections ?? [];
-            statsRes = {
-              ...statsRes,
-              listeningSectionGroups: statsRes.listeningSectionGroups?.length > 0
-                ? statsRes.listeningSectionGroups
-                : buildSectionGroupsFromChapterSections(sections, TEST_SKILL_LISTENING),
-              readingSectionGroups: statsRes.readingSectionGroups?.length > 0
-                ? statsRes.readingSectionGroups
-                : buildSectionGroupsFromChapterSections(sections, TEST_SKILL_READING),
-              vocabularySectionGroups: statsRes.vocabularySectionGroups?.length > 0
-                ? statsRes.vocabularySectionGroups
-                : buildSectionGroupsFromChapterSections(sections, TEST_SKILL_VOCABULARY),
-            };
-          }
-        }
-      }
-
-      let nextConfig = configRes.ok
-        ? normalizeQuizQuestionConfigs(configRes.config)
-        : getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex });
-
-      nextConfig = sanitizeChapterPrerequisites(nextConfig, chapterIndex);
-
-      if (showPrerequisiteConfig) {
-        setPrerequisiteOptions(
-          buildPreviousChapterQuizOptions(
-            paths,
-            chapterIndex,
-            courseConfigsRes.ok ? courseConfigsRes.configs : [],
-          ),
-        );
-      } else {
-        setPrerequisiteOptions([]);
-      }
-
-      if (statsRes.ok) {
-        nextConfig = syncChapterQuizConfigWithStats(nextConfig, statsRes);
-      }
-
+    if (isCourseScope) {
+      const statsRes = EMPTY_COURSE_STATS;
+      let nextConfig = getDefaultCourseQuizConfig({ courseId, courseTitle });
+      nextConfig = initCourseQuizChapterSelection(nextConfig, []);
+      setAllCourseStats(statsRes);
       setConfig(nextConfig);
-
-      if (statsRes.ok) {
-        setChapterStats(statsRes);
-      } else {
-        setChapterStats({ hasBank: false });
-      }
-    } finally {
       setLoading(false);
+      return;
     }
+
+    const statsRes = EMPTY_CHAPTER_STATS;
+    let nextConfig = getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex });
+    nextConfig = sanitizeChapterPrerequisites(nextConfig, chapterIndex);
+
+    if (showPrerequisiteConfig) {
+      setPrerequisiteOptions(buildPreviousChapterQuizOptions(paths, chapterIndex, []));
+    } else {
+      setPrerequisiteOptions([]);
+    }
+
+    setChapterStats(statsRes);
+    setConfig(normalizeQuizQuestionConfigs(nextConfig));
+    setLoading(false);
   }, [open, courseId, chapterId, chapterTitle, chapterIndex, courseTitle, isCourseScope, paths, showPrerequisiteConfig]);
 
   useEffect(() => {
@@ -555,38 +483,10 @@ export default function MentorChapterQuizSetupDialog({
     navigate(buildQuestionBankChapterManagePath(courseId, chapterId));
   }, [chapterId, courseId, isCourseScope, navigate, onClose]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!config) return;
-
-    const validationErrors = validateChapterQuizConfig(config, stats);
-    if (hasChapterQuizConfigErrors(validationErrors)) {
-      setErrors(validationErrors);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const payload = isCourseScope
-        ? normalizeQuizQuestionConfigs({ ...config, courseId, chapterId: COURSE_QUIZ_CHAPTER_ID })
-        : sanitizeChapterPrerequisites(
-            normalizeQuizQuestionConfigs({ ...config, courseId, chapterId }),
-            chapterIndex,
-          );
-      const saveFn = isCourseScope ? saveCourseQuizConfig : saveChapterQuizConfig;
-      const res = await saveFn(payload);
-      if (!res.ok) {
-        toast.error(res.message ?? 'Không thể lưu thiết lập');
-        return;
-      }
-      toast.success(
-        isCourseScope
-          ? 'Đã lưu thiết lập kiểm tra toàn khóa'
-          : 'Đã lưu thiết lập kiểm tra cho chương',
-      );
-      onClose?.(res.config);
-    } finally {
-      setSaving(false);
-    }
+    toast.info('UI-only: logic lưu thiết lập kiểm tra chưa được implement.');
+    onClose?.(config);
   };
 
   const emptyState = useMemo(

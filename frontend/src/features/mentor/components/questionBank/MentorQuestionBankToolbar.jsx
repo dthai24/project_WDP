@@ -16,8 +16,7 @@ import SortOutlinedIcon from '@mui/icons-material/SortOutlined';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
-import { mentorQuestionBankFilterOptionsMock } from '@/features/mentor/data/mentorQuestionBankMock';
-import { QB_LIST_DEFAULTS } from '@/features/mentor/utils/mentorQuestionBankListParams';
+import { QB_LIST_DEFAULTS, QUESTION_BANK_LIST_FILTER_OPTIONS } from '@/features/mentor/utils/mentorQuestionBankListParams';
 const MUTED = '#64748B';
 const ICON = '#94A3B8';
 function getMenuPaperSx(theme) {
@@ -184,9 +183,9 @@ export default function MentorQuestionBankToolbar({
   activeFilterChips = [],
   onRemoveFilterChip,
   // Filter Pay Attention to 3 line below
-  statusOptions = mentorQuestionBankFilterOptionsMock.statusOptions,
-  questionStatusOptions = mentorQuestionBankFilterOptionsMock.questionStatusOptions,
-  sortOptions = mentorQuestionBankFilterOptionsMock.sortOptions,
+  statusOptions = QUESTION_BANK_LIST_FILTER_OPTIONS.statusOptions,
+  questionStatusOptions = QUESTION_BANK_LIST_FILTER_OPTIONS.questionStatusOptions,
+  sortOptions = QUESTION_BANK_LIST_FILTER_OPTIONS.sortOptions,
 }) {
   const theme = useTheme();
   const [statusAnchor, setStatusAnchor] = useState(null);

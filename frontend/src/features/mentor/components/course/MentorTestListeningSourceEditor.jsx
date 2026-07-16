@@ -13,12 +13,8 @@ import {
   LISTENING_AUDIO_FILE_ACCEPT,
   LISTENING_SOURCE_LINK,
   LISTENING_SOURCE_UPLOAD,
-  LISTENING_UPLOAD_FAILED_MESSAGE,
   getListeningAudioMaxSizeLabel,
-  validateListeningAudioFile,
-  validateListeningAudioUrl,
 } from '@/features/mentor/utils/mentorTestContentUtils';
-import { uploadAudioMaterial } from '@/features/mentor/services/materialUploadService';
 import {
   isMaterialFileUploadBlocked,
   releaseMaterialFileUploadLock,
@@ -143,12 +139,6 @@ export default function MentorTestListeningSourceEditor({
         return;
       }
 
-      const fileCheck = validateListeningAudioFile(file);
-      if (!fileCheck.ok) {
-        setFileTypeError(fileCheck.message);
-        return;
-      }
-
       if (!tryAcquireMaterialFileUploadLock(section.tempId)) {
         setFileTypeError('Đang có học liệu khác tải file lên. Vui lòng đợi hoàn tất.');
         return;
@@ -158,50 +148,18 @@ export default function MentorTestListeningSourceEditor({
       uploadingRef.current = true;
       setFileTypeError('');
       setUploadError('');
-      setUploading(true);
-      setUploadProgress(0);
+      setUploading(false);
+      setUploadProgress(100);
       setRemovedFileSnapshot(null);
       onChange({
         AudioSourceType: LISTENING_SOURCE_UPLOAD,
         File: file,
         FileName: file.name,
         FileSize: file.size,
-        AudioUrl: '',
+        AudioUrl: URL.createObjectURL(file),
       });
-
-      try {
-        const uploaded = await uploadAudioMaterial(file, {
-          onProgress: (percent) => {
-            if (seq !== uploadSeqRef.current) return;
-            setUploadProgress(percent);
-          },
-        });
-        if (seq !== uploadSeqRef.current) return;
-
-        onChange({
-          AudioSourceType: LISTENING_SOURCE_UPLOAD,
-          File: null,
-          FileName: uploaded.fileName ?? file.name,
-          FileSize: uploaded.fileSize ?? file.size,
-          AudioUrl: uploaded.deliveryUrl ?? uploaded.url ?? '',
-        });
-      } catch (error) {
-        if (seq !== uploadSeqRef.current) return;
-        setUploadError(error?.message || LISTENING_UPLOAD_FAILED_MESSAGE);
-        onChange({
-          File: null,
-          FileName: null,
-          FileSize: null,
-          AudioUrl: '',
-        });
-      } finally {
-        if (seq === uploadSeqRef.current) {
-          uploadingRef.current = false;
-          releaseMaterialFileUploadLock(section.tempId);
-          setUploading(false);
-          setUploadProgress(0);
-        }
-      }
+      releaseMaterialFileUploadLock(section.tempId);
+      uploadingRef.current = false;
     },
     [disabled, onChange, section.AudioUrl, section.File, section.FileName, section.tempId, uploading],
   );
@@ -278,13 +236,8 @@ export default function MentorTestListeningSourceEditor({
 
   const handleLinkChange = (event) => {
     const nextUrl = event.target.value;
+    setFileTypeError('');
     if (nextUrl.trim()) {
-      const linkCheck = validateListeningAudioUrl(nextUrl);
-      if (!linkCheck.ok) {
-        setFileTypeError(linkCheck.message);
-      } else {
-        setFileTypeError('');
-      }
       onChange({
         AudioUrl: nextUrl,
         AudioSourceType: LISTENING_SOURCE_LINK,

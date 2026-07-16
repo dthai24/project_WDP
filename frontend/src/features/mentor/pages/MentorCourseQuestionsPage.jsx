@@ -1,5 +1,5 @@
 /**
- * MentorCourseQuestionsPage — UI + mock, không gọi API.
+ * MentorCourseQuestionsPage — UI-only, không gọi API / mock data.
  */
 import { useMemo } from 'react';
 import {
@@ -15,10 +15,6 @@ import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import AppButton from '@/shared/ui/AppButton';
 import EmptyState from '@/shared/ui/EmptyState';
-import {
-  getMockChapterBanksForCourse,
-  getMockCourseFromQuestionBank,
-} from '@/features/mentor/data/mentorQuestionBankMock';
 import { formatMentorCourseDate } from '@/features/mentor/utils/mentorCourseUtils';
 
 const TEXT = '#0F172A';
@@ -76,9 +72,8 @@ export default function MentorCourseQuestionsPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
 
-  const course = getMockCourseFromQuestionBank(courseId);
-  const banks = useMemo(() => getMockChapterBanksForCourse(courseId), [courseId]);
-  const courseName = course?.courseName ?? `Khóa học #${courseId}`;
+  const courseName = `Khóa học #${courseId}`;
+  const banks = useMemo(() => [], []);
 
   const handleManage = (bank) => {
     navigate(
