@@ -10,7 +10,7 @@ import {
   Typography,
   alpha,
 } from '@mui/material';
-import { buildTestResultStats } from '@/features/learning/utils/testResultStatsUtils';
+import { buildTestResultStats, buildTestResultStatsFromSectionRows } from '@/features/learning/utils/testResultStatsUtils';
 import {
   TEST_DIVIDER,
   TEST_MUTED,
@@ -20,11 +20,16 @@ import {
   TEST_TEXT,
 } from './testTheme';
 
-export default function TestResultStatsTable({ paper, questionResults = [] }) {
-  const stats = useMemo(
-    () => buildTestResultStats(paper, questionResults),
-    [paper, questionResults],
-  );
+export default function TestResultStatsTable({
+  paper,
+  questionResults = [],
+  stats: statsOverride = null,
+  compact = false,
+}) {
+  const stats = useMemo(() => {
+    if (statsOverride) return statsOverride;
+    return buildTestResultStats(paper, questionResults);
+  }, [statsOverride, paper, questionResults]);
 
   if (!stats.skillCount) return null;
 
@@ -35,6 +40,10 @@ export default function TestResultStatsTable({ paper, questionResults = [] }) {
       sectionCount: skill.sectionCount,
       sectionId: section.sectionId,
       displayName: section.displayName,
+      chapterLabel: section.chapterLabel,
+      chapterCourseNumber: section.chapterCourseNumber,
+      pathOrder: section.pathOrder,
+      pathId: section.pathId,
       correctCount: section.correctCount,
       wrongCount: section.wrongCount,
       totalCount: section.totalCount,
@@ -43,8 +52,16 @@ export default function TestResultStatsTable({ paper, questionResults = [] }) {
     })),
   );
 
+  const formatChapterCell = (row) => {
+    if (row.chapterCourseNumber) return row.chapterCourseNumber;
+    if (row.pathOrder) return `Chương ${row.pathOrder}`;
+    if (row.chapterLabel) return row.chapterLabel;
+    if (row.pathId) return `Chương #${row.pathId}`;
+    return '—';
+  };
+
   return (
-    <Box sx={{ p: { xs: 2.5, md: 3.5 }, borderTop: `1px solid ${TEST_DIVIDER}` }}>
+    <Box sx={{ p: compact ? 0 : { xs: 2.5, md: 3.5 }, borderTop: compact ? 'none' : `1px solid ${TEST_DIVIDER}` }}>
       <Typography sx={{ fontSize: 18, fontWeight: 800, color: TEST_TEXT, mb: 0.75 }}>
         Thống kê theo kỹ năng & section
       </Typography>
@@ -72,6 +89,9 @@ export default function TestResultStatsTable({ paper, questionResults = [] }) {
                 Số section
               </TableCell>
               <TableCell sx={{ fontWeight: 700, color: TEST_MUTED, fontSize: 13 }}>SectionId</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: TEST_MUTED, fontSize: 13 }}>
+                Chương trong khóa
+              </TableCell>
               <TableCell sx={{ fontWeight: 700, color: TEST_MUTED, fontSize: 13 }}>Tên section</TableCell>
               <TableCell sx={{ fontWeight: 700, color: TEST_MUTED, fontSize: 13, textAlign: 'center' }}>
                 Câu đúng
@@ -114,6 +134,9 @@ export default function TestResultStatsTable({ paper, questionResults = [] }) {
                 )}
                 <TableCell sx={{ fontSize: 14, fontWeight: 700, color: TEST_TEXT }}>
                   {row.sectionId}
+                </TableCell>
+                <TableCell sx={{ fontSize: 14, color: TEST_TEXT, whiteSpace: 'nowrap', fontWeight: 600 }}>
+                  {formatChapterCell(row)}
                 </TableCell>
                 <TableCell sx={{ fontSize: 14, color: TEST_TEXT }}>
                   {row.displayName}

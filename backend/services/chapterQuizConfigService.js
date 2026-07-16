@@ -222,11 +222,13 @@ function aggregateCourseBankStats(courseStats = {}, selectedChapterIds = []) {
 function mapCourseBundleToClientConfig(bundle, bankStats = null) {
   if (!bundle?.test) return null;
 
+  const selectedChapterIds = bundle.selectedChapterIds ?? [];
+
   const base = mapBundleToClientConfig(
     {
       ...bundle,
       pathId: COURSE_QUIZ_CHAPTER_ID,
-      requiredChapterIds: [],
+      requiredChapterIds: selectedChapterIds,
     },
     bankStats,
   );
@@ -236,7 +238,27 @@ function mapCourseBundleToClientConfig(bundle, bankStats = null) {
   return {
     ...base,
     chapterId: COURSE_QUIZ_CHAPTER_ID,
-    selectedChapterIds: bundle.selectedChapterIds ?? [],
+    selectedChapterIds,
+    requiredChapterIds: selectedChapterIds,
+  };
+}
+
+function mapTestConfigFromBundle(bundle) {
+  if (!bundle?.test) return null;
+
+  const { config, passConfig } = bundle;
+  if (!config && !passConfig) return null;
+
+  return {
+    timeLimitMinutes: config?.DurationMinutes != null
+      ? Number(config.DurationMinutes)
+      : null,
+    maxAttempts: config?.MaxAttempts != null
+      ? Number(config.MaxAttempts)
+      : null,
+    passingScore: passConfig?.MinPassScore != null
+      ? Number(passConfig.MinPassScore)
+      : null,
   };
 }
 
@@ -366,12 +388,21 @@ async function validateCourseSavePayload(courseId, config) {
     }
   }
 
+  const prerequisiteTestIds = [];
+  for (const requiredPathId of selectedChapterIds) {
+    const prerequisiteTestId = await chapterQuizConfigModel.getTestIdByPathId(requiredPathId);
+    if (prerequisiteTestId) {
+      prerequisiteTestIds.push(prerequisiteTestId);
+    }
+  }
+
   return {
     ok: true,
     courseMeta,
     bankStats,
     sectionRows,
     selectedChapterIds,
+    prerequisiteTestIds,
     testConfigRow: {
       DurationMinutes: timeLimitMinutes,
       MaxAttempts: maxAttempts,
@@ -383,7 +414,7 @@ async function validateCourseSavePayload(courseId, config) {
       TestName: title,
       TestOrder: 0,
       IsActive: Boolean(config?.enabled),
-      HasPrerequisite: false,
+      HasPrerequisite: prerequisiteTestIds.length > 0,
     },
   };
 }
@@ -487,10 +518,12 @@ async function getChapterQuizConfig(courseId, pathId) {
   }
 
   const bundle = await chapterQuizConfigModel.getChapterQuizConfigBundle(courseId, pathId);
+  const testConfig = mapTestConfigFromBundle(bundle);
   if (!bundle) {
     return {
       ok: true,
       config: null,
+      testConfig,
       pathMeta,
     };
   }
@@ -500,6 +533,7 @@ async function getChapterQuizConfig(courseId, pathId) {
   return {
     ok: true,
     config: mapBundleToClientConfig(bundle, bankStats),
+    testConfig,
     pathMeta,
   };
 }
@@ -575,10 +609,12 @@ async function getCourseQuizConfig(courseId) {
   }
 
   const bundle = await chapterQuizConfigModel.getCourseQuizConfigBundle(courseId);
+  const testConfig = mapTestConfigFromBundle(bundle);
   if (!bundle) {
     return {
       ok: true,
       config: null,
+      testConfig,
       courseMeta,
     };
   }
@@ -592,6 +628,7 @@ async function getCourseQuizConfig(courseId) {
   return {
     ok: true,
     config: mapCourseBundleToClientConfig(bundle, bankStats),
+    testConfig,
     courseMeta,
   };
 }
@@ -647,7 +684,11 @@ async function saveCourseQuizConfig(courseId, config, updatedBy) {
       UpdatedBy: Number(updatedBy),
     });
 
-    await chapterQuizConfigModel.replaceTestPrerequisites(transaction, testId, []);
+    await chapterQuizConfigModel.replaceTestPrerequisites(
+      transaction,
+      testId,
+      validation.prerequisiteTestIds ?? [],
+    );
 
     await transaction.commit();
 

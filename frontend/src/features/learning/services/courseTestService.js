@@ -234,13 +234,6 @@ function enrichMetaWithConfig(meta = {}, config = {}, paper = null) {
 export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   try {
     const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
-
-    if (scope === 'final') {
-      if (!configRes.ok) return configRes;
-      const finalMeta = buildMetaFromConfig(configRes.config, scope, { courseId, chapterId, ...meta });
-      return { ok: true, meta: enrichMetaWithConfig(finalMeta, configRes.config) };
-    }
-
     const url = `${API_BASE}/courses/${courseId}/tests/${scope}/meta`;
     const { data } = await axios.get(url, { params: { chapterId }, headers: getAuthHeaders() });
 
@@ -255,23 +248,6 @@ export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   } catch (error) {
     console.error('getTestMeta error:', error);
     return { ok: false, message: 'Không tải được thông tin bài kiểm tra.' };
-  }
-}
-
-export async function getFinalTestRecommendationPreview(courseId) {
-  try {
-    const url = `${API_BASE}/courses/${courseId}/tests/final/recommendation-preview`;
-    const { data } = await axios.get(url, { headers: getAuthHeaders() });
-    if (!data?.ok) {
-      return { ok: false, message: data?.message ?? 'Không tải được thống kê đề xuất.' };
-    }
-    return { ok: true, preview: data.data };
-  } catch (error) {
-    console.error('getFinalTestRecommendationPreview error:', error);
-    return {
-      ok: false,
-      message: error.response?.data?.message ?? 'Lỗi kết nối khi tải thống kê đề xuất.',
-    };
   }
 }
 
@@ -300,10 +276,6 @@ export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
       config,
       paper,
     );
-
-    if (data.meta?.recommendation) {
-      resolvedMeta.recommendation = data.meta.recommendation;
-    }
 
     return {
       ok: true,
@@ -350,5 +322,19 @@ export async function submitTestAttempt(
   } catch (error) {
     console.error('submitTestAttempt error:', error);
     return { ok: false, message: 'Lỗi khi nộp bài.' };
+  }
+}
+
+export async function fetchAttemptSectionStats(courseId, attemptId) {
+  try {
+    const url = `${API_BASE}/courses/${courseId}/tests/attempts/${attemptId}/section-stats`;
+    const { data } = await axios.get(url, { headers: getAuthHeaders() });
+    return data;
+  } catch (error) {
+    console.error('fetchAttemptSectionStats error:', error);
+    return {
+      ok: false,
+      message: error.response?.data?.message ?? 'Không tải được thống kê lần làm bài.',
+    };
   }
 }

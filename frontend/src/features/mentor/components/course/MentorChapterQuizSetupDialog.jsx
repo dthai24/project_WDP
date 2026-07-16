@@ -52,6 +52,7 @@ import {
   getSelectedChapterIdsFromConfig,
   initCourseQuizChapterSelection,
   patchCourseChapterSelection,
+  syncCourseQuizChapterPrerequisites,
   getSkillSectionGroupsFromStats,
   buildSectionGroupsFromChapterSections,
   normalizeQuizQuestionConfigs,
@@ -384,10 +385,9 @@ export default function MentorChapterQuizSetupDialog({
 
         setAllCourseStats(statsRes.ok ? statsRes : { hasBank: false, chapters: [] });
 
-        let nextConfig = getDefaultCourseQuizConfig({ courseId, courseTitle });
-        if (configRes.ok) {
-          nextConfig = configRes.config;
-        }
+        let nextConfig = configRes.ok
+          ? configRes.config
+          : getDefaultCourseQuizConfig({ courseId, courseTitle });
 
         const chapterOptions = statsRes.ok ? statsRes.chapters ?? [] : [];
         nextConfig = initCourseQuizChapterSelection(nextConfig, chapterOptions);
@@ -440,7 +440,7 @@ export default function MentorChapterQuizSetupDialog({
       }
 
       let nextConfig = configRes.ok
-        ? normalizeQuizQuestionConfigs(configRes.config)
+        ? configRes.config
         : getDefaultChapterQuizConfig({ courseId, chapterId, chapterTitle, chapterIndex });
 
       nextConfig = sanitizeChapterPrerequisites(nextConfig, chapterIndex);
@@ -567,7 +567,9 @@ export default function MentorChapterQuizSetupDialog({
     setSaving(true);
     try {
       const payload = isCourseScope
-        ? normalizeQuizQuestionConfigs({ ...config, courseId, chapterId: COURSE_QUIZ_CHAPTER_ID })
+        ? syncCourseQuizChapterPrerequisites(
+            normalizeQuizQuestionConfigs({ ...config, courseId, chapterId: COURSE_QUIZ_CHAPTER_ID }),
+          )
         : sanitizeChapterPrerequisites(
             normalizeQuizQuestionConfigs({ ...config, courseId, chapterId }),
             chapterIndex,
@@ -823,7 +825,7 @@ export default function MentorChapterQuizSetupDialog({
               <>
                 <SectionTitle>Chọn chương</SectionTitle>
                 <Typography sx={{ fontSize: 12, color: MUTED, mb: 1, lineHeight: 1.5 }}>
-                  Chỉ random câu hỏi từ các chương được chọn. Mặc định chọn tất cả chương đã có ngân hàng.
+                  Chỉ random câu hỏi từ các chương được chọn. Học viên phải đạt bài kiểm tra các chương được chọn trước khi được làm bài kiểm tra toàn khóa. Mặc định chọn tất cả chương đã có ngân hàng.
                 </Typography>
                 <CourseChapterSelector
                   chapters={allCourseStats?.chapters ?? []}

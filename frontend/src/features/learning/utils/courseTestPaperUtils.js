@@ -111,7 +111,9 @@ function resolveSectionConfigKey(section, pathId = null) {
 function flattenBankSections(bankList = []) {
   return bankList.flatMap((bank) => {
     const pathId = bank.pathId ?? bank.PathId ?? null;
-    return (bank.sections ?? []).map((section) => ({ section, pathId }));
+    const pathName = bank.pathName ?? bank.PathName ?? null;
+    const pathOrder = Number(bank.pathOrder ?? bank.PathOrder ?? bank.Order ?? 0) || null;
+    return (bank.sections ?? []).map((section) => ({ section, pathId, pathName, pathOrder }));
   });
 }
 
@@ -123,11 +125,13 @@ function pickQuestionsForSkill(config, bankList, skill) {
     const inTestEntries = entries.filter(({ section }) =>
       getSectionsBySkill([section], skill).length > 0 && isSectionUseForTest(section));
     const pickedEntries = pickRandom(inTestEntries, getSectionCountForPart(config, skill));
-    return pickedEntries.flatMap(({ section, pathId }) =>
+    return pickedEntries.flatMap(({ section, pathId, pathName, pathOrder }) =>
       getActiveFilledTestQuestions(section.Questions ?? []).map((question) => ({
         question,
         section,
         pathId,
+        pathName,
+        pathOrder,
       })),
     );
   }
@@ -139,7 +143,7 @@ function pickQuestionsForSkill(config, bankList, skill) {
     ]),
   );
 
-  return entries.flatMap(({ section, pathId }) => {
+  return entries.flatMap(({ section, pathId, pathName, pathOrder }) => {
     if (!getSectionsBySkill([section], skill).length || !isSectionUseForTest(section)) {
       return [];
     }
@@ -162,6 +166,8 @@ function pickQuestionsForSkill(config, bankList, skill) {
       question,
       section,
       pathId,
+      pathName,
+      pathOrder,
     }));
   });
 }
@@ -170,13 +176,15 @@ function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, start
   if (!questionsWithSource.length) return null;
 
   const groupsMap = new Map();
-  questionsWithSource.forEach(({ question, section, pathId }) => {
+  questionsWithSource.forEach(({ question, section, pathId, pathName, pathOrder }) => {
     const groupId = section?.tempId ?? section?.DisplayName ?? `group_${groupsMap.size + 1}`;
     if (!groupsMap.has(groupId)) {
       groupsMap.set(groupId, {
         groupId,
         sectionId: section?.SectionId ?? null,
         pathId: pathId ?? section?.pathId ?? section?.PathId ?? null,
+        pathName: pathName ?? section?.pathName ?? section?.PathName ?? null,
+        pathOrder: pathOrder ?? section?.pathOrder ?? section?.PathOrder ?? null,
         displayName:
           String(section?.DisplayName ?? section?.SectionTitle ?? '').trim() ||
           `Nhóm ${groupsMap.size + 1}`,
@@ -185,7 +193,7 @@ function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, start
         items: [],
       });
     }
-    groupsMap.get(groupId).items.push({ question, section, pathId });
+    groupsMap.get(groupId).items.push({ question, section, pathId, pathName, pathOrder });
   });
 
   let order = startOrder;
@@ -204,6 +212,8 @@ function buildSkillSection(skillType, questionsWithSource, shuffleAnswers, start
         ? String(group.sectionId)
         : String(group.groupId ?? `section_${index}`),
       pathId: group.pathId != null ? Number(group.pathId) : null,
+      pathName: group.pathName ?? null,
+      pathOrder: group.pathOrder != null ? Number(group.pathOrder) : null,
       displayName: group.displayName || `Nhóm ${index + 1}`,
       audioUrl: group.audioUrl,
       readingUrl: group.readingUrl ?? null,
@@ -493,6 +503,10 @@ function toQuestionGroupFromPaperSection(section, index = 0) {
     groupId: String(section?.sectionId ?? section?.groupId ?? `section_${index}`),
     sectionId: String(section?.sectionId ?? section?.groupId ?? `section_${index}`),
     pathId: section?.pathId != null ? Number(section.pathId) : null,
+    pathName: section?.pathName ?? section?.PathName ?? null,
+    pathOrder: section?.pathOrder != null
+      ? Number(section.pathOrder)
+      : (section?.PathOrder != null ? Number(section.PathOrder) : null),
     displayName: resolvePaperSectionTitle(section, index),
     audioUrl: section?.skillType === TEST_SKILL_LISTENING ? listeningUrl : null,
     readingUrl: section?.skillType === TEST_SKILL_READING ? readingUrl : null,
@@ -523,6 +537,9 @@ function mergeSkillPaperSections(skillType, sections = []) {
         ...group,
         groupId: group.groupId ?? `${section.sectionId ?? index}_${groupIndex}`,
         sectionId: group.sectionId ?? group.groupId ?? String(section.sectionId ?? index),
+        pathId: group.pathId ?? section.pathId ?? null,
+        pathName: group.pathName ?? section.pathName ?? section.PathName ?? null,
+        pathOrder: group.pathOrder ?? section.pathOrder ?? section.PathOrder ?? null,
         displayName: group.displayName || resolvePaperSectionTitle(section, index),
       }));
     }
@@ -590,6 +607,9 @@ export function getSectionQuestionGroups(section) {
       groupId: 'default',
       displayName: 'Câu hỏi',
       audioUrl: section.audioUrl ?? null,
+      pathId: section.pathId ?? null,
+      pathName: section.pathName ?? null,
+      pathOrder: section.pathOrder ?? null,
       questions: section.questions,
     },
   ];
