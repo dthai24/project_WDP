@@ -8,13 +8,93 @@ const mongoose = require("mongoose");
 require("dotenv").config({ path: path.join(__dirname, "..", "backend", ".env") });
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/wdp_english";
+const daysAgo = (n) => new Date(Date.now() - n * 86400000);
 
 const DATA_categories = [
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d057"), "categoryName": "kinh-doanh-&-quản-lý", "displayName": "Business & Management", "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.907Z"), "updatedAt": new Date("2026-06-25T00:47:02.907Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d058"), "categoryName": "finance", "displayName": "Finance & Accounting", "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.907Z"), "updatedAt": new Date("2026-06-25T00:47:02.907Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d059"), "categoryName": "communication", "displayName": "Communication & Soft Skills", "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.907Z"), "updatedAt": new Date("2026-06-25T00:47:02.907Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05a"), "categoryName": "technology", "displayName": "Information Technology", "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.907Z"), "updatedAt": new Date("2026-06-25T00:47:02.907Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05b"), "categoryName": "lifestyle", "displayName": "Lifestyle & Hobbies", "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.907Z"), "updatedAt": new Date("2026-06-25T00:47:02.907Z"), "__v": 0},
+  {
+    _id: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d057"),
+    categoryName: "toeic",
+    displayName: "TOEIC",
+    name: "TOEIC",
+    slug: "toeic",
+    code: "TOEIC",
+    description: "Luyện thi TOEIC Listening & Reading chuẩn ETS",
+    color: "bg-blue-50 text-blue-600",
+    count: 12,
+    isActive: true,
+    createdAt: daysAgo(360),
+    updatedAt: daysAgo(10)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d058"),
+    categoryName: "ielts",
+    displayName: "IELTS",
+    name: "IELTS",
+    slug: "ielts",
+    code: "IELTS",
+    description: "Luyện thi IELTS Academic & General Training",
+    color: "bg-green-50 text-green-600",
+    count: 8,
+    isActive: true,
+    createdAt: daysAgo(360),
+    updatedAt: daysAgo(15)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d059"),
+    categoryName: "giao-tiep",
+    displayName: "Giao tiếp",
+    name: "Giao tiếp",
+    slug: "giao-tiep",
+    code: "COMMUNICATION",
+    description: "Tiếng Anh giao tiếp hàng ngày, tự tin nói chuyện",
+    color: "bg-yellow-50 text-yellow-600",
+    count: 10,
+    isActive: true,
+    createdAt: daysAgo(350),
+    updatedAt: daysAgo(20)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05a"),
+    categoryName: "ngu-phap",
+    displayName: "Ngữ pháp",
+    name: "Ngữ pháp",
+    slug: "ngu-phap",
+    code: "GRAMMAR",
+    description: "Hệ thống ngữ pháp tiếng Anh từ cơ bản đến nâng cao",
+    color: "bg-purple-50 text-purple-600",
+    count: 6,
+    isActive: true,
+    createdAt: daysAgo(350),
+    updatedAt: daysAgo(25)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05b"),
+    categoryName: "tu-vung",
+    displayName: "Từ vựng",
+    name: "Từ vựng",
+    slug: "tu-vung",
+    code: "VOCABULARY",
+    description: "Học từ vựng theo chủ đề với flashcard và spaced repetition",
+    color: "bg-pink-50 text-pink-600",
+    count: 9,
+    isActive: true,
+    createdAt: daysAgo(340),
+    updatedAt: daysAgo(30)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05c"),
+    categoryName: "business-english",
+    displayName: "Business English",
+    name: "Business English",
+    slug: "business-english",
+    code: "BUSINESS",
+    description: "Tiếng Anh thương mại, email, thuyết trình chuyên nghiệp",
+    color: "bg-orange-50 text-orange-600",
+    count: 5,
+    isActive: true,
+    createdAt: daysAgo(320),
+    updatedAt: daysAgo(12)
+  }
 ];
 
 const DATA_coursecomments = [
