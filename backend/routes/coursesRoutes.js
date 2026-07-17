@@ -87,7 +87,6 @@ router.post('/:id/progress', updateProgress);
 router.get("/streak", getStreak);
 
 const studentTestController = require('../controllers/studentTestController');
-router.get('/:courseId/tests/final/recommendation-preview', studentTestController.getFinalTestRecommendationPreview);
 // Lấy thông tin giới thiệu bài thi (tên bài, thời gian, số câu...)
 router.get('/:courseId/tests/:scope/meta', studentTestController.getTestMeta);
 // Khởi tạo lượt thi mới, lấy ngẫu nhiên câu hỏi tạo thành đề thi

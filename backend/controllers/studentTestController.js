@@ -3,8 +3,32 @@ const questionBankModel = require('../Models/questionBankModel');
 const chapterQuizConfigService = require('../services/chapterQuizConfigService');
 const courseModel = require('../models/coursesModel');
 const studentTestPaperService = require('../services/studentTestPaperService');
-const courseTestRecommendationService = require('../services/courseTestRecommendationService');
 const testAttemptSectionStatsService = require('../services/testAttemptSectionStatsService');
+const testRecommendationService = require('../services/testRecommendationService');
+
+async function getUnmetTestPrerequisiteBlockers(courseId, modules, requiredChapterIds = []) {
+    const required = (requiredChapterIds ?? []).map(String).filter(Boolean);
+    if (required.length === 0) return [];
+
+    const blockers = [];
+    for (const requiredPathId of required) {
+        const reqMod = modules.find((mod) => mod.id === Number(requiredPathId));
+        const configRes = await chapterQuizConfigService.getChapterQuizConfig(courseId, requiredPathId);
+        const hasActiveTest = configRes.ok
+            && configRes.config?.enabled !== false
+            && configRes.config != null;
+
+        if (hasActiveTest && !reqMod?.isTestPassed) {
+            blockers.push(
+                configRes.pathMeta?.PathName
+                ?? configRes.config?.title
+                ?? `Chương ${requiredPathId}`,
+            );
+        }
+    }
+
+    return blockers;
+}
 
 //check xem học viên có đủ điều kiện làm bài kiểm tra hay không
 async function checkPrerequisites(courseId, userId, scope, chapterId) {
@@ -36,7 +60,6 @@ async function checkPrerequisites(courseId, userId, scope, chapterId) {
         if (scope === 'chapter' && chapterId) {
             const targetMod = modules.find(m => m.id === Number(chapterId));
             if (targetMod) {
-                const targetIndex = modules.findIndex(m => m.id === Number(chapterId));
                 // MỞ KHÓA LIÊN CHƯƠNG
                 const isLocked = false;
 
@@ -46,13 +69,36 @@ async function checkPrerequisites(courseId, userId, scope, chapterId) {
                 } else if (!targetMod.allLessonsDone) {
                     prerequisitesMet = false;
                     prerequisiteBlockers.push("Bạn phải học xong tất cả bài học trong chương trước khi làm bài kiểm tra.");
+                } else {
+                    const chapterConfigRes = await chapterQuizConfigService.getChapterQuizConfig(courseId, chapterId);
+                    const unmetBlockers = await getUnmetTestPrerequisiteBlockers(
+                        courseId,
+                        modules,
+                        chapterConfigRes.config?.requiredChapterIds ?? [],
+                    );
+                    if (unmetBlockers.length > 0) {
+                        prerequisitesMet = false;
+                        prerequisiteBlockers.push(
+                            `Bạn phải đạt bài kiểm tra các chương: ${unmetBlockers.join(', ')}.`,
+                        );
+                    }
                 }
             }
         } else if (scope === 'final') {
-            const allCompleted = modules.every(m => m.isCompleted);
-            if (!allCompleted) {
+            const courseConfigRes = await chapterQuizConfigService.getCourseQuizConfig(courseId);
+            const prerequisiteChapterIds = courseConfigRes.config?.selectedChapterIds
+                ?? courseConfigRes.config?.requiredChapterIds
+                ?? [];
+            const unmetBlockers = await getUnmetTestPrerequisiteBlockers(
+                courseId,
+                modules,
+                prerequisiteChapterIds,
+            );
+            if (unmetBlockers.length > 0) {
                 prerequisitesMet = false;
-                prerequisiteBlockers.push("Bạn phải hoàn thành tất cả các chương trước khi làm bài kiểm tra cuối khóa.");
+                prerequisiteBlockers.push(
+                    `Bạn phải đạt bài kiểm tra các chương: ${unmetBlockers.join(', ')}.`,
+                );
             }
         }
     }
@@ -137,6 +183,7 @@ const startTestAttempt = async (req, res) => {
 
         let testId = null;
         let config = {};
+        let paperConfig = null;
         let paper = null;
 
         if (scope === 'final') {
@@ -160,24 +207,19 @@ const startTestAttempt = async (req, res) => {
                 });
             }
 
-            try {
-                const generationPlan = await courseTestRecommendationService.resolveCourseTestGenerationPlan({
-                    userId,
-                    courseId,
-                    baseConfig: config,
-                    testId,
-                });
-                //laasy ra đề thi dựa trên kế hoạch đã được đề xuất
-                paper = await studentTestPaperService.buildCourseTestPaper(
-                    generationPlan.config,
-                    courseId,
-                    { chapterWeights: generationPlan.chapterWeights },
-                );
+            const { sectionStats } = await testRecommendationService.getLatestCourseTestAttemptStats({
+                userId,
+                courseId,
+            });
+            paperConfig = sectionStats.length > 0
+                ? testRecommendationService.recommendCourseTestFromStats(sectionStats, config)
+                : config;
 
-                config = {
-                    ...generationPlan.config,
-                    recommendationMeta: generationPlan.recommendationMeta,
-                };
+            try {
+                paper = await studentTestPaperService.buildCourseTestPaper(
+                    paperConfig,
+                    courseId,
+                );
             } catch (paperError) {
                 if (paperError.code === 'INSUFFICIENT_TEST_QUESTIONS') {
                     return res.status(400).json({ ok: false, message: paperError.message });
@@ -207,6 +249,7 @@ const startTestAttempt = async (req, res) => {
             }
 
             config = configResult.config;
+            paperConfig = config;
 
             const sectionsData = await questionBankModel.getSectionsByPath(courseId, pathId);
             try {
@@ -218,9 +261,13 @@ const startTestAttempt = async (req, res) => {
                 throw paperError;
             }
 
+            const pathName = configResult.pathMeta?.PathName ?? null;
+            const pathOrder = Number(configResult.pathMeta?.PathOrder ?? 0) || null;
             paper.sections = (paper.sections ?? []).map((section) => ({
                 ...section,
                 pathId: Number(pathId),
+                pathName,
+                pathOrder,
             }));
         }
 
@@ -236,7 +283,7 @@ const startTestAttempt = async (req, res) => {
             });
         }
 
-        const configuredSkills = studentTestPaperService.getConfiguredSkillTypes(config);
+        const configuredSkills = studentTestPaperService.getConfiguredSkillTypes(paperConfig ?? config);
 
         res.json({
             ok: true,
@@ -244,7 +291,6 @@ const startTestAttempt = async (req, res) => {
                 timeLimitMinutes: config.timeLimitMinutes || 15,
                 skills: configuredSkills,
                 totalQuestions: totalQuestionsCount,
-                recommendation: config.recommendationMeta ?? null,
             },
             attempt: attempt,
             paper: {
@@ -456,6 +502,8 @@ const getAttemptSectionStats = async (req, res) => {
 
         const mappedRows = rows.map((row) => ({
             pathId: row.PathId,
+            pathName: row.PathName ?? null,
+            pathOrder: row.PathOrder != null ? Number(row.PathOrder) : null,
             typeId: row.TypeId,
             skillType: row.SkillType,
             sectionId: row.SectionId,
@@ -474,46 +522,10 @@ const getAttemptSectionStats = async (req, res) => {
     }
 };
 
-const getFinalTestRecommendationPreview = async (req, res) => {
-    try {
-        const { courseId } = req.params;
-        const userId = req.headers['x-user-id'] || req.user?.userId || 1;
-
-        const configResult = await chapterQuizConfigService.getCourseQuizConfig(courseId);
-        if (!configResult.ok || !configResult.config?.enabled) {
-            return res.status(400).json({
-                ok: false,
-                message: configResult.message ?? 'Bài kiểm tra toàn khóa chưa được bật.',
-            });
-        }
-
-        const testId = configResult.config.id
-            ?? await studentTestModel.getTestIdByCourseForFinal(courseId);
-        if (!testId) {
-            return res.status(404).json({
-                ok: false,
-                message: 'Giảng viên chưa tạo bài kiểm tra toàn khóa!',
-            });
-        }
-
-        const preview = await courseTestRecommendationService.getCourseTestRecommendationPreview({
-            userId,
-            courseId,
-            baseConfig: configResult.config,
-            testId,
-        });
-
-        return res.json({ ok: true, data: preview });
-    } catch (error) {
-        res.status(500).json({ ok: false, message: error.message });
-    }
-};
-
 module.exports = {
     getTestMeta,
     startTestAttempt,
     submitTestAttempt,
     getWrongAnswersStats,
     getAttemptSectionStats,
-    getFinalTestRecommendationPreview,
 };

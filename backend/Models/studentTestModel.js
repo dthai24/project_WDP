@@ -238,21 +238,24 @@ const getAttemptSectionStats = async (attemptId) => {
     request.input('attemptId', sql.Int, Number(attemptId));
     const result = await request.query(`
         SELECT
-            AttemptSectionStatId,
-            AttemptId,
-            CourseId,
-            PathId,
-            TypeId,
-            SkillType,
-            SectionId,
-            SectionTitle,
-            CorrectCount,
-            WrongCount,
-            TotalCount,
-            CreatedAt
-        FROM dbo.Test_Attempt_Section_Stats
-        WHERE AttemptId = @attemptId
-        ORDER BY TypeId, PathId, SectionId
+            s.AttemptSectionStatId,
+            s.AttemptId,
+            s.CourseId,
+            s.PathId,
+            s.TypeId,
+            s.SkillType,
+            s.SectionId,
+            s.SectionTitle,
+            s.CorrectCount,
+            s.WrongCount,
+            s.TotalCount,
+            s.CreatedAt,
+            p.PathName,
+            p.[Order] AS PathOrder
+        FROM dbo.Test_Attempt_Section_Stats s
+        LEFT JOIN dbo.Paths p ON p.PathId = s.PathId
+        WHERE s.AttemptId = @attemptId
+        ORDER BY s.TypeId, s.PathId, s.SectionId
     `);
     return result.recordset;
 };

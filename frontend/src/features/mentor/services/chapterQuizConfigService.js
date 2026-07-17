@@ -6,6 +6,7 @@ import { getUser } from '@/features/auth/utils/authUtils';
 import {
   getDefaultChapterQuizConfig,
   getDefaultCourseQuizConfig,
+  mergeQuizConfigFromApi,
   COURSE_QUIZ_CHAPTER_ID,
 } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 
@@ -62,18 +63,17 @@ export async function getChapterQuizConfig(courseId, chapterId, meta = {}) {
     }
 
     const stored = payload.data?.config;
-    if (stored) {
-      return { ok: true, config: stored };
-    }
+    const testConfig = payload.data?.testConfig ?? null;
+    const defaults = getDefaultChapterQuizConfig({
+      courseId,
+      chapterId,
+      chapterTitle: meta.chapterTitle,
+      chapterIndex: meta.chapterIndex,
+    });
 
     return {
       ok: true,
-      config: getDefaultChapterQuizConfig({
-        courseId,
-        chapterId,
-        chapterTitle: meta.chapterTitle,
-        chapterIndex: meta.chapterIndex,
-      }),
+      config: mergeQuizConfigFromApi(stored, testConfig, defaults),
     };
   } catch (error) {
     console.error('getChapterQuizConfig error:', error);
@@ -138,16 +138,15 @@ export async function getCourseQuizConfig(courseId, meta = {}) {
     }
 
     const stored = payload.data?.config;
-    if (stored) {
-      return { ok: true, config: stored };
-    }
+    const testConfig = payload.data?.testConfig ?? null;
+    const defaults = getDefaultCourseQuizConfig({
+      courseId,
+      courseTitle: meta.courseTitle,
+    });
 
     return {
       ok: true,
-      config: getDefaultCourseQuizConfig({
-        courseId,
-        courseTitle: meta.courseTitle,
-      }),
+      config: mergeQuizConfigFromApi(stored, testConfig, defaults),
     };
   } catch (error) {
     console.error('getCourseQuizConfig error:', error);

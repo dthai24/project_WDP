@@ -24,15 +24,14 @@ import {
   getTestMeta,
   startTestAttempt,
   submitTestAttempt,
-  getFinalTestRecommendationPreview,
 } from '@/features/learning/services/courseTestService';
 import TestResultPanel from '@/features/learning/components/test/TestResultPanel';
-import TestRecommendationPreviewPanel from '@/features/learning/components/test/TestRecommendationPreviewPanel';
 import {
   flattenPaperQuestions,
   getSectionQuestionGroups,
   normalizeTestPaper,
 } from '@/features/learning/utils/courseTestPaperUtils';
+import { buildTestGroupToolbarMeta } from '@/features/learning/utils/testSectionContextUtils';
 import { buildPaperSectionsPayload } from '@/features/learning/utils/testAttemptSectionStatsPayload';
 import { TEST_LEAVE_DIALOG, useTestLeaveGuard } from '@/features/learning/hooks/useTestLeaveGuard';
 import { TEST_MUTED, TEST_TEXT } from '@/features/learning/components/test/testTheme';
@@ -68,10 +67,6 @@ export default function CourseTestPage() {
   const [starting, setStarting] = useState(false);
   const [activeSkillType, setActiveSkillType] = useState(null);
   const [activeGroupIndex, setActiveGroupIndex] = useState(0);
-  const [recommendationPreview, setRecommendationPreview] = useState(null);
-  const [recommendationLoading, setRecommendationLoading] = useState(false);
-  const [recommendationError, setRecommendationError] = useState('');
-
   const autoSubmittedRef = useRef(false);
   const submitInFlightRef = useRef(false);
 
@@ -150,31 +145,6 @@ export default function CourseTestPage() {
   useEffect(() => {
     loadMeta();
   }, [loadMeta]);
-
-  useEffect(() => {
-    if (normalizedScope !== 'final' || pageState !== PAGE_STATE.INTRO) return undefined;
-
-    let cancelled = false;
-    setRecommendationLoading(true);
-    setRecommendationError('');
-
-    (async () => {
-      const res = await getFinalTestRecommendationPreview(courseId);
-      if (cancelled) return;
-
-      setRecommendationLoading(false);
-      if (!res.ok) {
-        setRecommendationError(res.message ?? 'Không tải được thống kê đề xuất.');
-        setRecommendationPreview(null);
-        return;
-      }
-      setRecommendationPreview(res.preview);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [courseId, normalizedScope, pageState]);
 
   /**
    * Cập nhật danh sách câu trả lời của học viên khi họ chọn hoặc thay đổi phương án của một câu hỏi.
@@ -377,13 +347,6 @@ export default function CourseTestPage() {
             onStart={handleStart}
             onBack={handleBackToLearn}
           />
-          {normalizedScope === 'final' && (
-            <TestRecommendationPreviewPanel
-              preview={recommendationPreview}
-              loading={recommendationLoading}
-              errorMessage={recommendationError}
-            />
-          )}
         </>
       )}
 
@@ -436,7 +399,7 @@ export default function CourseTestPage() {
                   <TestSectionToolbar
                     title={SKILL_SHORT_LABELS[activeSection.skillType] ?? activeSection.displayName}
                     groupLabel={activeGroup.displayName}
-                    groupMeta={`${activeGroup.questions?.length ?? 0} câu`}
+                    groupMeta={buildTestGroupToolbarMeta(activeSection.skillType, activeGroup)}
                     accentColor={activeSectionColors.color}
                     accentBg={activeSectionColors.bg}
                   />

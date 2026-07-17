@@ -174,6 +174,28 @@ export function normalizeQuizQuestionConfigs(config = {}) {
   return { ...config, questionConfigs };
 }
 
+/** Gộp config API với Test_Config (thời gian, điểm pass, số lần làm) từ database. */
+export function mergeQuizConfigFromApi(config, testConfig, defaults) {
+  const merged = {
+    ...defaults,
+    ...(config ?? {}),
+  };
+
+  if (testConfig) {
+    if (testConfig.timeLimitMinutes != null && Number.isFinite(Number(testConfig.timeLimitMinutes))) {
+      merged.timeLimitMinutes = Number(testConfig.timeLimitMinutes);
+    }
+    if (testConfig.passingScore != null && Number.isFinite(Number(testConfig.passingScore))) {
+      merged.passingScore = Number(testConfig.passingScore);
+    }
+    if (testConfig.maxAttempts != null && Number.isFinite(Number(testConfig.maxAttempts))) {
+      merged.maxAttempts = Number(testConfig.maxAttempts);
+    }
+  }
+
+  return normalizeQuizQuestionConfigs(merged);
+}
+
 export function getSectionCountForPart(config = {}, part) {
   const item = (config.questionConfigs ?? []).find((entry) => entry.part === part);
   return Math.max(0, Number(item?.sectionCount ?? 0));
@@ -497,6 +519,15 @@ export function getSelectedChapterIdsFromConfig(config = {}) {
   return (config.selectedChapterIds ?? []).map(String);
 }
 
+export function syncCourseQuizChapterPrerequisites(config = {}) {
+  const selectedChapterIds = getSelectedChapterIdsFromConfig(config);
+  return {
+    ...config,
+    selectedChapterIds,
+    requiredChapterIds: selectedChapterIds,
+  };
+}
+
 /** Khởi tạo / làm sạch danh sách chương được chọn khi mở dialog toàn khóa. */
 export function initCourseQuizChapterSelection(config = {}, chapterOptions = []) {
   const validIds = new Set(chapterOptions.map((chapter) => String(chapter.PathId)));
@@ -504,16 +535,16 @@ export function initCourseQuizChapterSelection(config = {}, chapterOptions = [])
   const existing = getSelectedChapterIdsFromConfig(config).filter((id) => validIds.has(id));
 
   if (existing.length === 0 && withBank.length > 0) {
-    return {
+    return syncCourseQuizChapterPrerequisites({
       ...config,
       selectedChapterIds: withBank.map((chapter) => String(chapter.PathId)),
-    };
+    });
   }
 
-  return {
+  return syncCourseQuizChapterPrerequisites({
     ...config,
     selectedChapterIds: existing,
-  };
+  });
 }
 
 export function patchCourseChapterSelection(config = {}, chapterId, selected) {
@@ -526,10 +557,17 @@ export function patchCourseChapterSelection(config = {}, chapterId, selected) {
     current.delete(id);
   }
 
-  return {
+  return syncCourseQuizChapterPrerequisites({
     ...config,
     selectedChapterIds: [...current],
-  };
+  });
+}
+
+export function getQuizPrerequisiteChapterIds(config = {}, { courseScope = false } = {}) {
+  if (courseScope) {
+    return getSelectedChapterIdsFromConfig(config);
+  }
+  return getRequiredChapterIdsFromConfig(config);
 }
 
 export function aggregateCourseStatsByChapterIds(chapters = [], selectedChapterIds = []) {
@@ -755,6 +793,38 @@ export function validateChapterQuizConfig(config = {}, stats = null) {
 
 export function hasChapterQuizConfigErrors(errors = {}) {
   return Object.keys(errors).length > 0;
+}
+
+export function buildChapterQuizPassResolver(modules = [], chapterQuizConfigs = {}) {
+  const moduleById = new Map(
+    modules.map((mod) => [String(mod.id), mod]),
+  );
+
+  return (chapterId) => {
+    const mod = moduleById.get(String(chapterId));
+    const config = chapterQuizConfigs[chapterId] ?? chapterQuizConfigs[Number(chapterId)];
+    const quizEnabled = config?.enabled !== false && config != null;
+
+    return {
+      chapterTitle: mod?.title ?? `Chương ${chapterId}`,
+      quizTitle: config?.title ?? 'Bài kiểm tra chương',
+      quizEnabled,
+      passed: !quizEnabled || Boolean(mod?.isTestPassed),
+    };
+  };
+}
+
+export function areQuizPrerequisitesMet(
+  config = {},
+  modules = [],
+  chapterQuizConfigs = {},
+  { courseScope = false } = {},
+) {
+  const requiredChapterIds = getQuizPrerequisiteChapterIds(config, { courseScope });
+  return evaluateQuizPrerequisites(
+    requiredChapterIds,
+    buildChapterQuizPassResolver(modules, chapterQuizConfigs),
+  );
 }
 
 export function evaluateQuizPrerequisites(requiredChapterIds = [], resolveChapterQuizMeta) {

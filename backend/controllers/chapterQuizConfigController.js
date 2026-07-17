@@ -56,6 +56,7 @@ const getChapterQuizConfig = async (req, res) => {
       success: true,
       data: {
         config: result.config,
+        testConfig: result.testConfig ?? null,
         pathMeta: result.pathMeta ?? null,
       },
     });
@@ -151,6 +152,7 @@ const getCourseQuizConfig = async (req, res) => {
       success: true,
       data: {
         config: result.config,
+        testConfig: result.testConfig ?? null,
         courseMeta: result.courseMeta ?? null,
       },
     });

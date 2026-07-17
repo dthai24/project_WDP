@@ -1,5 +1,17 @@
-import { SKILL_TO_TYPE_ID } from '@/features/mentor/utils/mentorTestContentUtils';
+import {
+  SKILL_TO_TYPE_ID,
+  TEST_SKILL_LISTENING,
+  TEST_SKILL_READING,
+  TEST_SKILL_VOCABULARY,
+} from '@/features/mentor/utils/mentorTestContentUtils';
 import { getSectionQuestionGroups } from '@/features/learning/utils/courseTestPaperUtils';
+import { formatChapterLabel, formatChapterCourseNumber } from '@/features/learning/utils/testSectionContextUtils';
+
+const SKILL_DISPLAY_ORDER = [
+  TEST_SKILL_LISTENING,
+  TEST_SKILL_READING,
+  TEST_SKILL_VOCABULARY,
+];
 
 function findQuestionResult(questionResults = [], question = {}) {
   const questionId = String(question?.tempId ?? question?.QuestionId ?? '');
@@ -45,6 +57,11 @@ export function buildTestResultStats(paper, questionResults = []) {
       return {
         sectionId: resolveSectionId(group, index),
         displayName: group.displayName ?? `Section ${index + 1}`,
+        pathId: group.pathId ?? null,
+        pathOrder: group.pathOrder ?? null,
+        pathName: group.pathName ?? null,
+        chapterLabel: formatChapterLabel(group),
+        chapterCourseNumber: formatChapterCourseNumber(group),
         ...counts,
       };
     });
@@ -62,6 +79,65 @@ export function buildTestResultStats(paper, questionResults = []) {
       totalCount: correctCount + wrongCount,
     };
   });
+
+  return {
+    skillCount: skills.length,
+    skills,
+    correctCount: skills.reduce((sum, skill) => sum + skill.correctCount, 0),
+    wrongCount: skills.reduce((sum, skill) => sum + skill.wrongCount, 0),
+    totalCount: skills.reduce((sum, skill) => sum + skill.totalCount, 0),
+  };
+}
+
+function mapPersistedSectionRow(row = {}) {
+  const pathId = row.pathId ?? row.PathId ?? null;
+  const pathOrder = row.pathOrder ?? row.PathOrder ?? null;
+  const pathName = row.pathName ?? row.PathName ?? null;
+  const chapterMeta = { pathId, pathOrder, pathName };
+
+  return {
+    sectionId: String(row.sectionId ?? row.SectionId ?? ''),
+    displayName: row.sectionTitle ?? row.SectionTitle ?? `Section ${row.sectionId ?? ''}`,
+    pathId,
+    pathOrder: pathOrder != null ? Number(pathOrder) : null,
+    pathName,
+    chapterLabel: formatChapterLabel(chapterMeta),
+    chapterCourseNumber: formatChapterCourseNumber(chapterMeta),
+    correctCount: Number(row.correctCount ?? row.CorrectCount ?? 0),
+    wrongCount: Number(row.wrongCount ?? row.WrongCount ?? 0),
+    totalCount: Number(row.totalCount ?? row.TotalCount ?? 0),
+  };
+}
+
+export function buildTestResultStatsFromSectionRows(sectionRows = []) {
+  const bySkill = new Map();
+
+  sectionRows.forEach((row) => {
+    const skillType = String(row.skillType ?? row.SkillType ?? '').trim().toUpperCase();
+    if (!skillType) return;
+    if (!bySkill.has(skillType)) {
+      bySkill.set(skillType, []);
+    }
+    bySkill.get(skillType).push(mapPersistedSectionRow(row));
+  });
+
+  const skills = SKILL_DISPLAY_ORDER
+    .filter((skillType) => bySkill.has(skillType))
+    .map((skillType) => {
+      const sections = bySkill.get(skillType) ?? [];
+      const correctCount = sections.reduce((sum, section) => sum + section.correctCount, 0);
+      const wrongCount = sections.reduce((sum, section) => sum + section.wrongCount, 0);
+
+      return {
+        skillType,
+        typeId: SKILL_TO_TYPE_ID[skillType] ?? null,
+        sectionCount: sections.length,
+        sections,
+        correctCount,
+        wrongCount,
+        totalCount: correctCount + wrongCount,
+      };
+    });
 
   return {
     skillCount: skills.length,

@@ -17,6 +17,7 @@ export default function TestQuestionCard({
   question,
   selectedOptionTempIds = [],
   onChange,
+  contextMeta = null,
 }) {
     const isMultiple = question.isMultipleChoice; 
 
@@ -66,6 +67,11 @@ export default function TestQuestionCard({
           {question.order}
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
+          {contextMeta && (
+            <Typography sx={{ fontSize: 12.5, color: TEST_MUTED, mb: 0.5, lineHeight: 1.4 }}>
+              {contextMeta}
+            </Typography>
+          )}
           <Typography sx={{ fontSize: 15, fontWeight: 600, color: TEST_TEXT, lineHeight: 1.55 }}>
             {question.questionText}
           </Typography>

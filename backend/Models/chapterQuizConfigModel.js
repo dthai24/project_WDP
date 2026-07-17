@@ -343,6 +343,7 @@ async function getCourseQuizConfigBundle(courseId) {
     ? await getTestConfigSections(config.ConfigId)
     : [];
   const selectedChapterIds = await getCourseChapterIds(test.TestId);
+  const requiredChapterIds = await getPrerequisitePathIds(test.TestId);
 
   return {
     test,
@@ -350,6 +351,7 @@ async function getCourseQuizConfigBundle(courseId) {
     passConfig,
     configSections,
     selectedChapterIds,
+    requiredChapterIds,
     courseId: Number(courseId),
     pathId: null,
   };

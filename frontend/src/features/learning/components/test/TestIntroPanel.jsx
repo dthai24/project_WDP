@@ -21,8 +21,11 @@ import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import AppButton from '@/shared/ui/AppButton';
-import { BYPASS_ATTEMPT_LIMIT } from '@/features/learning/services/courseTestService';
+import { BYPASS_ATTEMPT_LIMIT, fetchAttemptSectionStats } from '@/features/learning/services/courseTestService';
+import { buildTestResultStatsFromSectionRows } from '@/features/learning/utils/testResultStatsUtils';
+import TestResultStatsTable from '@/features/learning/components/test/TestResultStatsTable';
 import {
   TEST_DIVIDER,
   TEST_MUTED,
@@ -38,6 +41,11 @@ export default function TestIntroPanel({
   onBack,
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailStats, setDetailStats] = useState(null);
+  const [detailAttempt, setDetailAttempt] = useState(null);
+  const [detailError, setDetailError] = useState('');
 
   const rules = [
     `Thời gian làm bài: ${formatDurationMinutes(meta?.timeLimitMinutes)}.`,
@@ -82,6 +90,43 @@ export default function TestIntroPanel({
     const s = diff % 60;
     if (m === 0) return `${s} giây`;
     return `${m} phút ${s} giây`;
+  };
+
+  const handleViewAttemptDetail = async (attempt) => {
+    if (!meta?.courseId || !attempt?.AttemptId) return;
+
+    setDetailAttempt(attempt);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailStats(null);
+    setDetailError('');
+
+    try {
+      const res = await fetchAttemptSectionStats(meta.courseId, attempt.AttemptId);
+      if (!res?.ok) {
+        setDetailError(res?.message ?? 'Không tải được thống kê lần làm bài.');
+        return;
+      }
+
+      const sectionRows = res.data?.sectionRows ?? [];
+      if (sectionRows.length === 0) {
+        setDetailError('Lần làm bài này chưa có dữ liệu thống kê theo section.');
+        return;
+      }
+
+      setDetailStats(buildTestResultStatsFromSectionRows(sectionRows));
+    } catch {
+      setDetailError('Không tải được thống kê lần làm bài.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setDetailAttempt(null);
+    setDetailStats(null);
+    setDetailError('');
   };
 
   return (
@@ -257,7 +302,7 @@ export default function TestIntroPanel({
       <Dialog
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: { borderRadius: '16px' }
@@ -287,6 +332,7 @@ export default function TestIntroPanel({
                     <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5 }}>Thời gian làm</TableCell>
                     <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5, textAlign: 'right' }}>Điểm</TableCell>
                     <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5, textAlign: 'right' }}>Kết quả</TableCell>
+                    <TableCell sx={{ color: TEST_MUTED, fontSize: 13, fontWeight: 600, py: 1.5, textAlign: 'right' }}>Chi tiết</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -326,12 +372,86 @@ export default function TestIntroPanel({
                             }} 
                           />
                         </TableCell>
+                        <TableCell sx={{ textAlign: 'right', py: 2 }}>
+                          <AppButton
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityRoundedIcon />}
+                            onClick={() => handleViewAttemptDetail(attempt)}
+                            sx={{
+                              borderRadius: '8px',
+                              px: 1.25,
+                              py: 0.25,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              borderColor: TEST_DIVIDER,
+                              color: TEST_TEXT,
+                              whiteSpace: 'nowrap',
+                              '&:hover': {
+                                borderColor: TEST_PRIMARY,
+                                color: TEST_PRIMARY,
+                                bgcolor: alpha(TEST_PRIMARY, 0.04),
+                              },
+                            }}
+                          >
+                            Xem chi tiết
+                          </AppButton>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={detailOpen}
+        onClose={handleCloseDetail}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: '16px' },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+          <Box>
+            <Typography sx={{ fontSize: 18, fontWeight: 700, color: TEST_TEXT }}>
+              Thống kê lần làm bài
+            </Typography>
+            {detailAttempt && (
+              <Typography sx={{ fontSize: 13, color: TEST_MUTED, mt: 0.5 }}>
+                {formatDateTime(detailAttempt.StartedAt)}
+                {' · '}
+                Điểm: {Number.isInteger(detailAttempt.Point) ? detailAttempt.Point : Number(detailAttempt.Point).toFixed(1)}/100
+              </Typography>
+            )}
+          </Box>
+          <IconButton onClick={handleCloseDetail} size="small" sx={{ color: TEST_MUTED }}>
+            <CloseRoundedIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {detailLoading && (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography sx={{ color: TEST_MUTED, fontSize: 14 }}>
+                Đang tải thống kê...
+              </Typography>
+            </Box>
+          )}
+
+          {!detailLoading && detailError && (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography sx={{ color: TEST_MUTED, fontSize: 14 }}>
+                {detailError}
+              </Typography>
+            </Box>
+          )}
+
+          {!detailLoading && !detailError && detailStats && (
+            <TestResultStatsTable stats={detailStats} compact />
           )}
         </DialogContent>
       </Dialog>

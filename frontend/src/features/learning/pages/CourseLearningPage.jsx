@@ -100,6 +100,12 @@ import {
   getChapterQuizConfig,
   getCourseQuizConfig,
 } from "@/features/mentor/services/chapterQuizConfigService";
+import {
+  areQuizPrerequisitesMet,
+  buildChapterQuizPassResolver,
+  getRequiredChapterIdsFromConfig,
+  evaluateQuizPrerequisites,
+} from "@/features/mentor/utils/mentorChapterQuizConfigUtils";
 
 const PRIMARY = "#0891B2";
 const TEXT = "#0F172A";
@@ -361,8 +367,6 @@ export default function CourseLearningPage() {
           });
           // ĐÂY LÀ ĐOẠN "DỊCH THUẬT" 
           const mappedModules = result.data.map((mod, chapterIndex) => {
-            // Debug log để kiểm tra dữ liệu từ BE
-            console.log("Module:", mod.PathName, "IsTestPassed from BE:", mod.IsTestPassed);
             return {
               id: mod.PathId,
               index: chapterIndex + 1,
@@ -431,37 +435,59 @@ export default function CourseLearningPage() {
   // 4. Các hàm tính toán của React
   const processedModules = useMemo(() => {
     if (!modules.length) return [];
-    
+
+    const resolveChapterPass = buildChapterQuizPassResolver(modules, chapterQuizConfigs);
+
     // Pass 1: compute isCompleted for each module
     const modulesWithStatus = modules.map((mod) => {
-      //chỉ trả về true nếu tất cả là completed
+      const config = chapterQuizConfigs[mod.id];
       const allLessonsDone = mod.lessons.every((l) => l.status === "completed");
-      // true nếu chương có bài kiểm tra và bài kiểm tra đang mở 
-      const hasActiveTest = chapterQuizConfigs[mod.id]?.enabled !== false && chapterQuizConfigs[mod.id] != null;
-      //trả về true nếu học hết và nếu có test thfi pass thfi tính là đã hoàn thành chương  
+      const hasActiveTest = config?.enabled !== false && config != null;
+      const testPrerequisites = evaluateQuizPrerequisites(
+        getRequiredChapterIdsFromConfig(config ?? {}),
+        resolveChapterPass,
+      );
+      const testPrerequisitesMet = testPrerequisites.ok;
       const isCompleted = allLessonsDone && (!hasActiveTest || mod.isTestPassed);
-      return { ...mod, isCompleted, hasActiveTest, allLessonsDone };
+      return {
+        ...mod,
+        isCompleted,
+        hasActiveTest,
+        testPrerequisitesMet,
+        allLessonsDone,
+      };
     });
 
     // Pass 2: compute isLocked
     return modulesWithStatus.map((mod, index) => {
       if (index === 0) return { ...mod, isLocked: false };
-      const prevMod = modulesWithStatus[index - 1];
       // MỞ KHÓA LIÊN CHƯƠNG: Luôn trả về false để cho phép học viên học nhảy cóc chương
       return { ...mod, isLocked: false };
     });
   }, [modules, chapterQuizConfigs]);
 
+  const courseTestVisibility = useMemo(() => {
+    if (!courseQuizConfig || courseQuizConfig.enabled === false) {
+      return { show: false, prerequisitesMet: false, blockers: [] };
+    }
+
+    const prereq = areQuizPrerequisitesMet(
+      courseQuizConfig,
+      modules,
+      chapterQuizConfigs,
+      { courseScope: true },
+    );
+    return {
+      show: true,
+      prerequisitesMet: prereq.ok,
+      blockers: prereq.blockers,
+    };
+  }, [courseQuizConfig, modules, chapterQuizConfigs]);
+
   const allLessons = useMemo(() => flatLessons(processedModules), [processedModules]);
   const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
   const { lesson: currentLesson, mod: currentMod } = findLessonAndModule(processedModules, currentLessonId);
   const progress = useMemo(() => computeProgress(processedModules), [processedModules]);
-
-  console.log("RENDER DEBUG:", {
-    courseQuizConfig,
-    chapterQuizConfigs,
-    processedModules
-  });
 
   // 5. Nút Đánh dấu hoàn thành
   const handleToggleComplete = async () => {
@@ -1124,8 +1150,11 @@ export default function CourseLearningPage() {
                             label="Bài kiểm tra chương"
                             subtitle={chapterQuizConfigs[mod.id]?.title || "Kiểm tra cuối chương"}
                             isPassed={mod.isTestPassed}
-                            onClick={() => !mod.isLocked && mod.allLessonsDone && handleGoToChapterTest(mod.id)}
-                            locked={mod.isLocked || !mod.allLessonsDone}
+                            onClick={() => {
+                              const canStart = !mod.isLocked && mod.allLessonsDone && mod.testPrerequisitesMet;
+                              if (canStart) handleGoToChapterTest(mod.id);
+                            }}
+                            locked={mod.isLocked || !mod.allLessonsDone || !mod.testPrerequisitesMet}
                           />
                         )}
                       </AccordionDetails>
@@ -1134,16 +1163,15 @@ export default function CourseLearningPage() {
                 })}
 
                 <Box sx={{ px: 1.5, pb: 2, pt: 1 }}>
-                  {courseQuizConfig?.enabled !== false && courseQuizConfig != null && (
+                  {courseTestVisibility.show && (
                     <OutlineTestItem
                       variant="course"
                       label="Kiểm tra cuối khóa"
                       subtitle={courseQuizConfig?.title || "Kiểm tra cuối khóa"}
                       onClick={() => {
-                        const allCompleted = processedModules.every(m => m.isCompleted);
-                        if (allCompleted) handleGoToCourseTest();
+                        if (courseTestVisibility.prerequisitesMet) handleGoToCourseTest();
                       }}
-                      locked={!processedModules.every(m => m.isCompleted)}
+                      locked={!courseTestVisibility.prerequisitesMet}
                     />
                   )}
                 </Box>

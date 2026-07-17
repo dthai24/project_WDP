@@ -2,9 +2,11 @@ import { Box, Typography } from '@mui/material';
 import {
   TEST_SKILL_LISTENING,
   TEST_SKILL_READING,
+  TEST_SKILL_VOCABULARY,
 } from '@/features/mentor/utils/mentorTestContentUtils';
 import TestQuestionCard from './TestQuestionCard';
 import TestReadingContent from './TestReadingContent';
+import { buildVocabularyQuestionContextMeta } from '@/features/learning/utils/testSectionContextUtils';
 import { TEST_DIVIDER, TEST_MUTED } from './testTheme';
 
 export default function TestQuestionGroup({  group,
@@ -15,6 +17,9 @@ export default function TestQuestionGroup({  group,
 }) {
   const audioUrl = group?.audioUrl ?? null;
   const readingUrl = group?.readingUrl ?? null;
+  const questionContextMeta = skillType === TEST_SKILL_VOCABULARY
+    ? buildVocabularyQuestionContextMeta(group)
+    : null;
 
   return (
     <Box>
@@ -72,6 +77,7 @@ export default function TestQuestionGroup({  group,
             question={question}
             selectedOptionTempIds={answers[question.tempId] ?? []}
             onChange={onAnswerChange}
+            contextMeta={questionContextMeta}
           />
         ))}
       </Box>
