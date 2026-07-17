@@ -196,6 +196,28 @@ export default function MentorCoursesPage() {
         onRemoveFilterChip={handleRemoveFilterChip}
       />
 
+      {!loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, mb: 1 }}>
+          <AppButton
+            startIcon={<AddRoundedIcon />}
+            onClick={handleCreateCourse}
+            sx={{
+              height: 40,
+              px: 3,
+              fontSize: 13.5,
+              fontWeight: 700,
+              borderRadius: '999px',
+              bgcolor: '#059669',
+              color: '#fff',
+              boxShadow: '0 1px 2px rgba(5,150,105,0.1)',
+              '&:hover': { bgcolor: '#047857', boxShadow: 'none' },
+            }}
+          >
+            Tạo khóa học mới
+          </AppButton>
+        </Box>
+      )}
+
       <MentorCourseList
         courses={pagination.items}
         loading={loading}
@@ -221,27 +243,6 @@ export default function MentorCoursesPage() {
             onPageChange={handlePageChange}
           />
         </>
-      )}
-      {!loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
-          <AppButton
-            startIcon={<AddRoundedIcon />}
-            onClick={handleCreateCourse}
-            sx={{
-              height: 48,
-              px: 4,
-              fontSize: 14,
-              fontWeight: 700,
-              borderRadius: '999px',
-              bgcolor: '#059669',
-              color: '#fff',
-              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-              '&:hover': { bgcolor: '#047857', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' },
-            }}
-          >
-            Tạo khóa học mới
-          </AppButton>
-        </div>
       )}
 
       <ConfirmDialog

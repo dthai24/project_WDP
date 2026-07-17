@@ -52,20 +52,49 @@ const getStudentsInCourse = async (req, res) => {
             });
         }
 
+        const UserNode = require('../models/MongoDB/UserNode');
+
         const enrollments = await UserCourse.find({ courseId })
             .populate('userId', 'fullName email avatarUrl dateOfBirth')
             .sort({ enrollmentDate: -1 })
             .lean();
 
-        const students = enrollments.map(e => ({
-            userId: e.userId?._id,
-            fullName: e.userId?.fullName || '',
-            email: e.userId?.email || '',
-            avatarUrl: e.userId?.avatarUrl || null,
-            dateOfBirth: e.userId?.dateOfBirth || null,
-            progressPercentage: e.progressPercentage,
-            enrollmentDate: e.enrollmentDate,
-        }));
+        // Fetch paths and nodes for the course
+        const paths = await Path.find({ courseId }).select('_id').lean();
+        const pathIds = paths.map(p => p._id);
+        const nodes = await PathNode.find({ pathId: { $in: pathIds } }).sort({ nodeOrder: 1 }).lean();
+        const nodeIds = nodes.map(n => n._id);
+
+        const students = [];
+
+        for (const e of enrollments) {
+            if (!e.userId) continue;
+
+            const userNodes = await UserNode.find({
+                userId: e.userId._id,
+                nodeId: { $in: nodeIds }
+            }).sort({ completedAt: -1 }).lean();
+
+            const completedNodeIds = new Set(userNodes.map(un => un.nodeId.toString()));
+            const currentIncompleteNode = nodes.find(n => !completedNodeIds.has(n._id.toString()));
+            const currentLessonName = currentIncompleteNode ? currentIncompleteNode.nodeName : 'Đã hoàn thành';
+
+            const lastAccessedAt = userNodes.length > 0 ? userNodes[0].completedAt : null;
+            const completedAt = e.progressPercentage === 100 && userNodes.length > 0 ? userNodes[0].completedAt : null;
+
+            students.push({
+                userId: e.userId._id,
+                fullName: e.userId.fullName || '',
+                email: e.userId.email || '',
+                avatarUrl: e.userId.avatarUrl || null,
+                dateOfBirth: e.userId.dateOfBirth || null,
+                progressPercentage: e.progressPercentage,
+                enrollmentDate: e.enrollmentDate,
+                currentLessonName,
+                lastAccessedAt,
+                completedAt,
+            });
+        }
 
         return res.status(200).json({
             success: true,

@@ -1,4 +1,6 @@
 const { uploadAudioFile, uploadDocumentFile, uploadTextHtml } = require('../services/cloudinaryService');
+const fs = require('fs');
+const path = require('path');
 
 function mapUploadErrorMessage(error) {
   if (error?.statusCode === 400) return error.message;
@@ -65,9 +67,16 @@ async function uploadMaterial(req, res) {  try {
 }
 function isAllowedTextMaterialUrl(rawUrl) {
   try {
-    const parsed = new URL(String(rawUrl ?? '').trim());
+    const urlStr = String(rawUrl ?? '').trim();
+    if (urlStr.startsWith('/uploads/')) return true;
+
+    const parsed = new URL(urlStr);
     if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-    return parsed.hostname.endsWith('cloudinary.com');
+    return (
+      parsed.hostname.endsWith('cloudinary.com') ||
+      parsed.hostname === 'localhost' ||
+      parsed.hostname === '127.0.0.1'
+    );
   } catch {
     return false;
   }
@@ -90,11 +99,42 @@ async function fetchTextMaterialContent(req, res) {
       });
     }
 
+    // Check if it's a local file in the uploads directory
+    let localPath = null;
+    if (rawUrl.startsWith('/uploads/')) {
+      localPath = path.join(__dirname, '..', rawUrl);
+    } else {
+      try {
+        const parsed = new URL(rawUrl);
+        if (
+          (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') &&
+          parsed.pathname.startsWith('/uploads/')
+        ) {
+          localPath = path.join(__dirname, '..', parsed.pathname);
+        }
+      } catch (e) {}
+    }
+
+    if (localPath) {
+      if (!fs.existsSync(localPath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'File không tồn tại trên local server.',
+        });
+      }
+      const html = fs.readFileSync(localPath, 'utf8');
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy nội dung văn bản thành công.',
+        data: { html },
+      });
+    }
+
     const response = await fetch(rawUrl);
     if (!response.ok) {
       return res.status(502).json({
         success: false,
-        message: 'Không thể tải nội dung văn bản từ Cloudinary.',
+        message: 'Không thể tải nội dung văn bản.',
       });
     }
 

@@ -88,21 +88,7 @@ export default function MentorCourseCreateSuccessDialog({
             Quản lý nội dung khóa học
           </AppButton>
 
-          <AppButton
-            variant="outlined"
-            startIcon={<QuizOutlinedIcon />}
-            onClick={onCreateQuestionBank}
-            disabled={courseId == null}
-            sx={{
-              height: 46,
-              borderRadius: '12px',
-              fontWeight: 700,
-              justifyContent: 'flex-start',
-              px: 2,
-            }}
-          >
-            Tạo ngân hàng câu hỏi
-          </AppButton>
+
 
           <AppButton
             variant="text"
