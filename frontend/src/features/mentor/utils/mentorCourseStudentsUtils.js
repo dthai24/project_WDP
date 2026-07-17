@@ -127,7 +127,7 @@ export function filterAndSortCourseStudents(students = [], query = {}) {
     if (status !== 'all' && student.status !== status) return false;
 
     if (keyword) {
-      const haystack = [student.FullName, student.Email].filter(Boolean).join(' ').toLowerCase();
+      const haystack = [student.fullName, student.email].filter(Boolean).join(' ').toLowerCase();
       if (!haystack.includes(keyword)) return false;
     }
 

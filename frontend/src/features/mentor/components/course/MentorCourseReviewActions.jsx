@@ -5,12 +5,14 @@ import { PRIMARY } from './mentorCourseCreateStyles';
 export default function MentorCourseReviewActions({
   onCreate,
   creating = false,
+  disabled = false,
 }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       <AppButton
         onClick={onCreate}
         loading={creating}
+        disabled={disabled}
         sx={{
           height: 44,
           borderRadius: '999px',
