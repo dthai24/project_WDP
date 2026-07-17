@@ -196,7 +196,10 @@ export async function saveCreateCourseContent(course, paths, meta) {
         body: JSON.stringify(contentPayload),
       });
       const data = await response.json();
-      if (data.success) return { ok: true, payload: contentPayload };
+      if (data.success) {
+        saveCreateCourseContentToStorage(course, paths, meta);
+        return { ok: true, payload: contentPayload };
+      }
     }
   } catch (e) {
     // fall through

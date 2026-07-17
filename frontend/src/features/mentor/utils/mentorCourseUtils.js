@@ -105,11 +105,19 @@ function courseIsPublished(course) {
 }
 
 function getCourseCategoryId(course) {
-  return course?.CategoryId ?? course?.categoryId ?? null;
+  const raw = course?.CategoryId ?? course?.categoryId;
+  if (raw && typeof raw === 'object') {
+    return raw._id ?? raw.id ?? null;
+  }
+  return raw ?? null;
 }
 
 function getCourseLevelId(course) {
-  return course?.LevelId ?? course?.levelId ?? null;
+  const raw = course?.LevelId ?? course?.levelId;
+  if (raw && typeof raw === 'object') {
+    return raw._id ?? raw.id ?? null;
+  }
+  return raw ?? null;
 }
 
 function getCourseName(course) {

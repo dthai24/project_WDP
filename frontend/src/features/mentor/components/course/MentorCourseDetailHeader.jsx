@@ -173,29 +173,6 @@ export default function MentorCourseDetailHeader({
               width: { xs: '100%', sm: 'auto' },
             }}
           >
-            <AppButton
-              variant="outlined"
-              startIcon={<QuizOutlinedIcon sx={{ fontSize: 16 }} />}
-              onClick={() => navigate(questionsPath)}
-              sx={{
-                height: 38,
-                borderRadius: '999px',
-                fontSize: 13,
-                fontWeight: 700,
-                px: 2,
-                flex: { xs: '1 1 0', sm: '0 0 auto' },
-                minWidth: { xs: 0, sm: 'auto' },
-                color: '#7C3AED',
-                borderColor: 'rgba(124,58,237,0.28)',
-                '&:hover': {
-                  borderColor: 'rgba(124,58,237,0.45)',
-                  bgcolor: 'rgba(124,58,237,0.04)',
-                },
-              }}
-            >
-              Ngân hàng câu hỏi
-            </AppButton>
-
             {/* 
             ---------------Button set publish course--------------------
             */}
