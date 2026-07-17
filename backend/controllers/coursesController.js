@@ -1166,9 +1166,36 @@ const getUserCertificates = async (req, res) => {
       return res.status(400).json({ success: false, message: 'userId không hợp lệ' });
     }
 
-    const certs = await Certificate.find({ userId })
+    let certs = await Certificate.find({ userId })
       .populate('courseId', 'courseName thumbnail rating totalLessons')
       .lean();
+
+    // Defensive fallback: check if there are 100% completed courses without a certificate
+    const completedCourses = await UserCourse.find({ userId, progressPercentage: 100 }).lean();
+    const existingCourseIds = certs.map(c => c.courseId?._id?.toString() || c.courseId?.toString());
+    
+    let generatedAny = false;
+    for (const uc of completedCourses) {
+      const cId = uc.courseId.toString();
+      if (!existingCourseIds.includes(cId)) {
+        const certificateCode = 'CERT-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        await Certificate.create({
+          userId,
+          courseId: uc.courseId,
+          grade: 100, // default grade for pre-completed/seeded courses
+          issuedAt: uc.updatedAt || new Date(),
+          certificateCode
+        });
+        generatedAny = true;
+        console.log(`Auto-generated missing certificate for user ${userId} on course ${cId}`);
+      }
+    }
+
+    if (generatedAny) {
+      certs = await Certificate.find({ userId })
+        .populate('courseId', 'courseName thumbnail rating totalLessons')
+        .lean();
+    }
 
     return res.status(200).json({ success: true, certificates: certs });
   } catch (error) {

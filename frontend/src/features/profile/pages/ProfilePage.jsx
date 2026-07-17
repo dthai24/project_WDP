@@ -1032,7 +1032,7 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       {coursesList.filter(c => c.isCompleted).map(course => {
                         const cert = certificatesList.find(
-                          c => (c.courseId?._id || c.courseId) === course.courseId
+                          c => (c.courseId?._id || c.courseId)?.toString() === course.courseId?.toString()
                         );
 
                         return (
