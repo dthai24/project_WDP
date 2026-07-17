@@ -78,6 +78,7 @@ function normalizeCourse(course = {}) {
     modules: course.modules ?? [],
     currentLessonDetail: course.currentLessonDetail ?? null,
     recentLessons: course.recentLessons ?? [],
+    certificateCode: course.certificateCode ?? null,
   };
 }
 
@@ -197,7 +198,7 @@ export default function MyCourseRow({
 
   if (variant === "completed") {
     statusChip = getCompletedStatusChip();
-    actionLabel = "Ôn tập lại";
+    actionLabel = data.certificateCode ? "Xem chứng chỉ" : "Ôn tập lại";
   } else if (variant === "not_joined") {
     statusChip = getNotJoinedStatusChip();
     actionLabel = "Đăng ký học";
@@ -209,6 +210,8 @@ export default function MyCourseRow({
   const handleAction = () => {
     if (variant === "not_joined") {
       navigate(detailPath);
+    } else if (variant === "completed" && data.certificateCode) {
+      window.open(`/certificate/${data.certificateCode}`, '_blank');
     } else {
       navigate(learningPath);
     }

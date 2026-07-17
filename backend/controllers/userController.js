@@ -186,6 +186,7 @@ const applyMentor = async (req, res) => {
 const TestAttempt = require('../models/MongoDB/TestAttempt');
 const Test        = require('../models/MongoDB/Test');
 const Path        = require('../models/MongoDB/Path');
+const Certificate = require('../models/MongoDB/Certificate');
 const mongoose    = require('mongoose');
 
 // ============================================================
@@ -227,6 +228,13 @@ const getMyCoursesList = async (req, res) => {
             ? await TestAttempt.countDocuments({ userId, testId: { $in: testIds } })
             : 0;
 
+          // Lấy mã chứng chỉ nếu đã hoàn thành
+          let certificateCode = null;
+          if (isCompleted) {
+            const cert = await Certificate.findOne({ userId, courseId: courseObjId }).select('certificateCode').lean();
+            certificateCode = cert ? cert.certificateCode : null;
+          }
+
           return {
             courseId:       courseObjId.toString(),
             courseName:     e.courseId.courseName,
@@ -239,6 +247,7 @@ const getMyCoursesList = async (req, res) => {
             totalLessons:   e.courseId.totalLessons ?? 0,
             chapterCount,
             quizDoneCount,
+            certificateCode,
             instructorName: e.courseId.instructorId?.fullName || '',
             categoryName:   e.courseId.categoryId?.displayName || '',
             levelName:      e.courseId.levelId?.displayName || '',
