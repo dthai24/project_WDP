@@ -103,6 +103,28 @@ function getLearningStatusChip() {
   };
 }
 
+function getNotJoinedStatusChip() {
+  return {
+    label: "Chưa học",
+    sx: {
+      bgcolor: "rgba(100, 116, 139, 0.12)",
+      color: "#64748B",
+      border: "1px solid rgba(100, 116, 139, 0.20)",
+    },
+  };
+}
+
+function getNotStartedStatusChip() {
+  return {
+    label: "Chưa học",
+    sx: {
+      bgcolor: "rgba(245, 158, 11, 0.12)",
+      color: "#D97706",
+      border: "1px solid rgba(245, 158, 11, 0.20)",
+    },
+  };
+}
+
 
 
 function MetaItem({ icon: Icon, label }) {
@@ -170,12 +192,26 @@ export default function MyCourseRow({
   const titlePath = detailPath;
   const progressTextColor = getProgressColor(progressValue);
 
-  const statusChip = isCompleted ? getCompletedStatusChip() : getLearningStatusChip();
+  let statusChip = getLearningStatusChip();
+  let actionLabel = "Tiếp tục học";
 
-  const actionLabel = isCompleted ? "Ôn tập lại" : "Tiếp tục học";
+  if (variant === "completed") {
+    statusChip = getCompletedStatusChip();
+    actionLabel = "Ôn tập lại";
+  } else if (variant === "not_joined") {
+    statusChip = getNotJoinedStatusChip();
+    actionLabel = "Đăng ký học";
+  } else if (variant === "not_started") {
+    statusChip = getNotStartedStatusChip();
+    actionLabel = "Đăng ký học";
+  }
 
   const handleAction = () => {
-    navigate(learningPath);
+    if (variant === "not_joined") {
+      navigate(detailPath);
+    } else {
+      navigate(learningPath);
+    }
   };
 
   return (
