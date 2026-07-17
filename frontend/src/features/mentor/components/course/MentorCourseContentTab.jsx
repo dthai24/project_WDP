@@ -48,7 +48,7 @@ export default function MentorCourseContentTab({ course }) {
         />
 
         <Typography sx={CARD_SECTION_META_SX}>
-          {paths.length} chương · {course.TotalLessons ?? 0} bài học ·{' '}
+          {paths.length} chương · {(course.totalLessons ?? course.TotalLessons) ?? 0} bài học ·{' '}
           {materialCount ?? 0} học liệu
         </Typography>
       </Box>

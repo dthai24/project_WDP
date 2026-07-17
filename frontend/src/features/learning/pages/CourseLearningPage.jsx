@@ -1444,6 +1444,14 @@ export default function CourseLearningPage() {
                       return (
                         <div
                           key={file.id}
+                          onClick={() => {
+                            if (file.url) {
+                              const targetUrl = file.url.startsWith('/')
+                                ? `http://localhost:5050${file.url}`
+                                : file.url;
+                              window.open(targetUrl, '_blank');
+                            }
+                          }}
                           className="flex items-center gap-2.5 py-2 px-3 rounded-xl border border-slate-100
                             hover:border-emerald-200/60 hover:bg-emerald-50/30 transition-all cursor-pointer group"
                         >

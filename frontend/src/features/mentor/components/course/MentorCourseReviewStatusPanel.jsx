@@ -44,17 +44,13 @@ export default function MentorCourseReviewStatusPanel({
   creating = false,
   showActions = true,
 }) {
-  const errorChecklist = checklist.reduce((sumErr, err) => {
-    if (err.status === true) {
-      sumErr++;
-    }
-
-    return sumErr;
-  }, 0);
-  const errorValidation = validation?.errors?.length ?? 0
-  const errorCount = Number(errorChecklist + errorValidation);
+  const errorChecklist = checklist.filter((item) => item.status === 'error').length;
+  const errorValidation = validation?.errors?.length ?? 0;
+  const errorCount = errorChecklist + errorValidation;
   const isValid = validation?.isValid;
-  const isValidCheckList = checklist.every((c) => c.status === true);
+  const isValidCheckList = checklist.every((c) => c.status === 'ok' || c.status === 'warning');
+  const isSubmitDisabled = !isValid || !isValidCheckList;
+
   return (
     <Box
       sx={{
@@ -76,19 +72,19 @@ export default function MentorCourseReviewStatusPanel({
             py: 1,
             borderRadius: '12px',
             mb: 1.5,
-            bgcolor: isValid ? 'rgba(5,150,105,0.08)' : 'rgba(220,38,38,0.06)',
-            border: `1px solid ${isValid ? 'rgba(5,150,105,0.18)' : 'rgba(220,38,38,0.15)'}`,
+            bgcolor: !isSubmitDisabled ? 'rgba(5,150,105,0.08)' : 'rgba(220,38,38,0.06)',
+            border: `1px solid ${!isSubmitDisabled ? 'rgba(5,150,105,0.18)' : 'rgba(220,38,38,0.15)'}`,
           }}
         >
           <Typography
             sx={{
               fontSize: 13,
               fontWeight: 700,
-              color: isValid ? '#059669' : '#DC2626',
+              color: !isSubmitDisabled ? '#059669' : '#DC2626',
               lineHeight: 1.5,
             }}
           >
-            {isValid && isValidCheckList
+            {!isSubmitDisabled
               ? 'Khóa học đã sẵn sàng để tạo.'
               : `Còn ${errorCount} mục cần hoàn thiện`}
           </Typography>
@@ -148,7 +144,7 @@ export default function MentorCourseReviewStatusPanel({
 
       {showActions && (
         <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <MentorCourseReviewActions onCreate={onCreate} creating={creating} />
+          <MentorCourseReviewActions onCreate={onCreate} creating={creating} disabled={isSubmitDisabled} />
         </Box>
       )}
     </Box>

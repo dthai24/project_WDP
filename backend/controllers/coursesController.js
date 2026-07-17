@@ -780,7 +780,7 @@ const createFinalCourse = async (req, res) => {
       });
     }
 
-    // Create course
+    // Create or update course
     const courseData = {
       courseName: String(newCourse.CourseName).trim(),
       description: String(newCourse.Description).trim(),
@@ -796,12 +796,44 @@ const createFinalCourse = async (req, res) => {
       totalLessons: 0,
     };
 
-    const course = await Course.create(courseData);
+    const existingId = newCourse.courseId || newCourse._id || newCourse.CourseId;
+    let course = null;
+
+    if (existingId && mongoose.Types.ObjectId.isValid(existingId)) {
+      course = await Course.findById(existingId);
+    }
+
+    if (course) {
+      // Update existing course metadata
+      const updateData = { ...courseData };
+      if (!newCourse.Thumbnail) {
+        delete updateData.thumbnail;
+      }
+      await Course.findByIdAndUpdate(course._id, updateData);
+      
+      // Clean up old paths, nodes, materials to prevent duplication
+      const existingPaths = await Path.find({ courseId: course._id }).select('_id').lean();
+      const pathIds = existingPaths.map(p => p._id);
+      const existingNodes = await PathNode.find({ pathId: { $in: pathIds } }).select('_id').lean();
+      const nodeIds = existingNodes.map(n => n._id);
+
+      await NodeMaterial.deleteMany({ nodeId: { $in: nodeIds } });
+      await PathNode.deleteMany({ pathId: { $in: pathIds } });
+      await Path.deleteMany({ courseId: course._id });
+    } else {
+      // Create new course
+      course = await Course.create(courseData);
+    }
 
     if (newCourse?.Thumbnail) {
-      const thumbnailPath = saveCourseThumbnailFromDataUrl(newCourse.Thumbnail, course._id);
-      if (thumbnailPath) {
-        course.thumbnail = thumbnailPath;
+      if (String(newCourse.Thumbnail).startsWith('data:')) {
+        const thumbnailPath = saveCourseThumbnailFromDataUrl(newCourse.Thumbnail, course._id);
+        if (thumbnailPath) {
+          course.thumbnail = thumbnailPath;
+          await course.save();
+        }
+      } else {
+        course.thumbnail = newCourse.Thumbnail;
         await course.save();
       }
     }
