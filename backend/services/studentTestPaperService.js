@@ -88,7 +88,9 @@ async function buildCourseTestPaper(config, courseId, options = {}) {
   }
 
   const sectionsData = await loadSectionsForPaths(courseId, selectedChapterIds);
-  return buildPaperFromConfig(config, sectionsData, options);
+  return buildPaperFromConfig(config, sectionsData, {
+    chapterWeights: options.chapterWeights ?? config.chapterWeights ?? {},
+  });
 }
 
 function getConfiguredSkillTypes(config = {}) {

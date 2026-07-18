@@ -88,34 +88,6 @@ function buildQuestionsFromRows(rawQuestions = []) {
   });
 }
 
-function pickWeightedWithoutReplacement(items, count, weightFn) {
-  const pool = [...items];
-  const picked = [];
-
-  while (picked.length < count && pool.length > 0) {
-    const totalWeight = pool.reduce((sum, item) => sum + Math.max(0, weightFn(item)), 0);
-    if (totalWeight <= 0) {
-      picked.push(...shuffleArray(pool).slice(0, count - picked.length));
-      break;
-    }
-
-    let threshold = Math.random() * totalWeight;
-    let selectedIndex = 0;
-    for (let i = 0; i < pool.length; i += 1) {
-      threshold -= Math.max(0, weightFn(pool[i]));
-      if (threshold <= 0) {
-        selectedIndex = i;
-        break;
-      }
-    }
-
-    picked.push(pool[selectedIndex]);
-    pool.splice(selectedIndex, 1);
-  }
-
-  return picked;
-}
-
 function getSectionPathId(section) {
   const pathId = Number(section.PathId ?? section.pathId);
   return Number.isFinite(pathId) ? pathId : null;
@@ -159,7 +131,110 @@ function partitionChaptersIntoGroups(chapters, pickCount) {
   return groups;
 }
 
-function pickSectionsFromChapterGroup(groupChapters, candidates, pickCount, weightMap) {
+function allocateSectionCountsByChapterWeight(chapterEntries = [], totalCount = 0) {
+  const entries = chapterEntries
+    .map((entry) => ({
+      pathId: entry.pathId,
+      weight: Math.max(0, Number(entry.weight) || 0),
+    }))
+    .filter((entry) => Number.isInteger(entry.pathId) && entry.pathId > 0);
+
+  if (totalCount <= 0 || entries.length === 0) {
+    return new Map();
+  }
+
+  const weightTotal = entries.reduce((sum, entry) => sum + entry.weight, 0);
+  if (weightTotal <= 0) {
+    return new Map();
+  }
+
+  const quotas = entries.map((entry) => {
+    const exact = (entry.weight / weightTotal) * totalCount;
+    const floor = Math.floor(exact);
+    return {
+      pathId: entry.pathId,
+      count: floor,
+      remainder: exact - floor,
+    };
+  });
+
+  let remaining = totalCount - quotas.reduce((sum, entry) => sum + entry.count, 0);
+  const byRemainder = [...quotas].sort(
+    (left, right) => right.remainder - left.remainder || left.pathId - right.pathId,
+  );
+
+  for (const entry of byRemainder) {
+    if (remaining <= 0) break;
+    entry.count += 1;
+    remaining -= 1;
+  }
+
+  const allocation = new Map();
+  quotas.forEach((entry) => {
+    if (entry.count > 0) {
+      allocation.set(entry.pathId, entry.count);
+    }
+  });
+  return allocation;
+}
+
+function groupCandidatesByChapter(candidates = []) {
+  const byChapter = new Map();
+
+  for (const section of candidates) {
+    const pathId = getSectionPathId(section);
+    if (pathId == null) continue;
+
+    if (!byChapter.has(pathId)) {
+      byChapter.set(pathId, []);
+    }
+    byChapter.get(pathId).push(section);
+  }
+
+  return byChapter;
+}
+
+/**
+ * Phân bổ section Nghe/Đọc theo trọng số chương.
+ * sectionCount(chapter) = weight(chapter) / Σ weight × tổng section mentor chọn.
+ */
+function pickSectionsByWeightedChapterAllocation(candidates, pickCount, weightMap) {
+  if (pickCount <= 0 || candidates.length === 0) {
+    return [];
+  }
+
+  const byChapter = groupCandidatesByChapter(candidates);
+  const chapterEntries = Array.from(byChapter.keys()).map((pathId) => ({
+    pathId,
+    weight: weightMap.get(pathId) ?? 0,
+  }));
+
+  const allocation = allocateSectionCountsByChapterWeight(chapterEntries, pickCount);
+  const picked = [];
+  const pickedSectionIds = new Set();
+
+  allocation.forEach((count, pathId) => {
+    const pool = byChapter.get(pathId) ?? [];
+    const selected = shuffleArray(pool).slice(0, Math.min(count, pool.length));
+    selected.forEach((section) => {
+      picked.push(section);
+      pickedSectionIds.add(section.SectionId);
+    });
+  });
+
+  if (picked.length < pickCount) {
+    const remainingPool = candidates.filter(
+      (section) => !pickedSectionIds.has(section.SectionId),
+    );
+    picked.push(
+      ...shuffleArray(remainingPool).slice(0, pickCount - picked.length),
+    );
+  }
+
+  return shuffleArray(picked).slice(0, pickCount);
+}
+
+function pickSectionsFromChapterGroup(groupChapters, candidates, pickCount) {
   const pathIds = new Set(groupChapters.map((chapter) => chapter.pathId));
   const pool = candidates.filter((section) => pathIds.has(getSectionPathId(section)));
 
@@ -167,18 +242,10 @@ function pickSectionsFromChapterGroup(groupChapters, candidates, pickCount, weig
     return [];
   }
 
-  if (weightMap) {
-    return pickWeightedWithoutReplacement(
-      pool,
-      Math.min(pickCount, pool.length),
-      (section) => weightMap.get(getSectionPathId(section)) ?? 1,
-    );
-  }
-
   return shuffleArray(pool).slice(0, Math.min(pickCount, pool.length));
 }
 
-function pickEvenlyAcrossChapters(candidates, pickCount, weightMap) {
+function pickEvenlyAcrossChapters(candidates, pickCount) {
   const chapters = getChaptersFromCandidates(candidates);
   if (!shouldDistributeEvenlyAcrossChapters(pickCount, chapters.length)) {
     return null;
@@ -189,7 +256,7 @@ function pickEvenlyAcrossChapters(candidates, pickCount, weightMap) {
 
   for (const group of chapterGroups) {
     orderedCandidates.push(
-      ...pickSectionsFromChapterGroup(group, candidates, 1, weightMap),
+      ...pickSectionsFromChapterGroup(group, candidates, 1),
     );
   }
 
@@ -239,16 +306,18 @@ async function pickListeningReadingSections(
   );
 
   const weightMap = chapterWeights instanceof Map ? chapterWeights : null;
-  const evenlyDistributedCandidates = pickEvenlyAcrossChapters(candidates, pickCount, weightMap);
-  const orderedCandidates = evenlyDistributedCandidates ?? (
-    weightMap
-      ? pickWeightedWithoutReplacement(
-        candidates,
-        Math.min(pickCount, candidates.length),
-        (section) => weightMap.get(getSectionPathId(section)) ?? 1,
-      )
-      : shuffleArray(candidates)
-  );
+  let orderedCandidates;
+
+  if (weightMap && weightMap.size > 0) {
+    orderedCandidates = pickSectionsByWeightedChapterAllocation(
+      candidates,
+      pickCount,
+      weightMap,
+    );
+  } else {
+    const evenlyDistributedCandidates = pickEvenlyAcrossChapters(candidates, pickCount);
+    orderedCandidates = evenlyDistributedCandidates ?? shuffleArray(candidates);
+  }
 
   const picked = [];
   for (const section of orderedCandidates) {
@@ -421,4 +490,5 @@ async function randomizeTestPaperFromConfig(config, sectionsData, options = {}) 
 
 module.exports = {
   randomizeTestPaperFromConfig,
+  allocateSectionCountsByChapterWeight,
 };

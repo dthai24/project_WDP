@@ -5,18 +5,18 @@ const createTestAttempt = async (userId, testId, remainingSeconds) => {
     const request = new sql.Request();
     request.input('userId', sql.Int, userId);
     request.input('testId', sql.Int, testId);
-    
+
     // Tính thời gian hết hạn
     const expiresAt = new Date(Date.now() + remainingSeconds * 1000);
     request.input('expiresAt', sql.DateTime, expiresAt);
 
     // Vì AttemptId là INT tự tăng, ta không truyền ID vào mà dùng OUTPUT INSERTED để lấy ID mới tạo
-     const result = await request.query(`
+    const result = await request.query(`
         INSERT INTO dbo.Test_Attempts (UserId, TestId, Point, StartedAt, ExpiresAt, Status, IsPass)
         OUTPUT INSERTED.AttemptId
         VALUES (@userId, @testId, 0, GETDATE(), @expiresAt, 'in_progress', 0)
     `);
-    
+
     return {
         attemptId: result.recordset[0].AttemptId.toString(),
         startedAt: new Date(),
@@ -29,7 +29,7 @@ const createTestAttempt = async (userId, testId, remainingSeconds) => {
 const submitTestAttemptModel = async (attemptId, score, status, isPass = 0) => {
     const request = new sql.Request();
     request.input('attemptId', sql.Int, Number(attemptId));
-    request.input('score', sql.Decimal(18,2), score);
+    request.input('score', sql.Decimal(18, 2), score);
     request.input('status', sql.VarChar, status);
     request.input('isPass', sql.Bit, isPass);
 
@@ -96,7 +96,7 @@ const getAttemptCountByUserAndTest = async (userId, testId) => {
     const request = new sql.Request();
     request.input('userId', sql.Int, userId);
     request.input('testId', sql.Int, testId);
-    
+
     const result = await request.query(`
         SELECT COUNT(*) as count
         FROM dbo.Test_Attempts
@@ -136,21 +136,55 @@ const getLatestSubmittedAttemptId = async (userId, testId) => {
 
     return result.recordset[0]?.AttemptId ?? null;
 };
+
+const getSectionStatsByUserAndTest = async (userId, testId) => {
+    const request = new sql.Request();
+    request.input('userId', sql.Int, Number(userId));
+    request.input('testId', sql.Int, Number(testId));
+
+    const result = await request.query(`
+        SELECT
+            s.AttemptSectionStatId,
+            s.AttemptId,
+            s.CourseId,
+            s.PathId,
+            s.TypeId,
+            s.SkillType,
+            s.SectionId,
+            s.SectionTitle,
+            s.CorrectCount,
+            s.WrongCount,
+            s.TotalCount,
+            s.CreatedAt,
+            p.PathName,
+            p.[Order] AS PathOrder,
+            ta.SubmittedAt,
+            ta.StartedAt
+        FROM dbo.Test_Attempt_Section_Stats s
+        INNER JOIN dbo.Test_Attempts ta ON ta.AttemptId = s.AttemptId
+        LEFT JOIN dbo.Paths p ON p.PathId = s.PathId
+        WHERE ta.UserId = @userId
+          AND ta.TestId = @testId
+          AND ta.Status = 'submitted'
+    `);
+
+    return result.recordset ?? [];
+};
 // Lưu chi tiết lịch sử làm bài của học viên vào Database.
 const saveTestAttemptAnswers = async (attemptId, questionResults) => {
     const { sql } = require('../config/db');
     const request = new sql.Request();
-    
+
     // Nếu không có kết quả câu hỏi nào thì bỏ qua
     if (!questionResults || questionResults.length === 0) return true;
     let values = [];
     const safeAttemptId = Number(attemptId);
     for (const result of questionResults) {
         // Xử lý câu học viên bỏ trống (không chọn gì) -> gán mảng chứa giá trị null
-        const choices = (result.userChoiceIds && result.userChoiceIds.length > 0) 
-                        ? result.userChoiceIds 
-                        : [null];
-        
+        const choices = (result.userChoiceIds && result.userChoiceIds.length > 0)
+            ? result.userChoiceIds
+            : [null];
+
         const isCorrectBit = result.isCorrect ? 1 : 0;
         const qId = Number(result.questionId);
         for (const choiceId of choices) {
@@ -167,7 +201,7 @@ const saveTestAttemptAnswers = async (attemptId, questionResults) => {
         `;
         await request.query(insertQuery);
     }
-    
+
     return true;
 };
 // lấy chi tiết các câu trả lời sai của học viên dựa vào AttemptId
@@ -175,7 +209,7 @@ const getWrongAnswersDetail = async (attemptId) => {
     const { sql } = require('../config/db');
     const request = new sql.Request();
     request.input('attemptId', sql.Int, Number(attemptId));
-    
+
     const result = await request.query(`
         SELECT 
             t.PathId AS ChapterId,
@@ -197,7 +231,7 @@ const getWrongAnswersDetail = async (attemptId) => {
         WHERE taa.AttemptId = @attemptId 
           
     `);
-    
+
     return result.recordset;
 };
 
@@ -269,6 +303,7 @@ module.exports = {
     getAttemptCountByUserAndTest,
     getSubmittedAttemptCountByUserAndTest,
     getLatestSubmittedAttemptId,
+    getSectionStatsByUserAndTest,
     getTestAttemptsHistory,
     saveTestAttemptAnswers,
     getWrongAnswersDetail,

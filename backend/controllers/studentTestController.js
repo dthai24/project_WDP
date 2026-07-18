@@ -210,6 +210,7 @@ const startTestAttempt = async (req, res) => {
             const { sectionStats } = await testRecommendationService.getLatestCourseTestAttemptStats({
                 userId,
                 courseId,
+                testId,
             });
             paperConfig = sectionStats.length > 0
                 ? testRecommendationService.recommendCourseTestFromStats(sectionStats, config)
@@ -426,16 +427,16 @@ const getWrongAnswersStats = async (req, res) => {
     try {
         const { attemptId } = req.params;
         const allAnswers = await studentTestModel.getWrongAnswersDetail(attemptId);
-        
+
         // Trải nghiệm người dùng: Nếu làm đúng 100%, trả về thông báo khen ngợi
         if (!allAnswers || allAnswers.length === 0) {
             return res.json({ ok: false, message: "Không tìm thấy dữ liệu lượt thi!" });
         }
-        
+
         // 1. Đếm tổng số câu hỏi (Dùng Set để không bị đếm trùng)
         const uniqueQuestions = new Set(allAnswers.map(a => a.QuestionId));
         const totalQuestionsCount = uniqueQuestions.size;
-        
+
         // 2. Lọc ra CHỈ NHỮNG DÒNG BỊ ĐÁNH DẤU SAI (Dòng code này sẽ loại bỏ câu Futsal ĐÚNG của bạn)
         const wrongAnswersRows = allAnswers.filter(a => a.IsCorrect === 0 || a.IsCorrect === false);
 
@@ -447,7 +448,7 @@ const getWrongAnswersStats = async (req, res) => {
             }
             wrongQuestionsMap.get(row.QuestionId).userChoices.push(row.UserChoiceText || 'Bỏ trống');
         }
-        
+
         // Chuyển lại thành mảng (Lúc này mỗi câu chỉ còn 1 dòng duy nhất)
         const wrongAnswers = Array.from(wrongQuestionsMap.values());
 
@@ -480,7 +481,7 @@ const getWrongAnswersStats = async (req, res) => {
                 questionId: row.QuestionId,
                 questionTitle: row.QuestionTitle,
                 // Gộp các đáp án thành 1 chuỗi với câu nhiều đáp án
-                userChoiceText: row.userChoices.join(', ') 
+                userChoiceText: row.userChoices.join(', ')
             });
         }
 

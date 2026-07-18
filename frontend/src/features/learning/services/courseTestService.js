@@ -1,10 +1,19 @@
 /**
- * Student test service — mock local, API-ready shape.
+ * Service làm bài kiểm tra của học viên.
  *
- * TODO backend:
+ * Vai trò: cầu nối giữa UI (CourseTestPage) và backend test API.
+ * Một phần logic cũ vẫn dùng localStorage (lịch sử/prerequisite phía client);
+ * luồng chính (meta / start / submit) đã gọi API thật.
+ *
+ * API backend:
  *   GET  /api/courses/:courseId/tests/:scope/meta?chapterId=
  *   POST /api/courses/:courseId/tests/:scope/start
  *   POST /api/courses/:courseId/tests/attempts/:attemptId/submit
+ *   GET  /api/courses/:courseId/tests/attempts/:attemptId/section-stats
+ *
+ * scope:
+ *   - 'chapter' → bài kiểm tra cuối chương (cần chapterId)
+ *   - 'final'   → bài kiểm tra toàn khóa
  */
 import { getUser } from '@/features/auth/utils/authUtils';
 import {
@@ -15,44 +24,43 @@ import {
 import {
   COURSE_QUIZ_CHAPTER_ID,
   getChapterQuizConfigTotal,
-  hasConfiguredQuizSources,
   getRequiredChapterIdsFromConfig,
   evaluateQuizPrerequisites,
+  getConfiguredSkillTypes,
 } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
-import {
-  normalizeTestPaper,
-  gradeTestAnswers,
-} from '@/features/learning/utils/courseTestPaperUtils';
-import { getConfiguredSkillTypes } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
+import { normalizeTestPaper } from '@/features/learning/utils/courseTestPaperUtils';
 import {
   createDemoTestMeta,
   createDemoTestPaper,
   DEMO_ANSWER_KEY,
 } from '@/features/learning/data/courseTestMock';
-import axios from 'axios'; 
+import axios from 'axios';
+
+// ─── HTTP client ─────────────────────────────────────────────────────────────
+
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '') + '/api';
+
+/** Header gửi kèm mọi request; backend đọc x-user-id để biết học viên. */
 function getAuthHeaders() {
   const userId = getUser()?.userId;
   const headers = { 'Content-Type': 'application/json' };
   if (userId) headers['x-user-id'] = String(userId);
   return headers;
 }
+
+// ─── localStorage (legacy / phụ trợ UI) ──────────────────────────────────────
+// Dùng cho đếm lượt làm & kiểm tra prerequisite phía client khi chưa có đủ data từ API.
+
 const ATTEMPTS_STORAGE_KEY = 'student_test_attempts_v1';
 const SESSIONS_STORAGE_KEY = 'student_test_sessions_v1';
 
-/** TODO: tắt khi backend enforce giới hạn lượt làm bài */
+/** Bật true để bỏ qua giới hạn số lần làm bài ở phía client. */
 export const BYPASS_ATTEMPT_LIMIT = false;
 
-/**
- * Hàm tạo hiệu ứng trễ (delay) giả lập thời gian phản hồi của mạng khi gọi API.
- */
 function delay(ms = 120) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Đọc và phân tích cú pháp JSON từ localStorage. Trả về đối tượng trống nếu không tồn tại.
- */
 function loadMap(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -62,42 +70,28 @@ function loadMap(key) {
   }
 }
 
-/**
- * Lưu trữ đối tượng JSON map vào localStorage bằng cách chuyển thành chuỗi String.
- */
 function saveMap(key, map) {
   try {
     localStorage.setItem(key, JSON.stringify(map));
   } catch {
-    // ignore
+    // ignore quota / private mode
   }
 }
 
-/**
- * Trả về khóa định danh dựa trên phạm vi bài kiểm tra (cuối khóa hoặc cuối chương).
- */
+/** Khóa phạm vi thi: 'final' hoặc id chương. */
 function getScopeKey(scope, chapterId) {
   return scope === 'final' ? 'final' : String(chapterId ?? '');
 }
 
-/**
- * Tạo chuỗi khóa duy nhất để quản lý lịch sử làm bài dựa trên userId, courseId và phạm vi thi.
- */
 function getAttemptHistoryKey(userId, courseId, scope, chapterId) {
   return `${userId}_${courseId}_${getScopeKey(scope, chapterId)}`;
 }
 
-/**
- * Lấy danh sách lịch sử các lượt làm bài của học viên từ localStorage.
- */
 function getAttemptHistory(userId, courseId, scope, chapterId) {
   const map = loadMap(ATTEMPTS_STORAGE_KEY);
   return map[getAttemptHistoryKey(userId, courseId, scope, chapterId)] ?? [];
 }
 
-/**
- * Ghi đè hoặc thêm mới một bản ghi lịch sử làm bài kiểm tra của học viên.
- */
 function saveAttemptRecord(userId, courseId, scope, chapterId, record) {
   const map = loadMap(ATTEMPTS_STORAGE_KEY);
   const key = getAttemptHistoryKey(userId, courseId, scope, chapterId);
@@ -106,25 +100,22 @@ function saveAttemptRecord(userId, courseId, scope, chapterId, record) {
   saveMap(ATTEMPTS_STORAGE_KEY, map);
 }
 
-/**
- * Lưu thông tin phiên làm bài thi hiện tại (các câu hỏi, câu trả lời tạm thời...) vào localStorage.
- */
 function saveSession(attemptId, session) {
   const map = loadMap(SESSIONS_STORAGE_KEY);
   map[attemptId] = session;
   saveMap(SESSIONS_STORAGE_KEY, map);
 }
 
-/**
- * Lấy thông tin phiên làm bài đang diễn ra thông qua ID của lượt làm bài (attemptId).
- */
 function getSession(attemptId) {
   const map = loadMap(SESSIONS_STORAGE_KEY);
   return map[attemptId] ?? null;
 }
 
+// ─── Config mentor ───────────────────────────────────────────────────────────
+
 /**
- * Tải cấu hình bài kiểm tra (thiết lập bởi Mentor) của chương học hoặc khóa học.
+ * Tải cấu hình bài test do mentor thiết lập (Test_Config trên backend).
+ * scope 'final' → getCourseQuizConfig; scope 'chapter' → getChapterQuizConfig.
  */
 async function loadQuizConfig(courseId, scope, chapterId, meta = {}) {
   if (scope === 'final') {
@@ -136,11 +127,16 @@ async function loadQuizConfig(courseId, scope, chapterId, meta = {}) {
   });
 }
 
+/** Kiểm tra localStorage: học viên đã đạt bài test chương prerequisite chưa. */
 function hasPassedChapterQuiz(userId, courseId, chapterId) {
   const history = getAttemptHistory(userId, courseId, 'chapter', chapterId);
   return history.some((item) => item.status === 'submitted' && item.passed);
 }
 
+/**
+ * Đánh giá điều kiện mở bài test (các chương prerequisite phải đạt quiz chương).
+ * Dùng config mentor + lịch sử local; backend cũng check lại khi start.
+ */
 async function resolvePrerequisiteStatus(courseId, config) {
   const requiredChapterIds = getRequiredChapterIdsFromConfig(config);
   if (requiredChapterIds.length === 0) {
@@ -166,9 +162,7 @@ async function resolvePrerequisiteStatus(courseId, config) {
   });
 }
 
-/**
- * Tổng hợp và chuẩn hóa thông tin thô thành một đối tượng Metadata chứa các quy chế thi chuẩn để hiển thị lên UI.
- */
+/** Ghép config mentor thành object meta hiển thị trên màn intro (fallback phía client). */
 function buildMetaFromConfig(config, scope, extras = {}) {
   const userId = getUser()?.userId;
   const history = getAttemptHistory(
@@ -199,9 +193,7 @@ function buildMetaFromConfig(config, scope, extras = {}) {
   };
 }
 
-/**
- * Tạo danh sách đáp án đúng mẫu (Demo Key) dùng để chấm điểm thử cho các bộ đề Demo.
- */
+/** Đáp án mẫu cho bộ đề demo (không dùng khi làm bài thật qua API). */
 function buildDemoGradingQuestions(paper) {
   return (paper?.sections ?? []).flatMap((section) =>
     (section.questions ?? []).map((question) => ({
@@ -214,6 +206,10 @@ function buildDemoGradingQuestions(paper) {
   );
 }
 
+/**
+ * Bổ sung meta từ API bằng thông tin config mentor (skills, tổng câu, title).
+ * Gọi sau getTestMeta / startTestAttempt để UI có đủ field hiển thị.
+ */
 function enrichMetaWithConfig(meta = {}, config = {}, paper = null) {
   const configuredSkills = getConfiguredSkillTypes(config);
   const resolvedSkills = configuredSkills.length > 0
@@ -231,6 +227,18 @@ function enrichMetaWithConfig(meta = {}, config = {}, paper = null) {
   };
 }
 
+// ─── API công khai ─────────────────────────────────────────────────────────────
+
+/**
+ * Màn intro bài test — tải meta trước khi học viên bấm「Bắt đầu làm bài」.
+ *
+ * Luồng:
+ *   1. loadQuizConfig (mentor API) — thời gian, điểm pass, số lần làm...
+ *   2. GET .../tests/:scope/meta — lịch sử, prerequisite, attemptsUsed (backend)
+ *   3. enrichMetaWithConfig — gộp hai nguồn cho UI
+ *
+ * @returns {{ ok: boolean, meta?: object, message?: string }}
+ */
 export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   try {
     const configRes = await loadQuizConfig(courseId, scope, chapterId, meta);
@@ -251,6 +259,19 @@ export async function getTestMeta(courseId, scope, chapterId, meta = {}) {
   }
 }
 
+/**
+ * Bấm「Bắt đầu làm bài」— tạo attempt mới và nhận đề random từ backend.
+ *
+ * Luồng:
+ *   1. loadQuizConfig — config mentor
+ *   2. POST .../tests/:scope/start
+ *      Backend: check prerequisite → lấy stats lần trước (final) → random đề → INSERT Test_Attempts
+ *   3. normalizeTestPaper — chuẩn hóa shape đề cho UI
+ *   4. getTestMeta + enrichMetaWithConfig — meta đầy đủ cho màn làm bài
+ *
+ * @param {string} scope - 'chapter' | 'final'
+ * @returns {{ ok, meta, attempt: { attemptId, expiresAt, ... }, paper }}
+ */
 export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
   try {
     let body = { chapterId };
@@ -294,7 +315,14 @@ export async function startTestAttempt(courseId, scope, chapterId, meta = {}) {
   }
 }
 
-// 3. Nộp bài (Gửi đáp án xuống Backend chấm điểm)
+/**
+ * Nộp bài — gửi đáp án xuống backend chấm điểm.
+ *
+ * Backend lưu Test_Attempt_Answers, Test_Attempt_Section_Stats, cập nhật IsPass.
+ *
+ * @param {object} options.scope - 'chapter' | 'final'
+ * @param {object[]} options.paperSections - metadata section/câu đã random (cho thống kê)
+ */
 export async function submitTestAttempt(
   courseId,
   chapterId,
@@ -316,7 +344,7 @@ export async function submitTestAttempt(
         scope: options.scope ?? 'chapter',
         paperSections: options.paperSections ?? [],
       },
-      { headers: getAuthHeaders() }
+      { headers: getAuthHeaders() },
     );
     return data;
   } catch (error) {
@@ -325,6 +353,10 @@ export async function submitTestAttempt(
   }
 }
 
+/**
+ * Thống kê đúng/sai theo section của một lần làm bài (dialog「Xem chi tiết」trên intro).
+ * Dữ liệu từ bảng Test_Attempt_Section_Stats.
+ */
 export async function fetchAttemptSectionStats(courseId, attemptId) {
   try {
     const url = `${API_BASE}/courses/${courseId}/tests/attempts/${attemptId}/section-stats`;
