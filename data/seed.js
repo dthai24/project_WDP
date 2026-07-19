@@ -294,6 +294,35 @@ const COURSES_DATA = [
     ]
   },
   {
+    courseName: "Premium IELTS Writing Band 8.5 Masterclass",
+    description: "Khóa học viết luận IELTS chuyên sâu cùng chuyên gia bản xứ giúp bạn chinh phục Band 8.5+",
+    levelKey: "Advanced",
+    categoryKey: "ielts",
+    rating: 4.9,
+    isPaid: true,
+    price: 199000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
     courseName: "Simple Sentences – Speaking for Kids",
     description: "Học sinh cấp 1 luyện nói các câu đơn giản theo chủ đề hàng ngày: tự giới thiệu, hỏi thăm, và nói về gia đình.",
     levelKey: "Beginner",
@@ -347,6 +376,35 @@ const COURSES_DATA = [
           { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
           { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
           { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Mastering English Pronunciation & Accent Reduction",
+    description: "Luyện phát âm chuẩn Mỹ, giảm khẩu âm địa phương và làm chủ ngữ điệu nói tự nhiên.",
+    levelKey: "Intermediate",
+    categoryKey: "giao-tiep",
+    rating: 4.9,
+    isPaid: true,
+    price: 249000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
         ]
       }
     ]
@@ -410,6 +468,35 @@ const COURSES_DATA = [
     ]
   },
   {
+    courseName: "Business Negotiation & Presentation Skills",
+    description: "Kỹ năng đàm phán hợp đồng, thuyết trình và bảo vệ dự án trước đối tác nước ngoài bằng tiếng Anh.",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.9,
+    isPaid: true,
+    price: 299000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
     courseName: "Everyday English Conversations – A2",
     description: "Học nói tiếng Anh trong các tình huống thực tế: mua sắm, hỏi đường, đặt bàn ăn, nói chuyện điện thoại.",
     levelKey: "Elementary",
@@ -463,6 +550,35 @@ const COURSES_DATA = [
           { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
           { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
           { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "TOEIC Listening & Reading 990 Practice Hacks",
+    description: "Tổng hợp mẹo giải đề TOEIC cực nhanh, bẫy từ vựng Part 5-6 và kỹ thuật skim/scan Part 7 đạt điểm tối đa.",
+    levelKey: "Intermediate",
+    categoryKey: "toeic",
+    rating: 4.9,
+    isPaid: true,
+    price: 399000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
         ]
       }
     ]
@@ -526,6 +642,35 @@ const COURSES_DATA = [
     ]
   },
   {
+    courseName: "Academic Essay Writing for University Students",
+    description: "Học cách viết luận văn, tiểu luận học thuật chuẩn mực tại môi trường đại học quốc tế.",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.9,
+    isPaid: true,
+    price: 499000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
     courseName: "B1 Grammar: Intermediate English",
     description: "Ngữ pháp trung cấp: các thì hoàn thành, câu điều kiện loại 1 & 2, mệnh đề quan hệ, câu bị động.",
     levelKey: "Intermediate",
@@ -579,6 +724,35 @@ const COURSES_DATA = [
           { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
           { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
           { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Advanced Grammar for Professional Writing",
+    description: "Làm chủ các cấu trúc ngữ pháp cao cấp, viết báo cáo công việc chuyên nghiệp không sai sót.",
+    levelKey: "Intermediate",
+    categoryKey: "ngu-phap",
+    rating: 4.9,
+    isPaid: true,
+    price: 599000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
         ]
       }
     ]
@@ -642,6 +816,35 @@ const COURSES_DATA = [
     ]
   },
   {
+    courseName: "Everyday Conversational English for Globetrotters",
+    description: "Tiếng Anh giao tiếp du lịch, đặt phòng, gọi món, giải quyết sự cố tại sân bay dễ dàng.",
+    levelKey: "Beginner",
+    categoryKey: "giao-tiep",
+    rating: 4.9,
+    isPaid: true,
+    price: 699000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
     courseName: "TOEIC 600+ – Listening & Reading",
     description: "Luyện thi TOEIC 2 kỹ năng chuyên sâu: từ vựng Part 5, mẹo nghe Part 2-3, phân bổ thời gian đọc Part 7.",
     levelKey: "Intermediate",
@@ -695,6 +898,35 @@ const COURSES_DATA = [
           { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
           { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
           { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "IELTS Vocabulary & Collocations Bootcamp",
+    description: "Tích lũy 1000+ từ vựng học thuật cao cấp và cụm từ cố định để đạt điểm Lexical Resource tối đa.",
+    levelKey: "Advanced",
+    categoryKey: "ielts",
+    rating: 4.9,
+    isPaid: true,
+    price: 799000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
         ]
       }
     ]
@@ -758,6 +990,35 @@ const COURSES_DATA = [
     ]
   },
   {
+    courseName: "English for Scientific Research & Publications",
+    description: "Quy chuẩn viết bài báo khoa học, abstract và trích dẫn chuẩn mực quốc tế đăng tạp chí ISI.",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.9,
+    isPaid: true,
+    price: 899000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
     courseName: "English for Research & Academia",
     description: "Viết báo cáo khoa học, tóm tắt abstract (250 từ), thuyết trình báo cáo tại hội thảo quốc tế.",
     levelKey: "Advanced",
@@ -811,267 +1072,6 @@ const COURSES_DATA = [
           { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
           { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
           { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "Premium IELTS Writing Band 8.5 Masterclass",
-    description: "Khóa học viết luận IELTS chuyên sâu cùng chuyên gia bản xứ giúp bạn chinh phục Band 8.5+",
-    levelKey: "Advanced",
-    categoryKey: "ielts",
-    rating: 4.9,
-    isPaid: true,
-    price: 199000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "Mastering English Pronunciation & Accent Reduction",
-    description: "Luyện phát âm chuẩn Mỹ, giảm khẩu âm địa phương và làm chủ ngữ điệu nói tự nhiên.",
-    levelKey: "Intermediate",
-    categoryKey: "giao-tiep",
-    rating: 4.9,
-    isPaid: true,
-    price: 249000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "Business Negotiation & Presentation Skills",
-    description: "Kỹ năng đàm phán hợp đồng, thuyết trình và bảo vệ dự án trước đối tác nước ngoài bằng tiếng Anh.",
-    levelKey: "Advanced",
-    categoryKey: "business-english",
-    rating: 4.9,
-    isPaid: true,
-    price: 299000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "TOEIC Listening & Reading 990 Practice Hacks",
-    description: "Tổng hợp mẹo giải đề TOEIC cực nhanh, bẫy từ vựng Part 5-6 và kỹ thuật skim/scan Part 7 đạt điểm tối đa.",
-    levelKey: "Intermediate",
-    categoryKey: "toeic",
-    rating: 4.9,
-    isPaid: true,
-    price: 399000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "Academic Essay Writing for University Students",
-    description: "Học cách viết luận văn, tiểu luận học thuật chuẩn mực tại môi trường đại học quốc tế.",
-    levelKey: "Advanced",
-    categoryKey: "business-english",
-    rating: 4.9,
-    isPaid: true,
-    price: 499000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "Advanced Grammar for Professional Writing",
-    description: "Làm chủ các cấu trúc ngữ pháp cao cấp, viết báo cáo công việc chuyên nghiệp không sai sót.",
-    levelKey: "Intermediate",
-    categoryKey: "ngu-phap",
-    rating: 4.9,
-    isPaid: true,
-    price: 599000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "Everyday Conversational English for Globetrotters",
-    description: "Tiếng Anh giao tiếp du lịch, đặt phòng, gọi món, giải quyết sự cố tại sân bay dễ dàng.",
-    levelKey: "Beginner",
-    categoryKey: "giao-tiep",
-    rating: 4.9,
-    isPaid: true,
-    price: 699000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "IELTS Vocabulary & Collocations Bootcamp",
-    description: "Tích lũy 1000+ từ vựng học thuật cao cấp và cụm từ cố định để đạt điểm Lexical Resource tối đa.",
-    levelKey: "Advanced",
-    categoryKey: "ielts",
-    rating: 4.9,
-    isPaid: true,
-    price: 799000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      }
-    ]
-  },
-  {
-    courseName: "English for Scientific Research & Publications",
-    description: "Quy chuẩn viết bài báo khoa học, abstract và trích dẫn chuẩn mực quốc tế đăng tạp chí ISI.",
-    levelKey: "Advanced",
-    categoryKey: "business-english",
-    rating: 4.9,
-    isPaid: true,
-    price: 899000,
-    chapters: [
-      {
-        title: "Module 1: Fundamental Concept",
-        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
-        lessons: [
-          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
-        ]
-      },
-      {
-        title: "Module 2: Advanced Mastery",
-        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
-        lessons: [
-          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
-          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
-          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
         ]
       }
     ]

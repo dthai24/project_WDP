@@ -239,42 +239,25 @@ function resolveLevel(key) {
 const COURSES_DATA = [
 `;
 
-// 1. Append 20 free courses
-FREE_COURSES.forEach((c, idx) => {
-  code += `  {
-    courseName: ${JSON.stringify(c.name)},
-    description: ${JSON.stringify(c.desc)},
-    levelKey: ${JSON.stringify(c.level)},
-    categoryKey: ${JSON.stringify(c.category)},
-    rating: 4.8,
-    isPaid: false,
-    price: 0,
-    chapters: [
-      {
-        title: "Week 1: Core Foundation",
-        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
-        lessons: [
-          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
-          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
-          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
-        ]
-      },
-      {
-        title: "Week 2: Intermediate Expansion",
-        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
-        lessons: [
-          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
-          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
-          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
-        ]
-      }
-    ]
-  },\n`;
-});
+// Interleave courses: 2 free, 1 paid
+const interleavedCourses = [];
+let freeIndex = 0;
+let paidIndex = 0;
+while (freeIndex < FREE_COURSES.length || paidIndex < PAID_COURSES.length) {
+  if (freeIndex < FREE_COURSES.length) {
+    interleavedCourses.push({ ...FREE_COURSES[freeIndex++], isPaid: false });
+  }
+  if (freeIndex < FREE_COURSES.length) {
+    interleavedCourses.push({ ...FREE_COURSES[freeIndex++], isPaid: false });
+  }
+  if (paidIndex < PAID_COURSES.length) {
+    interleavedCourses.push({ ...PAID_COURSES[paidIndex++], isPaid: true });
+  }
+}
 
-// 2. Append 10 paid courses
-PAID_COURSES.forEach((c, idx) => {
-  code += `  {
+interleavedCourses.forEach((c, idx) => {
+  if (c.isPaid) {
+    code += `  {
     courseName: ${JSON.stringify(c.name)},
     description: ${JSON.stringify(c.desc)},
     levelKey: ${JSON.stringify(c.level)},
@@ -303,6 +286,37 @@ PAID_COURSES.forEach((c, idx) => {
       }
     ]
   },\n`;
+  } else {
+    code += `  {
+    courseName: ${JSON.stringify(c.name)},
+    description: ${JSON.stringify(c.desc)},
+    levelKey: ${JSON.stringify(c.level)},
+    categoryKey: ${JSON.stringify(c.category)},
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },\n`;
+  }
 });
 
 code += `];
