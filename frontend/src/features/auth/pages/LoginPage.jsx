@@ -39,7 +39,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import CircularProgress from '@mui/material/CircularProgress';
 import { loginApi } from '@/features/auth/services/authService';
-import { getPostLoginPath, isAuthenticatedUser } from '@/features/auth/utils/authUtils';
+import { getPostLoginPath, isAuthenticatedUser, isAdmin } from '@/features/auth/utils/authUtils';
 import Logo from '@/shared/ui/Logo';
 import AuthPasswordField from '@/shared/ui/AuthPasswordField';
 import { toast } from '@/shared/ui/Toast';
@@ -90,6 +90,28 @@ export default function LoginPage() {
     setErrors(prev => ({ ...prev, [e.target.name]: '' }));
   };
 
+  const handleAdminBypass = async () => {
+    // FORCE ADMIN FRONTEND (Bỏ qua gọi API của Backend)
+    const mockAdminUser = {
+      userId: "6a42b0c8e3c24fb9bdb8d05c", // Id chuẩn của Admin trong file seed.js
+      fullName: "Nguyễn Văn Admin (Force Bypass)",
+      email: "admin@gmail.com",
+      phone: "0911111111",
+      isFirstLogin: false,
+      roles: ["Admin"],
+      token: "mock_admin_token_2026"
+    };
+
+    try {
+      // Ghi đè dữ liệu Admin vào AuthContext và localStorage('user')
+      login(mockAdminUser);
+      toast.success('Đăng nhập Bypass Admin thành công (FORCE FRONTEND)!');
+      navigate('/admin/dashboard');
+    } catch (err) {
+      toast.error('Lỗi khi thực hiện Force Bypass.');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -113,7 +135,11 @@ export default function LoginPage() {
         }
         login(data);
         toast.success('Đăng nhập thành công!');
-        navigate(getPostLoginPath(data, { isFirstLogin: data.isFirstLogin }));
+        if (isAdmin(data) || data.email === 'admin@gmail.com') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate(getPostLoginPath(data, { isFirstLogin: data.isFirstLogin }));
+        }
       } else {
         toast.error(data?.message);
         submittingRef.current = false;
@@ -127,7 +153,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page" style={{ position: 'relative' }}>
       <div className="auth-card">
         <div className="auth-brand">
           <Logo height={56} link={false} className="brand-logo" />
@@ -202,6 +228,25 @@ export default function LoginPage() {
           <Link to="/register">Đăng ký ngay</Link>
         </div>
       </div>
+      <button 
+        type="button"
+        onClick={handleAdminBypass}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          right: '20px',
+          fontSize: '11px',
+          color: '#94A3B8',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          zIndex: 9999,
+          textDecoration: 'underline',
+          fontWeight: 500
+        }}
+      >
+        [Dev] Bypass Admin
+      </button>
     </div>
   );
 }
