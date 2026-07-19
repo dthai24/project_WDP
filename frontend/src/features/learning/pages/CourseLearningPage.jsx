@@ -61,6 +61,7 @@ import {
   Star,
   ThumbsUp,
   Chats,
+  Lock,
 } from "@phosphor-icons/react";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
@@ -332,6 +333,7 @@ function LessonItem({ lesson, isActive, onSelect }) {
   const cfg = TYPE_CONFIG[lesson.type] ?? TYPE_CONFIG.reading;
   const Icon = cfg.icon;
   const isCompleted = lesson.status === "completed";
+  const isLocked = lesson.locked === true;
 
   return (
     <button
@@ -340,7 +342,9 @@ function LessonItem({ lesson, isActive, onSelect }) {
       className={`
         w-full flex items-start gap-2.5 py-2.5 px-3 rounded-xl text-left
         transition-all duration-150 font-sans
-        ${isActive
+        ${isLocked
+          ? "opacity-60 hover:bg-slate-50/20"
+          : isActive
           ? "bg-emerald-50 shadow-sm border border-emerald-200/60"
           : "hover:bg-slate-50 border border-transparent"
         }
@@ -348,7 +352,9 @@ function LessonItem({ lesson, isActive, onSelect }) {
     >
       {/* Status icon */}
       <span className="pt-0.5 flex-shrink-0">
-        {isCompleted ? (
+        {isLocked ? (
+          <Lock size={18} className="text-slate-400" weight="fill" />
+        ) : isCompleted ? (
           <CheckCircle size={18} className="text-emerald-500" weight="fill" />
         ) : isActive ? (
           <PlayCircle size={18} className="text-emerald-500" weight="fill" />
@@ -361,14 +367,18 @@ function LessonItem({ lesson, isActive, onSelect }) {
       <span className="flex-1 min-w-0">
         <span
           className={`block text-[13px] leading-snug ${
-            isActive ? "font-semibold text-emerald-700" : "font-medium text-slate-800"
+            isLocked
+              ? "font-medium text-slate-500"
+              : isActive
+              ? "font-semibold text-emerald-700"
+              : "font-medium text-slate-800"
           }`}
         >
-          Bài {lesson.index}: {lesson.title}
+          Bài {lesson.index}: {lesson.title} {isLocked && "🔒"}
         </span>
         <span className="flex items-center gap-1 mt-1">
-          <Icon size={11} className={cfg.color} />
-          <span className="text-[11px] text-slate-400">{lesson.duration}</span>
+          <Icon size={11} className={isLocked ? "text-slate-400" : cfg.color} />
+          <span className="text-[11px] text-slate-400">{lesson.duration || "10 phút"}</span>
         </span>
       </span>
     </button>
@@ -797,6 +807,7 @@ export default function CourseLearningPage() {
     return localStorage.getItem(`enrollmentType_${courseId}`) || null;
   });
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showPaymentRedirectModal, setShowPaymentRedirectModal] = useState(false);
   const [activeTab, setActiveTab] = useState("lessons"); // "lessons" | "quizzes" | "peerReview" | "forum"
 
   // Notes state
@@ -960,6 +971,7 @@ export default function CourseLearningPage() {
                   fileSize: m.fileSize,
                 })),
                 duration: "10 phút",
+                locked: lesson.locked ?? false,
               };
             }),
           }));
@@ -1073,7 +1085,14 @@ export default function CourseLearningPage() {
     }
   };
 
-  const handleSelectLesson = (id) => setCurrentLessonId(id);
+  const handleSelectLesson = (id) => {
+    const target = allLessons.find(l => l.id === id);
+    if (target?.locked) {
+      setShowPaymentRedirectModal(true);
+      return;
+    }
+    setCurrentLessonId(id);
+  };
   const handlePrev = () => {
     if (currentIndex > 0) handleSelectLesson(allLessons[currentIndex - 1].id);
   };
@@ -2384,6 +2403,45 @@ export default function CourseLearningPage() {
             >
               Gửi nhận xét
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 4: THÔNG BÁO MỞ KHÓA KHÓA HỌC TRẢ PHÍ (Payment Redirect Modal) ─── */}
+      {showPaymentRedirectModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl font-sans text-center relative border border-slate-100 animate-scaleUp">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-100">
+              <Lock size={26} weight="fill" />
+            </div>
+            
+            <h3 className="text-base font-extrabold text-slate-800 mb-2">
+              Nội dung bài học đã bị khóa 🔒
+            </h3>
+            
+            <p className="text-[12px] text-slate-400 leading-relaxed mb-6">
+              Bài học này nằm ở phần bài giảng nâng cao có phí. Quý khách vui lòng thanh toán mua khóa học để mở khóa toàn bộ giáo trình và nhận chứng chỉ chính thức!
+            </p>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowPaymentRedirectModal(false)}
+                className="py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentRedirectModal(false);
+                  navigate(`/payment/${courseId}`);
+                }}
+                className="py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-amber-500/20"
+              >
+                Mua khóa học
+              </button>
+            </div>
           </div>
         </div>
       )}
