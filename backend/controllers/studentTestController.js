@@ -300,7 +300,7 @@ const getTestMeta = async (req, res) => {
  *
  * Luồng FINAL (toàn khóa):
  *   1. checkPrerequisites
- *   2. resolveCourseTestPaperConfig — lấy config mentor + kiểm tra đã nộp bài chưa
+ *   2. resolveCourseTestPaperConfig — lấy mentor config + kiểm tra đã có attempt trước chưa (mọi status)
  *   3a. Chưa từng làm → studentTestPaperService.buildCourseTestPaper (random)
  *   3b. Đã từng làm  → testRecommendationService.buildRecommendedCourseTestPaper (đề xuất + random)
  *   4. createTestAttempt → trả { meta, attempt, paper }
