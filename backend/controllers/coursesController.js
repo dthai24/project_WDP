@@ -11,6 +11,7 @@ const User = require('../models/MongoDB/User');
 const Category = require('../models/MongoDB/Category');
 const Level = require('../models/MongoDB/Level');
 const Certificate = require('../models/MongoDB/Certificate');
+const nodemailer = require('nodemailer');
 const streakService = require("../services/streakService");
 const { validateCourseThumbnailDataUrl, saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
@@ -578,6 +579,81 @@ const getLearningPath = async (req, res) => {
   }
 };
 
+// Helper to send congratulatory email
+const sendCongratulatoryEmail = async (userEmail, studentName, courseTitle, certCode) => {
+  const emailUser = process.env.EMAIL_USER?.trim();
+  const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, '');
+
+  if (!emailUser || !emailPass) {
+    console.warn(`[Email Warning] Chưa cấu hình EMAIL_USER/EMAIL_PASS — Bỏ qua gửi email chúc mừng cho ${userEmail}`);
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
+    const certUrl = `http://localhost:5173/certificate/${certCode}`;
+
+    const mailOptions = {
+      from: `"English Master Academic Team" <${emailUser}>`,
+      to: userEmail,
+      subject: `🏆 Congratulations on completing "${courseTitle}"!`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #FAF8F5; color: #1e293b;">
+          <div style="text-align: center; margin-bottom: 25px;">
+            <div style="font-size: 40px; margin-bottom: 10px;">🏆</div>
+            <h1 style="font-family: 'Georgia', serif; color: #1e293b; font-size: 24px; margin: 0; text-transform: uppercase; letter-spacing: 1px;">English Master</h1>
+            <p style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin: 5px 0 0 0;">Education Excellence Platform</p>
+          </div>
+          
+          <div style="background-color: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <p style="font-size: 16px; margin-top: 0;">Dear <strong>${studentName}</strong>,</p>
+            
+            <p style="font-size: 14.5px; line-height: 1.6; color: #334155;">
+              We are absolutely thrilled to congratulate you on successfully completing the course:
+            </p>
+            
+            <div style="background-color: #f8fafc; border-left: 4px solid #d97706; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <h2 style="font-size: 16px; margin: 0; color: #0f172a;">${courseTitle}</h2>
+              <p style="font-size: 12px; color: #64748b; margin: 5px 0 0 0;">Issued on: ${new Date().toLocaleDateString('vi-VN')}</p>
+            </div>
+            
+            <p style="font-size: 14.5px; line-height: 1.6; color: #334155;">
+              Your dedication, hard work, and commitment to master English are highly commendable. By completing this program, you have taken a major step forward in your academic and professional journey.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0 20px 0;">
+              <a href="${certUrl}" target="_blank" style="background-color: #059669; color: #ffffff; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(4,120,87,0.2);">
+                View Your Certificate Online
+              </a>
+            </div>
+            
+            <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">
+              Verification Code: <code style="font-weight: bold; color: #0f172a; background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${certCode}</code>
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 25px; font-size: 12px; color: #94a3b8;">
+            <p style="margin: 0;">© 2026 English Master Online Education. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0;">If you have any questions, contact us at support@englishmaster.edu.vn</p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email Success] Congratulatory email sent to ${userEmail} for course "${courseTitle}"`);
+  } catch (err) {
+    console.error(`[Email Error] Failed to send congratulations to ${userEmail}:`, err.message);
+  }
+};
+
 // Helper to check and generate certificate
 const checkAndGenerateCertificate = async (userId, courseId) => {
   try {
@@ -597,6 +673,18 @@ const checkAndGenerateCertificate = async (userId, courseId) => {
         grade: 95 + Math.floor(Math.random() * 6) // random realistic grade 95-100%
       });
       console.log(`Certificate auto-generated for user ${userId} on course ${courseId}: ${certificateCode}`);
+
+      // Send congratulatory email asynchronously
+      const student = await User.findById(userId).select('email fullName').lean();
+      const course = await Course.findById(courseId).select('courseName').lean();
+      if (student && student.email && course) {
+        sendCongratulatoryEmail(
+          student.email,
+          student.fullName || "Student",
+          course.courseName,
+          certificateCode
+        ).catch(e => console.error("Error in sendCongratulatoryEmail:", e));
+      }
     }
     return cert;
   } catch (error) {
