@@ -74,10 +74,18 @@ const getStudentCourses = async (req, res) => {
       category: req.query.category || '',
       level: req.query.level || '',
       status: req.query.status || '',
-      sort: req.query.sort || 'newest'
+      sort: req.query.sort || 'newest',
+      priceType: req.query.priceType || '' // 'free' | 'paid' | ''
     };
 
     let query = { isPublished: true, status: { $ne: 'inactive' } };
+
+    // Lọc theo khóa học miễn phí / trả phí
+    if (filters.priceType === 'free') {
+      query.isPaid = false;
+    } else if (filters.priceType === 'paid') {
+      query.isPaid = true;
+    }
 
     // Search by course name
     if (filters.search) {
@@ -115,6 +123,8 @@ const getStudentCourses = async (req, res) => {
     if (filters.sort === 'oldest') sortOption = { createdAt: 1 };
     else if (filters.sort === 'rating') sortOption = { rating: -1 };
     else if (filters.sort === 'name') sortOption = { courseName: 1 };
+    else if (filters.sort === 'price_asc') sortOption = { price: 1 };
+    else if (filters.sort === 'price_desc') sortOption = { price: -1 };
 
     const courses = await Course.find(query)
       .populate('categoryId', 'displayName')
