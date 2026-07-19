@@ -728,6 +728,26 @@ const updateCourseThumbnail = async (courseId, thumbnailPath) => {
     `);
 };
 
+const assertCourseCanPublish = async (courseId) => {
+  const request = new sql.Request();
+  request.input("CourseId", sql.Int, Number(courseId));
+
+  const result = await request.query(`
+        SELECT COUNT(*) AS PublishedPathCount
+        FROM dbo.Paths
+        WHERE CourseId = @CourseId
+          AND ISNULL(IsActive, 1) = 1
+    `);
+
+  if (Number(result.recordset[0]?.PublishedPathCount ?? 0) < 1) {
+    const error = new Error(
+      "Khóa học cần ít nhất 1 chương được xuất bản trước khi xuất bản.",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+};
+
 // set course => publish
 const setPublishCourse = async (courseId) => {
   const request = new sql.Request();
@@ -907,6 +927,7 @@ module.exports = {
   getMyEnrolledCourses,
   enrollCourse,
   setDraftCourse,
+  assertCourseCanPublish,
   setPublishCourse,
   getCourseLearningPath,
   markNodeAsCompleted,
