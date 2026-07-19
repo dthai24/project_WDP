@@ -510,22 +510,24 @@ const getLearningPath = async (req, res) => {
       return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
     }
 
-    const hasAccess = await userHasCourseAccess(userId, courseId);
-    if (!hasAccess) {
-      return res.status(403).json({
-        success: false,
-        message: 'Bạn cần đăng ký hoặc thanh toán khóa học này trước khi học.',
-        code: 'COURSE_ACCESS_DENIED',
-      });
-    }
-
-    // Get course info
     const course = await Course.findById(courseId)
       .populate('instructorId', 'fullName')
       .lean();
 
     if (!course) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học' });
+    }
+
+    const hasFullAccess = await userHasCourseAccess(userId, courseId);
+    const isPaidCourse = course.isPaid === true && course.price > 0;
+
+    // Nếu là khóa học miễn phí nhưng chưa đăng ký thì chặn 403
+    if (!isPaidCourse && !hasFullAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn cần đăng ký khóa học này trước khi vào học.',
+        code: 'COURSE_ACCESS_DENIED',
+      });
     }
 
     // Get paths with nodes and materials
@@ -539,9 +541,16 @@ const getLearningPath = async (req, res) => {
         .lean();
 
       const nodesWithDetails = await Promise.all(nodes.map(async (node) => {
-        const materials = await NodeMaterial.find({ nodeId: node._id })
-          .sort({ materialOrder: 1 })
-          .lean();
+        // Kiểm tra xem bài học có được miễn phí dùng thử không
+        const isFreeLesson = node.isFree === true;
+        const isLocked = isPaidCourse && !hasFullAccess && !isFreeLesson;
+
+        let materials = [];
+        if (!isLocked) {
+          materials = await NodeMaterial.find({ nodeId: node._id })
+            .sort({ materialOrder: 1 })
+            .lean();
+        }
 
         // Check if node is completed by user
         let isCompleted = false;
@@ -556,9 +565,13 @@ const getLearningPath = async (req, res) => {
 
         return {
           ...node,
-          Materials: materials,
-          IsCompleted: isCompleted,
-          CompletedAt: completedAt
+          locked: isLocked,
+          Materials: isLocked ? [] : materials,
+          IsCompleted: isLocked ? false : isCompleted,
+          CompletedAt: isLocked ? null : completedAt,
+          // Ẩn học liệu nếu bài viết bị khóa
+          videoUrl: isLocked ? null : node.videoUrl,
+          contentBody: isLocked ? null : node.contentBody
         };
       }));
 
@@ -568,7 +581,10 @@ const getLearningPath = async (req, res) => {
     res.json({
       success: true,
       courseTitle: course.courseName,
-      instructor: course.instructorId?.fullName || 'Giảng viên',
+      instructor: course.instructorId?.fullName || 'English Master Academic Team',
+      isPaidCourse,
+      hasFullAccess,
+      price: course.price,
       hasPendingUpdates: course.hasPendingUpdates || false,
       tempContent: course.tempContent || null,
       data: pathsWithNodes
