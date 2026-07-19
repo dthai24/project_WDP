@@ -1,73 +1,62 @@
 import {
   useCallback,
-  useContext,
   useEffect,
   useRef,
   useState,
 } from 'react';
 import {
-  UNSAFE_NavigationContext as NavigationContext,
   useBeforeUnload,
+  useBlocker,
 } from 'react-router-dom';
 
 /**
  * Cảnh báo khi học viên rời trang đang làm bài kiểm tra.
- * Chặn SPA navigation (sidebar, header, link…) qua navigator patch.
+ * Sử dụng hook useBlocker chuẩn của react-router-dom v6.4+ / v7 để chặn điều hướng SPA.
  */
 export function useTestLeaveGuard(enabled) {
-  const { navigator } = useContext(NavigationContext);
   const allowLeaveRef = useRef(false);
-  const originalsRef = useRef(null);
-  const pendingRef = useRef(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const allowLeave = useCallback(() => {
     allowLeaveRef.current = true;
   }, []);
 
-  const cancelLeave = useCallback(() => {
-    pendingRef.current = null;
-    setDialogOpen(false);
-  }, []);
-
-  const confirmLeave = useCallback(() => {
-    allowLeaveRef.current = true;
-    setDialogOpen(false);
-
-    const pending = pendingRef.current;
-    pendingRef.current = null;
-    const originals = originalsRef.current;
-    if (!pending || !originals) return;
-
-    if (pending.type === 'navigation') {
-      originals[pending.method](...pending.args);
-      return;
-    }
-
-    if (pending.type === 'historyBack') {
-      originals.go(-1);
-      return;
-    }
-
-    if (pending.type === 'reload') {
-      window.location.reload();
-    }
-  }, []);
-
-  const requestLeave = useCallback((pending) => {
-    if (allowLeaveRef.current) {
-      return true;
-    }
-    pendingRef.current = pending;
-    setDialogOpen(true);
-    return false;
-  }, []);
+  const blocker = useBlocker(
+    useCallback(
+      () => {
+        if (!enabled || allowLeaveRef.current) return false;
+        return true; // Chặn chuyển trang
+      },
+      [enabled]
+    )
+  );
 
   useEffect(() => {
     if (enabled) {
       allowLeaveRef.current = false;
     }
   }, [enabled]);
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setDialogOpen(true);
+    } else {
+      setDialogOpen(false);
+    }
+  }, [blocker.state]);
+
+  const confirmLeave = useCallback(() => {
+    allowLeaveRef.current = true;
+    if (blocker.state === 'blocked') {
+      blocker.proceed();
+    }
+  }, [blocker.state]);
+
+  const cancelLeave = useCallback(() => {
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  }, [blocker.state]);
 
   useBeforeUnload(
     useCallback(
@@ -80,62 +69,6 @@ export function useTestLeaveGuard(enabled) {
       [enabled],
     ),
   );
-
-  useEffect(() => {
-    if (!enabled) return undefined;
-
-    const onKeyDown = (event) => {
-      if (allowLeaveRef.current || !isReloadShortcut(event)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      requestLeave({ type: 'reload' });
-    };
-
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [enabled, requestLeave]);
-
-  useEffect(() => {
-    if (!enabled || !navigator) return undefined;
-
-    const originals = {
-      push: navigator.push.bind(navigator),
-      replace: navigator.replace.bind(navigator),
-      go: navigator.go.bind(navigator),
-    };
-    originalsRef.current = originals;
-
-    const intercept =
-      (method) =>
-      (...args) => {
-        if (allowLeaveRef.current) {
-          originals[method](...args);
-          return;
-        }
-        requestLeave({ type: 'navigation', method, args });
-      };
-
-    navigator.push = intercept('push');
-    navigator.replace = intercept('replace');
-    navigator.go = intercept('go');
-
-    window.history.pushState({ testLeaveGuard: true }, '');
-
-    const onPopState = () => {
-      if (allowLeaveRef.current) return;
-      window.history.pushState({ testLeaveGuard: true }, '');
-      requestLeave({ type: 'historyBack' });
-    };
-
-    window.addEventListener('popstate', onPopState);
-
-    return () => {
-      navigator.push = originals.push;
-      navigator.replace = originals.replace;
-      navigator.go = originals.go;
-      window.removeEventListener('popstate', onPopState);
-    };
-  }, [enabled, navigator, requestLeave]);
 
   return {
     dialogOpen,
@@ -155,9 +88,3 @@ export const TEST_LEAVE_DIALOG = {
   beforeUnloadMessage:
     'Bạn sẽ mất 1 lượt làm bài nếu rời trang. Tiến trình làm bài sẽ không được lưu.',
 };
-
-function isReloadShortcut(event) {
-  if (event.key === 'F5') return true;
-  const key = event.key?.toLowerCase();
-  return key === 'r' && (event.ctrlKey || event.metaKey);
-}
