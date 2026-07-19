@@ -843,8 +843,14 @@ const markNodeAsCompleted = async (courseId, userId, nodeId) => {
     const insertQuery = `
             IF NOT EXISTS (SELECT 1 FROM User_Nodes WHERE UserId = @userId AND NodeId = @nodeId)
             BEGIN
-                INSERT INTO User_Nodes (UserId, NodeId, IsCompleted) 
-                VALUES (@userId, @nodeId, 1);
+                INSERT INTO User_Nodes (UserId, NodeId, IsCompleted, CompletedAt)
+                VALUES (@userId, @nodeId, 1, GETDATE());
+            END
+            ELSE
+            BEGIN
+                UPDATE User_Nodes
+                SET IsCompleted = 1, CompletedAt = GETDATE()
+                WHERE UserId = @userId AND NodeId = @nodeId;
             END
         `;
     await new sql.Request()

@@ -4,7 +4,6 @@
  * MỤC ĐÍCH: Service đề xuất cấu hình bài kiểm tra toàn khóa (scope = 'final')
  * TÀI LIỆU: Thuật toán đề xuất câu hỏi.docx
  * =============================================================================
- *
  * I. TỔNG QUAN
  * ------------
  * Service này triển khai thuật toán "đề xuất câu hỏi" cho bài kiểm tra cuối khóa.
@@ -795,7 +794,7 @@ function distributeQuestionsAcrossSections(sections, totalQuestions) {
   // Bước 2 docx: bù phần thiếu vào section có nhiều câu nhất trong bank
   const byAvailability = [...plan].sort(
     (left, right) => right.availableCount - left.availableCount
-        || left.sectionTempId.localeCompare(right.sectionTempId),
+      || left.sectionTempId.localeCompare(right.sectionTempId),
   );
 
   for (const entry of byAvailability) {

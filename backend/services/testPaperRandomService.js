@@ -33,8 +33,12 @@
  *
  * RULE DOCX — NGHE / ĐỌC (lần đầu, chưa đề xuất)
  * ------------------------------------------------
- * - Random section theo sectionCount mentor
- * - Có thể chia đều theo chương nếu thỏa điều kiện pickEvenlyAcrossChapters
+ * - Random section theo sectionCount mentor (pickCount)
+ * - pickCount < số chương: chọn pickCount chương khác nhau, mỗi chương 1 section
+ * - pickCount >= số chương: chia đều floor(pickCount/chương) section/chương;
+ *   phần dư random thêm từng chương còn section (chương hết section → loại, thử chương khác)
+ * - Mentor đã validate khi lưu config: sectionCount <= tổng section kỹ năng trong bank
+ * - Không lấy trùng cùng một section trong một chương
  * - Validate: phải đủ đúng số section mentor config
  *
  * RULE DOCX — TỪ VỰNG
@@ -250,83 +254,120 @@ function getChaptersFromCandidates(candidates = []) {
 }
 
 /**
- * Kiểm tra có nên chia đều section giữa các chương không (chế độ mentor gốc).
- *
- * Điều kiện: số chương chia hết cho số section cần lấy, và pickCount <= số chương.
- * Ví dụ: 3 chương, 3 section Nghe → mỗi chương 1 section.
- *
- * @param {number} pickCount
- * @param {number} chapterCount
- * @returns {boolean}
- */
-function shouldDistributeEvenlyAcrossChapters(pickCount, chapterCount) {
-  return pickCount > 0
-    && chapterCount > 0
-    && pickCount <= chapterCount
-    && chapterCount % pickCount === 0;
-}
-
-/**
- * Chia danh sách chương thành các nhóm để mỗi nhóm đóng góp 1 section.
- *
- * @param {{ pathId: number }[]} chapters - Đã sắp xếp theo PathOrder
- * @param {number} pickCount - Số section cần chọn
- * @returns {Array<{ pathId: number }[]>}
- */
-function partitionChaptersIntoGroups(chapters, pickCount) {
-  const groupSize = chapters.length / pickCount;
-  const groups = [];
-
-  for (let index = 0; index < pickCount; index += 1) {
-    groups.push(chapters.slice(index * groupSize, (index + 1) * groupSize));
-  }
-
-  return groups;
-}
-
-/**
- * Random 1 section từ pool các chương trong một nhóm.
- *
- * @param {{ pathId: number }[]} groupChapters
- * @param {object[]} candidates - Toàn bộ section ứng viên của kỹ năng
- * @param {number} pickCount
- * @returns {object[]}
- */
-function pickSectionsFromChapterGroup(groupChapters, candidates, pickCount) {
-  const pathIds = new Set(groupChapters.map((chapter) => chapter.pathId));
-  const pool = candidates.filter((section) => pathIds.has(getSectionPathId(section)));
-
-  if (pool.length === 0 || pickCount <= 0) {
-    return [];
-  }
-
-  return shuffleArray(pool).slice(0, Math.min(pickCount, pool.length));
-}
-
-/**
- * Chọn section Nghe/Đọc sao cho mỗi nhóm chương đóng góp đúng 1 section.
- * Chỉ áp dụng lần làm đầu (không có chapterSectionCounts từ đề xuất).
+ * Nhóm section ứng viên theo chương (pathId).
  *
  * @param {object[]} candidates
- * @param {number} pickCount
- * @returns {object[]|null} null nếu không thỏa điều kiện chia đều
+ * @returns {Map<number, object[]>}
  */
-function pickEvenlyAcrossChapters(candidates, pickCount) {
+function groupCandidatesByChapter(candidates = []) {
+  const byChapter = new Map();
+
+  for (const section of candidates) {
+    const pathId = getSectionPathId(section);
+    if (pathId == null) continue;
+    if (!byChapter.has(pathId)) byChapter.set(pathId, []);
+    byChapter.get(pathId).push(section);
+  }
+
+  return byChapter;
+}
+
+/**
+ * Random tối đa `count` section chưa dùng từ một chương.
+ * Không lấy trùng sectionId đã có trong pickedSectionIds.
+ *
+ * @returns {object[]} Section vừa chọn
+ */
+function pickUnusedSectionsFromChapter(byChapter, pathId, count, pickedSectionIds) {
+  if (count <= 0) return [];
+
+  const pool = (byChapter.get(pathId) ?? []).filter(
+    (section) => !pickedSectionIds.has(section.SectionId),
+  );
+  const taken = shuffleArray(pool).slice(0, Math.min(count, pool.length));
+
+  for (const section of taken) {
+    pickedSectionIds.add(section.SectionId);
+  }
+
+  return taken;
+}
+
+/**
+ * Liệt kê chương còn ít nhất một section chưa được chọn.
+ */
+function getChaptersWithAvailableSections(chapters, byChapter, pickedSectionIds) {
+  return chapters.filter((chapter) =>
+    (byChapter.get(chapter.pathId) ?? []).some(
+      (section) => !pickedSectionIds.has(section.SectionId),
+    ));
+}
+
+/**
+ * Chọn section Nghe/Đọc theo quy tắc chia đều chương (chế độ A — lần đầu).
+ *
+ * QUY TẮC:
+ *   1. pickCount < số chương:
+ *      → chọn ngẫu nhiên pickCount chương khác nhau, mỗi chương lấy 1 section.
+ *      Ví dụ: pickCount=4, 5 chương → 4 chương × 1 section = 4 section.
+ *
+ *   2. pickCount >= số chương:
+ *      → Mỗi chương lấy floor(pickCount / số chương) section (chia đều).
+ *      → Phần còn thiếu (do dư pickCount % số chương HOẶC chương không đủ section cho quota):
+ *        lặp random chương còn section, mỗi lần +1 section; chương hết thì loại khỏi pool.
+ *      Ví dụ: pickCount=6, 5 chương → 5×1 + 1 random (vd. chương 5; hết thì lấy chương 1–4).
+ *
+ *   Lưu ý: Khi mentor lưu config, hệ thống đã kiểm tra sectionCount <= tổng section
+ *   kỹ năng trong bank (chapterQuizConfigService / mentorChapterQuizConfigUtils).
+ *   Vòng lặp bù phía trên chỉ xử lý lệch quota theo chương, không phải "bank thiếu" toàn cục.
+ *
+ * @param {object[]} candidates - Section ứng viên đã lọc theo kỹ năng
+ * @param {number} pickCount - sectionCount mentor config
+ * @returns {object[]}
+ */
+function pickSectionsDistributedAcrossChapters(candidates, pickCount) {
+  if (pickCount <= 0) return [];
+
+  const byChapter = groupCandidatesByChapter(candidates);
   const chapters = getChaptersFromCandidates(candidates);
-  if (!shouldDistributeEvenlyAcrossChapters(pickCount, chapters.length)) {
-    return null;
+
+  if (chapters.length === 0) {
+    return shuffleArray(candidates).slice(0, pickCount);
   }
 
-  const chapterGroups = partitionChaptersIntoGroups(chapters, pickCount);
-  const orderedCandidates = [];
+  const picked = [];
+  const pickedSectionIds = new Set();
 
-  for (const group of chapterGroups) {
-    orderedCandidates.push(
-      ...pickSectionsFromChapterGroup(group, candidates, 1),
-    );
+  if (pickCount < chapters.length) {
+    const selectedChapters = shuffleArray(chapters).slice(0, pickCount);
+    for (const chapter of selectedChapters) {
+      picked.push(
+        ...pickUnusedSectionsFromChapter(byChapter, chapter.pathId, 1, pickedSectionIds),
+      );
+    }
+  } else {
+    const basePerChapter = Math.floor(pickCount / chapters.length);
+
+    for (const chapter of chapters) {
+      picked.push(
+        ...pickUnusedSectionsFromChapter(byChapter, chapter.pathId, basePerChapter, pickedSectionIds),
+      );
+    }
+
+    // Bù phần còn thiếu: dư chia đều + chương không đủ quota basePerChapter
+    while (picked.length < pickCount) {
+      const eligible = getChaptersWithAvailableSections(chapters, byChapter, pickedSectionIds);
+      if (eligible.length === 0) break;
+
+      const chapter = eligible[Math.floor(Math.random() * eligible.length)];
+      const taken = pickUnusedSectionsFromChapter(byChapter, chapter.pathId, 1, pickedSectionIds);
+      if (taken.length === 0) break;
+
+      picked.push(...taken);
+    }
   }
 
-  return orderedCandidates;
+  return shuffleArray(picked).slice(0, pickCount);
 }
 
 /**
@@ -381,8 +422,7 @@ async function buildSectionPaperEntry(section, limitCount, pathId, loadQuestions
  *    - Tổng có thể < pickCount nếu bank thiếu (docx: tổng <= mentor)
  *
  * B) CHƯA ĐỀ XUẤT — chapterSectionCounts null/rỗng:
- *    - Random theo sectionCount mentor
- *    - Thử chia đều chương nếu thỏa pickEvenlyAcrossChapters
+ *    - pickSectionsDistributedAcrossChapters (chia đều + bù phần dư random)
  *    - Cắt đúng pickCount section
  *
  * @param {object[]} sectionsData - Question bank đã load
@@ -433,9 +473,7 @@ async function pickListeningReadingSections(
     orderedCandidates = shuffleArray(orderedCandidates);
   } else {
     // --- Chế độ mentor gốc (lần làm đầu / Case 1) ---
-    const evenlyDistributedCandidates = pickEvenlyAcrossChapters(candidates, pickCount);
-    orderedCandidates = evenlyDistributedCandidates ?? shuffleArray(candidates);
-    orderedCandidates = orderedCandidates.slice(0, pickCount);
+    orderedCandidates = pickSectionsDistributedAcrossChapters(candidates, pickCount);
   }
 
   // Có đề xuất: lấy hết orderedCandidates (đã phản ánh bank thực tế)
