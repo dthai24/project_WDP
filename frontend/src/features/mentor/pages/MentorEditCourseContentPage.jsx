@@ -56,13 +56,12 @@ import {
   normalizeChapterPublishState,
   shouldUnpublishChapterBecauseAllLessonsOff,
   syncPathsChapterPublishState,
-  lessonHasContent,
-  materialHasContent,
   makePathDirtyKey,
   makeNodeDirtyKey,
   makeMaterialDirtyKey,
   isEditDirty,
   hasUnsavedEditScopeDirty,
+  hasPendingNewUnsavedFocus,
   clearDirtyKeysForPath,
   isNewUnsavedMaterial,
   isNewUnsavedNode,
@@ -86,21 +85,9 @@ const COURSE_CONTENT_MOBILE_BACK_ID = 'course-content-mobile-back';
 
 function getDeleteDialogContent(deleteConfirm) {
   if (!deleteConfirm) return { title: 'Xác nhận', message: '' };
-  if (deleteConfirm.type === 'newPath') {
-    return {
-      title: 'Xóa chương mới?',
-      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Chương này chưa lưu lên hệ thống.`,
-    };
-  }
-  if (deleteConfirm.type === 'lesson') {
-    return {
-      title: 'Xóa bài học?',
-      message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Toàn bộ học liệu trong bài học sẽ bị xóa.`,
-    };
-  }
   return {
-    title: 'Xóa học liệu?',
-    message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Nội dung học liệu sẽ bị xóa vĩnh viễn.`,
+    title: 'Xóa chương mới?',
+    message: `Bạn có chắc muốn xóa "${deleteConfirm.label}"? Chương này chưa lưu lên hệ thống.`,
   };
 }
 
@@ -454,22 +441,25 @@ export default function MentorEditCourseContentPage() {
       return next;
     });
     if (activeChapterId === pathTempId) {
-      setActiveChapterId(nextPaths[0]?.tempId ?? null);
+      const deletedIndex = pathsRef.current.findIndex((p) => p.tempId === pathTempId);
+      const nextIdx = Math.max(0, deletedIndex - 1);
+      setActiveChapterId(nextPaths[nextIdx]?.tempId ?? null);
       setFocusTarget(null);
       focusTargetRef.current = null;
     }
+  };
+
+  const dismissPendingContentNavigation = () => {
+    pendingNavigationRef.current = null;
+    setUnsavedNavDialogOpen(false);
   };
 
   const requestDeleteNewPath = (pathTempId) => {
     const path = pathsRef.current.find((item) => item.tempId === pathTempId);
     if (!path) return;
 
-    if (!path.PathId && !chapterHasContent(path)) {
-      handleDeleteNewPath(pathTempId);
-      return;
-    }
-
     if (!path.PathId) {
+      dismissPendingContentNavigation();
       setDeleteConfirm({
         type: 'newPath',
         pathTempId,
@@ -481,75 +471,10 @@ export default function MentorEditCourseContentPage() {
     handleDeleteNewPath(pathTempId);
   };
 
-  const requestDeleteNode = (pathTempId, nodeTempId) => {
-    const p = paths.find((x) => x.tempId === pathTempId);
-    const n = (p?.nodes ?? p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
-    if (!n) return;
-    if (!lessonHasContent(n)) {
-      handleNodeDelete(pathTempId, nodeTempId);
-      return;
-    }
-    setDeleteConfirm({ type: 'lesson', pathTempId, nodeTempId, label: String(n?.NodeName ?? '').trim() || 'Bài học này' });
-  };
-
-  const requestDeleteMaterial = (pathTempId, nodeTempId, materialTempId) => {
-    const p = paths.find((x) => x.tempId === pathTempId);
-    const n = (p?.nodes ?? p?.Nodes ?? []).find((x) => x.tempId === nodeTempId);
-    const m = (n?.materials ?? n?.Materials ?? []).find((x) => x.tempId === materialTempId);
-    if (!m) return;
-    if (!materialHasContent(m)) {
-      handleMaterialDelete(pathTempId, nodeTempId, materialTempId);
-      return;
-    }
-    const title = String(m?.Title ?? '').trim();
-    const typeLabel = MATERIAL_TYPE_LABELS[m?.MaterialType] ?? 'Học liệu';
-    setDeleteConfirm({ type: 'material', pathTempId, nodeTempId, materialTempId, label: title || `${typeLabel} này` });
-  };
-
-  const handleNodeDelete = (pathTempId, nodeTempId) => {
-    applyPaths((prev) =>
-      prev.map((p) =>
-        p.tempId === pathTempId
-          ? {
-              ...p,
-              nodes: (p.nodes ?? p.Nodes ?? []).filter((n) => n.tempId !== nodeTempId),
-            }
-          : p,
-      ),
-    );
-    setExpandedNodes((prev) => { const n = { ...prev }; delete n[nodeTempId]; return n; });
-  };
-
-  const handleMaterialDelete = (pathTempId, nodeTempId, materialTempId) => {
-    applyPaths((prev) =>
-      prev.map((p) => {
-        if (p.tempId !== pathTempId) return p;
-        return {
-          ...p,
-          nodes: (p.nodes ?? p.Nodes ?? []).map((n) =>
-            n.tempId !== nodeTempId
-              ? n
-              : {
-                  ...n,
-                  materials: (n.materials ?? n.Materials ?? []).filter(
-                    (m) => m.tempId !== materialTempId,
-                  ),
-                },
-          ),
-        };
-      }),
-    );
-  };
-
   const handleConfirmDelete = () => {
     if (!deleteConfirm) return;
-    if (deleteConfirm.type === 'newPath') {
-      handleDeleteNewPath(deleteConfirm.pathTempId);
-    } else if (deleteConfirm.type === 'lesson') {
-      handleNodeDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId);
-    } else {
-      handleMaterialDelete(deleteConfirm.pathTempId, deleteConfirm.nodeTempId, deleteConfirm.materialTempId);
-    }
+    dismissPendingContentNavigation();
+    handleDeleteNewPath(deleteConfirm.pathTempId);
     setDeleteConfirm(null);
   };
 
@@ -1287,7 +1212,7 @@ export default function MentorEditCourseContentPage() {
     }
   }, [clearDirtyKey]);
 
-  const revertActivePathChanges = useCallback(async (pathTempId) => {
+  const revertActivePathChanges = useCallback(async (pathTempId, options = {}) => {
     if (!pathTempId) return;
 
     const focus = focusTargetRef.current;
@@ -1299,7 +1224,7 @@ export default function MentorEditCourseContentPage() {
       if (getMaterialPersistentId(material)) {
         await handleRestoreMaterial(focus.pathTempId, focus.nodeTempId, focus.materialTempId);
       } else {
-        discardUnsavedNewFocusEntity();
+        discardUnsavedNewFocusEntity(options);
       }
       return;
     }
@@ -1309,7 +1234,7 @@ export default function MentorEditCourseContentPage() {
       if (node?.NodeId) {
         await handleRestoreNode(focus.pathTempId, focus.nodeTempId);
       } else {
-        discardUnsavedNewFocusEntity();
+        discardUnsavedNewFocusEntity(options);
       }
       return;
     }
@@ -1318,7 +1243,7 @@ export default function MentorEditCourseContentPage() {
       if (path?.PathId) {
         await handleRestorePath(focus.pathTempId);
       } else {
-        discardUnsavedNewFocusEntity();
+        discardUnsavedNewFocusEntity(options);
       }
       return;
     }
@@ -1332,24 +1257,19 @@ export default function MentorEditCourseContentPage() {
 
   const requestContentNavigation = useCallback((navigateFn, options = {}) => {
     const currentPathId = activeChapterId;
-    if (!currentPathId) {
-      discardUnsavedNewFocusEntity(options);
-      navigateFn();
-      return;
-    }
-
     const focus = focusTargetRef.current;
     const isDirty = hasUnsavedEditScopeDirty(dirtyKeysRef.current, focus, currentPathId);
+    const hasPendingNewFocus = hasPendingNewUnsavedFocus(focus, pathsRef.current);
+    const needsConfirm = isDirty || hasPendingNewFocus;
 
-    if (!isDirty) {
-      discardUnsavedNewFocusEntity(options);
+    if (!needsConfirm) {
       navigateFn();
       return;
     }
 
     pendingNavigationRef.current = { navigateFn, options };
     setUnsavedNavDialogOpen(true);
-  }, [activeChapterId, discardUnsavedNewFocusEntity]);
+  }, [activeChapterId]);
 
   requestNavigationRef.current = requestContentNavigation;
 
@@ -1407,7 +1327,7 @@ export default function MentorEditCourseContentPage() {
     pendingNavigationRef.current = null;
     setUnsavedNavDialogOpen(false);
     void (async () => {
-      await revertActivePathChanges(activeChapterId);
+      await revertActivePathChanges(activeChapterId, pending?.options);
       pending?.navigateFn?.();
     })();
   };
@@ -1589,7 +1509,7 @@ export default function MentorEditCourseContentPage() {
           onAddChapter={handleAddPath}
           onAddNode={handleAddNode}
           onAddMaterial={handleAddMaterial}
-          onDeleteNewPath={handleDeleteNewPath}
+          onDeleteNewPath={requestDeleteNewPath}
           disabled={busy}
           footer={backButton}
         />
@@ -1612,12 +1532,12 @@ export default function MentorEditCourseContentPage() {
           onDeleteNewPath={requestDeleteNewPath}
           onAddNode={handleAddNode}
           onNodeChange={handleNodeChange}
-          onNodeDelete={requestDeleteNode}
           onAddMaterial={handleAddMaterial}
           onMaterialChange={handleMaterialChange}
-          onMaterialDelete={requestDeleteMaterial}
           onMaterialReorder={handleMaterialReorder}
           disabled={busy}
+          allowNodeDelete={false}
+          allowMaterialDelete={false}
           dirtyKeys={dirtyKeys}
           showChapterSave={false}
           showPathUpdate

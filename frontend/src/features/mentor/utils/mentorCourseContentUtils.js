@@ -717,6 +717,40 @@ export function hasUnsavedEditScopeDirty(dirtyKeys, focusTarget, activePathTempI
   return false;
 }
 
+/** Focus đang trỏ tới chương/bài/học liệu mới tạo nhưng chưa lưu DB. */
+export function hasPendingNewUnsavedFocus(focusTarget, paths = []) {
+  if (!focusTarget?.pathTempId) return false;
+
+  const path = (paths ?? []).find((item) => item.tempId === focusTarget.pathTempId);
+  if (!path) return false;
+
+  if (
+    focusTarget.type === 'material'
+    && focusTarget.nodeTempId
+    && focusTarget.materialTempId
+  ) {
+    const node = (path.nodes ?? path.Nodes ?? []).find(
+      (item) => item.tempId === focusTarget.nodeTempId,
+    );
+    const material = filterLearningMaterials(node?.materials ?? node?.Materials ?? [])
+      .find((item) => item.tempId === focusTarget.materialTempId);
+    return isNewUnsavedMaterial(material);
+  }
+
+  if (focusTarget.type === 'lesson' && focusTarget.nodeTempId) {
+    const node = (path.nodes ?? path.Nodes ?? []).find(
+      (item) => item.tempId === focusTarget.nodeTempId,
+    );
+    return isNewUnsavedNode(node);
+  }
+
+  if (focusTarget.type === 'chapter-edit') {
+    return isNewUnsavedPath(path);
+  }
+
+  return false;
+}
+
 export function pathHasAnyDirty(dirtyKeys = {}, pathTempId) {
   if (!pathTempId) return false;
   return Object.keys(dirtyKeys).some((key) => (

@@ -36,6 +36,8 @@ export default function MentorCourseContentBuilder({
   onMaterialDelete,
   onMaterialReorder,
   disabled = false,
+  allowNodeDelete = true,
+  allowMaterialDelete = true,
   dirtyKeys = {},
   savingChapterId = null,
   onSaveChapter,
@@ -221,14 +223,8 @@ export default function MentorCourseContentBuilder({
   };
 
   const handleDeleteNewPath = useCallback((pathTempId) => {
-    if (pathTempId === activeChapterId) {
-      const idx = paths.findIndex((p) => p.tempId === pathTempId);
-      const remaining = paths.filter((p) => p.tempId !== pathTempId);
-      const nextIdx = Math.max(0, idx - 1);
-      setActiveChapterId(remaining[nextIdx]?.tempId ?? null);
-    }
     onDeleteNewPath?.(pathTempId);
-  }, [activeChapterId, paths, onDeleteNewPath, setActiveChapterId]);
+  }, [onDeleteNewPath]);
 
   return (
     <>
@@ -523,6 +519,8 @@ export default function MentorCourseContentBuilder({
                   onMaterialDelete={onMaterialDelete}
                   onMaterialReorder={onMaterialReorder}
                   disabled={disabled}
+                  allowNodeDelete={allowNodeDelete}
+                  allowMaterialDelete={allowMaterialDelete}
                   isSaved={!isEditDirty(dirtyKeys, makePathDirtyKey(activePath.tempId))}
                   saving={savingChapterId === activePath.tempId}
                   showSave={showChapterSave}
