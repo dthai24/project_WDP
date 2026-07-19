@@ -32,6 +32,8 @@ import {
   fetchUserCertificates,
 } from "@/features/profile/services/profileService";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import paymentApi from "@/services/paymentApi";
 import {
   getStoredAvatarUrl,
   persistUserAvatar,
@@ -346,7 +348,8 @@ export default function ProfilePage() {
   });
   const [coursesList, setCoursesList] = useState([]);
   const [certificatesList, setCertificatesList] = useState([]);
-  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | 'certificates' | null
+  const [paymentsList, setPaymentsList] = useState([]);
+  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | 'certificates' | 'payments' | null
 
   useEffect(() => {
     const cUser = getInitialUser();
@@ -415,6 +418,16 @@ export default function ProfilePage() {
           const certResult = await fetchUserCertificates(currentUser.userId);
           if (certResult.success && Array.isArray(certResult.certificates)) {
             setCertificatesList(certResult.certificates);
+          }
+
+          try {
+            // Tải danh sách thanh toán thành công (success)
+            const payResult = await paymentApi.getUserPayments('success', 50, 0);
+            if (payResult && Array.isArray(payResult.payments)) {
+              setPaymentsList(payResult.payments);
+            }
+          } catch (payErr) {
+            console.error("Lỗi khi tải lịch sử thanh toán:", payErr);
           }
         }
       } catch (err) {
@@ -1077,7 +1090,6 @@ export default function ProfilePage() {
                   expandable={certificatesList.length > 0}
                   expanded={expandedStat === "certificates"}
                   onClick={() => setExpandedStat(prev => prev === "certificates" ? null : "certificates")}
-                  last
                 >
                   <div className="space-y-2">
                     {certificatesList.map(cert => (
@@ -1106,6 +1118,47 @@ export default function ProfilePage() {
                       </div>
                     ))}
                   </div>
+                </StatRow>
+
+                <StatRow
+                  icon={ReceiptLongRoundedIcon}
+                  iconColor="#0284c7"
+                  label="Lịch sử thanh toán"
+                  value={`${paymentsList.length} giao dịch`}
+                  expandable={true}
+                  expanded={expandedStat === "payments"}
+                  onClick={() => setExpandedStat(prev => prev === "payments" ? null : "payments")}
+                  last
+                >
+                  {paymentsList.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic">Không có lịch sử thanh toán nào.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                      {paymentsList.map(payment => (
+                        <div
+                          key={payment._id}
+                          className="flex flex-col gap-1 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="text-[11.5px] font-bold text-slate-700 leading-tight flex-1">
+                              {payment.courseId?.courseName || 'Khóa học tiếng Anh'}
+                            </span>
+                            <span className="text-[11px] font-extrabold text-emerald-600 shrink-0">
+                              +{payment.finalAmount?.toLocaleString('vi-VN')} ₫
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1 text-[9px] text-slate-400">
+                            <span>
+                              Mã HĐ: <span className="font-mono text-slate-600">{payment.vnpayOrderId || payment._id?.substring(0, 8).toUpperCase()}</span>
+                            </span>
+                            <span>
+                              {new Date(payment.paidAt || payment.createdAt).toLocaleDateString('vi-VN')}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </StatRow>
               </SectionCard>
             )}
