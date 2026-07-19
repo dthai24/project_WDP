@@ -25,7 +25,9 @@ import {
   chapterHasContent,
   filterLearningMaterials,
   getChapterPublishBlockReason,
+  getChapterUnpublishBlockReason,
   getLessonPublishBlockReason,
+  getLessonUnpublishBlockReason,
   isEditDirty,
   isNewUnsavedPath,
   isNodeActive,
@@ -69,7 +71,7 @@ function getMaterialToolbarSummary(material) {
   return `${typeLabel} · ${title || 'Chưa đặt tiêu đề'}`;
 }
 
-function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false, publishBlockReason = null }) {
+function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false, publishBlockReason = null, hideBlockReason = null }) {
   if (isNewUnsavedPath(path)) {
     return (
       <AppButton
@@ -91,6 +93,7 @@ function PathChapterActions({ path, onChange, onDeleteNewPath, disabled = false,
       onChange={onChange}
       disabled={disabled}
       publishBlockReason={publishBlockReason}
+      hideBlockReason={hideBlockReason}
     />
   );
 }
@@ -136,6 +139,7 @@ export default function MentorChapterCard({
   showNodeContent = true,
   showMaterialContent = true,
   onRequestContentNavigation = null,
+  chapterQuizPathIds = null,
 }) {
   const nodesNormal = path.nodes ?? path.Nodes ?? [];
   const lessonCount = nodesNormal.length;
@@ -143,6 +147,7 @@ export default function MentorChapterCard({
   const pathPublishBlockReason = !chapterCanPublish(path)
     ? getChapterPublishBlockReason(path)
     : null;
+  const pathHideBlockReason = getChapterUnpublishBlockReason(path, { chapterQuizPathIds });
   const [activeLessonId, setActiveLessonId] = useState(
     () => focusLessonId ?? nodesNormal[0]?.tempId ?? null,
   );
@@ -267,6 +272,9 @@ export default function MentorChapterCard({
   const activeLesson = activeLessonIndex >= 0 ? nodesNormal[activeLessonIndex] : null;
   const activeNodePublishBlockReason = activeLesson && !isNodeActive(activeLesson) && !lessonCanPublish(activeLesson)
     ? getLessonPublishBlockReason(activeLesson)
+    : null;
+  const activeNodeHideBlockReason = activeLesson
+    ? getLessonUnpublishBlockReason(activeLesson, path, { chapterQuizPathIds })
     : null;
   const activeMaterials = filterLearningMaterials(activeLesson?.Materials ?? activeLesson?.materials ?? []);
   const activeNodeDirty = Boolean(
@@ -826,10 +834,16 @@ export default function MentorChapterCard({
             onChange={onNodeChange}
             disabled={disabled}
             publishBlockReason={activeNodePublishBlockReason}
+            hideBlockReason={activeNodeHideBlockReason}
           />
           {activeNodePublishBlockReason ? (
             <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
               {activeNodePublishBlockReason}
+            </Typography>
+          ) : null}
+          {activeNodeHideBlockReason ? (
+            <Typography sx={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+              {activeNodeHideBlockReason}
             </Typography>
           ) : null}
           {needsPathFirst ? (
@@ -1018,6 +1032,7 @@ export default function MentorChapterCard({
           onDeleteNewPath={onDeleteNewPath}
           disabled={disabled}
           publishBlockReason={pathPublishBlockReason}
+          hideBlockReason={pathHideBlockReason}
         />
       ) : showChapterEdit && isNewUnsavedPath(path) ? (
         <PathChapterActions
@@ -1026,6 +1041,7 @@ export default function MentorChapterCard({
           onDeleteNewPath={onDeleteNewPath}
           disabled={disabled}
           publishBlockReason={pathPublishBlockReason}
+          hideBlockReason={pathHideBlockReason}
         />
       ) : null}
     </Box>
@@ -1049,6 +1065,7 @@ export default function MentorChapterCard({
             onChange={onChange}
             disabled={disabled}
             publishBlockReason={pathPublishBlockReason}
+            hideBlockReason={pathHideBlockReason}
           />
         </Box>
       ) : null}
@@ -1250,6 +1267,7 @@ export default function MentorChapterCard({
           onDeleteNewPath={onDeleteNewPath}
           disabled={disabled}
           publishBlockReason={pathPublishBlockReason}
+          hideBlockReason={pathHideBlockReason}
         />
       </Box>
 

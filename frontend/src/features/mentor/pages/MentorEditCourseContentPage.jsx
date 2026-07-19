@@ -11,6 +11,8 @@ import ScrollToTopButton from '@/shared/ui/ScrollToTopButton';
 import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import { MUTED, PRIMARY, TEXT } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 import { fetchMentorCourseDetail } from '@/features/mentor/services/mentorCourseService';
+import { getChapterQuizConfigsByCourse } from '@/features/mentor/services/chapterQuizConfigService';
+import { buildChapterQuizPathIdSet } from '@/features/mentor/utils/mentorChapterQuizConfigUtils';
 import {
   saveCoursePath,
   deleteCoursePath,
@@ -47,7 +49,9 @@ import {
   chapterHasContent,
   chapterCanPublish,
   getChapterPublishBlockReason,
+  getChapterUnpublishBlockReason,
   getLessonPublishBlockReason,
+  getLessonUnpublishBlockReason,
   lessonCanPublish,
   normalizeChapterPublishState,
   shouldUnpublishChapterBecauseAllLessonsOff,
@@ -163,11 +167,13 @@ async function unpublishPathWhenAllLessonsOff({
   setPaths,
   pathSnapshotsRef,
   clearDirtyKey,
+  chapterQuizPathIds = null,
 }) {
   const pathForChapterCheck = pathsRef.current.find((item) => item.tempId === pathTempId);
   if (
     !shouldUnpublishChapterBecauseAllLessonsOff(pathForChapterCheck)
     || !pathForChapterCheck?.PathId
+    || getChapterUnpublishBlockReason(pathForChapterCheck, { chapterQuizPathIds })
   ) {
     return { ok: true, didUnpublish: false };
   }
@@ -270,11 +276,13 @@ export default function MentorEditCourseContentPage() {
   const [updatingPathId, setUpdatingPathId] = useState(null);
   const [updatingNodeKey, setUpdatingNodeKey] = useState(null);
   const [updatingMaterialKey, setUpdatingMaterialKey] = useState(null);
+  const [chapterQuizPathIds, setChapterQuizPathIds] = useState(() => new Set());
 
   const pathsRef = useRef(paths);
   const pathSnapshotsRef = useRef({});
   const dirtyKeysRef = useRef(dirtyKeys);
   const focusTargetRef = useRef(focusTarget);
+  const chapterQuizPathIdsRef = useRef(chapterQuizPathIds);
   const pendingNavigationRef = useRef(null);
   const requestNavigationRef = useRef(null);
   const confirmSaveInFlightRef = useRef(false);
@@ -291,6 +299,10 @@ export default function MentorEditCourseContentPage() {
   useEffect(() => {
     focusTargetRef.current = focusTarget;
   }, [focusTarget]);
+
+  useEffect(() => {
+    chapterQuizPathIdsRef.current = chapterQuizPathIds;
+  }, [chapterQuizPathIds]);
 
   const courseName = coursePascal?.CourseName ?? '';
 
@@ -345,11 +357,19 @@ export default function MentorEditCourseContentPage() {
       const hydratedPaths = await hydrateTextMaterialsInPaths(resolvedPaths);
       if (cancelled) return;
 
+      const quizResult = await getChapterQuizConfigsByCourse(Number(courseId));
+      if (cancelled) return;
+
       const loaded = syncPathsChapterPublishState(withNormalizedOrders(hydratedPaths));
 
       pathSnapshotsRef.current = buildPathSnapshotsMap(loaded);
       setCoursePascal(resolvedCoursePascal);
       setPaths(loaded);
+      if (quizResult.ok) {
+        setChapterQuizPathIds(buildChapterQuizPathIdSet(quizResult.configs));
+      } else {
+        setChapterQuizPathIds(new Set());
+      }
       setDirtyKeys({});
       setActiveChapterId(loaded[0]?.tempId ?? null);
       setFocusTarget(null);
@@ -377,8 +397,19 @@ export default function MentorEditCourseContentPage() {
   }, [applyPaths, applyFocusTarget, markDirty]);
 
   const handlePathChange = (pathTempId, patch) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+
+    if (patch.IsActive === 0 || patch.IsActive === false) {
+      const hideReason = getChapterUnpublishBlockReason(path, {
+        chapterQuizPathIds: chapterQuizPathIdsRef.current,
+      });
+      if (hideReason) {
+        toast.error(hideReason);
+        return;
+      }
+    }
+
     if (patch.IsActive === 1 || patch.IsActive === true) {
-      const path = pathsRef.current.find((item) => item.tempId === pathTempId);
       const nextPath = path ? { ...path, ...patch } : null;
       if (nextPath && !chapterCanPublish(nextPath)) {
         toast.error(getChapterPublishBlockReason(nextPath));
@@ -542,9 +573,20 @@ export default function MentorEditCourseContentPage() {
   }, [applyPaths, applyFocusTarget, markDirty]);
 
   const handleNodeChange = (pathTempId, nodeTempId, patch) => {
+    const path = pathsRef.current.find((item) => item.tempId === pathTempId);
+    const node = (path?.nodes ?? path?.Nodes ?? []).find((item) => item.tempId === nodeTempId);
+
+    if (patch.IsActive === 0 || patch.IsActive === false) {
+      const hideReason = getLessonUnpublishBlockReason(node, path, {
+        chapterQuizPathIds: chapterQuizPathIdsRef.current,
+      });
+      if (hideReason) {
+        toast.error(hideReason);
+        return;
+      }
+    }
+
     if (patch.IsActive === 1 || patch.IsActive === true) {
-      const path = pathsRef.current.find((item) => item.tempId === pathTempId);
-      const node = (path?.nodes ?? path?.Nodes ?? []).find((item) => item.tempId === nodeTempId);
       const nextNode = node ? { ...node, ...patch } : null;
       if (nextNode && !lessonCanPublish(nextNode)) {
         toast.error(getLessonPublishBlockReason(nextNode));
@@ -644,7 +686,9 @@ export default function MentorEditCourseContentPage() {
         return;
       }
 
-      const pathErrors = validatePathFieldsForSave(path, pathsRef.current);
+      const pathErrors = validatePathFieldsForSave(path, pathsRef.current, {
+        chapterQuizPathIds: chapterQuizPathIdsRef.current,
+      });
       if (Object.keys(pathErrors).length > 0) {
         setValidationErrors((prev) => ({
           ...prev,
@@ -672,7 +716,10 @@ export default function MentorEditCourseContentPage() {
         return;
       }
 
-      const nodeErrors = validateNodeFieldsForSave(node, path.nodes ?? []);
+      const nodeErrors = validateNodeFieldsForSave(node, path.nodes ?? [], {
+        path,
+        chapterQuizPathIds: chapterQuizPathIdsRef.current,
+      });
       if (Object.keys(nodeErrors).length > 0) {
         setValidationErrors((prev) => ({
           ...prev,
@@ -968,6 +1015,7 @@ export default function MentorEditCourseContentPage() {
           setPaths,
           pathSnapshotsRef,
           clearDirtyKey,
+          chapterQuizPathIds: chapterQuizPathIdsRef.current,
         });
       } else if (saveScope === 'node') {
         clearDirtyKey(makeNodeDirtyKey(pathTempId, nodeTempId));
@@ -979,6 +1027,7 @@ export default function MentorEditCourseContentPage() {
           setPaths,
           pathSnapshotsRef,
           clearDirtyKey,
+          chapterQuizPathIds: chapterQuizPathIdsRef.current,
         });
       } else {
         clearDirtyKey(makePathDirtyKey(pathTempId));
@@ -1588,6 +1637,7 @@ export default function MentorEditCourseContentPage() {
           onRequestContentNavigation={requestContentNavigation}
           focusTarget={focusTarget}
           sidebarLayout
+          chapterQuizPathIds={chapterQuizPathIds}
         />
       </Box>
 
