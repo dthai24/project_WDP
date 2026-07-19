@@ -307,6 +307,29 @@ PAID_COURSES.forEach((c, idx) => {
 
 code += `];
 
+const UNSPLASH_IMAGES = [
+  "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1484755560695-a4c7302cce29?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1513258496099-48168024aec0?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1447069387593-a5de0862481e?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=600&auto=format&fit=crop&q=80"
+];
+
 COURSES_DATA.forEach((c, idx) => {
   const courseId = new mongoose.Types.ObjectId();
   const totalLessons = c.chapters.reduce((sum, ch) => sum + ch.lessons.length, 0);
@@ -318,7 +341,7 @@ COURSES_DATA.forEach((c, idx) => {
     categoryId: resolveCategory(c.categoryKey),
     levelId: resolveLevel(c.levelKey),
     instructorId: MENTOR_ID,
-    thumbnail: \`/assets/avatars/courses/course_avt_\${(idx % 4) + 1}.jpg\`,
+    thumbnail: UNSPLASH_IMAGES[idx % UNSPLASH_IMAGES.length],
     rating: c.rating || 0,
     totalLessons,
     isPublished: true,
