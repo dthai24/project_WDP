@@ -91,21 +91,24 @@ const USERS = [
     email: "mentor@gmail.com",
     fullName: "Trần Văn Mentor",
     isActive: true,
-    passwordHash: "$2b$10$wE1Vlqg0yQGz4i9B9r.JSu8.8XzPj0i4E.2E8q5V6F9G3H8I.JSuO" // 123456
+    password: "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    passwordHash: "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
   },
   {
     _id: "6a42b0c8e3c24fb9bdb8d05e",
     email: "student@gmail.com",
     fullName: "Lê Văn Student",
     isActive: true,
-    passwordHash: "$2b$10$wE1Vlqg0yQGz4i9B9r.JSu8.8XzPj0i4E.2E8q5V6F9G3H8I.JSuO" // 123456
+    password: "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    passwordHash: "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
   },
   {
     _id: "6a42b0c8e3c24fb9bdb8d05f",
     email: "admin@gmail.com",
     fullName: "Nguyễn Văn Admin",
     isActive: true,
-    passwordHash: "$2b$10$wE1Vlqg0yQGz4i9B9r.JSu8.8XzPj0i4E.2E8q5V6F9G3H8I.JSuO" // 123456
+    password: "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    passwordHash: "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
   }
 ];
 
@@ -171,7 +174,11 @@ const DATA_roles = ${JSON.stringify(ROLES, null, 2).replace(/"_id": "(.*?)"/g, '
 
 const DATA_users = ${JSON.stringify(USERS, null, 2).replace(/"_id": "(.*?)"/g, '"_id": new mongoose.Types.ObjectId("$1")')};
 
-const DATA_userroles = ${JSON.stringify(USER_ROLES, null, 2).replace(/"userId": "(.*?)", "roleId": "(.*?)"/g, '"userId": new mongoose.Types.ObjectId("$1"), "roleId": new mongoose.Types.ObjectId("$2")')};
+const DATA_userroles = [
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052") },
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050") },
+];
 
 const DATA_coursecomments = [];
 const DATA_otpverifications = [];

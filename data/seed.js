@@ -138,37 +138,31 @@ const DATA_users = [
     "email": "mentor@gmail.com",
     "fullName": "Trần Văn Mentor",
     "isActive": true,
-    "passwordHash": "$2b$10$wE1Vlqg0yQGz4i9B9r.JSu8.8XzPj0i4E.2E8q5V6F9G3H8I.JSuO"
+    "password": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    "passwordHash": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
   },
   {
     "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"),
     "email": "student@gmail.com",
     "fullName": "Lê Văn Student",
     "isActive": true,
-    "passwordHash": "$2b$10$wE1Vlqg0yQGz4i9B9r.JSu8.8XzPj0i4E.2E8q5V6F9G3H8I.JSuO"
+    "password": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    "passwordHash": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
   },
   {
     "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"),
     "email": "admin@gmail.com",
     "fullName": "Nguyễn Văn Admin",
     "isActive": true,
-    "passwordHash": "$2b$10$wE1Vlqg0yQGz4i9B9r.JSu8.8XzPj0i4E.2E8q5V6F9G3H8I.JSuO"
+    "password": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    "passwordHash": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
   }
 ];
 
 const DATA_userroles = [
-  {
-    "userId": "6a42b0c8e3c24fb9bdb8d05d",
-    "roleId": "6a42b0c8e3c24fb9bdb8d052"
-  },
-  {
-    "userId": "6a42b0c8e3c24fb9bdb8d05e",
-    "roleId": "6a42b0c8e3c24fb9bdb8d051"
-  },
-  {
-    "userId": "6a42b0c8e3c24fb9bdb8d05f",
-    "roleId": "6a42b0c8e3c24fb9bdb8d050"
-  }
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052") },
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050") },
 ];
 
 const DATA_coursecomments = [];
