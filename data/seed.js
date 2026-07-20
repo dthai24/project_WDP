@@ -183,8 +183,11 @@ const DATA_tests = [];
 const DATA_usercategories = [];
 const DATA_usercourses = [];
 const DATA_usernodes = [];
+const DATA_certificates = [];
+const DATA_payments = [];
 
 const MENTOR_ID = new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d");
+const STUDENT_ID = new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e");
 
 const DATA_courses = [];
 const DATA_paths = [];
@@ -1146,6 +1149,79 @@ COURSES_DATA.forEach((c, idx) => {
     __v: 0
   });
 
+  // Nạp dữ liệu học tập đồng nhất cho tài khoản Student
+  if (idx === 0) {
+    // Khoá 1: Đã hoàn thành 100% -> Có chứng chỉ
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 100,
+      enrollmentDate: daysAgo(30)
+    });
+    DATA_certificates.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      certificateCode: "CERT-WDP-001",
+      grade: 100,
+      issuedAt: daysAgo(20)
+    });
+  } else if (idx === 1) {
+    // Khoá 2: Đã hoàn thành 100% -> Có chứng chỉ
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 100,
+      enrollmentDate: daysAgo(25)
+    });
+    DATA_certificates.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      certificateCode: "CERT-WDP-002",
+      grade: 98,
+      issuedAt: daysAgo(15)
+    });
+  } else if (idx === 2) {
+    // Khoá 3: Đang học (65%) -> Có thanh toán
+    const payId = new mongoose.Types.ObjectId();
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 65,
+      enrollmentDate: daysAgo(10),
+      paymentId: payId
+    });
+    DATA_payments.push({
+      _id: payId,
+      userId: STUDENT_ID,
+      courseId: courseId,
+      paymentType: "one-time",
+      amount: c.price || 599000,
+      discountAmount: 0,
+      finalAmount: c.price || 599000,
+      vnpayOrderId: "VNP99281721",
+      transactionCode: "TXN99281721",
+      bankCode: "NCB",
+      status: "success",
+      paymentMethod: "VNPay",
+      paymentDescription: "Thanh toán khóa học " + c.courseName,
+      paidAt: daysAgo(10)
+    });
+  } else if (idx === 3) {
+    // Khoá 4: Đang học (30%)
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 30,
+      enrollmentDate: daysAgo(5)
+    });
+  }
+
   // Tạo ngân hàng câu hỏi ảo tương ứng cho mỗi khóa học
   DATA_questionbanks.push({
     _id: new mongoose.Types.ObjectId(),
@@ -1242,6 +1318,8 @@ async function main() {
     { name: "questions", data: DATA_questions },
     { name: "questionspaths", data: DATA_questionspaths },
     { name: "questiontypes", data: DATA_questiontypes },
+    { name: "certificates", data: DATA_certificates },
+    { name: "payments", data: DATA_payments },
     { name: "roles", data: DATA_roles },
     { name: "testattempts", data: DATA_testattempts },
     { name: "testquestionchoices", data: DATA_testquestionchoices },
