@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const User = require('../models/MongoDB/User');
 const Level = require('../models/MongoDB/Level');
 const UserCategory = require('../models/MongoDB/UserCategory');
@@ -106,11 +107,15 @@ const changePassword = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Người dùng không tồn tại.' });
     }
 
-    if (user.password !== currentPassword) {
+    const isCurrentPasswordValid =
+      user.password === currentPassword ||
+      (await bcrypt.compare(currentPassword, user.password).catch(() => false));
+    if (!isCurrentPasswordValid) {
       return res.status(400).json({ success: false, message: 'Mật khẩu hiện tại không đúng.' });
     }
 
-    await User.findByIdAndUpdate(userId, { password: newPassword });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(userId, { password: hashedPassword });
 
     return res.json({ success: true, message: 'Đổi mật khẩu thành công.' });
   } catch (err) {

@@ -181,6 +181,10 @@ const register = async (req, res) => {
       message: 'Email không hợp lệ. Phải có @, dấu chấm và tên miền, không có khoảng trắng.',
     });
 
+  const parsedDob = new Date(dateOfBirth);
+  if (Number.isNaN(parsedDob.getTime()) || parsedDob > new Date())
+    return res.status(400).json({ success: false, message: 'Ngày sinh không hợp lệ hoặc không được ở tương lai.' });
+
   try {
     // Kiểm tra email đã tồn tại trong Users
     const existingEmail = await User.findOne({ email });
@@ -198,12 +202,13 @@ const register = async (req, res) => {
     // Tạo OTP + thời hạn 3 phút
     const otpCode = generateOTP();
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     await OtpVerification.create({
       email,
       fullName,
       phone,
-      password,
+      password: hashedPassword,
       dateOfBirth: new Date(dateOfBirth),
       otpCode,
       expiresAt,
@@ -285,6 +290,65 @@ const verifyOtp = async (req, res) => {
   } catch (err) {
     console.error('[VerifyOTP Error]', err.message);
     return res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
+  }
+};
+
+// ============================================================
+// POST /api/auth/resend-otp
+// Gửi lại mã OTP cho một đăng ký đang chờ xác thực (chưa verify-otp)
+// ============================================================
+const resendOtp = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || !validateEmail(email.trim()))
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập email hợp lệ.' });
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    const record = await OtpVerification.findOne({ email: normalizedEmail });
+    if (!record)
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy yêu cầu đăng ký nào cho email này. Vui lòng đăng ký lại từ đầu.',
+      });
+
+    // Chống spam: chỉ cho gửi lại sau tối thiểu 30 giây kể từ lần gửi trước
+    const RESEND_COOLDOWN_MS = 30 * 1000;
+    const elapsed = Date.now() - new Date(record.updatedAt).getTime();
+    if (elapsed < RESEND_COOLDOWN_MS) {
+      const waitSeconds = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Vui lòng đợi ${waitSeconds} giây trước khi yêu cầu gửi lại mã.`,
+      });
+    }
+
+    const otpCode = generateOTP();
+    const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
+
+    record.otpCode = otpCode;
+    record.expiresAt = expiresAt;
+    await record.save();
+
+    const { emailSent } = await sendOtpEmail({
+      to: normalizedEmail,
+      subject: '🔐 Mã xác thực OTP của bạn - English Master',
+      html: buildRegisterOtpHtml(record.fullName, otpCode),
+      otpCode,
+      label: 'gửi lại đăng ký',
+    });
+
+    return res.json({
+      success: true,
+      message: otpDeliveryMessage(normalizedEmail, emailSent),
+    });
+  } catch (err) {
+    console.error('[ResendOtp Error]', err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể gửi lại email OTP. Vui lòng thử lại sau.',
+    });
   }
 };
 
@@ -404,10 +468,11 @@ const resetPassword = async (req, res) => {
     if (new Date() > new Date(user.resetOtpExpires))
       return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn (quá 5 phút). Vui lòng yêu cầu mã mới.' });
 
-    // Cập nhật mật khẩu và xoá OTP
+    // Cập nhật mật khẩu (hash) và xoá OTP
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.updateOne(
       { email: normalizedEmail },
-      { password: newPassword, resetOtpCode: null, resetOtpExpires: null }
+      { password: hashedPassword, resetOtpCode: null, resetOtpExpires: null }
     );
 
     return res.json({
@@ -420,4 +485,4 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { login, register, verifyOtp, forgotPassword, resetPassword, saveOnboarding };
+module.exports = { login, register, verifyOtp, resendOtp, forgotPassword, resetPassword, saveOnboarding };
