@@ -7,6 +7,7 @@ const {
   createUser,
   getUserDetail,
   updateUser,
+  toggleUserStatus,
   deleteUser,
   updateUserRoles,
   getRoles,
@@ -75,6 +76,7 @@ router.get('/users', protect, adminOnly, getUsers);
 router.post('/users', protect, adminOnly, createUser);
 router.get('/users/:userId', protect, adminOnly, getUserDetail);
 router.put('/users/:userId', protect, adminOnly, updateUser);
+router.patch('/users/:userId/status', protect, adminOnly, toggleUserStatus);
 router.delete('/users/:userId', protect, adminOnly, deleteUser);
 router.put('/users/:userId/roles', protect, adminOnly, updateUserRoles);
 

@@ -78,6 +78,7 @@ function normalizeCourse(course = {}) {
     modules: course.modules ?? [],
     currentLessonDetail: course.currentLessonDetail ?? null,
     recentLessons: course.recentLessons ?? [],
+    certificateCode: course.certificateCode ?? null,
   };
 }
 
@@ -99,6 +100,28 @@ function getLearningStatusChip() {
       bgcolor: "rgba(8,145,178,0.12)",
       color: PRIMARY,
       border: "1px solid rgba(8,145,178,0.20)",
+    },
+  };
+}
+
+function getNotJoinedStatusChip() {
+  return {
+    label: "Chưa học",
+    sx: {
+      bgcolor: "rgba(100, 116, 139, 0.12)",
+      color: "#64748B",
+      border: "1px solid rgba(100, 116, 139, 0.20)",
+    },
+  };
+}
+
+function getNotStartedStatusChip() {
+  return {
+    label: "Chưa học",
+    sx: {
+      bgcolor: "rgba(245, 158, 11, 0.12)",
+      color: "#D97706",
+      border: "1px solid rgba(245, 158, 11, 0.20)",
     },
   };
 }
@@ -170,12 +193,28 @@ export default function MyCourseRow({
   const titlePath = detailPath;
   const progressTextColor = getProgressColor(progressValue);
 
-  const statusChip = isCompleted ? getCompletedStatusChip() : getLearningStatusChip();
+  let statusChip = getLearningStatusChip();
+  let actionLabel = "Tiếp tục học";
 
-  const actionLabel = isCompleted ? "Ôn tập lại" : "Tiếp tục học";
+  if (variant === "completed") {
+    statusChip = getCompletedStatusChip();
+    actionLabel = data.certificateCode ? "Xem chứng chỉ" : "Ôn tập lại";
+  } else if (variant === "not_joined") {
+    statusChip = getNotJoinedStatusChip();
+    actionLabel = "Đăng ký học";
+  } else if (variant === "not_started") {
+    statusChip = getNotStartedStatusChip();
+    actionLabel = "Đăng ký học";
+  }
 
   const handleAction = () => {
-    navigate(learningPath);
+    if (variant === "not_joined") {
+      navigate(detailPath);
+    } else if (variant === "completed" && data.certificateCode) {
+      window.open(`/certificate/${data.certificateCode}`, '_blank');
+    } else {
+      navigate(learningPath);
+    }
   };
 
   return (

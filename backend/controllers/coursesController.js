@@ -11,6 +11,7 @@ const User = require('../models/MongoDB/User');
 const Category = require('../models/MongoDB/Category');
 const Level = require('../models/MongoDB/Level');
 const Certificate = require('../models/MongoDB/Certificate');
+const nodemailer = require('nodemailer');
 const streakService = require("../services/streakService");
 const { validateCourseThumbnailDataUrl, saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
 
@@ -73,10 +74,18 @@ const getStudentCourses = async (req, res) => {
       category: req.query.category || '',
       level: req.query.level || '',
       status: req.query.status || '',
-      sort: req.query.sort || 'newest'
+      sort: req.query.sort || 'newest',
+      priceType: req.query.priceType || '' // 'free' | 'paid' | ''
     };
 
     let query = { isPublished: true, status: { $ne: 'inactive' } };
+
+    // Lọc theo khóa học miễn phí / trả phí
+    if (filters.priceType === 'free') {
+      query.isPaid = false;
+    } else if (filters.priceType === 'paid') {
+      query.isPaid = true;
+    }
 
     // Search by course name
     if (filters.search) {
@@ -114,6 +123,8 @@ const getStudentCourses = async (req, res) => {
     if (filters.sort === 'oldest') sortOption = { createdAt: 1 };
     else if (filters.sort === 'rating') sortOption = { rating: -1 };
     else if (filters.sort === 'name') sortOption = { courseName: 1 };
+    else if (filters.sort === 'price_asc') sortOption = { price: 1 };
+    else if (filters.sort === 'price_desc') sortOption = { price: -1 };
 
     const courses = await Course.find(query)
       .populate('categoryId', 'displayName')
@@ -509,22 +520,24 @@ const getLearningPath = async (req, res) => {
       return res.status(400).json({ success: false, message: 'courseId không hợp lệ' });
     }
 
-    const hasAccess = await userHasCourseAccess(userId, courseId);
-    if (!hasAccess) {
-      return res.status(403).json({
-        success: false,
-        message: 'Bạn cần đăng ký hoặc thanh toán khóa học này trước khi học.',
-        code: 'COURSE_ACCESS_DENIED',
-      });
-    }
-
-    // Get course info
     const course = await Course.findById(courseId)
       .populate('instructorId', 'fullName')
       .lean();
 
     if (!course) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học' });
+    }
+
+    const hasFullAccess = await userHasCourseAccess(userId, courseId);
+    const isPaidCourse = course.isPaid === true && course.price > 0;
+
+    // Nếu là khóa học miễn phí nhưng chưa đăng ký thì chặn 403
+    if (!isPaidCourse && !hasFullAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn cần đăng ký khóa học này trước khi vào học.',
+        code: 'COURSE_ACCESS_DENIED',
+      });
     }
 
     // Get paths with nodes and materials
@@ -538,9 +551,16 @@ const getLearningPath = async (req, res) => {
         .lean();
 
       const nodesWithDetails = await Promise.all(nodes.map(async (node) => {
-        const materials = await NodeMaterial.find({ nodeId: node._id })
-          .sort({ materialOrder: 1 })
-          .lean();
+        // Kiểm tra xem bài học có được miễn phí dùng thử không
+        const isFreeLesson = node.isFree === true;
+        const isLocked = isPaidCourse && !hasFullAccess && !isFreeLesson;
+
+        let materials = [];
+        if (!isLocked) {
+          materials = await NodeMaterial.find({ nodeId: node._id })
+            .sort({ materialOrder: 1 })
+            .lean();
+        }
 
         // Check if node is completed by user
         let isCompleted = false;
@@ -555,9 +575,13 @@ const getLearningPath = async (req, res) => {
 
         return {
           ...node,
-          Materials: materials,
-          IsCompleted: isCompleted,
-          CompletedAt: completedAt
+          locked: isLocked,
+          Materials: isLocked ? [] : materials,
+          IsCompleted: isLocked ? false : isCompleted,
+          CompletedAt: isLocked ? null : completedAt,
+          // Ẩn học liệu nếu bài viết bị khóa
+          videoUrl: isLocked ? null : node.videoUrl,
+          contentBody: isLocked ? null : node.contentBody
         };
       }));
 
@@ -567,7 +591,10 @@ const getLearningPath = async (req, res) => {
     res.json({
       success: true,
       courseTitle: course.courseName,
-      instructor: course.instructorId?.fullName || 'Giảng viên',
+      instructor: course.instructorId?.fullName || 'English Master Academic Team',
+      isPaidCourse,
+      hasFullAccess,
+      price: course.price,
       hasPendingUpdates: course.hasPendingUpdates || false,
       tempContent: course.tempContent || null,
       data: pathsWithNodes
@@ -575,6 +602,81 @@ const getLearningPath = async (req, res) => {
   } catch (err) {
     console.error('getLearningPath error:', err);
     res.status(500).json({ success: false, message: 'Lỗi Server' });
+  }
+};
+
+// Helper to send congratulatory email
+const sendCongratulatoryEmail = async (userEmail, studentName, courseTitle, certCode) => {
+  const emailUser = process.env.EMAIL_USER?.trim();
+  const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, '');
+
+  if (!emailUser || !emailPass) {
+    console.warn(`[Email Warning] Chưa cấu hình EMAIL_USER/EMAIL_PASS — Bỏ qua gửi email chúc mừng cho ${userEmail}`);
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
+    const certUrl = `http://localhost:5173/certificate/${certCode}`;
+
+    const mailOptions = {
+      from: `"English Master Academic Team" <${emailUser}>`,
+      to: userEmail,
+      subject: `🏆 Congratulations on completing "${courseTitle}"!`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #FAF8F5; color: #1e293b;">
+          <div style="text-align: center; margin-bottom: 25px;">
+            <div style="font-size: 40px; margin-bottom: 10px;">🏆</div>
+            <h1 style="font-family: 'Georgia', serif; color: #1e293b; font-size: 24px; margin: 0; text-transform: uppercase; letter-spacing: 1px;">English Master</h1>
+            <p style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin: 5px 0 0 0;">Education Excellence Platform</p>
+          </div>
+          
+          <div style="background-color: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <p style="font-size: 16px; margin-top: 0;">Dear <strong>${studentName}</strong>,</p>
+            
+            <p style="font-size: 14.5px; line-height: 1.6; color: #334155;">
+              We are absolutely thrilled to congratulate you on successfully completing the course:
+            </p>
+            
+            <div style="background-color: #f8fafc; border-left: 4px solid #d97706; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <h2 style="font-size: 16px; margin: 0; color: #0f172a;">${courseTitle}</h2>
+              <p style="font-size: 12px; color: #64748b; margin: 5px 0 0 0;">Issued on: ${new Date().toLocaleDateString('vi-VN')}</p>
+            </div>
+            
+            <p style="font-size: 14.5px; line-height: 1.6; color: #334155;">
+              Your dedication, hard work, and commitment to master English are highly commendable. By completing this program, you have taken a major step forward in your academic and professional journey.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0 20px 0;">
+              <a href="${certUrl}" target="_blank" style="background-color: #059669; color: #ffffff; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(4,120,87,0.2);">
+                View Your Certificate Online
+              </a>
+            </div>
+            
+            <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">
+              Verification Code: <code style="font-weight: bold; color: #0f172a; background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${certCode}</code>
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 25px; font-size: 12px; color: #94a3b8;">
+            <p style="margin: 0;">© 2026 English Master Online Education. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0;">If you have any questions, contact us at support@englishmaster.edu.vn</p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email Success] Congratulatory email sent to ${userEmail} for course "${courseTitle}"`);
+  } catch (err) {
+    console.error(`[Email Error] Failed to send congratulations to ${userEmail}:`, err.message);
   }
 };
 
@@ -597,6 +699,18 @@ const checkAndGenerateCertificate = async (userId, courseId) => {
         grade: 95 + Math.floor(Math.random() * 6) // random realistic grade 95-100%
       });
       console.log(`Certificate auto-generated for user ${userId} on course ${courseId}: ${certificateCode}`);
+
+      // Send congratulatory email asynchronously
+      const student = await User.findById(userId).select('email fullName').lean();
+      const course = await Course.findById(courseId).select('courseName').lean();
+      if (student && student.email && course) {
+        sendCongratulatoryEmail(
+          student.email,
+          student.fullName || "Student",
+          course.courseName,
+          certificateCode
+        ).catch(e => console.error("Error in sendCongratulatoryEmail:", e));
+      }
     }
     return cert;
   } catch (error) {
@@ -780,7 +894,7 @@ const createFinalCourse = async (req, res) => {
       });
     }
 
-    // Create course
+    // Create or update course
     const courseData = {
       courseName: String(newCourse.CourseName).trim(),
       description: String(newCourse.Description).trim(),
@@ -796,12 +910,44 @@ const createFinalCourse = async (req, res) => {
       totalLessons: 0,
     };
 
-    const course = await Course.create(courseData);
+    const existingId = newCourse.courseId || newCourse._id || newCourse.CourseId;
+    let course = null;
+
+    if (existingId && mongoose.Types.ObjectId.isValid(existingId)) {
+      course = await Course.findById(existingId);
+    }
+
+    if (course) {
+      // Update existing course metadata
+      const updateData = { ...courseData };
+      if (!newCourse.Thumbnail) {
+        delete updateData.thumbnail;
+      }
+      await Course.findByIdAndUpdate(course._id, updateData);
+      
+      // Clean up old paths, nodes, materials to prevent duplication
+      const existingPaths = await Path.find({ courseId: course._id }).select('_id').lean();
+      const pathIds = existingPaths.map(p => p._id);
+      const existingNodes = await PathNode.find({ pathId: { $in: pathIds } }).select('_id').lean();
+      const nodeIds = existingNodes.map(n => n._id);
+
+      await NodeMaterial.deleteMany({ nodeId: { $in: nodeIds } });
+      await PathNode.deleteMany({ pathId: { $in: pathIds } });
+      await Path.deleteMany({ courseId: course._id });
+    } else {
+      // Create new course
+      course = await Course.create(courseData);
+    }
 
     if (newCourse?.Thumbnail) {
-      const thumbnailPath = saveCourseThumbnailFromDataUrl(newCourse.Thumbnail, course._id);
-      if (thumbnailPath) {
-        course.thumbnail = thumbnailPath;
+      if (String(newCourse.Thumbnail).startsWith('data:')) {
+        const thumbnailPath = saveCourseThumbnailFromDataUrl(newCourse.Thumbnail, course._id);
+        if (thumbnailPath) {
+          course.thumbnail = thumbnailPath;
+          await course.save();
+        }
+      } else {
+        course.thumbnail = newCourse.Thumbnail;
         await course.save();
       }
     }
@@ -1134,9 +1280,36 @@ const getUserCertificates = async (req, res) => {
       return res.status(400).json({ success: false, message: 'userId không hợp lệ' });
     }
 
-    const certs = await Certificate.find({ userId })
+    let certs = await Certificate.find({ userId })
       .populate('courseId', 'courseName thumbnail rating totalLessons')
       .lean();
+
+    // Defensive fallback: check if there are 100% completed courses without a certificate
+    const completedCourses = await UserCourse.find({ userId, progressPercentage: 100 }).lean();
+    const existingCourseIds = certs.map(c => c.courseId?._id?.toString() || c.courseId?.toString());
+    
+    let generatedAny = false;
+    for (const uc of completedCourses) {
+      const cId = uc.courseId.toString();
+      if (!existingCourseIds.includes(cId)) {
+        const certificateCode = 'CERT-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        await Certificate.create({
+          userId,
+          courseId: uc.courseId,
+          grade: 100, // default grade for pre-completed/seeded courses
+          issuedAt: uc.updatedAt || new Date(),
+          certificateCode
+        });
+        generatedAny = true;
+        console.log(`Auto-generated missing certificate for user ${userId} on course ${cId}`);
+      }
+    }
+
+    if (generatedAny) {
+      certs = await Certificate.find({ userId })
+        .populate('courseId', 'courseName thumbnail rating totalLessons')
+        .lean();
+    }
 
     return res.status(200).json({ success: true, certificates: certs });
   } catch (error) {

@@ -72,6 +72,19 @@ export async function apiPut(endpoint, body) {
   }
 }
 
+export async function apiPatch(endpoint, body) {
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+    return handleResponse(response);
+  } catch (err) {
+    return { ok: false, message: 'Không thể kết nối đến server', data: null };
+  }
+}
+
 export async function apiDelete(endpoint) {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {

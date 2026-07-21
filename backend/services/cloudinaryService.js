@@ -1,4 +1,6 @@
 const cloudinary = require('../config/cloudinary');
+const fs = require('fs');
+const path = require('path');
 
 const MATERIALS_FOLDER = 'learning-path/materials';
 const TEXT_FOLDER = `${MATERIALS_FOLDER}/text`;
@@ -72,6 +74,23 @@ async function uploadDocumentFile(file) {
   const ext = getExtensionFromFileName(file.originalname);
   const safeName = sanitizeFileName(file.originalname).replace(/\.[^.]+$/, '');
 
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    const uploadsDir = path.join(__dirname, '../uploads/materials');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const localFileName = `${safeName}_${Date.now()}.${ext}`;
+    const localFilePath = path.join(uploadsDir, localFileName);
+    fs.writeFileSync(localFilePath, file.buffer);
+    return {
+      url: `/uploads/materials/${localFileName}`,
+      publicId: `local_${Date.now()}`,
+      fileName: file.originalname,
+      fileSize: file.size,
+      format: ext,
+    };
+  }
+
   const result = await uploadBuffer(file.buffer, {
     resource_type: 'raw',
     folder: MATERIALS_FOLDER,
@@ -97,6 +116,22 @@ async function uploadAudioFile(file) {
     throw error;
   }
   const safeName = sanitizeFileName(file.originalname).replace(/\.[^.]+$/, '');
+
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    const uploadsDir = path.join(__dirname, '../uploads/audio');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const localFileName = `${safeName}_${Date.now()}.${ext}`;
+    const localFilePath = path.join(uploadsDir, localFileName);
+    fs.writeFileSync(localFilePath, file.buffer);
+    return {
+      url: `/uploads/audio/${localFileName}`,
+      fileName: file.originalname,
+      fileSize: file.size,
+    };
+  }
+
   const result = await uploadBuffer(file.buffer, {
     resource_type: 'video',
     folder: AUDIO_FOLDER,
@@ -120,6 +155,24 @@ async function uploadTextHtml(html, title = 'text-material') {
   const buffer = Buffer.from(trimmed, 'utf8');
   assertMaterialSize(buffer.byteLength);
   const safeName = sanitizeFileName(title).replace(/\.[^.]+$/, '') || 'text-material';
+
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    const uploadsDir = path.join(__dirname, '../uploads/text');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const localFileName = `${safeName}_${Date.now()}.html`;
+    const localFilePath = path.join(uploadsDir, localFileName);
+    fs.writeFileSync(localFilePath, buffer);
+    return {
+      url: `/uploads/text/${localFileName}`,
+      publicId: `local_${Date.now()}`,
+      fileName: `${safeName}.html`,
+      fileSize: buffer.byteLength,
+      format: 'html',
+    };
+  }
+
   const result = await uploadBuffer(buffer, {
     resource_type: 'raw',
     folder: TEXT_FOLDER,

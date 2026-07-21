@@ -1,790 +1,1362 @@
 /**
- * WDP English Learning Platform - MongoDB Seed Script
- * Chạy: node seed.js  (từ thư mục data/, hoặc từ bất kỳ đâu trong repo)
- *
- * Dùng đúng các Mongoose model thật của backend (backend/Models/MongoDB/*)
- * nên dữ liệu tạo ra sẽ hiển thị đúng trong app — không như bản cũ (schema tự chế,
- * DB/collection khác với backend thật).
- *
- * Kết nối theo MONGO_URI khai báo trong backend/.env (mặc định mongodb://127.0.0.1:27017/wdp_english
- * nếu không có .env), đảm bảo luôn seed đúng database mà backend đang đọc.
+ * WDP English Learning Platform - MongoDB Seed Script v2
+ * Contains all database records inlined directly.
  */
 
 const path = require("path");
+const mongoose = require("mongoose");
 require("dotenv").config({ path: path.join(__dirname, "..", "backend", ".env") });
 
-const bcrypt = require("bcryptjs");
-
-const Role = require("../backend/Models/MongoDB/Role");
-const UserRole = require("../backend/Models/MongoDB/UserRole");
-const User = require("../backend/Models/MongoDB/User");
-const Category = require("../backend/Models/MongoDB/Category");
-const Level = require("../backend/Models/MongoDB/Level");
-const Course = require("../backend/Models/MongoDB/Course");
-const Path_ = require("../backend/Models/MongoDB/Path");
-const PathNode = require("../backend/Models/MongoDB/PathNode");
-const NodeMaterial = require("../backend/Models/MongoDB/NodeMaterial");
-const UserCourse = require("../backend/Models/MongoDB/UserCourse");
-const UserNode = require("../backend/Models/MongoDB/UserNode");
-const Payment = require("../backend/Models/MongoDB/Payment");
-const MentorApplication = require("../backend/Models/MongoDB/MentorApplication");
-const Notification = require("../backend/Models/MongoDB/Notification");
-const CourseComment = require("../backend/Models/MongoDB/CourseComment");
-const Certificate = require("../backend/Models/MongoDB/Certificate");
-
-// Dùng đúng instance mongoose mà các model backend đã dùng để compile (backend/node_modules) —
-// nếu require("mongoose") riêng ở đây, root node_modules có thể có bản mongoose khác,
-// khiến connect() vào 1 instance còn model chờ instance kia -> buffering timeout.
-const mongoose = User.base;
-
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/wdp_english";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────
-const id = () => new mongoose.Types.ObjectId();
-const now = new Date();
 const daysAgo = (n) => new Date(Date.now() - n * 86400000);
-const daysFromNow = (n) => new Date(Date.now() + n * 86400000);
 
-// ─── IDs (pre-generated để cross-reference) ──────────────────────────────
-const IDS = {
-  // Roles
-  roleAdmin: id(),
-  roleMentor: id(),
-  roleStudent: id(),
+const DATA_categories = [
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d057"),
+    "categoryName": "toeic",
+    "displayName": "TOEIC",
+    "name": "TOEIC",
+    "slug": "toeic",
+    "code": "TOEIC",
+    "description": "Luyện thi TOEIC Listening & Reading chuẩn ETS",
+    "color": "bg-blue-50 text-blue-600",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d058"),
+    "categoryName": "ielts",
+    "displayName": "IELTS",
+    "name": "IELTS",
+    "slug": "ielts",
+    "code": "IELTS",
+    "description": "Luyện thi IELTS Academic & General Training",
+    "color": "bg-green-50 text-green-600",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d059"),
+    "categoryName": "giao-tiep",
+    "displayName": "Giao tiếp",
+    "name": "Giao tiếp",
+    "slug": "giao-tiep",
+    "code": "COMMUNICATION",
+    "description": "Tiếng Anh giao tiếp hàng ngày, tự tin nói chuyện",
+    "color": "bg-yellow-50 text-yellow-600",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05a"),
+    "categoryName": "ngu-phap",
+    "displayName": "Ngữ pháp",
+    "name": "Ngữ pháp",
+    "slug": "ngu-phap",
+    "code": "GRAMMAR",
+    "description": "Hệ thống ngữ pháp tiếng Anh từ cơ bản đến nâng cao",
+    "color": "bg-purple-50 text-purple-600",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05b"),
+    "categoryName": "tu-vung",
+    "displayName": "Từ vựng",
+    "name": "Từ vựng",
+    "slug": "tu-vung",
+    "code": "VOCABULARY",
+    "description": "Học từ vựng theo chủ đề với flashcard và spaced repetition",
+    "color": "bg-pink-50 text-pink-600",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05c"),
+    "categoryName": "business-english",
+    "displayName": "Business English",
+    "name": "Business English",
+    "slug": "business-english",
+    "code": "BUSINESS",
+    "description": "Tiếng Anh thương mại, email, thuyết trình chuyên nghiệp",
+    "color": "bg-orange-50 text-orange-600",
+    "isActive": true
+  }
+];
 
-  // Users
-  adminUser: id(),
-  mentorAnh: id(),
-  mentorTuan: id(),
-  mentorLan: id(),
-  learnerMinh: id(),
-  learnerHoa: id(),
-  learnerDuc: id(),
-  learnerThu: id(),
-  learnerKhoa: id(),
+const DATA_levels = [
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d053"),
+    "levelName": "beginner",
+    "displayName": "Beginner",
+    "description": "Mới bắt đầu học, phát âm và từ vựng cơ bản",
+    "code": "BEGINNER",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d054"),
+    "levelName": "elementary",
+    "displayName": "Elementary",
+    "description": "Giao tiếp cơ bản và ngữ pháp nền tảng",
+    "code": "ELEMENTARY",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d055"),
+    "levelName": "intermediate",
+    "displayName": "Intermediate",
+    "description": "Giao tiếp thành thạo, viết và nói trôi chảy",
+    "code": "INTERMEDIATE",
+    "isActive": true
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d056"),
+    "levelName": "advanced",
+    "displayName": "Advanced",
+    "description": "Học thuật và nghiên cứu chuyên sâu, ielts cao",
+    "code": "ADVANCED",
+    "isActive": true
+  }
+];
 
-  // Categories
-  catToeic: id(),
-  catIelts: id(),
-  catGiaoTiep: id(),
-  catNguPhap: id(),
-  catTuVung: id(),
-  catBusiness: id(),
+const DATA_roles = [
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050"),
+    "roleName": "Admin",
+    "description": "Quản trị viên hệ thống — toàn quyền quản lý"
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051"),
+    "roleName": "Student",
+    "description": "Học viên — truy cập khóa học và lộ trình học tập"
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052"),
+    "roleName": "Mentor",
+    "description": "Người hướng dẫn — tạo nội dung và theo dõi học viên"
+  }
+];
 
-  // Levels
-  levelBeginner: id(),
-  levelElementary: id(),
-  levelIntermediate: id(),
-  levelAdvanced: id(),
+const DATA_users = [
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d"),
+    "email": "mentor@gmail.com",
+    "fullName": "Trần Văn Mentor",
+    "isActive": true,
+    "password": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    "passwordHash": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"),
+    "email": "student@gmail.com",
+    "fullName": "Lê Văn Student",
+    "isActive": true,
+    "password": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    "passwordHash": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"),
+    "email": "admin@gmail.com",
+    "fullName": "Nguyễn Văn Admin",
+    "isActive": true,
+    "password": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq",
+    "passwordHash": "$2b$10$zgNbReJNxECTyKfgZnNZKu4lJAa.Zwn8.JkTQHlxKlRqRh70Cqlvq"
+  }
+];
 
-  // Courses
-  courseToeicBasic: id(),
-  courseToeicAdvanced: id(),
-  courseIelts75: id(),
-  courseGiaoTiepHangNgay: id(),
-  courseBusinessEnglish: id(),
-  courseMentorOrigami: id(),
+const DATA_userroles = [
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052") },
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050") },
+];
 
-  // Payments
-  payMinhToeic: id(),
-  payHoaToeic: id(),
-  payDucBiz: id(),
-  payKhoaIelts: id(),
+const DATA_coursecomments = [];
+const DATA_otpverifications = [];
+const DATA_questionchoices = [];
+const DATA_questions = [];
+const DATA_questionspaths = [];
+const DATA_questiontypes = [
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d08e"), "name": "Listening ", "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d08f"), "name": "Reading   ", "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d090"), "name": "Vocabulary", "__v": 0},
+];
+const DATA_testattempts = [];
+const DATA_testquestionchoices = [];
+const DATA_testquestioncollections = [];
+const DATA_testquestions = [];
+const DATA_tests = [];
+const DATA_usercategories = [];
+const DATA_usercourses = [];
+const DATA_usernodes = [];
+const DATA_certificates = [];
+const DATA_payments = [];
+
+const MENTOR_ID = new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d");
+const STUDENT_ID = new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e");
+
+const DATA_courses = [];
+const DATA_paths = [];
+const DATA_pathnodes = [];
+const DATA_nodematerials = [];
+const DATA_questionbanks = [];
+
+// Helper functions for mapping
+const CAT_MAP = {
+  "toeic": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d057"),
+  "ielts": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d058"),
+  "giao-tiep": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d059"),
+  "ngu-phap": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05a"),
+  "tu-vung": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05b"),
+  "business-english": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05c"),
+};
+const LEVEL_MAP = {
+  "beginner": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d053"),
+  "elementary": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d054"),
+  "intermediate": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d055"),
+  "advanced": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d056"),
 };
 
-// ═══════════════════════════════════════════════════════════════════════
-// 1. ROLES
-// ═══════════════════════════════════════════════════════════════════════
-function buildRoles() {
-  return [
-    { _id: IDS.roleAdmin, roleName: "Admin", description: "Quản trị hệ thống" },
-    { _id: IDS.roleMentor, roleName: "Mentor", description: "Giảng viên / người tạo khóa học" },
-    { _id: IDS.roleStudent, roleName: "Student", description: "Học viên" },
-  ];
+function resolveCategory(key) {
+  const normalized = String(key || "").trim().toLowerCase();
+  if (normalized.includes("toeic")) return CAT_MAP["toeic"];
+  if (normalized.includes("ielts")) return CAT_MAP["ielts"];
+  if (normalized.includes("business") || normalized.includes("academic")) return CAT_MAP["business-english"];
+  if (normalized.includes("ngu phap") || normalized.includes("grammar")) return CAT_MAP["ngu-phap"];
+  if (normalized.includes("tu vung") || normalized.includes("vocabulary")) return CAT_MAP["tu-vung"];
+  return CAT_MAP["giao-tiep"];
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 2. USERS + USER_ROLES
-// ═══════════════════════════════════════════════════════════════════════
-async function buildUsers() {
-  const users = [
-    {
-      _id: IDS.adminUser,
-      fullName: "Admin WDP",
-      email: "admin@wdp.edu.vn",
-      password: "Admin@123",
-      phone: "0900000001",
-      isFirstLogin: false,
-      isActive: true,
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
-      createdAt: daysAgo(365),
-    },
-    {
-      _id: IDS.mentorAnh,
-      fullName: "Nguyen Thuy Anh",
-      email: "mentor.anh@wdp.edu.vn",
-      password: "Mentor@123",
-      phone: "0912345601",
-      isFirstLogin: false,
-      isActive: true,
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=anh",
-      createdAt: daysAgo(300),
-    },
-    {
-      _id: IDS.mentorTuan,
-      fullName: "Le Minh Tuan",
-      email: "mentor.tuan@wdp.edu.vn",
-      password: "Mentor@123",
-      phone: "0912345602",
-      isFirstLogin: false,
-      isActive: true,
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=tuan",
-      createdAt: daysAgo(280),
-    },
-    {
-      _id: IDS.mentorLan,
-      fullName: "Pham Thi Lan",
-      email: "mentor.lan@wdp.edu.vn",
-      password: "Mentor@123",
-      phone: "0912345603",
-      isFirstLogin: false,
-      isActive: true,
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=lan",
-      createdAt: daysAgo(200),
-    },
-    {
-      _id: IDS.learnerMinh,
-      fullName: "Tran Van Minh",
-      email: "minh.tv@gmail.com",
-      password: "Learner@123",
-      phone: "0987654321",
-      isFirstLogin: false,
-      isActive: true,
-      currentLevelId: IDS.levelElementary,
-      learningGoal: "Đạt TOEIC 700+ để tốt nghiệp",
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=minh",
-      createdAt: daysAgo(120),
-    },
-    {
-      _id: IDS.learnerHoa,
-      fullName: "Nguyen Thi Hoa",
-      email: "hoa.nt@gmail.com",
-      password: "Learner@123",
-      phone: "0976543210",
-      isFirstLogin: false,
-      isActive: true,
-      currentLevelId: IDS.levelIntermediate,
-      learningGoal: "Cải thiện tiếng Anh để thăng tiến",
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=hoa",
-      createdAt: daysAgo(180),
-    },
-    {
-      _id: IDS.learnerDuc,
-      fullName: "Hoang Van Duc",
-      email: "duc.hv@gmail.com",
-      password: "Learner@123",
-      phone: "0965432109",
-      isFirstLogin: false,
-      isActive: true,
-      currentLevelId: IDS.levelIntermediate,
-      learningGoal: "Business English cho công việc",
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=duc",
-      createdAt: daysAgo(60),
-    },
-    {
-      _id: IDS.learnerThu,
-      fullName: "Le Thi Thu",
-      email: "thu.lt@gmail.com",
-      password: "Learner@123",
-      phone: "0954321098",
-      isFirstLogin: false,
-      isActive: true,
-      currentLevelId: IDS.levelBeginner,
-      learningGoal: "Ôn thi tiếng Anh đại học",
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=thu",
-      createdAt: daysAgo(30),
-    },
-    {
-      _id: IDS.learnerKhoa,
-      fullName: "Pham Minh Khoa",
-      email: "khoa.pm@gmail.com",
-      password: "Learner@123",
-      phone: "0943210987",
-      isFirstLogin: false,
-      isActive: true,
-      currentLevelId: IDS.levelIntermediate,
-      learningGoal: "IELTS 6.5 để du học",
-      avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=khoa",
-      createdAt: daysAgo(20),
-    },
-  ];
+function resolveLevel(key) {
+  const normalized = String(key || "").trim().toLowerCase();
+  if (normalized.includes("beginner")) return LEVEL_MAP["beginner"];
+  if (normalized.includes("elementary")) return LEVEL_MAP["elementary"];
+  if (normalized.includes("intermediate")) return LEVEL_MAP["intermediate"];
+  if (normalized.includes("advanced")) return LEVEL_MAP["advanced"];
+  return LEVEL_MAP["elementary"];
+}
 
-  // Hash mật khẩu (bcrypt) trước khi lưu, khớp cách backend hash khi đăng ký/đổi mật khẩu thật
-  for (const user of users) {
-    user.password = await bcrypt.hash(user.password, 10);
+// All courses definition
+const COURSES_DATA = [
+  {
+    courseName: "English for Kids: Alphabet & Phonics",
+    description: "Khoá học dành cho học sinh cấp 1, giúp các em nhận biết 26 chữ cái, phát âm chuẩn từng âm vị (phonics) và đánh vần các từ đơn giản.",
+    levelKey: "Beginner",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Basic English Vocabulary – Grade 1",
+    description: "Xây dựng vốn từ vựng 300 từ thiết yếu cho học sinh lớp 1–2: màu sắc, con số, thức ăn, đồ vật gia đình.",
+    levelKey: "Beginner",
+    categoryKey: "tu-vung",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Premium IELTS Writing Band 8.5 Masterclass",
+    description: "Khóa học viết luận IELTS chuyên sâu cùng chuyên gia bản xứ giúp bạn chinh phục Band 8.5+",
+    levelKey: "Advanced",
+    categoryKey: "ielts",
+    rating: 4.9,
+    isPaid: true,
+    price: 199000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Simple Sentences – Speaking for Kids",
+    description: "Học sinh cấp 1 luyện nói các câu đơn giản theo chủ đề hàng ngày: tự giới thiệu, hỏi thăm, và nói về gia đình.",
+    levelKey: "Beginner",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "English Listening – Level 1 (A1)",
+    description: "Luyện nghe hiểu các đoạn hội thoại cực kỳ đơn giản về cuộc sống hàng ngày, các số đếm, màu sắc và đồ dùng cá nhân.",
+    levelKey: "Beginner",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Mastering English Pronunciation & Accent Reduction",
+    description: "Luyện phát âm chuẩn Mỹ, giảm khẩu âm địa phương và làm chủ ngữ điệu nói tự nhiên.",
+    levelKey: "Intermediate",
+    categoryKey: "giao-tiep",
+    rating: 4.9,
+    isPaid: true,
+    price: 249000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "English Reading – Grade 1 (A1)",
+    description: "Đọc hiểu các câu đơn giản, mẩu tin ngắn 2-3 câu và truyện tranh ngắn dành cho người mới bắt đầu học tiếng Anh.",
+    levelKey: "Beginner",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "English Grammar – Grade 4 (A2)",
+    description: "Tổng hợp ngữ pháp lớp 4: các thì đơn giản (HTĐ, QKĐ, TLĐ), danh từ số ít/nhiều, động từ khuyết thiếu cơ bản.",
+    levelKey: "Elementary",
+    categoryKey: "ngu-phap",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Business Negotiation & Presentation Skills",
+    description: "Kỹ năng đàm phán hợp đồng, thuyết trình và bảo vệ dự án trước đối tác nước ngoài bằng tiếng Anh.",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.9,
+    isPaid: true,
+    price: 299000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Everyday English Conversations – A2",
+    description: "Học nói tiếng Anh trong các tình huống thực tế: mua sắm, hỏi đường, đặt bàn ăn, nói chuyện điện thoại.",
+    levelKey: "Elementary",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "English Writing – Grade 5 (A2)",
+    description: "Luyện viết đoạn văn ngắn 50-80 từ: mô tả bạn thân, kể về ngày nghỉ cuối tuần, viết email xin phép nghỉ học.",
+    levelKey: "Elementary",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "TOEIC Listening & Reading 990 Practice Hacks",
+    description: "Tổng hợp mẹo giải đề TOEIC cực nhanh, bẫy từ vựng Part 5-6 và kỹ thuật skim/scan Part 7 đạt điểm tối đa.",
+    levelKey: "Intermediate",
+    categoryKey: "toeic",
+    rating: 4.9,
+    isPaid: true,
+    price: 399000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "A2 Reading Comprehension",
+    description: "Rèn luyện kỹ năng đọc hiểu văn bản ngắn 100-150 từ, biển báo công cộng, thực đơn nhà hàng, quảng cáo tuyển dụng.",
+    levelKey: "Elementary",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "A2 Listening Skills – Elementary",
+    description: "Luyện nghe hiểu các bài độc thoại ngắn, thông báo tại sân bay/nhà ga, tin tức thời tiết cơ bản.",
+    levelKey: "Elementary",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Academic Essay Writing for University Students",
+    description: "Học cách viết luận văn, tiểu luận học thuật chuẩn mực tại môi trường đại học quốc tế.",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.9,
+    isPaid: true,
+    price: 499000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "B1 Grammar: Intermediate English",
+    description: "Ngữ pháp trung cấp: các thì hoàn thành, câu điều kiện loại 1 & 2, mệnh đề quan hệ, câu bị động.",
+    levelKey: "Intermediate",
+    categoryKey: "ngu-phap",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "IELTS Preparation – Band 5.0 to 6.0",
+    description: "Làm quen cấu trúc đề thi IELTS, chiến thuật làm bài 4 kỹ năng nhắm mục tiêu đạt band 5.5 - 6.0.",
+    levelKey: "Intermediate",
+    categoryKey: "ielts",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Advanced Grammar for Professional Writing",
+    description: "Làm chủ các cấu trúc ngữ pháp cao cấp, viết báo cáo công việc chuyên nghiệp không sai sót.",
+    levelKey: "Intermediate",
+    categoryKey: "ngu-phap",
+    rating: 4.9,
+    isPaid: true,
+    price: 599000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Business English – Intermediate",
+    description: "Tiếng Anh dùng trong văn phòng: viết email công việc lịch sự, họp hành, thuyết trình dự án ngắn.",
+    levelKey: "Intermediate",
+    categoryKey: "business-english",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "English Writing Skills – B1",
+    description: "Viết bài luận ngắn 120-150 từ: thảo luận ưu/nhược điểm, viết thư phàn nàn dịch vụ, viết thư mời.",
+    levelKey: "Intermediate",
+    categoryKey: "giao-tiep",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Everyday Conversational English for Globetrotters",
+    description: "Tiếng Anh giao tiếp du lịch, đặt phòng, gọi món, giải quyết sự cố tại sân bay dễ dàng.",
+    levelKey: "Beginner",
+    categoryKey: "giao-tiep",
+    rating: 4.9,
+    isPaid: true,
+    price: 699000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "TOEIC 600+ – Listening & Reading",
+    description: "Luyện thi TOEIC 2 kỹ năng chuyên sâu: từ vựng Part 5, mẹo nghe Part 2-3, phân bổ thời gian đọc Part 7.",
+    levelKey: "Intermediate",
+    categoryKey: "toeic",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Academic English Writing – University Level",
+    description: "Viết học thuật đại học: cách trích dẫn APA/MLA, viết bài luận tranh biện (argumentative essay).",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "IELTS Vocabulary & Collocations Bootcamp",
+    description: "Tích lũy 1000+ từ vựng học thuật cao cấp và cụm từ cố định để đạt điểm Lexical Resource tối đa.",
+    levelKey: "Advanced",
+    categoryKey: "ielts",
+    rating: 4.9,
+    isPaid: true,
+    price: 799000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "IELTS Academic – Band 7.0 & Above",
+    description: "IELTS nâng cao band 7+: phân tích đề thi thực tế, chiến lược làm bài Writing Task 2 và Speaking Part 3.",
+    levelKey: "Advanced",
+    categoryKey: "ielts",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "Advanced English Grammar – C1 Level",
+    description: "Ngữ pháp nâng cao: đảo ngữ, câu điều kiện hỗn hợp, phân từ hoàn thành, cấu trúc song song phức tạp.",
+    levelKey: "Advanced",
+    categoryKey: "ngu-phap",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "English for Scientific Research & Publications",
+    description: "Quy chuẩn viết bài báo khoa học, abstract và trích dẫn chuẩn mực quốc tế đăng tạp chí ISI.",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.9,
+    isPaid: true,
+    price: 899000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "English for Research & Academia",
+    description: "Viết báo cáo khoa học, tóm tắt abstract (250 từ), thuyết trình báo cáo tại hội thảo quốc tế.",
+    levelKey: "Advanced",
+    categoryKey: "business-english",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "C2 Mastery English – Proficiency Level",
+    description: "Cấp độ tiếng Anh cao nhất: từ vựng hiếm, thành ngữ cổ, đọc hiểu các tác phẩm văn học học thuật phức tạp.",
+    levelKey: "Advanced",
+    categoryKey: "tu-vung",
+    rating: 4.8,
+    isPaid: false,
+    price: 0,
+    chapters: [
+      {
+        title: "Week 1: Core Foundation",
+        description: "Làm quen với các kiến thức nền tảng đầu tiên của chủ đề.",
+        lessons: [
+          { title: "Core Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "Essay Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Knowledge Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      },
+      {
+        title: "Week 2: Intermediate Expansion",
+        description: "Mở rộng và đào sâu kiến thức lý thuyết đã học.",
+        lessons: [
+          { title: "Expansion Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: true },
+          { title: "Application Challenge (Writing Practice)", type: "reading", url: "", isFree: true },
+          { title: "Progress Check (Quiz Assessment)", type: "quiz", url: "", isFree: true }
+        ]
+      }
+    ]
+  },
+  {
+    courseName: "C2 English Proficiency Mastery Course",
+    description: "Chinh phục đỉnh cao tiếng Anh với giáo trình C2 Proficiency nâng tầm tư duy ngôn ngữ như người bản xứ.",
+    levelKey: "Advanced",
+    categoryKey: "tu-vung",
+    rating: 4.9,
+    isPaid: true,
+    price: 999000,
+    chapters: [
+      {
+        title: "Module 1: Fundamental Concept",
+        description: "Nội dung nhập môn và hướng dẫn học tập căn bản.",
+        lessons: [
+          { title: "Introduction Lecture (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=75p-N9YKqNo", isFree: true },
+          { title: "First Writing Task (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 1 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      },
+      {
+        title: "Module 2: Advanced Mastery",
+        description: "Nội dung nâng cao và chuyên sâu đòi hỏi tư duy ngôn ngữ.",
+        lessons: [
+          { title: "Advanced Methods (Video Lecture)", type: "video", url: "https://www.youtube.com/watch?v=36IBDpTRVNE", isFree: false },
+          { title: "Final Dissertation (Writing Practice)", type: "reading", url: "", isFree: false },
+          { title: "Module 2 Exam (Quiz Assessment)", type: "quiz", url: "", isFree: false }
+        ]
+      }
+    ]
+  },
+];
+
+const UNSPLASH_IMAGES = [
+  "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1484755560695-a4c7302cce29?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1513258496099-48168024aec0?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1447069387593-a5de0862481e?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=600&auto=format&fit=crop&q=80"
+];
+
+COURSES_DATA.forEach((c, idx) => {
+  const courseId = new mongoose.Types.ObjectId();
+  const totalLessons = c.chapters.reduce((sum, ch) => sum + ch.lessons.length, 0);
+  
+  DATA_courses.push({
+    _id: courseId,
+    courseName: c.courseName,
+    description: c.description,
+    categoryId: resolveCategory(c.categoryKey),
+    levelId: resolveLevel(c.levelKey),
+    instructorId: MENTOR_ID,
+    thumbnail: UNSPLASH_IMAGES[idx % UNSPLASH_IMAGES.length],
+    rating: c.rating || 0,
+    totalLessons,
+    isPublished: true,
+    price: c.price || 0,
+    isPaid: c.isPaid || false,
+    createdAt: daysAgo(100 - idx * 3),
+    updatedAt: daysAgo(100 - idx * 3),
+    __v: 0
+  });
+
+  // Nạp dữ liệu học tập đồng nhất cho tài khoản Student
+  if (idx === 0) {
+    // Khoá 1: Đã hoàn thành 100% -> Có chứng chỉ
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 100,
+      enrollmentDate: daysAgo(30)
+    });
+    DATA_certificates.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      certificateCode: "CERT-WDP-001",
+      grade: 100,
+      issuedAt: daysAgo(20)
+    });
+  } else if (idx === 1) {
+    // Khoá 2: Đã hoàn thành 100% -> Có chứng chỉ
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 100,
+      enrollmentDate: daysAgo(25)
+    });
+    DATA_certificates.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      certificateCode: "CERT-WDP-002",
+      grade: 98,
+      issuedAt: daysAgo(15)
+    });
+  } else if (idx === 2) {
+    // Khoá 3: Đang học (65%) -> Có thanh toán
+    const payId = new mongoose.Types.ObjectId();
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 65,
+      enrollmentDate: daysAgo(10),
+      paymentId: payId
+    });
+    DATA_payments.push({
+      _id: payId,
+      userId: STUDENT_ID,
+      courseId: courseId,
+      paymentType: "one-time",
+      amount: c.price || 599000,
+      discountAmount: 0,
+      finalAmount: c.price || 599000,
+      vnpayOrderId: "VNP99281721",
+      transactionCode: "TXN99281721",
+      bankCode: "NCB",
+      status: "success",
+      paymentMethod: "VNPay",
+      paymentDescription: "Thanh toán khóa học " + c.courseName,
+      paidAt: daysAgo(10)
+    });
+  } else if (idx === 3) {
+    // Khoá 4: Đang học (30%)
+    DATA_usercourses.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: STUDENT_ID,
+      courseId: courseId,
+      progressPercentage: 30,
+      enrollmentDate: daysAgo(5)
+    });
   }
-  return users;
-}
 
-function buildUserRoles() {
-  return [
-    { userId: IDS.adminUser, roleId: IDS.roleAdmin },
-    { userId: IDS.mentorAnh, roleId: IDS.roleMentor },
-    { userId: IDS.mentorTuan, roleId: IDS.roleMentor },
-    { userId: IDS.mentorLan, roleId: IDS.roleMentor },
-    { userId: IDS.learnerMinh, roleId: IDS.roleStudent },
-    { userId: IDS.learnerHoa, roleId: IDS.roleStudent },
-    { userId: IDS.learnerDuc, roleId: IDS.roleStudent },
-    { userId: IDS.learnerThu, roleId: IDS.roleStudent },
-    { userId: IDS.learnerKhoa, roleId: IDS.roleStudent },
-  ];
-}
+  // Tạo ngân hàng câu hỏi ảo tương ứng cho mỗi khóa học
+  DATA_questionbanks.push({
+    _id: new mongoose.Types.ObjectId(),
+    instructorId: MENTOR_ID,
+    courseId: courseId,
+    courseName: c.courseName,
+    courseDescription: c.description,
+    bankDescription: `Ngân hàng câu hỏi của khóa học ${c.courseName}`,
+    isPublished: true,
+    createdAt: daysAgo(100 - idx * 3),
+    updatedAt: daysAgo(100 - idx * 3),
+    __v: 0
+  });
 
-// ═══════════════════════════════════════════════════════════════════════
-// 3. CATEGORIES & LEVELS
-// ═══════════════════════════════════════════════════════════════════════
-function buildCategories() {
-  return [
-    { _id: IDS.catToeic, categoryName: "TOEIC", displayName: "TOEIC", isActive: true },
-    { _id: IDS.catIelts, categoryName: "IELTS", displayName: "IELTS", isActive: true },
-    { _id: IDS.catGiaoTiep, categoryName: "Giao tiếp", displayName: "Giao tiếp", isActive: true },
-    { _id: IDS.catNguPhap, categoryName: "Ngữ pháp", displayName: "Ngữ pháp", isActive: true },
-    { _id: IDS.catTuVung, categoryName: "Từ vựng", displayName: "Từ vựng", isActive: true },
-    { _id: IDS.catBusiness, categoryName: "Business English", displayName: "Business English", isActive: true },
-  ];
-}
+  c.chapters.forEach((ch, ci) => {
+    const pathId = new mongoose.Types.ObjectId();
+    DATA_paths.push({
+      _id: pathId,
+      courseId: courseId,
+      pathName: ch.title,
+      description: ch.description || "",
+      order: ci + 1,
+      createdAt: daysAgo(100 - idx * 3),
+      updatedAt: daysAgo(100 - idx * 3),
+      __v: 0
+    });
 
-function buildLevels() {
-  return [
-    { _id: IDS.levelBeginner, levelName: "Beginner", displayName: "Người mới bắt đầu", sortOrder: 1, isActive: true },
-    { _id: IDS.levelElementary, levelName: "Elementary", displayName: "Cơ bản", sortOrder: 2, isActive: true },
-    { _id: IDS.levelIntermediate, levelName: "Intermediate", displayName: "Trung cấp", sortOrder: 3, isActive: true },
-    { _id: IDS.levelAdvanced, levelName: "Advanced", displayName: "Cao cấp", sortOrder: 4, isActive: true },
-  ];
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// 4. COURSES
-// ═══════════════════════════════════════════════════════════════════════
-function buildCourses() {
-  return [
-    {
-      _id: IDS.courseToeicBasic,
-      courseName: "Ôn thi TOEIC 2026 - Từ cơ bản đến 700+",
-      description: "Khóa học TOEIC toàn diện theo chuẩn ETS 2026. Bao gồm 7 dạng bài Listening và 4 dạng bài Reading. Cam kết đạt 700+ sau 3 tháng học.",
-      categoryId: IDS.catToeic,
-      levelId: IDS.levelElementary,
-      instructorId: IDS.mentorAnh,
-      thumbnail: null,
-      rating: 4.8,
-      totalLessons: 4,
-      isPublished: true,
-      status: "active",
-      price: 499000,
-      isPaid: true,
-      discountPercentage: 50,
-      createdAt: daysAgo(300),
-    },
-    {
-      _id: IDS.courseToeicAdvanced,
-      courseName: "TOEIC Nâng Cao - Chinh phục 900+",
-      description: "Dành cho học viên đã có nền tảng TOEIC 600+. Tập trung vào Part 7 (đọc hiểu đoạn dài) và Part 3, 4 (nghe hội thoại phức tạp).",
-      categoryId: IDS.catToeic,
-      levelId: IDS.levelAdvanced,
-      instructorId: IDS.mentorAnh,
-      thumbnail: null,
-      rating: 4.9,
-      totalLessons: 4,
-      isPublished: true,
-      status: "active",
-      price: 649000,
-      isPaid: true,
-      discountPercentage: 50,
-      createdAt: daysAgo(250),
-    },
-    {
-      _id: IDS.courseIelts75,
-      courseName: "IELTS 7.5+ - Học thuật toàn diện",
-      description: "Khóa học IELTS đầy đủ 4 kỹ năng Listening, Reading, Writing, Speaking. Phương pháp học tập dựa trên thực hành và phân tích lỗi sai.",
-      categoryId: IDS.catIelts,
-      levelId: IDS.levelIntermediate,
-      instructorId: IDS.mentorAnh,
-      thumbnail: null,
-      rating: 4.7,
-      totalLessons: 4,
-      isPublished: true,
-      status: "active",
-      price: 799000,
-      isPaid: true,
-      discountPercentage: 47,
-      createdAt: daysAgo(200),
-    },
-    {
-      _id: IDS.courseGiaoTiepHangNgay,
-      courseName: "Tiếng Anh giao tiếp hàng ngày - A1 đến B2",
-      description: "Học tiếng Anh giao tiếp qua các tình huống thực tế: mua sắm, đi du lịch, làm việc, kết bạn. Phát âm chuẩn từ đầu.",
-      categoryId: IDS.catGiaoTiep,
-      levelId: IDS.levelElementary,
-      instructorId: IDS.mentorLan,
-      thumbnail: null,
-      rating: 4.6,
-      totalLessons: 4,
-      isPublished: true,
-      status: "active",
-      price: 0,
-      isPaid: false,
-      discountPercentage: 0,
-      createdAt: daysAgo(180),
-    },
-    {
-      _id: IDS.courseBusinessEnglish,
-      courseName: "Business English Chuyên nghiệp",
-      description: "Email, thuyết trình, đàm phán, họp hành bằng tiếng Anh. Dành cho nhân viên văn phòng và quản lý muốn nâng cấp kỹ năng chuyên môn.",
-      categoryId: IDS.catBusiness,
-      levelId: IDS.levelIntermediate,
-      instructorId: IDS.mentorTuan,
-      thumbnail: null,
-      rating: 4.8,
-      totalLessons: 4,
-      isPublished: true,
-      status: "active",
-      price: 599000,
-      isPaid: true,
-      discountPercentage: 50,
-      createdAt: daysAgo(150),
-    },
-    {
-      _id: IDS.courseMentorOrigami,
-      courseName: "Từ vựng qua nghệ thuật Origami",
-      description: "Khóa học đặc biệt: học từ vựng tiếng Anh qua các hướng dẫn gấp giấy Origami bằng tiếng Anh. Vừa học ngôn ngữ, vừa thư giãn.",
-      categoryId: IDS.catTuVung,
-      levelId: IDS.levelElementary,
-      instructorId: IDS.mentorLan,
-      thumbnail: null,
-      rating: 4.5,
-      totalLessons: 4,
-      isPublished: true,
-      status: "active",
-      price: 0,
-      isPaid: false,
-      discountPercentage: 0,
-      createdAt: daysAgo(60),
-    },
-  ];
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// 5. PATHS (chương) + PATH_NODES (bài học) + NODE_MATERIALS (nội dung)
-// ═══════════════════════════════════════════════════════════════════════
-// Mỗi khóa học: 2 chương x 2 bài học = 4 node, mỗi node có 1 material.
-function buildCourseStructure(courses) {
-  const paths = [];
-  const nodes = [];
-  const materials = [];
-  const nodesByCourse = {}; // courseId(string) -> [nodeId,...] theo thứ tự
-
-  const CHAPTER_TITLES = [
-    ["Chương 1: Nhập môn & Định hướng", "Chương 2: Thực hành & Kỹ năng nâng cao"],
-  ];
-
-  for (const course of courses) {
-    const courseKey = course._id.toString();
-    nodesByCourse[courseKey] = [];
-
-    for (let ci = 0; ci < 2; ci++) {
-      const pathId = id();
-      paths.push({
-        _id: pathId,
-        courseId: course._id,
-        pathName: CHAPTER_TITLES[0][ci],
-        description: `Nội dung ${CHAPTER_TITLES[0][ci].toLowerCase()} của khóa "${course.courseName}"`,
-        order: ci + 1,
-        createdAt: course.createdAt,
+    ch.lessons.forEach((lesson, li) => {
+      const nodeId = new mongoose.Types.ObjectId();
+      DATA_pathnodes.push({
+        _id: nodeId,
+        pathId: pathId,
+        nodeName: lesson.title,
+        nodeOrder: li + 1,
+        description: `Hướng dẫn chi tiết cho bài học ${lesson.title}`,
+        isFree: lesson.isFree || false,
+        __v: 0
       });
 
-      for (let ni = 0; ni < 2; ni++) {
-        const nodeId = id();
-        const nodeOrder = ci * 2 + ni + 1;
-        nodes.push({
-          _id: nodeId,
-          pathId,
-          nodeName: `Bài ${nodeOrder}: ${ni === 0 ? "Video bài giảng" : "Tài liệu & bài tập"}`,
-          nodeOrder,
-          description: `Bài học số ${nodeOrder} thuộc "${CHAPTER_TITLES[0][ci]}"`,
-          isFree: nodeOrder === 1,
-        });
-        nodesByCourse[courseKey].push(nodeId);
+      let matType = "VIDEO";
+      if (lesson.type === "reading") matType = "TEXT";
+      else if (lesson.type === "quiz") matType = "DOC";
 
-        materials.push({
-          _id: id(),
-          nodeId,
-          materialType: ni === 0 ? "VIDEO" : "TEXT",
-          title: ni === 0 ? `Video bài ${nodeOrder}` : `Tài liệu bài ${nodeOrder}`,
-          materialUrl: ni === 0 ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : null,
+      if (lesson.url && lesson.type === "video") {
+        DATA_nodematerials.push({
+          _id: new mongoose.Types.ObjectId(),
+          nodeId: nodeId,
+          materialType: "VIDEO",
+          title: lesson.title,
+          materialUrl: lesson.url,
           materialOrder: 1,
-          sourceType: ni === 0 ? "LINK" : "UPLOAD",
-          content: ni === 0 ? null : `Nội dung tóm tắt bài ${nodeOrder} của khóa "${course.courseName}".`,
+          sourceType: "LINK",
+          fileName: null,
+          fileSize: null,
+          embedUrl: lesson.url.replace("watch?v=", "embed/"),
+          __v: 0
+        });
+      } else if (lesson.type === "reading") {
+        DATA_nodematerials.push({
+          _id: new mongoose.Types.ObjectId(),
+          nodeId: nodeId,
+          materialType: "TEXT",
+          title: lesson.title,
+          materialUrl: null,
+          materialOrder: 1,
+          sourceType: "UPLOAD",
+          content: `<h3>${lesson.title} - Guide</h3><p>Đây là bài tập rèn luyện kỹ năng viết luận tiếng Anh (AI Writing Practice). Quý học viên hãy tiến hành đọc kỹ yêu cầu đề bài bên dưới, sau đó viết một đoạn văn ngắn (tối thiểu 30 từ, tối đa 300 từ) và bấm nút <strong>Nộp bài & Chấm điểm AI</strong> để Trợ lý AI thực hiện đánh giá, phân tích và sửa lỗi chính tả ngữ pháp trực tiếp.</p>`,
+          fileName: "Writing task.pdf",
+          fileSize: 12450,
+          embedUrl: null,
+          __v: 0
         });
       }
+    });
+  });
+});
+
+async function main() {
+  console.log(`🔌 Connecting to MongoDB: ${MONGO_URI}...\n`);
+  await mongoose.connect(MONGO_URI);
+  const db = mongoose.connection.db;
+
+  const collectionsToSeed = [
+    { name: "categories", data: DATA_categories },
+    { name: "coursecomments", data: DATA_coursecomments },
+    { name: "courses", data: DATA_courses },
+    { name: "levels", data: DATA_levels },
+    { name: "nodematerials", data: DATA_nodematerials },
+    { name: "otpverifications", data: DATA_otpverifications },
+    { name: "pathnodes", data: DATA_pathnodes },
+    { name: "paths", data: DATA_paths },
+    { name: "questionbanks", data: DATA_questionbanks },
+    { name: "questionchoices", data: DATA_questionchoices },
+    { name: "questions", data: DATA_questions },
+    { name: "questionspaths", data: DATA_questionspaths },
+    { name: "questiontypes", data: DATA_questiontypes },
+    { name: "certificates", data: DATA_certificates },
+    { name: "payments", data: DATA_payments },
+    { name: "roles", data: DATA_roles },
+    { name: "testattempts", data: DATA_testattempts },
+    { name: "testquestionchoices", data: DATA_testquestionchoices },
+    { name: "testquestioncollections", data: DATA_testquestioncollections },
+    { name: "testquestions", data: DATA_testquestions },
+    { name: "tests", data: DATA_tests },
+    { name: "usercategories", data: DATA_usercategories },
+    { name: "usercourses", data: DATA_usercourses },
+    { name: "usernodes", data: DATA_usernodes },
+    { name: "userroles", data: DATA_userroles },
+    { name: "users", data: DATA_users },
+  ];
+
+  for (const col of collectionsToSeed) {
+    console.log(`📦 Seeding collection [${col.name}]...`);
+    const collections = await db.listCollections({ name: col.name }).toArray();
+    if (collections.length > 0) {
+      await db.collection(col.name).drop();
+      console.log(`  🗑  Dropped old collection`);
+    }
+
+    if (col.data && col.data.length > 0) {
+      await db.collection(col.name).insertMany(col.data);
+      console.log(`  ✅ Seeded ${col.data.length} records successfully.`);
+    } else {
+      console.log(`  ℹ️  Collection was empty. Skipped insertion.`);
     }
   }
 
-  return { paths, nodes, materials, nodesByCourse };
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// 6. USER_COURSES (đăng ký học) + PAYMENTS
-// ═══════════════════════════════════════════════════════════════════════
-function buildPayments() {
-  return [
-    {
-      _id: IDS.payMinhToeic,
-      userId: IDS.learnerMinh,
-      courseId: IDS.courseToeicBasic,
-      paymentType: "one-time",
-      amount: 499000,
-      discountAmount: 0,
-      finalAmount: 499000,
-      status: "success",
-      paymentMethod: "MoMo",
-      paymentDescription: "Thanh toan khoa hoc Ôn thi TOEIC 2026",
-      paidAt: daysAgo(100),
-      createdAt: daysAgo(100),
-    },
-    {
-      _id: IDS.payHoaToeic,
-      userId: IDS.learnerHoa,
-      courseId: IDS.courseToeicBasic,
-      paymentType: "one-time",
-      amount: 499000,
-      discountAmount: 0,
-      finalAmount: 499000,
-      status: "success",
-      paymentMethod: "VNPay",
-      paymentDescription: "Thanh toan khoa hoc Ôn thi TOEIC 2026",
-      paidAt: daysAgo(150),
-      createdAt: daysAgo(150),
-    },
-    {
-      _id: IDS.payDucBiz,
-      userId: IDS.learnerDuc,
-      courseId: IDS.courseBusinessEnglish,
-      paymentType: "one-time",
-      amount: 599000,
-      discountAmount: 0,
-      finalAmount: 599000,
-      status: "success",
-      paymentMethod: "ZaloPay",
-      paymentDescription: "Thanh toan khoa hoc Business English Chuyên nghiệp",
-      paidAt: daysAgo(50),
-      createdAt: daysAgo(50),
-    },
-    {
-      _id: IDS.payKhoaIelts,
-      userId: IDS.learnerKhoa,
-      courseId: IDS.courseIelts75,
-      paymentType: "one-time",
-      amount: 799000,
-      discountAmount: 0,
-      finalAmount: 799000,
-      status: "success",
-      paymentMethod: "Bank Transfer",
-      paymentDescription: "Thanh toan khoa hoc IELTS 7.5+",
-      paidAt: daysAgo(18),
-      createdAt: daysAgo(18),
-    },
-    // Ví dụ thanh toán thất bại
-    {
-      _id: id(),
-      userId: IDS.learnerMinh,
-      courseId: IDS.courseIelts75,
-      paymentType: "one-time",
-      amount: 799000,
-      discountAmount: 0,
-      finalAmount: 799000,
-      status: "failed",
-      paymentMethod: "Card",
-      paymentDescription: "Thanh toan khoa hoc IELTS 7.5+",
-      errorMessage: "Payment failed",
-      errorCode: "15",
-      createdAt: daysAgo(15),
-    },
-  ];
-}
-
-function buildUserCourses() {
-  return [
-    { userId: IDS.learnerMinh, courseId: IDS.courseToeicBasic, progressPercentage: 65, enrollmentDate: daysAgo(100), paymentId: IDS.payMinhToeic },
-    { userId: IDS.learnerMinh, courseId: IDS.courseGiaoTiepHangNgay, progressPercentage: 30, enrollmentDate: daysAgo(80), paymentId: null },
-    { userId: IDS.learnerHoa, courseId: IDS.courseToeicBasic, progressPercentage: 85, enrollmentDate: daysAgo(150), paymentId: IDS.payHoaToeic },
-    { userId: IDS.learnerHoa, courseId: IDS.courseGiaoTiepHangNgay, progressPercentage: 100, enrollmentDate: daysAgo(90), paymentId: null },
-    { userId: IDS.learnerDuc, courseId: IDS.courseBusinessEnglish, progressPercentage: 20, enrollmentDate: daysAgo(50), paymentId: IDS.payDucBiz },
-    { userId: IDS.learnerThu, courseId: IDS.courseGiaoTiepHangNgay, progressPercentage: 45, enrollmentDate: daysAgo(28), paymentId: null },
-    { userId: IDS.learnerKhoa, courseId: IDS.courseIelts75, progressPercentage: 10, enrollmentDate: daysAgo(18), paymentId: IDS.payKhoaIelts },
-  ];
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// 7. USER_NODES (tiến độ bài học + streak) + CERTIFICATES
-// ═══════════════════════════════════════════════════════════════════════
-function buildUserNodes(nodesByCourse) {
-  const userNodes = [];
-
-  // Minh: hoàn thành bài 1 khóa TOEIC vào các ngày gần đây -> streak 5 ngày (kể cả hôm nay)
-  const toeicNodes = nodesByCourse[IDS.courseToeicBasic.toString()];
-  [0, 1, 2].forEach((i) => {
-    userNodes.push({ userId: IDS.learnerMinh, nodeId: toeicNodes[i], isCompleted: true, completedAt: daysAgo(i) });
-  });
-
-  // Hoa: hoàn thành toàn bộ khóa Giao tiếp (100% -> có certificate)
-  const gtNodes = nodesByCourse[IDS.courseGiaoTiepHangNgay.toString()];
-  gtNodes.forEach((nodeId, i) => {
-    userNodes.push({ userId: IDS.learnerHoa, nodeId, isCompleted: true, completedAt: daysAgo(10 + i) });
-  });
-
-  // Thu: hoàn thành 2 bài đầu khóa Giao tiếp, streak hôm nay
-  [0, 1].forEach((i) => {
-    userNodes.push({ userId: IDS.learnerThu, nodeId: gtNodes[i], isCompleted: true, completedAt: daysAgo(0) });
-  });
-
-  // Duc: hoàn thành bài 1 khóa Business
-  const bizNodes = nodesByCourse[IDS.courseBusinessEnglish.toString()];
-  userNodes.push({ userId: IDS.learnerDuc, nodeId: bizNodes[0], isCompleted: true, completedAt: daysAgo(1) });
-
-  return userNodes;
-}
-
-function buildCertificates() {
-  return [
-    {
-      userId: IDS.learnerHoa,
-      courseId: IDS.courseGiaoTiepHangNgay,
-      certificateCode: `CERT-${IDS.learnerHoa.toString().slice(-6)}-${IDS.courseGiaoTiepHangNgay.toString().slice(-6)}`,
-      issuedAt: daysAgo(10),
-      grade: 100,
-    },
-  ];
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// 8. MENTOR APPLICATIONS
-// ═══════════════════════════════════════════════════════════════════════
-function buildMentorApplications() {
-  return [
-    {
-      userId: IDS.mentorAnh,
-      fullName: "Nguyen Thuy Anh",
-      name: "Nguyen Thuy Anh",
-      email: "mentor.anh@wdp.edu.vn",
-      bio: "Giảng viên TOEIC & IELTS với 10 năm kinh nghiệm. IELTS 8.5, TOEIC 990.",
-      portfolioUrl: "https://thuyanhteaches.com",
-      levels: [IDS.levelIntermediate, IDS.levelAdvanced],
-      status: "approved",
-      isReadByAdmin: true,
-      createdAt: daysAgo(310),
-    },
-    {
-      userId: IDS.mentorTuan,
-      fullName: "Le Minh Tuan",
-      name: "Le Minh Tuan",
-      email: "mentor.tuan@wdp.edu.vn",
-      bio: "Chuyên gia Business English. MBA tại RMIT. 7 năm đào tạo doanh nghiệp.",
-      levels: [IDS.levelIntermediate],
-      status: "approved",
-      isReadByAdmin: true,
-      createdAt: daysAgo(290),
-    },
-    // Đơn đang chờ duyệt, dùng để test luồng admin approval
-    {
-      userId: IDS.learnerMinh,
-      fullName: "Tran Van Minh",
-      name: "Tran Van Minh",
-      email: "minh.tv@gmail.com",
-      bio: "Sinh viên CNTT có khả năng dạy lập trình bằng tiếng Anh. TOEIC 750.",
-      portfolioUrl: "https://github.com/minhtvdev",
-      levels: [IDS.levelElementary],
-      status: "pending",
-      isReadByAdmin: false,
-      createdAt: daysAgo(5),
-    },
-  ];
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// 9. NOTIFICATIONS & COMMENTS
-// ═══════════════════════════════════════════════════════════════════════
-function buildNotifications() {
-  return [
-    {
-      userId: IDS.learnerMinh,
-      type: "payment",
-      title: "Thanh toán thành công",
-      message: "Bạn đã đăng ký thành công khóa học 'Ôn thi TOEIC 2026'. Chúc bạn học tốt!",
-      metadata: { paymentId: IDS.payMinhToeic, courseId: IDS.courseToeicBasic },
-      isRead: true,
-      createdAt: daysAgo(100),
-    },
-    {
-      userId: IDS.learnerMinh,
-      type: "streak",
-      title: "Streak 3 ngày!",
-      message: "Bạn đã duy trì streak học tập 3 ngày liên tiếp.",
-      isRead: false,
-      createdAt: now,
-    },
-    {
-      userId: IDS.learnerHoa,
-      type: "course",
-      title: "Hoàn thành khóa học!",
-      message: "Bạn đã hoàn thành khóa học 'Tiếng Anh giao tiếp hàng ngày'. Chứng chỉ đã sẵn sàng.",
-      metadata: { courseId: IDS.courseGiaoTiepHangNgay },
-      isRead: true,
-      createdAt: daysAgo(10),
-    },
-    {
-      userId: IDS.adminUser,
-      type: "system",
-      title: "Đơn đăng ký mentor mới",
-      message: "Tran Van Minh đã gửi đơn đăng ký trở thành mentor. Vui lòng xem xét.",
-      isRead: false,
-      createdAt: daysAgo(5),
-    },
-  ];
-}
-
-function buildCourseComments() {
-  return [
-    {
-      courseId: IDS.courseToeicBasic,
-      userId: IDS.learnerMinh,
-      rating: 5,
-      content: "Khóa học rất chi tiết và dễ hiểu! Mình đã cải thiện điểm từ 450 lên 680 sau 2 tháng!",
-      createdAt: daysAgo(30),
-    },
-    {
-      courseId: IDS.courseToeicBasic,
-      userId: IDS.learnerHoa,
-      rating: 5,
-      content: "Tuyệt vời! Phương pháp giảng dạy khoa học, phù hợp cho người đi làm bận rộn.",
-      createdAt: daysAgo(40),
-    },
-    {
-      courseId: IDS.courseGiaoTiepHangNgay,
-      userId: IDS.learnerHoa,
-      rating: 4,
-      content: "Khóa học hay, phát âm chuẩn. Chỉ tiếc là chưa có nhiều bài tập thực hành nói trực tiếp.",
-      createdAt: daysAgo(8),
-    },
-    {
-      courseId: IDS.courseBusinessEnglish,
-      userId: IDS.learnerDuc,
-      rating: 5,
-      content: "Thầy Tuấn dạy rất thực tế! Sau 1 tháng mình viết email tiếng Anh tự tin hơn hẳn.",
-      createdAt: daysAgo(10),
-    },
-  ];
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// MAIN
-// ═══════════════════════════════════════════════════════════════════════
-async function main() {
-  console.log(`Đang kết nối tới MongoDB: ${MONGO_URI}`);
-  await mongoose.connect(MONGO_URI);
-  console.log("✅ Kết nối MongoDB thành công!\n");
-
-  // Xoá dữ liệu cũ (seed lại từ đầu) — chỉ xoá các collection script này quản lý
-  console.log("Xoá dữ liệu cũ...");
-  await Promise.all([
-    Role.deleteMany({}),
-    UserRole.deleteMany({}),
-    User.deleteMany({}),
-    Category.deleteMany({}),
-    Level.deleteMany({}),
-    Course.deleteMany({}),
-    Path_.deleteMany({}),
-    PathNode.deleteMany({}),
-    NodeMaterial.deleteMany({}),
-    UserCourse.deleteMany({}),
-    UserNode.deleteMany({}),
-    Payment.deleteMany({}),
-    MentorApplication.deleteMany({}),
-    Notification.deleteMany({}),
-    CourseComment.deleteMany({}),
-    Certificate.deleteMany({}),
-  ]);
-
-  console.log("Seeding...\n");
-
-  await Role.insertMany(buildRoles());
-  console.log(`  ✅ roles`);
-
-  await User.insertMany(await buildUsers());
-  console.log(`  ✅ users`);
-
-  await UserRole.insertMany(buildUserRoles());
-  console.log(`  ✅ userroles`);
-
-  await Category.insertMany(buildCategories());
-  console.log(`  ✅ categories`);
-
-  await Level.insertMany(buildLevels());
-  console.log(`  ✅ levels`);
-
-  const courses = buildCourses();
-  await Course.insertMany(courses);
-  console.log(`  ✅ courses`);
-
-  const { paths, nodes, materials, nodesByCourse } = buildCourseStructure(courses);
-  await Path_.insertMany(paths);
-  console.log(`  ✅ paths`);
-  await PathNode.insertMany(nodes);
-  console.log(`  ✅ pathnodes`);
-  await NodeMaterial.insertMany(materials);
-  console.log(`  ✅ nodematerials`);
-
-  await Payment.insertMany(buildPayments());
-  console.log(`  ✅ payments`);
-
-  await UserCourse.insertMany(buildUserCourses());
-  console.log(`  ✅ usercourses`);
-
-  await UserNode.insertMany(buildUserNodes(nodesByCourse));
-  console.log(`  ✅ usernodes`);
-
-  await Certificate.insertMany(buildCertificates());
-  console.log(`  ✅ certificates`);
-
-  await MentorApplication.insertMany(buildMentorApplications());
-  console.log(`  ✅ mentorapplications`);
-
-  await Notification.insertMany(buildNotifications());
-  console.log(`  ✅ notifications`);
-
-  await CourseComment.insertMany(buildCourseComments());
-  console.log(`  ✅ coursecomments`);
-
   console.log("\n═══════════════════════════════════════════");
-  console.log("  🎉 Seed hoàn tất! WDP English Platform");
-  console.log("═══════════════════════════════════════════");
-  console.log("\n  📋 Tài khoản test (mật khẩu lưu dạng hash bcrypt, đăng nhập bằng mật khẩu gốc bên dưới):");
-  console.log("  ┌─────────────────────────────────────────────────┐");
-  console.log("  │ ADMIN   admin@wdp.edu.vn        Admin@123        │");
-  console.log("  │ MENTOR  mentor.anh@wdp.edu.vn    Mentor@123       │");
-  console.log("  │ MENTOR  mentor.tuan@wdp.edu.vn   Mentor@123       │");
-  console.log("  │ MENTOR  mentor.lan@wdp.edu.vn    Mentor@123       │");
-  console.log("  │ STUDENT minh.tv@gmail.com        Learner@123      │");
-  console.log("  │ STUDENT hoa.nt@gmail.com         Learner@123      │");
-  console.log("  │ STUDENT duc.hv@gmail.com         Learner@123      │");
-  console.log("  │ STUDENT thu.lt@gmail.com         Learner@123      │");
-  console.log("  │ STUDENT khoa.pm@gmail.com        Learner@123      │");
-  console.log("  └─────────────────────────────────────────────────┘");
-  console.log(`\n  🔗 MongoDB URI: ${MONGO_URI}\n`);
+  console.log("  🎉 All data seeded successfully!");
+  console.log("═══════════════════════════════════════════\n");
 
   await mongoose.disconnect();
 }
 
 main().catch((err) => {
-  console.error("\n❌ Lỗi:", err.message);
+  console.error("\n❌ Error:", err.message);
   process.exit(1);
 });

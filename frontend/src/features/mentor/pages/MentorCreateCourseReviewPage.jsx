@@ -172,7 +172,11 @@ export default function MentorCreateCourseReviewPage() {
       </Box>
 
       <Box sx={{ display: { xs: 'block', lg: 'none' }, mt: 2.5 }}>
-        <MentorCourseReviewActions onCreate={handleCreateCourse} creating={creating} />
+        <MentorCourseReviewActions
+          onCreate={handleCreateCourse}
+          creating={creating}
+          disabled={!validation?.isValid || !checklist.every((c) => c.status === 'ok' || c.status === 'warning')}
+        />
       </Box>
 
       <MentorCourseCreateSuccessDialog

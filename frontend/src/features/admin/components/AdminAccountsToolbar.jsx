@@ -20,6 +20,7 @@ import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import {
   ADMIN_ACCOUNT_ROLE_OPTIONS,
   ADMIN_ACCOUNT_STATUS_OPTIONS,
@@ -200,6 +201,7 @@ export default function AdminAccountsToolbar({
   onRemoveFilterChip,
   keyword = '',
   onKeywordChange,
+  onCreateClick,
   roleOptions = ADMIN_ACCOUNT_ROLE_OPTIONS,
   statusOptions = ADMIN_ACCOUNT_STATUS_OPTIONS,
   sortOptions = ADMIN_ACCOUNT_SORT_OPTIONS,
@@ -280,6 +282,35 @@ export default function AdminAccountsToolbar({
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+          {onCreateClick && (
+            <Box
+              component="button"
+              type="button"
+              onClick={onCreateClick}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                height: 34,
+                px: 1.5,
+                border: '1px solid transparent',
+                borderRadius: theme.ios18?.radius?.pill ?? 9999,
+                bgcolor: 'primary.main',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: '#0E7490',
+                },
+              }}
+            >
+              <AddRoundedIcon sx={{ fontSize: 16, color: 'inherit' }} />
+              Thêm tài khoản
+            </Box>
+          )}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.5 }}>
             <PeopleAltOutlinedIcon sx={{ fontSize: 14, color: '#0891B2' }} />
             <Typography

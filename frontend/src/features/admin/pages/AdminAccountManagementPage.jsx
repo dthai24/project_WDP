@@ -8,7 +8,8 @@ import AdminAccountsToolbar from '@/features/admin/components/AdminAccountsToolb
 import AdminAccountList from '@/features/admin/components/AdminAccountList';
 import AdminAccountFormDialog from '@/features/admin/components/AdminAccountFormDialog';
 import AdminAccountCreateDialog from '@/features/admin/components/AdminAccountCreateDialog';
-import { createAccount, getAccounts, updateAccount } from '@/features/admin/services/adminAccountService';
+import ConfirmDialog from '@/shared/ui/ConfirmDialog';
+import { createAccount, getAccounts, updateAccount, toggleAccountStatus } from '@/features/admin/services/adminAccountService';
 import {
   ADMIN_ACCOUNT_ROLE_OPTIONS,
   ADMIN_ACCOUNT_STATUS_OPTIONS,
@@ -39,6 +40,9 @@ export default function AdminAccountManagementPage() {
   const [editingAccount, setEditingAccount] = useState(null);
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [toggleConfirmOpen, setToggleConfirmOpen] = useState(false);
+  const [accountToToggle, setAccountToToggle] = useState(null);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   const queryState = useMemo(
     () => parseAdminAccountListParams(searchParams),
@@ -172,6 +176,33 @@ export default function AdminAccountManagementPage() {
     }
   };
 
+  const handleToggleStatusClick = (account) => {
+    setAccountToToggle(account);
+    setToggleConfirmOpen(true);
+  };
+
+  const handleConfirmToggleStatus = async () => {
+    if (!accountToToggle) return;
+    setToggleLoading(true);
+    try {
+      const actionText = accountToToggle.status === 'ACTIVE' ? 'khóa' : 'kích hoạt';
+      const res = await toggleAccountStatus(accountToToggle.id, accountToToggle.status);
+      if (res.ok) {
+        toast.success(`Đã thực hiện ${actionText} tài khoản thành công`);
+        setToggleConfirmOpen(false);
+        setAccountToToggle(null);
+        await loadAccounts();
+      } else {
+        toast.error(res.message || 'Không thể thay đổi trạng thái tài khoản');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi kết nối khi thay đổi trạng thái');
+    } finally {
+      setToggleLoading(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto">
       {/* Page header */}
@@ -201,6 +232,7 @@ export default function AdminAccountManagementPage() {
         onRemoveFilterChip={handleRemoveChip}
         keyword={queryState.q || ''}
         onKeywordChange={(val) => updateQuery({ q: val, page: 1 })}
+        onCreateClick={() => setCreateOpen(true)}
       />
 
       <AdminAccountList
@@ -211,6 +243,7 @@ export default function AdminAccountManagementPage() {
         isFiltered={showReset || Boolean(queryState.q?.trim())}
         onEdit={openEditDialog}
         onView={openViewDialog}
+        onToggleStatus={handleToggleStatusClick}
         onClearFilters={handleReset}
       />
 
@@ -231,6 +264,28 @@ export default function AdminAccountManagementPage() {
         onSubmit={handleFormSubmit}
         saving={saving}
         mode={dialogMode}
+      />
+
+      <AdminAccountCreateDialog
+        open={createOpen}
+        onClose={() => {
+          if (creating) return;
+          setCreateOpen(false);
+        }}
+        onSubmit={handleCreateSubmit}
+        saving={creating}
+      />
+
+      <ConfirmDialog
+        open={toggleConfirmOpen}
+        onClose={() => !toggleLoading && setToggleConfirmOpen(false)}
+        onConfirm={handleConfirmToggleStatus}
+        loading={toggleLoading}
+        title="Xác nhận thay đổi trạng thái?"
+        message={`Bạn có chắc muốn thực hiện ${accountToToggle?.status === 'ACTIVE' ? 'khóa' : 'kích hoạt'} tài khoản này chứ?`}
+        confirmLabel="Đồng ý"
+        cancelLabel="Hủy"
+        destructive={accountToToggle?.status === 'ACTIVE'}
       />
 
 
