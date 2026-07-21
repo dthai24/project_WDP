@@ -323,12 +323,13 @@ function LessonIcon({ type }) {
 }
 
 function CurriculumSection({ modules, isEnrolled, course }) {
-  const [expandedIds, setExpandedIds] = useState(() => new Set(modules[0]?.id ? [modules[0].id] : []));
+  const [expandedIds, setExpandedIds] = useState(() => new Set(isEnrolled && modules[0]?.id ? [modules[0].id] : []));
   if (!modules?.length) return null;
 
-  const allExpanded = modules.every((m) => expandedIds.has(m.id));
+  const allExpanded = isEnrolled && modules.every((m) => expandedIds.has(m.id));
 
   const toggleModule = (id) => {
+    if (!isEnrolled) return;
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -338,6 +339,7 @@ function CurriculumSection({ modules, isEnrolled, course }) {
   };
 
   const toggleAll = () => {
+    if (!isEnrolled) return;
     if (allExpanded) setExpandedIds(new Set());
     else setExpandedIds(new Set(modules.map((m) => m.id)));
   };
@@ -352,91 +354,114 @@ function CurriculumSection({ modules, isEnrolled, course }) {
             {course.stageCount} chapters &middot; {course.lessonCount} lessons
           </p>
         </div>
-        <button
-          onClick={toggleAll}
-          className="shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
-        >
-          {allExpanded ? <ArrowsIn size={18} /> : <ArrowsOut size={18} />}
-        </button>
+        {isEnrolled && (
+          <button
+            onClick={toggleAll}
+            className="shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
+          >
+            {allExpanded ? <ArrowsIn size={18} /> : <ArrowsOut size={18} />}
+          </button>
+        )}
       </div>
 
-      {modules.map((mod, index) => {
-        const isOpen = expandedIds.has(mod.id);
-        return (
-          <div
-            key={mod.id}
-            className="border-b border-slate-100 last:border-b-0"
-          >
-            {/* Module Header */}
-            <button
-              onClick={() => toggleModule(mod.id)}
-              className="w-full flex items-center gap-3 py-3 px-0 text-left transition-colors hover:bg-brand-50/30 rounded-lg -mx-1 px-1"
+      <div className={!isEnrolled ? "opacity-75 pointer-events-none select-none" : ""}>
+        {modules.map((mod, index) => {
+          const isOpen = isEnrolled && expandedIds.has(mod.id);
+          return (
+            <div
+              key={mod.id}
+              className="border-b border-slate-100 last:border-b-0"
             >
-              <span className="text-xs font-bold text-slate-400 min-w-[20px] shrink-0">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 leading-snug">{mod.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{mod.lessonCount} lessons</p>
-              </div>
-              <CaretDown
-                size={16}
-                weight="bold"
-                className={`text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {/* Module Content */}
-            {isOpen && (
-              <div className="pb-3 pl-9">
-                {mod.description && (
-                  <div className="pb-3 mb-1 border-b border-slate-50">
-                    <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">
-                      {mod.description}
-                    </p>
-                  </div>
+              {/* Module Header */}
+              <button
+                onClick={() => toggleModule(mod.id)}
+                disabled={!isEnrolled}
+                className={`w-full flex items-center gap-3 py-3 px-0 text-left transition-colors rounded-lg -mx-1 px-1 ${
+                  isEnrolled ? "hover:bg-brand-50/30 cursor-pointer" : "cursor-default"
+                }`}
+              >
+                <span className="text-xs font-bold text-slate-400 min-w-[20px] shrink-0">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-900 leading-snug">{mod.title}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{mod.lessonCount} lessons</p>
+                </div>
+                {isEnrolled ? (
+                  <CaretDown
+                    size={16}
+                    weight="bold"
+                    className={`text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                  />
+                ) : (
+                  <Lock size={15} className="text-slate-400 shrink-0" />
                 )}
-                {mod.lessons.map((lesson, lessonIndex) => {
-                  const isLocked = !isEnrolled && !lesson.isPreview;
-                  return (
-                    <div
-                      key={lesson.id}
-                      className={`flex items-center gap-2 py-2.5 ${
-                        lessonIndex > 0 ? "border-t border-slate-50" : ""
-                      } ${isLocked ? "opacity-50" : ""} transition-colors ${
-                        isLocked ? "" : "hover:bg-brand-50/30 rounded-lg -mx-1 px-1"
-                      }`}
-                    >
-                      {isLocked ? (
-                        <Lock size={15} className="text-slate-400 shrink-0" />
-                      ) : (
-                        <LessonIcon type={lesson.type} />
-                      )}
-                      <span
-                        className={`flex-1 text-xs leading-snug ${
-                          isLocked ? "text-slate-500" : lesson.isCompleted ? "text-slate-900 font-semibold" : "text-slate-700"
+              </button>
+
+              {/* Module Content */}
+              {isOpen && (
+                <div className="pb-3 pl-9">
+                  {mod.description && (
+                    <div className="pb-3 mb-1 border-b border-slate-50">
+                      <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">
+                        {mod.description}
+                      </p>
+                    </div>
+                  )}
+                  {mod.lessons.map((lesson, lessonIndex) => {
+                    const isLocked = !isEnrolled && !lesson.isPreview;
+                    return (
+                      <div
+                        key={lesson.id}
+                        className={`flex items-center gap-2 py-2.5 ${
+                          lessonIndex > 0 ? "border-t border-slate-50" : ""
+                        } ${isLocked ? "opacity-50" : ""} transition-colors ${
+                          isLocked ? "" : "hover:bg-brand-50/30 rounded-lg -mx-1 px-1"
                         }`}
                       >
-                        {lesson.title}
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {lesson.isPreview && !isEnrolled && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200">
-                            Preview
-                          </span>
+                        {isLocked ? (
+                          <Lock size={15} className="text-slate-400 shrink-0" />
+                        ) : (
+                          <LessonIcon type={lesson.type} />
                         )}
-                        {lesson.isCompleted && (
-                          <CheckCircle size={14} weight="fill" className="text-emerald-500" />
-                        )}
+                        <span
+                          className={`flex-1 text-xs leading-snug ${
+                            isLocked ? "text-slate-500" : lesson.isCompleted ? "text-slate-900 font-semibold" : "text-slate-700"
+                          }`}
+                        >
+                          {lesson.title}
+                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {lesson.isPreview && !isEnrolled && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200">
+                              Preview
+                            </span>
+                          )}
+                          {lesson.isCompleted && (
+                            <CheckCircle size={14} weight="fill" className="text-emerald-500" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {!isEnrolled && (
+        <div className="mt-5 p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex items-start gap-3">
+          <Lock size={18} className="text-slate-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-slate-800">Nội dung chi tiết khóa học đã được khóa</p>
+            <p className="text-[11.5px] text-slate-500 mt-1 leading-relaxed">
+              Bạn cần tham gia hoặc đăng ký mua khóa học này để có thể mở khóa xem chi tiết lộ trình bài học, xem các video bài giảng chất lượng cao, tải về tài liệu và tham gia làm bài tập trắc nghiệm.
+            </p>
           </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   );
 }

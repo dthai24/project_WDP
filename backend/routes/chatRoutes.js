@@ -3,6 +3,9 @@ const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Course = require("../models/MongoDB/Course");
 const Category = require("../models/MongoDB/Category");
+const User = require("../models/MongoDB/User");
+const UserRole = require("../models/MongoDB/UserRole");
+const mongoose = require("mongoose");
 
 const SYSTEM_PROMPT = `Bạn là EM Assistant - trợ lý AI chính thức của nền tảng học tiếng Anh English Master.
 
@@ -158,16 +161,25 @@ router.post("/chat", async (req, res) => {
   // Dynamic database knowledge retrieval
   let dbKnowledge = "";
   try {
-    const courses = await Course.find({ status: "Active" }).select("courseName description rating");
-    const categories = await Category.find().select("categoryName displayName");
+    const categories = await Category.find().select("categoryName displayName").lean();
+    const courses = await Course.find({ isPublished: true }).select("courseName description rating").lean();
+    
+    // Query mentors (users with roleId: 6a42b0c8e3c24fb9bdb8d052)
+    const mentorRoleId = new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052");
+    const mentorUserRoles = await UserRole.find({ roleId: mentorRoleId }).select("userId").lean();
+    const mentorUserIds = mentorUserRoles.map(ur => ur.userId);
+    const mentors = await User.find({ _id: { $in: mentorUserIds }, isActive: true }).select("fullName email").lean();
 
-    if (courses.length > 0 || categories.length > 0) {
-      dbKnowledge = "\n";
+    if (categories.length > 0 || courses.length > 0 || mentors.length > 0) {
+      dbKnowledge = "\n\nTHÔNG TIN DỮ LIỆU THỰC TẾ TRÊN HỆ THỐNG:\n";
       if (categories.length > 0) {
-        dbKnowledge += "• Danh mục: " + categories.map(c => `${c.displayName || c.categoryName}`).join(", ") + "\n";
+        dbKnowledge += `- Các danh mục học tập (${categories.length}): ` + categories.map(c => c.displayName || c.categoryName).join(", ") + "\n";
       }
       if (courses.length > 0) {
-        dbKnowledge += "• Khóa học hiện có: " + courses.map(c => `"${c.courseName}"`).join(", ") + "\n";
+        dbKnowledge += `- Các khóa học hiện có (${courses.length}): ` + courses.map(c => `"${c.courseName}"`).join(", ") + "\n";
+      }
+      if (mentors.length > 0) {
+        dbKnowledge += `- Đội ngũ Mentor hướng dẫn (${mentors.length}): ` + mentors.map(m => `${m.fullName} (${m.email})`).join(", ") + "\n";
       }
     }
   } catch (dbErr) {

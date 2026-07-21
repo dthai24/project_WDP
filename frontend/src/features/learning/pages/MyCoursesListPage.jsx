@@ -230,6 +230,7 @@ export default function MyCoursesListPage() {
             enrollmentDate: enrolled ? enrolled.enrollmentDate : null,
             quizDoneCount: enrolled ? enrolled.quizDoneCount : 0,
             chapterCount: c.chapterCount ?? 0,
+            certificateCode: enrolled ? enrolled.certificateCode : null,
           };
         });
 

@@ -42,6 +42,7 @@ export default function AdminApplicationsPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [rejectFormOpen, setRejectFormOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   
   // Rejection state
   const [selectedTags, setSelectedTags] = useState([]);
@@ -294,14 +295,41 @@ export default function AdminApplicationsPage() {
               </Box>
 
               <Box>
-                <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 0.5 }}>Tài liệu minh chứng</Typography>
+                <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 1 }}>Tài liệu minh chứng / Chứng chỉ</Typography>
                 {selectedApp.evidence?.startsWith('http') ? (
-                  <Link href={selectedApp.evidence} target="_blank" rel="noopener" sx={{ fontSize: 13.5, fontWeight: 600, color: PRIMARY, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}>
-                    Xem liên kết minh chứng (Google Drive / Dropbox) &rarr;
-                  </Link>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'flex-start' }}>
+                    {/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(selectedApp.evidence) && (
+                      <Box
+                        component="img"
+                        src={selectedApp.evidence}
+                        onClick={() => setLightboxOpen(true)}
+                        sx={{
+                          maxHeight: 140,
+                          maxWidth: '100%',
+                          borderRadius: '8px',
+                          cursor: 'zoom-in',
+                          border: '1px solid rgba(15,23,42,0.1)',
+                          objectFit: 'contain',
+                          '&:hover': { opacity: 0.85, borderColor: '#7C3AED' },
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                      />
+                    )}
+                    <AppButton
+                      component="a"
+                      href={selectedApp.evidence}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="outlined"
+                      size="small"
+                      sx={{ textTransform: 'none', fontWeight: 700, display: 'inline-flex', width: 'auto' }}
+                    >
+                      Mở tài liệu xác minh &rarr;
+                    </AppButton>
+                  </Box>
                 ) : (
                   <Typography sx={{ fontSize: 13, color: TEXT, bgcolor: 'rgba(15,23,42,0.02)', p: 1.5, borderRadius: '8px', border: '1px solid rgba(15,23,42,0.06)', whiteSpace: 'pre-wrap' }}>
-                    {selectedApp.evidence}
+                    {selectedApp.evidence || 'Không có chứng chỉ đính kèm.'}
                   </Typography>
                 )}
               </Box>
@@ -441,6 +469,39 @@ export default function AdminApplicationsPage() {
             Từ chối đơn ứng tuyển
           </AppButton>
         </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        slotProps={{
+          backdrop: {
+            sx: {
+              backdropFilter: 'blur(8px)',
+              backgroundColor: alpha('#0F172A', 0.85),
+            },
+          },
+        }}
+      >
+        <DialogContent sx={{ p: 0.5, bgcolor: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative' }}>
+          <IconButton
+            onClick={() => setLightboxOpen(false)}
+            sx={{ position: 'absolute', top: 10, right: 10, color: '#fff', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' }, zIndex: 10 }}
+          >
+            <CloseRoundedIcon />
+          </IconButton>
+          <Box
+            component="img"
+            src={selectedApp?.evidence}
+            sx={{
+              maxWidth: '100%',
+              maxHeight: '85vh',
+              objectFit: 'contain',
+            }}
+          />
+        </DialogContent>
       </Dialog>
     </div>
   );

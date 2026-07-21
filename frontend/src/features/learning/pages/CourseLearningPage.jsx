@@ -61,6 +61,7 @@ import {
   Star,
   ThumbsUp,
   Chats,
+  Lock,
 } from "@phosphor-icons/react";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
@@ -332,6 +333,7 @@ function LessonItem({ lesson, isActive, onSelect }) {
   const cfg = TYPE_CONFIG[lesson.type] ?? TYPE_CONFIG.reading;
   const Icon = cfg.icon;
   const isCompleted = lesson.status === "completed";
+  const isLocked = lesson.locked === true;
 
   return (
     <button
@@ -340,7 +342,9 @@ function LessonItem({ lesson, isActive, onSelect }) {
       className={`
         w-full flex items-start gap-2.5 py-2.5 px-3 rounded-xl text-left
         transition-all duration-150 font-sans
-        ${isActive
+        ${isLocked
+          ? "opacity-60 hover:bg-slate-50/20"
+          : isActive
           ? "bg-emerald-50 shadow-sm border border-emerald-200/60"
           : "hover:bg-slate-50 border border-transparent"
         }
@@ -348,7 +352,9 @@ function LessonItem({ lesson, isActive, onSelect }) {
     >
       {/* Status icon */}
       <span className="pt-0.5 flex-shrink-0">
-        {isCompleted ? (
+        {isLocked ? (
+          <Lock size={18} className="text-slate-400" weight="fill" />
+        ) : isCompleted ? (
           <CheckCircle size={18} className="text-emerald-500" weight="fill" />
         ) : isActive ? (
           <PlayCircle size={18} className="text-emerald-500" weight="fill" />
@@ -361,14 +367,18 @@ function LessonItem({ lesson, isActive, onSelect }) {
       <span className="flex-1 min-w-0">
         <span
           className={`block text-[13px] leading-snug ${
-            isActive ? "font-semibold text-emerald-700" : "font-medium text-slate-800"
+            isLocked
+              ? "font-medium text-slate-500"
+              : isActive
+              ? "font-semibold text-emerald-700"
+              : "font-medium text-slate-800"
           }`}
         >
-          Bài {lesson.index}: {lesson.title}
+          Bài {lesson.index}: {lesson.title} {isLocked && "🔒"}
         </span>
         <span className="flex items-center gap-1 mt-1">
-          <Icon size={11} className={cfg.color} />
-          <span className="text-[11px] text-slate-400">{lesson.duration}</span>
+          <Icon size={11} className={isLocked ? "text-slate-400" : cfg.color} />
+          <span className="text-[11px] text-slate-400">{lesson.duration || "10 phút"}</span>
         </span>
       </span>
     </button>
@@ -797,6 +807,7 @@ export default function CourseLearningPage() {
     return localStorage.getItem(`enrollmentType_${courseId}`) || null;
   });
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showPaymentRedirectModal, setShowPaymentRedirectModal] = useState(false);
   const [activeTab, setActiveTab] = useState("lessons"); // "lessons" | "quizzes" | "peerReview" | "forum"
 
   // Notes state
@@ -960,6 +971,7 @@ export default function CourseLearningPage() {
                   fileSize: m.fileSize,
                 })),
                 duration: "10 phút",
+                locked: lesson.locked ?? false,
               };
             }),
           }));
@@ -1073,7 +1085,14 @@ export default function CourseLearningPage() {
     }
   };
 
-  const handleSelectLesson = (id) => setCurrentLessonId(id);
+  const handleSelectLesson = (id) => {
+    const target = allLessons.find(l => l.id === id);
+    if (target?.locked) {
+      setShowPaymentRedirectModal(true);
+      return;
+    }
+    setCurrentLessonId(id);
+  };
   const handlePrev = () => {
     if (currentIndex > 0) handleSelectLesson(allLessons[currentIndex - 1].id);
   };
@@ -1444,6 +1463,14 @@ export default function CourseLearningPage() {
                       return (
                         <div
                           key={file.id}
+                          onClick={() => {
+                            if (file.url) {
+                              const targetUrl = file.url.startsWith('/')
+                                ? `http://localhost:5050${file.url}`
+                                : file.url;
+                              window.open(targetUrl, '_blank');
+                            }
+                          }}
                           className="flex items-center gap-2.5 py-2 px-3 rounded-xl border border-slate-100
                             hover:border-emerald-200/60 hover:bg-emerald-50/30 transition-all cursor-pointer group"
                         >
@@ -2268,33 +2295,46 @@ export default function CourseLearningPage() {
       {/* ─── MODAL 2: CHỨNG CHỈ SỐ HOÀN THÀNH KHÓA HỌC (Certificate Modal) ─── */}
       {showCertModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl font-sans relative border-4 border-emerald-600/30">
+          <style dangerouslySetInnerHTML={{ __html: `
+            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap');
+            .cert-modal-cinzel { font-family: 'Cinzel', serif; }
+            .cert-modal-playfair { font-family: 'Playfair Display', serif; }
+          `}} />
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl font-sans relative border-4 border-slate-850">
             
-            <div className="border border-slate-150 p-6 rounded-2xl bg-slate-50 text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/30 rounded-full blur-2xl" />
+            <div className="border-[10px] border-[#1E293B] p-6 rounded-2xl bg-[#FAF8F5] text-center relative overflow-hidden">
+              <div className="absolute inset-1 border border-[#D97706]/40 pointer-events-none"></div>
               
-              <Certificate size={48} className="text-emerald-600 mx-auto mb-3" />
-              <h4 className="text-sm font-black text-emerald-700 tracking-wider uppercase mb-1">CHỨNG CHỈ HOÀN THÀNH</h4>
-              <p className="text-[10px] text-slate-400 tracking-widest uppercase mb-6">ĐƯỢC CẤP BỞI ENGLISH MASTER & COURSERA</p>
+              <div className="absolute top-2 left-2 w-4 h-4 border-t border-l border-[#D97706] pointer-events-none"></div>
+              <div className="absolute top-2 right-2 w-4 h-4 border-t border-r border-[#D97706] pointer-events-none"></div>
+              <div className="absolute bottom-2 left-2 w-4 h-4 border-b border-l border-[#D97706] pointer-events-none"></div>
+              <div className="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-[#D97706] pointer-events-none"></div>
 
-              <p className="text-xs text-slate-500 italic mb-1">Chứng nhận học viên:</p>
-              <h3 className="text-lg font-black text-slate-800 mb-2 border-b border-slate-200 pb-2 max-w-xs mx-auto">
+              <GraduationCap className="text-[#D97706] mx-auto mb-2" size={36} weight="fill" />
+              <h4 className="cert-modal-cinzel text-sm font-bold text-slate-800 tracking-widest uppercase mb-0.5">English Master</h4>
+              <p className="text-[7px] text-slate-400 tracking-widest uppercase mb-5 font-semibold">Education Excellence Platform</p>
+
+              <p className="text-[10px] text-slate-400 italic mb-1 cert-modal-playfair">This is to certify that</p>
+              <h3 className="cert-modal-playfair text-xl font-bold text-[#78350F] mb-3 pb-1 max-w-xs mx-auto">
                 {user.fullName || "Lê Văn Student"}
               </h3>
 
-              <p className="text-xs text-slate-500 mb-2">Đã hoàn thành xuất sắc khóa học trực tuyến:</p>
-              <h4 className="text-sm font-extrabold text-slate-800 mb-6">
+              <p className="text-[10px] text-slate-500 mb-2">has successfully completed the online course</p>
+              <h4 className="cert-modal-cinzel text-xs font-bold text-slate-800 mb-6 leading-snug">
                 {courseInfo.courseTitle}
               </h4>
 
-              <div className="flex justify-between items-center text-[10px] text-slate-400 px-6">
-                <div>
-                  <p className="font-bold text-slate-500">{courseInfo.instructor || "Trần Văn Mentor"}</p>
-                  <p className="border-t border-slate-200 pt-0.5 mt-0.5">Giảng viên hướng dẫn</p>
+              <div className="flex justify-between items-center text-[8px] text-slate-400 px-4 mt-4 border-t border-slate-100/50 pt-3">
+                <div className="text-left">
+                  <p className="font-bold text-slate-700">{courseInfo.instructor || "Nguyen Thuy Anh"}</p>
+                  <p>Academic Director</p>
                 </div>
-                <div>
-                  <p className="font-bold text-slate-500">{new Date().toLocaleDateString('vi-VN')}</p>
-                  <p className="border-t border-slate-200 pt-0.5 mt-0.5">Ngày cấp chứng chỉ</p>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center border border-yellow-200 shadow-sm">
+                  <GraduationCap size={16} weight="fill" className="text-white" />
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-700">{new Date().toLocaleDateString('vi-VN')}</p>
+                  <p>Date Issued</p>
                 </div>
               </div>
             </div>
@@ -2363,6 +2403,45 @@ export default function CourseLearningPage() {
             >
               Gửi nhận xét
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 4: THÔNG BÁO MỞ KHÓA KHÓA HỌC TRẢ PHÍ (Payment Redirect Modal) ─── */}
+      {showPaymentRedirectModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl font-sans text-center relative border border-slate-100 animate-scaleUp">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-100">
+              <Lock size={26} weight="fill" />
+            </div>
+            
+            <h3 className="text-base font-extrabold text-slate-800 mb-2">
+              Nội dung bài học đã bị khóa 🔒
+            </h3>
+            
+            <p className="text-[12px] text-slate-400 leading-relaxed mb-6">
+              Bài học này nằm ở phần bài giảng nâng cao có phí. Quý khách vui lòng thanh toán mua khóa học để mở khóa toàn bộ giáo trình và nhận chứng chỉ chính thức!
+            </p>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowPaymentRedirectModal(false)}
+                className="py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentRedirectModal(false);
+                  navigate(`/payment/${courseId}`);
+                }}
+                className="py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-amber-500/20"
+              >
+                Mua khóa học
+              </button>
+            </div>
           </div>
         </div>
       )}
