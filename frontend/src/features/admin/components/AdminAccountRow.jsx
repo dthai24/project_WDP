@@ -6,6 +6,7 @@ import {
   Tooltip,
   Typography,
   alpha,
+  Switch,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
@@ -53,7 +54,7 @@ function DesktopValue({ value }) {
   );
 }
 
-export default function AdminAccountRow({ account, onEdit, onView }) {
+export default function AdminAccountRow({ account, onEdit, onView, onToggleStatus }) {
   const roleSx = ADMIN_ACCOUNT_ROLE_CHIP_SX[account.role] ?? ADMIN_ACCOUNT_ROLE_CHIP_SX.Student;
   const statusSx = ADMIN_ACCOUNT_STATUS_CHIP_SX[account.status] ?? ADMIN_ACCOUNT_STATUS_CHIP_SX.ACTIVE;
 
@@ -128,7 +129,7 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
         />
       </Box>
 
-      <Box sx={{ justifySelf: 'start' }}>
+      <Box sx={{ justifySelf: 'start', display: 'flex', alignItems: 'center', gap: 1 }}>
         <MobileField
           label="Trạng thái"
           value={ADMIN_ACCOUNT_STATUS_LABELS[account.status] ?? account.status}
@@ -140,6 +141,15 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
             ...PILL_CHIP_SX,
             ...statusSx,
             display: { xs: 'none', md: 'inline-flex' },
+          }}
+        />
+        <Switch
+          size="small"
+          checked={account.status === 'ACTIVE'}
+          onChange={() => onToggleStatus?.(account)}
+          sx={{
+            '& .MuiSwitch-switchBase.Mui-checked': { color: '#047857' },
+            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#047857' }
           }}
         />
       </Box>

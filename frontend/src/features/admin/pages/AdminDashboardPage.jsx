@@ -16,6 +16,7 @@ import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutli
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import BookOutlinedIcon from '@mui/icons-material/BookOutlined';
+import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
 import { toast } from '@/shared/ui/Toast';
 import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
@@ -53,8 +54,9 @@ export default function AdminDashboardPage() {
     fetchStats();
   }, [fetchStats]);
 
-  const MetricCard = ({ title, value, icon, color }) => (
+  const MetricCard = ({ title, value, icon, color, path }) => (
     <Card
+      onClick={() => path && navigate(path)}
       sx={{
         p: 3,
         borderRadius: '16px',
@@ -62,7 +64,14 @@ export default function AdminDashboardPage() {
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01)',
         position: 'relative',
         overflow: 'hidden',
-        background: '#fff'
+        background: '#fff',
+        cursor: path ? 'pointer' : 'default',
+        transition: 'all 0.2s ease',
+        '&:hover': path ? {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)',
+          borderColor: alpha(color, 0.3)
+        } : {}
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -120,36 +129,48 @@ export default function AdminDashboardPage() {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {/* Metrics Grid */}
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4} lg={2.4}>
               <MetricCard
                 title="TỔNG THÀNH VIÊN"
                 value={stats?.totalUsers || 0}
                 icon={<PeopleAltOutlinedIcon />}
                 color="#0891B2"
+                path="/admin/accounts"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4} lg={2.4}>
               <MetricCard
                 title="TỔNG KHÓA HỌC"
                 value={stats?.totalCourses || 0}
                 icon={<MenuBookOutlinedIcon />}
                 color="#F59E0B"
+                path="/admin/courses"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4} lg={2.4}>
               <MetricCard
                 title="HỌC VIÊN ĐĂNG KÝ"
                 value={stats?.totalEnrollments || 0}
                 icon={<CheckCircleOutlineOutlinedIcon />}
                 color="#10B981"
+                path="/admin/accounts?role=Student"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4} lg={2.4}>
               <MetricCard
                 title="KHÓA HỌC XUẤT BẢN"
                 value={stats?.publishedCourses || 0}
-                icon={<MenuBookOutlinedIcon />}
+                icon={<BookOutlinedIcon />}
                 color="#8B5CF6"
+                path="/admin/courses"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4} lg={2.4}>
+              <MetricCard
+                title="DOANH THU HỆ THỐNG"
+                value={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 }).format(stats?.totalRevenue || 0)}
+                icon={<MonetizationOnOutlinedIcon />}
+                color="#0D9488"
               />
             </Grid>
           </Grid>

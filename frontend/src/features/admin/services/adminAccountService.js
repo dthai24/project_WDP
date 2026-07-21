@@ -1,7 +1,7 @@
 /**
  * Admin Account Service — calls real backend APIs.
  */
-import { apiGet, apiPost, apiPut } from '@/features/admin/services/adminApiClient';
+import { apiGet, apiPost, apiPut, apiPatch } from '@/features/admin/services/adminApiClient';
 
 /**
  * Map a backend user record to the frontend account shape.
@@ -103,8 +103,12 @@ export async function updateAccount(id, payload) {
   return { ok: true, account };
 }
 
-export async function toggleAccountStatus(id) {
-  return { ok: true, message: 'Đã cập nhật trạng thái tài khoản' };
+export async function toggleAccountStatus(id, currentStatus) {
+  const newIsActive = currentStatus !== 'ACTIVE';
+  const res = await apiPatch(`/users/${id}/status`, { IsActive: newIsActive });
+  if (!res.ok) return { ok: false, message: res.message || 'Không thể chuyển trạng thái tài khoản' };
+  const account = res.data ? mapUserToAccount(res.data) : null;
+  return { ok: true, message: res.message || 'Đã chuyển trạng thái tài khoản thành công', account };
 }
 
 export async function resetAccountPassword(id) {
