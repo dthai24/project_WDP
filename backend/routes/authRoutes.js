@@ -4,6 +4,7 @@ const {
   login,
   register,
   verifyOtp,
+  resendOtp,
   saveOnboarding,
   forgotPassword,
   resetPassword,
@@ -17,6 +18,9 @@ router.post('/register', register);
 
 // POST /api/auth/verify-otp — xác thực OTP đăng ký
 router.post('/verify-otp', verifyOtp);
+
+// POST /api/auth/resend-otp — gửi lại mã OTP đăng ký
+router.post('/resend-otp', resendOtp);
 
 
 // POST /api/auth/onboarding — lưu kết quả khảo sát 3 bước

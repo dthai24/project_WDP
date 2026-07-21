@@ -673,11 +673,12 @@ const approveApplication = async (req, res) => {
     if (!user) {
       // 2. GUEST FLOW: Tạo tài khoản mới, cấp mật khẩu ngẫu nhiên 12 ký tự
       randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4);
-      
+      const hashedRandomPassword = await bcrypt.hash(randomPassword, 10);
+
       user = await User.create({
         fullName: app.fullName || app.name || 'Mentor User',
         email: app.email.toLowerCase(),
-        password: randomPassword,
+        password: hashedRandomPassword,
         isActive: true,
       });
 

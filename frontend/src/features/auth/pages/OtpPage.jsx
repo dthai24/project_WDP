@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CircularProgress from '@mui/material/CircularProgress';
-import { verifyOtpApi } from '@/features/auth/services/authService';
+import { verifyOtpApi, resendOtpApi } from '@/features/auth/services/authService';
 import Logo from '@/shared/ui/Logo';
 import { toast } from '@/shared/ui/Toast';
 import '@/shared/styles/auth.css';
@@ -100,9 +100,23 @@ export default function OtpPage() {
     if (resendingRef.current) return;
     resendingRef.current = true;
     setResending(true);
-    toast.error('Vui lòng quay lại trang Đăng ký để gửi lại OTP.');
-    resendingRef.current = false;
-    setResending(false);
+
+    try {
+      const { ok, data } = await resendOtpApi(email);
+      if (ok && data.success) {
+        toast.success(data.message || 'Đã gửi lại mã OTP.');
+        setDigits(Array(OTP_LENGTH).fill(''));
+        setTimeLeft(OTP_SECONDS);
+        inputRefs.current[0]?.focus();
+      } else {
+        toast.error(data.message || 'Không thể gửi lại mã OTP.');
+      }
+    } catch {
+      toast.error('Không thể kết nối server.');
+    } finally {
+      resendingRef.current = false;
+      setResending(false);
+    }
   };
 
   const isDisabled = isSubmitting || timeLeft <= 0;

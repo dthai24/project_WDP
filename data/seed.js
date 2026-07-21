@@ -13,6 +13,8 @@
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", "backend", ".env") });
 
+const bcrypt = require("bcryptjs");
+
 const Role = require("../backend/Models/MongoDB/Role");
 const UserRole = require("../backend/Models/MongoDB/UserRole");
 const User = require("../backend/Models/MongoDB/User");
@@ -104,8 +106,8 @@ function buildRoles() {
 // ═══════════════════════════════════════════════════════════════════════
 // 2. USERS + USER_ROLES
 // ═══════════════════════════════════════════════════════════════════════
-function buildUsers() {
-  return [
+async function buildUsers() {
+  const users = [
     {
       _id: IDS.adminUser,
       fullName: "Admin WDP",
@@ -216,6 +218,12 @@ function buildUsers() {
       createdAt: daysAgo(20),
     },
   ];
+
+  // Hash mật khẩu (bcrypt) trước khi lưu, khớp cách backend hash khi đăng ký/đổi mật khẩu thật
+  for (const user of users) {
+    user.password = await bcrypt.hash(user.password, 10);
+  }
+  return users;
 }
 
 function buildUserRoles() {
@@ -711,7 +719,7 @@ async function main() {
   await Role.insertMany(buildRoles());
   console.log(`  ✅ roles`);
 
-  await User.insertMany(buildUsers());
+  await User.insertMany(await buildUsers());
   console.log(`  ✅ users`);
 
   await UserRole.insertMany(buildUserRoles());
@@ -759,7 +767,7 @@ async function main() {
   console.log("\n═══════════════════════════════════════════");
   console.log("  🎉 Seed hoàn tất! WDP English Platform");
   console.log("═══════════════════════════════════════════");
-  console.log("\n  📋 Tài khoản test (mật khẩu dạng text thường, khớp cách BE so sánh):");
+  console.log("\n  📋 Tài khoản test (mật khẩu lưu dạng hash bcrypt, đăng nhập bằng mật khẩu gốc bên dưới):");
   console.log("  ┌─────────────────────────────────────────────────┐");
   console.log("  │ ADMIN   admin@wdp.edu.vn        Admin@123        │");
   console.log("  │ MENTOR  mentor.anh@wdp.edu.vn    Mentor@123       │");
