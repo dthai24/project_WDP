@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, maxlength: 150, lowercase: true, trim: true },
   phone: { type: String, maxlength: 20 },
   password: { type: String, maxlength: 255 },
+  passwordHash: { type: String, maxlength: 255 },
   dateOfBirth: Date,
   isFirstLogin: { type: Boolean, default: true },
   resetOtpCode: { type: String, maxlength: 6 },
