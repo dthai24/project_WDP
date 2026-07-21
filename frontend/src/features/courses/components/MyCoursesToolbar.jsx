@@ -278,38 +278,9 @@ export default function MyCoursesToolbar({
   return (
     <Box
       sx={{
-        mb: 3,
-        pb: activeFilterChips.length ? 1.5 : 2,
-        borderBottom: "1px solid rgba(15,23,42,0.08)",
+        pb: activeFilterChips.length ? 1 : 0,
       }}
     >
-      {/* Status tabs — ưu tiên */}
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1.5 }}>
-        {STATUS_TABS.map((tab) => {
-          const active = statusTab === tab.value;
-
-          return (
-            <Chip
-              key={tab.value}
-              label={tab.label}
-              onClick={() => onStatusTabChange?.(tab.value)}
-              sx={{
-                height: 32,
-                fontSize: 13,
-                fontWeight: 600,
-                borderRadius: "99px",
-                cursor: "pointer",
-                bgcolor: active ? alpha(PRIMARY, 0.12) : "transparent",
-                color: active ? PRIMARY : MUTED,
-                border: `1px solid ${active ? alpha(PRIMARY, 0.28) : "rgba(100,116,139,0.2)"}`,
-                "&:hover": {
-                  bgcolor: active ? alpha(PRIMARY, 0.16) : alpha(PRIMARY, 0.06),
-                },
-              }}
-            />
-          );
-        })}
-      </Box>
 
       {/* Secondary filters */}
       <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>

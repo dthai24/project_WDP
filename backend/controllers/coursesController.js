@@ -112,8 +112,9 @@ const getStudentCourses = async (req, res) => {
     // Sort
     let sortOption = { createdAt: -1 }; // newest
     if (filters.sort === 'oldest') sortOption = { createdAt: 1 };
-    else if (filters.sort === 'rating') sortOption = { rating: -1 };
-    else if (filters.sort === 'name') sortOption = { courseName: 1 };
+    else if (filters.sort === 'rating' || filters.sort === 'popular') sortOption = { rating: -1, createdAt: -1 };
+    else if (filters.sort === 'name' || filters.sort === 'name_asc') sortOption = { courseName: 1 };
+    else if (filters.sort === 'name_desc') sortOption = { courseName: -1 };
 
     const courses = await Course.find(query)
       .populate('categoryId', 'displayName')

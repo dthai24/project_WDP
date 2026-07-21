@@ -1058,7 +1058,7 @@ export default function ProfilePage() {
                                   className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
                                 >
                                   <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
-                                  Xem chứng chỉ
+                                  Xem chứng nhận
                                 </Link>
                               )}
                             </div>
@@ -1072,8 +1072,8 @@ export default function ProfilePage() {
                 <StatRow
                   icon={WorkspacePremiumIcon}
                   iconColor="#d97706"
-                  label="Chứng chỉ của tôi"
-                  value={`${certificatesList.length} chứng chỉ`}
+                  label="Chứng nhận của tôi"
+                  value={`${certificatesList.length} chứng nhận`}
                   expandable={certificatesList.length > 0}
                   expanded={expandedStat === "certificates"}
                   onClick={() => setExpandedStat(prev => prev === "certificates" ? null : "certificates")}
@@ -1100,7 +1100,7 @@ export default function ProfilePage() {
                             className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
                           >
                             <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
-                            Xem chứng chỉ
+                            Xem chứng nhận
                           </Link>
                         </div>
                       </div>
@@ -1141,30 +1141,7 @@ export default function ProfilePage() {
                   Thay đổi
                 </AppButton>
               </div>
-              {(profile.role?.toLowerCase() === "student" || profile.role === "Hoc vien") && (
-                <div className="flex items-center gap-3 py-[6px] border-t border-slate-100 mt-2 pt-2">
-                  <PersonRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
-                  <span
-                    className="flex-1 text-[13px] font-semibold"
-                    style={{ color: TEXT }}
-                  >
-                    Ứng tuyển làm Mentor
-                  </span>
-                  <AppButton
-                    size="small"
-                    variant="contained"
-                    onClick={() => setApplyMentorOpen(true)}
-                    sx={{
-                      fontSize: 11,
-                      height: 28,
-                      px: 1.5,
-                      minWidth: "auto",
-                    }}
-                  >
-                    Đăng ký
-                  </AppButton>
-                </div>
-              )}
+
             </SectionCard>
           </div>
         </div>

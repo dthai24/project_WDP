@@ -86,9 +86,9 @@ function matchesKeyword(course, keyword) {
 
 function pickContinueCourse(courses) {
   const learning = courses
-    .filter((c) => c.enrollmentStatus === "learning")
-    .sort((a, b) => (a.lastActivityOrder ?? 99) - (b.lastActivityOrder ?? 99));
-  return learning[0] ?? null;
+    .filter((c) => c.enrollmentStatus === "learning" || c.progressPercentage > 0)
+    .sort((a, b) => (b.progressPercentage ?? 0) - (a.progressPercentage ?? 0));
+  return learning[0] ?? courses[0] ?? null;
 }
 
 export default function MyCoursesListPage() {
@@ -196,11 +196,22 @@ export default function MyCoursesListPage() {
           const courseId = c._id.toString();
           const enrolled = enrolledMap.get(courseId);
 
-          let progress = 0;
-          let status = "not_joined";
+          let progress = enrolled ? (enrolled.progress ?? 0) : 0;
 
-          if (enrolled) {
-            progress = enrolled.progress ?? 0;
+          // Real-time progress synchronization from LocalStorage
+          const localProgress1 = localStorage.getItem(`course_progress_${courseId}_${userId}`);
+          const localProgress2 = localStorage.getItem(`course_progress_${courseId}`);
+          if (localProgress1 != null || localProgress2 != null) {
+            const p1 = localProgress1 ? parseInt(localProgress1, 10) : 0;
+            const p2 = localProgress2 ? parseInt(localProgress2, 10) : 0;
+            const maxLocal = Math.max(isNaN(p1) ? 0 : p1, isNaN(p2) ? 0 : p2);
+            if (maxLocal > progress) {
+              progress = maxLocal;
+            }
+          }
+
+          let status = "not_joined";
+          if (enrolled || progress > 0) {
             if (progress >= 100) {
               status = "completed";
             } else if (progress > 0) {
@@ -334,108 +345,149 @@ export default function MyCoursesListPage() {
     navigate(`/my-courses/${course.courseId}/learn`);
   };
 
+  const stats = useMemo(() => {
+    let learning = 0;
+    let completed = 0;
+    let notStarted = 0;
+
+    allCourses.forEach((c) => {
+      if (c.enrollmentStatus === "completed") completed++;
+      else if (c.enrollmentStatus === "learning") learning++;
+      else notStarted++;
+    });
+
+    return { total: allCourses.length, learning, completed, notStarted };
+  }, [allCourses]);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* ── Breadcrumb ── */}
-      <nav className="flex items-center gap-2 text-[13px] mb-6">
-        <Link to="/home" className="text-slate-400 hover:text-emerald-600 font-medium transition-colors">
+      <nav className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-6">
+        <Link to="/home" className="hover:text-brand-600 transition-colors">
           Trang chủ
         </Link>
         <span className="text-slate-300">/</span>
-        <span className="text-slate-800 font-semibold">Khóa học của tôi</span>
+        <span className="text-slate-700 font-semibold">Khóa học của tôi</span>
       </nav>
 
-      {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 pb-2">
+      {/* ── Page Header & Stats Bar ── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-xs font-bold mb-2">
+            <Sparkle size={14} weight="fill" className="text-brand-500" />
+            <span>Lộ trình học cá nhân</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             Khóa học của tôi
           </h1>
-          <p className="text-[13.5px] text-slate-400 mt-1 font-medium">
-            Theo dõi lộ trình học tập và kiểm tra tiến độ của bạn
+          <p className="text-sm text-slate-500 mt-1 font-medium">
+            Theo dõi tiến độ, xem lại các khóa học dở dang và chinh phục mục tiêu tiếng Anh của bạn.
           </p>
         </div>
 
-        {/* Clean search bar */}
-        <div className="relative w-full md:w-80">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center">
-            <MagnifyingGlass size={16} className="text-slate-400" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            placeholder="Tìm nhanh khóa học..."
-            className="w-full bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl py-2.5 pl-10 pr-10 text-[13px] font-medium text-slate-700 outline-none transition-all focus:ring-4 focus:ring-emerald-500/10 shadow-inner-sm"
-          />
-          {searchQuery && (
-            <button
-              onClick={handleClearSearch}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-200 text-slate-400 transition-colors"
-            >
-              <X size={12} weight="bold" />
-            </button>
-          )}
+        {/* Stats Pills */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="bg-white border border-slate-100 shadow-sm rounded-2xl px-4 py-3 text-center min-w-[100px]">
+            <span className="block text-2xl font-black text-slate-900">{stats.total}</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng số</span>
+          </div>
+          <div className="bg-emerald-50/60 border border-emerald-100 shadow-sm rounded-2xl px-4 py-3 text-center min-w-[100px]">
+            <span className="block text-2xl font-black text-emerald-600">{stats.learning}</span>
+            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Đang học</span>
+          </div>
+          <div className="bg-brand-50/60 border border-brand-100 shadow-sm rounded-2xl px-4 py-3 text-center min-w-[100px]">
+            <span className="block text-2xl font-black text-brand-600">{stats.completed}</span>
+            <span className="text-[11px] font-bold text-brand-700 uppercase tracking-wider">Hoàn thành</span>
+          </div>
         </div>
       </div>
-
-      {/* ── Status Tabs (Segmented Control) ── */}
-      <div className="flex items-center gap-1 mb-5 bg-slate-100/60 rounded-xl p-1 border border-slate-200/50 w-fit">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => updateFilters({ statusTab: tab.value, page: 1 })}
-            className={`px-4.5 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
-              filters.statusTab === tab.value
-                ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
-                : "text-slate-500 hover:text-slate-700 border border-transparent"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Toolbar ── */}
-      <MyCoursesToolbar
-        statusTab={filters.statusTab}
-        onStatusTabChange={(value) => updateFilters({ statusTab: value, page: 1 })}
-        categories={filters.categories}
-        onCategoriesChange={(e) => updateFilters({ categories: e.target.value, page: 1 })}
-        categoryOptions={categoryOptions}
-        categoryCountMap={categoryCountMap}
-        levels={filters.levels}
-        onLevelsChange={(e) => updateFilters({ levels: e.target.value, page: 1 })}
-        levelOptions={levelOptions}
-        levelCountMap={levelCountMap}
-        sortBy={filters.sort}
-        onSortChange={(e) => updateFilters({ sort: e.target.value, page: 1 })}
-        sortOptions={SORT_OPTIONS}
-        totalCount={filteredCourses.length}
-        activeFilterChips={activeFilterChips}
-        onRemoveFilterChip={handleRemoveFilterChip}
-        showReset={showReset}
-        onReset={handleResetFilters}
-      />
-
 
       {/* ── Continue Section ── */}
       {showContinueSection && (
-        <div className="mb-5">
-          <MyCourseContinueSection
-            course={continueCourse}
-            onContinue={handleLearningAction}
-          />
-        </div>
+        <MyCourseContinueSection
+          course={continueCourse}
+          onContinue={handleLearningAction}
+        />
       )}
+
+      {/* ── Search Bar & Filter Section ── */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-xs mb-6 space-y-4">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+            {STATUS_TABS.map((tab) => {
+              const active = filters.statusTab === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => updateFilters({ statusTab: tab.value, page: 1 })}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                    active
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full md:w-80">
+            <MagnifyingGlass
+              size={16}
+              weight="bold"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Tìm tên khóa học, giảng viên..."
+              className="w-full bg-slate-50/80 border border-slate-200 focus:border-brand-500 focus:bg-white rounded-xl py-2 pl-9 pr-9 text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:ring-4 focus:ring-brand-500/10"
+            />
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              >
+                <X size={14} weight="bold" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Toolbar Dropdowns */}
+        <MyCoursesToolbar
+          statusTab={filters.statusTab}
+          onStatusTabChange={(value) => updateFilters({ statusTab: value, page: 1 })}
+          categories={filters.categories}
+          onCategoriesChange={(e) => updateFilters({ categories: e.target.value, page: 1 })}
+          categoryOptions={categoryOptions}
+          categoryCountMap={categoryCountMap}
+          levels={filters.levels}
+          onLevelsChange={(e) => updateFilters({ levels: e.target.value, page: 1 })}
+          levelOptions={levelOptions}
+          levelCountMap={levelCountMap}
+          sortBy={filters.sort}
+          onSortChange={(e) => updateFilters({ sort: e.target.value, page: 1 })}
+          sortOptions={SORT_OPTIONS}
+          totalCount={filteredCourses.length}
+          activeFilterChips={activeFilterChips}
+          onRemoveFilterChip={handleRemoveFilterChip}
+          showReset={showReset}
+          onReset={handleResetFilters}
+        />
+      </div>
 
       {/* ── Course List / Empty State ── */}
       {!hasAnyCourse || filteredCourses.length === 0 ? (
-        <div className="py-12 text-center rounded-2xl border border-slate-100 bg-slate-50/30">
+        <div className="py-16 text-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/50">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
-              <BookOpen size={32} className="text-emerald-400" />
+            <div className="w-16 h-16 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center shadow-sm">
+              <BookOpen size={32} className="text-brand-500" />
             </div>
           </div>
           <EmptyState
@@ -450,15 +502,15 @@ export default function MyCoursesListPage() {
                 ? keyword
                   ? "Thử từ khóa khác hoặc xóa bộ lọc để xem thêm khóa học."
                   : "Thử chọn bộ lọc khác để xem thêm khóa học."
-                : "Khám phá các khóa học phù hợp để bắt đầu lộ trình học."
+                : "Khám phá các khóa học phù hợp để bắt đầu lộ trình học của bạn."
             }
             actionLabel={hasAnyCourse ? "Xóa bộ lọc" : "Khám phá khóa học"}
             onAction={() => (hasAnyCourse ? handleResetFilters() : navigate("/courses"))}
           />
         </div>
       ) : (
-        <>
-          <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="space-y-3.5">
             {pageCourses.map((course) => (
               <MyCourseRow
                 key={course.courseId}
@@ -477,7 +529,7 @@ export default function MyCoursesListPage() {
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           />
-        </>
+        </div>
       )}
     </div>
   );

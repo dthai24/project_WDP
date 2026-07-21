@@ -46,7 +46,7 @@ const theme = createTheme({
     divider: alpha(OCEAN, 0.1),
   },
   typography: {
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
+    fontFamily: '"Be Vietnam Pro", "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     h4: { fontWeight: 600, letterSpacing: "-0.02em" },
     h5: { fontWeight: 600, letterSpacing: "-0.02em" },
     h6: { fontWeight: 600, letterSpacing: "-0.01em" },

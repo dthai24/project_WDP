@@ -516,12 +516,12 @@ export default function HomePage() {
             </div>
             
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-6 leading-tight">
-              Trở thành Giảng viên tại <br className="hidden sm:inline" />
+              Become an Instructor at <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-300 to-accent-300">English Master</span>
             </h2>
             
             <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
-              Chia sẻ chuyên môn, xây dựng lộ trình học tập độc đáo và truyền lửa đam mê tiếng Anh đến hàng ngàn học viên năng động. Chúng tôi đồng hành cùng bạn trên mọi bước đường giảng dạy.
+              Share your expertise, design unique learning paths, and inspire thousands of dynamic English learners. We walk alongside you on every step of your teaching journey.
             </p>
             
             <div className="space-y-4 mb-8">
@@ -529,19 +529,19 @@ export default function HomePage() {
                 <div className="w-6 h-6 rounded-full bg-brand-500/20 border border-brand-400/40 flex items-center justify-center shrink-0 mt-0.5 text-brand-300 font-bold">
                   ✓
                 </div>
-                <p className="text-sm sm:text-base text-slate-300 font-medium">Tự do xây dựng bài giảng & đặt giá khóa học linh hoạt</p>
+                <p className="text-sm sm:text-base text-slate-300 font-medium">Freedom to design your curriculum & flexible course pricing</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-brand-500/20 border border-brand-400/40 flex items-center justify-center shrink-0 mt-0.5 text-brand-300 font-bold">
                   ✓
                 </div>
-                <p className="text-sm sm:text-base text-slate-300 font-medium">Công cụ quản lý bài tập, ngân hàng câu hỏi thông minh</p>
+                <p className="text-sm sm:text-base text-slate-300 font-medium">Smart assignment management & question bank tools</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-brand-500/20 border border-brand-400/40 flex items-center justify-center shrink-0 mt-0.5 text-brand-300 font-bold">
                   ✓
                 </div>
-                <p className="text-sm sm:text-base text-slate-300 font-medium">Thu nhập hấp dẫn và cơ hội mở rộng tầm ảnh hưởng</p>
+                <p className="text-sm sm:text-base text-slate-300 font-medium">Attractive income & opportunities to expand your reach</p>
               </div>
             </div>
 
@@ -549,7 +549,7 @@ export default function HomePage() {
               to="/become-mentor"
               className="inline-flex items-center gap-2 px-8 py-4 bg-white text-slate-900 rounded-2xl text-base font-bold hover:bg-brand-50 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-black/20"
             >
-              Đăng ký ứng tuyển ngay
+              Apply Now
               <ArrowRight size={18} weight="bold" className="text-slate-900" />
             </Link>
           </div>
@@ -562,7 +562,7 @@ export default function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 right-6">
-              <p className="text-lg font-bold text-white mb-1">“Giảng dạy không chỉ là truyền đạt kiến thức, đó là kiến tạo tương lai.”</p>
+              <p className="text-lg font-bold text-white mb-1">“Teaching is not just about imparting knowledge; it is about shaping the future.”</p>
               <p className="text-xs text-brand-300 font-bold uppercase tracking-wider">Le Minh Tuan — English Master Mentor</p>
             </div>
           </div>
