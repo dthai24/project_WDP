@@ -78,6 +78,8 @@ export const registerApi = (formData) => apiAuthFetch('/register', formData);
 
 export const verifyOtpApi = (email, otpCode) => apiAuthFetch('/verify-otp', { email, otpCode });
 
+export const resendOtpApi = (email) => apiAuthFetch('/resend-otp', { email });
+
 export const getCategoriesApi = () => apiGet('/categories');
 
 export const getLevelsApi = () => apiGet('/levels');
