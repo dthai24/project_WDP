@@ -66,6 +66,7 @@ export function normalizeMentorCourseDetail(raw = {}) {
 export const MENTOR_COURSE_DETAIL_TABS = {
   COURSE: 'course',
   CONTENT: 'content',
+  QUIZZES: 'quizzes',
   STUDENTS: 'students',
   COMMENTS: 'comments',
 };
@@ -75,6 +76,9 @@ export function parseMentorCourseDetailTab(searchParams) {
 
   if (tab === MENTOR_COURSE_DETAIL_TABS.CONTENT) {
     return MENTOR_COURSE_DETAIL_TABS.CONTENT;
+  }
+  if (tab === MENTOR_COURSE_DETAIL_TABS.QUIZZES) {
+    return MENTOR_COURSE_DETAIL_TABS.QUIZZES;
   }
   if (tab === MENTOR_COURSE_DETAIL_TABS.STUDENTS) {
     return MENTOR_COURSE_DETAIL_TABS.STUDENTS;

@@ -32,6 +32,7 @@ export default function CourseListPage() {
 
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [levelsList, setLevelsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
@@ -39,22 +40,29 @@ export default function CourseListPage() {
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "popular");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch categories
+  // Fetch categories & levels
   useEffect(() => {
-    async function fetchCategories() {
+    async function fetchLookups() {
       try {
-        const res = await fetch("http://localhost:5050/api/lookups/categories");
+        const [catRes, levelRes] = await Promise.all([
+          fetch("http://localhost:5050/api/categories"),
+          fetch("http://localhost:5050/api/levels")
+        ]);
 
+        const catResult = await catRes.json();
+        if (catResult.success && Array.isArray(catResult.data)) {
+          setCategories(catResult.data);
+        }
 
-        const result = await res.json();
-        if (result.success && Array.isArray(result.data)) {
-          setCategories(result.data);
+        const levelResult = await levelRes.json();
+        if (levelResult.success && Array.isArray(levelResult.data)) {
+          setLevelsList(levelResult.data);
         }
       } catch (err) {
-        console.error("Failed to fetch categories:", err);
+        console.error("Failed to fetch lookups:", err);
       }
     }
-    fetchCategories();
+    fetchLookups();
   }, []);
 
   // Fetch courses
@@ -173,8 +181,8 @@ export default function CourseListPage() {
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
-                <option key={cat.CategoryId} value={String(cat.CategoryId)}>
-                  {cat.DisplayName || cat.CategoryName}
+                <option key={cat.categoryId} value={String(cat.categoryId)}>
+                  {cat.displayName}
                 </option>
               ))}
             </select>
@@ -192,9 +200,10 @@ export default function CourseListPage() {
               onChange={(e) => setSelectedLevel(e.target.value)}
               className="appearance-none pl-3.5 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all cursor-pointer hover:border-slate-300"
             >
-              {LEVELS.map((level) => (
-                <option key={level.value} value={level.value}>
-                  {level.label}
+              <option value="">All Levels</option>
+              {levelsList.map((level) => (
+                <option key={level.levelId} value={level.levelId}>
+                  {level.displayName}
                 </option>
               ))}
             </select>
@@ -252,8 +261,8 @@ export default function CourseListPage() {
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
-                <option key={cat.CategoryId} value={String(cat.CategoryId)}>
-                  {cat.DisplayName || cat.CategoryName}
+                <option key={cat.categoryId} value={String(cat.categoryId)}>
+                  {cat.displayName}
                 </option>
               ))}
             </select>
@@ -268,9 +277,10 @@ export default function CourseListPage() {
               onChange={(e) => setSelectedLevel(e.target.value)}
               className="w-full appearance-none px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200"
             >
-              {LEVELS.map((level) => (
-                <option key={level.value} value={level.value}>
-                  {level.label}
+              <option value="">All Levels</option>
+              {levelsList.map((level) => (
+                <option key={level.levelId} value={level.levelId}>
+                  {level.displayName}
                 </option>
               ))}
             </select>

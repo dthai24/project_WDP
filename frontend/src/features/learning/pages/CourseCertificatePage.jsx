@@ -26,7 +26,7 @@ export default function CourseCertificatePage() {
         if (res.success) {
           setCert(res.certificate);
         } else {
-          setError(res.message || 'Không tìm thấy chứng chỉ');
+          setError(res.message || 'Không tìm thấy chứng nhận');
         }
       } catch (err) {
         console.error('Error fetching certificate:', err);
@@ -53,7 +53,7 @@ export default function CourseCertificatePage() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-500 font-medium">Đang tải chứng chỉ...</p>
+          <p className="text-slate-500 font-medium">Đang tải chứng nhận...</p>
         </div>
       </div>
     );
@@ -68,8 +68,8 @@ export default function CourseCertificatePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 className="text-lg font-bold text-slate-800 mb-2">Chứng Chỉ Không Hợp Lệ</h3>
-          <p className="text-xs text-slate-400 mb-6">{error || 'Mã xác minh chứng chỉ không chính xác hoặc đã bị xóa.'}</p>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Chứng Nhận Không Hợp Lệ</h3>
+          <p className="text-xs text-slate-400 mb-6">{error || 'Mã xác minh chứng nhận không chính xác hoặc đã bị xóa.'}</p>
           <Link to="/" className="inline-flex items-center gap-1 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all decoration-none">
             <ArrowLeft size={16} /> Quay về Trang chủ
           </Link>
@@ -304,7 +304,7 @@ export default function CourseCertificatePage() {
               className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 font-bold rounded-2xl text-xs transition-all shadow-sm cursor-pointer"
             >
               <Copy size={16} />
-              {copied ? 'Đã sao chép liên kết!' : 'Chia sẻ chứng chỉ'}
+              {copied ? 'Đã sao chép liên kết!' : 'Chia sẻ chứng nhận'}
             </button>
             
             <button
@@ -312,7 +312,7 @@ export default function CourseCertificatePage() {
               className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs transition-all shadow-md cursor-pointer"
             >
               <Download size={16} />
-              Tải chứng chỉ (PDF/In)
+              Tải chứng nhận (PDF/In)
             </button>
           </div>
 

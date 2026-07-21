@@ -44,6 +44,7 @@ import { toast } from '@/shared/ui/Toast';
 import MentorCourseDetailHeader from '@/features/mentor/components/course/MentorCourseDetailHeader';
 import MentorCourseOverviewTab from '@/features/mentor/components/course/MentorCourseOverviewTab';
 import MentorCourseContentTab from '@/features/mentor/components/course/MentorCourseContentTab';
+import MentorCourseQuizzesTab from '@/features/mentor/components/course/MentorCourseQuizzesTab';
 import MentorCourseStudentsTab from '@/features/mentor/components/course/MentorCourseStudentsTab';
 import MentorCourseCommentsTab from '@/features/mentor/components/course/MentorCourseCommentsTab';
 import {
@@ -108,6 +109,9 @@ export default function MentorCourseDetailPage() {
       // ---------Content-----------
       case MENTOR_COURSE_DETAIL_TABS.CONTENT:
         return <MentorCourseContentTab course={course} />;
+      // ---------Quizzes / Assessment-----------
+      case MENTOR_COURSE_DETAIL_TABS.QUIZZES:
+        return <MentorCourseQuizzesTab course={course} />;
       // ---------Students-----------
       case MENTOR_COURSE_DETAIL_TABS.STUDENTS:
         return <MentorCourseStudentsTab courseId={course._id || course.CourseId} />;
