@@ -49,6 +49,8 @@ const validateEmail = (email) => {
 
 const validatePhone = (phone) => /^[0-9]{9,11}$/.test(phone.replace(/\s/g, ''));
 
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
 export default function RegisterPage() {
   const navigate = useNavigate();
 
@@ -61,6 +63,7 @@ export default function RegisterPage() {
     const errs = {};
     if (!form.fullName.trim())           errs.fullName        = 'Họ và tên không được để trống.';
     if (!form.dateOfBirth)               errs.dateOfBirth     = 'Ngày sinh không được để trống.';
+    else if (form.dateOfBirth > todayStr()) errs.dateOfBirth   = 'Ngày sinh không được ở tương lai.';
     if (!form.phone.trim())              errs.phone           = 'Số điện thoại không được để trống.';
     else if (!validatePhone(form.phone)) errs.phone           = 'Số điện thoại không hợp lệ (9-11 chữ số).';
     if (!form.email.trim())              errs.email           = 'Email không được để trống.';
@@ -144,6 +147,7 @@ export default function RegisterPage() {
               </span>
               <input id="reg-dob" type="date" name="dateOfBirth"
                 value={form.dateOfBirth} onChange={handleChange}
+                max={todayStr()}
                 disabled={isSubmitting} />
             </div>
             {errors.dateOfBirth && <p className="field-error">{errors.dateOfBirth}</p>}
