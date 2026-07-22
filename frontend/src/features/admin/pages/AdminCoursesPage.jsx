@@ -272,14 +272,16 @@ export default function AdminCoursesPage() {
   };
 
   const getStatusChipStyles = (status) => {
-    if (status === 'active') return { bgcolor: 'rgba(22,163,74,0.1)', color: '#16A34A', border: '1px solid rgba(22,163,74,0.2)' };
-    if (status === 'inactive') return { bgcolor: 'rgba(220,38,38,0.1)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' };
+    if (status === 'active' || status === 'published') return { bgcolor: 'rgba(22,163,74,0.1)', color: '#16A34A', border: '1px solid rgba(22,163,74,0.2)' };
+    if (status === 'inactive' || status === 'blocked') return { bgcolor: 'rgba(220,38,38,0.1)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' };
+    if (status === 'rejected') return { bgcolor: 'rgba(220,38,38,0.1)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' };
     return { bgcolor: 'rgba(234,88,12,0.1)', color: '#EA580C', border: '1px solid rgba(234,88,12,0.2)' };
   };
 
   const getStatusLabel = (status) => {
-    if (status === 'active') return 'Đang hoạt động';
-    if (status === 'inactive') return 'Đã khóa/Từ chối';
+    if (status === 'active' || status === 'published') return 'Đang hoạt động';
+    if (status === 'inactive' || status === 'blocked') return 'Đã khóa';
+    if (status === 'rejected') return 'Từ chối';
     return 'Chờ phê duyệt';
   };
 

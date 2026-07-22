@@ -101,7 +101,7 @@ function LevelSummaryCard({ level }) {
   );
 }
 
-function buildChangeSummary(level, form, categories = []) {
+function buildChangeSummary(level, form) {
   const lines = [];
   if (level.displayName !== form.displayName.trim()) {
     lines.push(`Tên hiển thị: ${level.displayName} → ${form.displayName.trim()}`);
@@ -110,12 +110,6 @@ function buildChangeSummary(level, form, categories = []) {
     lines.push(
       `Trạng thái: ${ADMIN_CATALOG_STATUS_LABELS[level.status] ?? level.status} → ${ADMIN_CATALOG_STATUS_LABELS[form.status] ?? form.status}`,
     );
-  }
-  const oldCatId = level.categoryId?._id || level.categoryId || '';
-  if (oldCatId !== form.categoryId) {
-    const oldCat = categories.find(c => c.id === oldCatId)?.displayName || '—';
-    const newCat = categories.find(c => c.id === form.categoryId)?.displayName || '—';
-    lines.push(`Danh mục: ${oldCat} → ${newCat}`);
   }
   return lines;
 }
@@ -128,32 +122,15 @@ export default function AdminLevelEditDialog({
   saving = false,
   existingNames = [],
 }) {
-  const [form, setForm] = useState({ displayName: '', status: 'ACTIVE', categoryId: '' });
+  const [form, setForm] = useState({ displayName: '', status: 'ACTIVE' });
   const [errors, setErrors] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    const fetchCats = async () => {
-      try {
-        const res = await fetch("http://localhost:5050/api/categories");
-        const data = await res.json();
-        if (data.success) {
-          setCategories(data.data || []);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchCats();
-  }, []);
 
   useEffect(() => {
     if (open && level) {
       setForm({
         displayName: level.displayName ?? '',
         status: level.status ?? 'ACTIVE',
-        categoryId: level.categoryId?._id || level.categoryId || '',
       });
       setErrors({});
       setConfirmOpen(false);
@@ -162,18 +139,16 @@ export default function AdminLevelEditDialog({
 
   const hasChanges = useMemo(() => {
     if (!level) return false;
-    const currentCatId = level.categoryId?._id || level.categoryId || '';
     return (
       level.displayName !== form.displayName.trim() ||
-      level.status !== form.status ||
-      currentCatId !== form.categoryId
+      level.status !== form.status
     );
   }, [level, form]);
 
   const changeSummary = useMemo(() => {
     if (!level) return [];
-    return buildChangeSummary(level, form, categories);
-  }, [level, form, categories]);
+    return buildChangeSummary(level, form);
+  }, [level, form]);
 
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -203,7 +178,6 @@ export default function AdminLevelEditDialog({
     await onSubmit?.({
       displayName: form.displayName.trim(),
       status: form.status,
-      CategoryId: form.categoryId || null,
     });
     setConfirmOpen(false);
   };
@@ -240,14 +214,6 @@ export default function AdminLevelEditDialog({
               value={form.displayName}
               onChange={(value) => updateField('displayName', value)}
               error={errors.displayName}
-            />
-
-            <FormFieldSelect
-              label="Danh mục liên kết"
-              value={form.categoryId}
-              options={categories.map(c => ({ value: c.id, label: c.displayName }))}
-              onChange={(value) => updateField('categoryId', value)}
-              error={errors.categoryId}
             />
 
             <FormFieldSelect

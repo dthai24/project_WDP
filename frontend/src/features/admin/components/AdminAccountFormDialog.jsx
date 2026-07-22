@@ -229,7 +229,7 @@ export default function AdminAccountFormDialog({
               value={status}
               options={ADMIN_ACCOUNT_FORM_STATUS_OPTIONS}
               colorMap={ADMIN_ACCOUNT_STATUS_CHIP_SX}
-              disabled={isView}
+              disabled={isView || account?.role === 'Admin'}
               onChange={(value) => {
                 setStatus(value);
                 setErrors((prev) => {

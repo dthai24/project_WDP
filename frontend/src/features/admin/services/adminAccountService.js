@@ -1,30 +1,37 @@
-/**
- * Admin Account Service — calls real backend APIs.
- */
-import { apiGet, apiPost, apiPut } from '@/features/admin/services/adminApiClient';
+import { apiGet, apiPost, apiPut, apiPatch } from '@/features/admin/services/adminApiClient';
+
+const extractArray = (res) => {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.users)) return res.users;
+  if (Array.isArray(res?.categories)) return res.categories;
+  if (Array.isArray(res?.courses)) return res.courses;
+  if (Array.isArray(res?.levels)) return res.levels;
+  return [];
+};
 
 /**
  * Map a backend user record to the frontend account shape.
- * Backend returns: UserId, FullName, Email, Phone, DateOfBirth,
- *   IsFirstLogin, CreatedAt, UpdatedAt, CurrentLevelId, LearningGoal, Roles (comma-separated)
  */
-function mapUserToAccount(user) {
+function mapUserToAccount(user = {}) {
   let roles = [];
   if (Array.isArray(user.roles)) {
     roles = user.roles;
-  } else if (user.Roles) {
+  } else if (typeof user.Roles === 'string') {
     roles = user.Roles.split(',').map((r) => r.trim()).filter(Boolean);
+  } else if (Array.isArray(user.Roles)) {
+    roles = user.Roles;
   }
 
   // Determine primary role: Admin > Mentor > Student
   let role = 'Student';
-  if (roles.includes('Admin')) role = 'Admin';
-  else if (roles.includes('Mentor')) role = 'Mentor';
+  if (roles.includes('Admin') || roles.includes('admin')) role = 'Admin';
+  else if (roles.includes('Mentor') || roles.includes('mentor')) role = 'Mentor';
 
-  const isActiveVal = user.isActive !== undefined ? user.isActive : true;
+  const isActiveVal = user.isActive !== undefined ? user.isActive : (user.IsActive !== undefined ? user.IsActive : true);
 
   return {
-    id: user.UserId || user._id,
+    id: user._id || user.UserId || user.id,
     fullName: user.FullName || user.fullName || '',
     username: user.Email ? user.Email.split('@')[0] : (user.email ? user.email.split('@')[0] : ''),
     email: user.Email || user.email || '',
@@ -42,7 +49,8 @@ function mapUserToAccount(user) {
 export async function getAccounts() {
   const res = await apiGet('/users');
   if (!res.ok) return { ok: false, accounts: [] };
-  const accounts = (res.data || []).map(mapUserToAccount);
+  const rawList = extractArray(res);
+  const accounts = rawList.map(mapUserToAccount);
   return { ok: true, accounts };
 }
 
@@ -68,10 +76,10 @@ export async function updateAccount(id, payload) {
   if (payload.role) {
     const rolesRes = await apiGet('/roles');
     if (rolesRes.ok) {
-      const allRoles = rolesRes.data || [];
-      const targetRole = allRoles.find((r) => r.RoleName === payload.role);
+      const allRoles = extractArray(rolesRes);
+      const targetRole = allRoles.find((r) => r.RoleName === payload.role || r.roleName === payload.role);
       if (targetRole) {
-        const roleRes = await apiPut(`/users/${userId}/roles`, { roleIds: [targetRole.RoleId] });
+        const roleRes = await apiPut(`/users/${userId}/roles`, { roleIds: [targetRole.RoleId || targetRole._id] });
         if (!roleRes.ok) {
           return { ok: false, message: roleRes.message || 'Không thể cập nhật vai trò' };
         }
@@ -103,16 +111,20 @@ export async function updateAccount(id, payload) {
   return { ok: true, account };
 }
 
-export async function toggleAccountStatus(id) {
-  return { ok: true, message: 'Đã cập nhật trạng thái tài khoản' };
+export async function toggleAccountStatus(id, isActive) {
+  const res = await apiPatch(`/users/${id}/status`, { isActive });
+  if (!res.ok) {
+    return { ok: false, message: res.message || 'Không thể cập nhật trạng thái tài khoản' };
+  }
+  return { ok: true, message: res.message || 'Đã cập nhật trạng thái tài khoản' };
 }
 
 export async function resetAccountPassword(id) {
-  const userId = Number(id);
+  const userId = id;
   const detailRes = await apiGet(`/users/${userId}`);
   if (!detailRes.ok || !detailRes.data) {
     return { ok: false, message: 'Không tìm thấy tài khoản' };
   }
-  const email = detailRes.data.Email || '';
+  const email = detailRes.data.Email || detailRes.data.email || '';
   return { ok: true, message: `Đã gửi email đặt lại mật khẩu tới ${email}` };
 }

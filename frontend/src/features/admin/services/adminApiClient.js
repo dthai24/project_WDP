@@ -31,7 +31,7 @@ async function handleResponse(response) {
   if (!response.ok) {
     return { ok: false, message: data.message || 'Lỗi server', data: null };
   }
-  return { ok: true, data: data.data, message: data.message };
+  return { ok: true, data: data.data, message: data.message, ...data };
 }
 
 export async function apiGet(endpoint) {
@@ -63,6 +63,19 @@ export async function apiPut(endpoint, body) {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+    return handleResponse(response);
+  } catch (err) {
+    return { ok: false, message: 'Không thể kết nối đến server', data: null };
+  }
+}
+
+export async function apiPatch(endpoint, body) {
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(body),
     });

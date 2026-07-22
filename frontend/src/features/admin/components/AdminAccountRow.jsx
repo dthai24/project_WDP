@@ -171,26 +171,33 @@ export default function AdminAccountRow({ account, onEdit, onView }) {
             <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
-        <Tooltip title="Chỉnh sửa trạng thái">
-          <IconButton
-            size="small"
-            aria-label="Chỉnh sửa tài khoản"
-            onClick={() => onEdit?.(account)}
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: '10px',
-              border: '1px solid rgba(15,23,42,0.08)',
-              color: MUTED,
-              '&:hover': {
-                color: PRIMARY,
-                bgcolor: alpha(PRIMARY, 0.06),
-                borderColor: alpha(PRIMARY, 0.2),
-              },
-            }}
-          >
-            <EditOutlinedIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+        <Tooltip title={account.role === 'Admin' ? "Không thể khóa tài khoản Admin" : "Chỉnh sửa trạng thái"}>
+          <span>
+            <IconButton
+              size="small"
+              aria-label="Chỉnh sửa tài khoản"
+              disabled={account.role === 'Admin'}
+              onClick={() => onEdit?.(account)}
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: '10px',
+                border: '1px solid rgba(15,23,42,0.08)',
+                color: MUTED,
+                '&:hover': {
+                  color: PRIMARY,
+                  bgcolor: alpha(PRIMARY, 0.06),
+                  borderColor: alpha(PRIMARY, 0.2),
+                },
+                '&.Mui-disabled': {
+                  opacity: 0.5,
+                  cursor: 'not-allowed'
+                }
+              }}
+            >
+              <EditOutlinedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </span>
         </Tooltip>
       </Box>
     </Box>
