@@ -24,7 +24,7 @@ export default function MainLayout() {
   const showSidebar = isStudent(user);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-white text-slate-900 antialiased">
+    <div className="min-h-[100dvh] flex flex-col bg-surface-secondary text-slate-900 antialiased">
       <Header />
       {showSidebar && <Sidebar variant="student" />}
       <main 

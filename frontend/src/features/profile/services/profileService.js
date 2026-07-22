@@ -45,6 +45,13 @@ export async function fetchUserCertificates(userId) {
   return response.json();
 }
 
+export async function fetchUserPayments() {
+  const response = await fetch(`${API_BASE}/payment/user-payments`, {
+    headers: getAuthHeaders(),
+  });
+  return response.json();
+}
+
 export async function verifyCertificateByCode(code) {
   const response = await fetch(`${API_BASE}/courses/certificates/verify/${code}`);
   return response.json();

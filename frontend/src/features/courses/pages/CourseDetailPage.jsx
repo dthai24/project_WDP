@@ -527,15 +527,16 @@ function RelatedCoursesSection({ course }) {
         </button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {relatedCourses.map((c) => (
-          <CourseCard
-            key={c._id || c.courseId || c.CourseId}
-            course={c}
-            onContinueLearning={() =>
-              navigate(buildCourseDetailPath(c._id || c.courseId || c.CourseId, searchParams))
-            }
-          />
-        ))}
+        {relatedCourses.map((c) => {
+          const cid = c._id || c.courseId || c.CourseId;
+          return (
+            <CourseCard
+              key={cid}
+              course={c}
+              onContinueLearning={() => navigate(`/my-courses/${cid}/learn`)}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -658,6 +659,7 @@ export default function CourseDetailPage() {
       }
     };
     fetchCourseData();
+    window.scrollTo(0, 0);
   }, [id]);
 
   const handleEnroll = async () => {

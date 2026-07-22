@@ -18,9 +18,9 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 
-const MUTED = "#64748B";
+const MUTED = "#64748b";
 const ICON = "#94A3B8";
-const PRIMARY = "#0891B2";
+const PRIMARY = "#7c3aed";
 
 const STATUS_TABS = [
   { value: "all", label: "Tất cả" },

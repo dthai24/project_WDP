@@ -3,9 +3,9 @@ import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutli
 import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
 import RadioButtonUncheckedOutlinedIcon from "@mui/icons-material/RadioButtonUncheckedOutlined";
 
-const MUTED = "#64748B";
-const TEXT = "#0F172A";
-const PRIMARY = "#0891B2";
+const MUTED = "#64748b";
+const TEXT = "#1e1b4b";
+const PRIMARY = "#7c3aed";
 
 const STATUS_CONFIG = {
   completed: {

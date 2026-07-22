@@ -19,10 +19,10 @@ import {
   resolveAvatarSrc,
 } from '@/features/courses/data/courseCommentsMock';
 
-const PRIMARY = '#0891B2';
-const TEXT = '#0F172A';
+const PRIMARY = '#7c3aed';
+const TEXT = '#1e1b4b';
 const MUTED = '#64748B';
-const DIVIDER = 'rgba(8,145,178,0.10)';
+const DIVIDER = 'rgba(124,58,237,0.10)';
 const COMMENT_MAX_LENGTH = 250;
 const COMMENT_LIST_MAX_HEIGHT = 480;
 
