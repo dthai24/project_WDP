@@ -5,6 +5,7 @@ const testQuestionSchema = new mongoose.Schema({
   title: String,
   typeId: { type: mongoose.Schema.Types.ObjectId, ref: 'QuestionType', required: true },
   url: String,
+  explanation: String,
 });
 
 module.exports = mongoose.models.TestQuestion || mongoose.model('TestQuestion', testQuestionSchema);

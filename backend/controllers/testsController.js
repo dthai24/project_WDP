@@ -284,8 +284,201 @@ const submitTestAttempt = async (req, res) => {
   }
 };
 
+// ============================================================
+// Mentor CRUD — quản lý câu hỏi bài kiểm tra cuối khóa (scope='final')
+// ============================================================
+
+async function assertMentorOwnsCourse(courseId, userId) {
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return { ok: false, status: 400, message: 'courseId không hợp lệ.' };
+  }
+  const course = await Course.findById(courseId).select('instructorId').lean();
+  if (!course) {
+    return { ok: false, status: 404, message: 'Không tìm thấy khóa học.' };
+  }
+  if (userId && String(course.instructorId) !== String(userId)) {
+    return { ok: false, status: 403, message: 'Bạn không có quyền quản lý bài kiểm tra của khóa học này.' };
+  }
+  return { ok: true, course };
+}
+
+// Tìm hoặc tạo Test cho scope='final' của khóa học (giống logic trong getTestMeta)
+async function findOrCreateFinalTest(courseId) {
+  const paths = await Path.find({ courseId }).sort({ order: -1 }).lean();
+  if (paths.length === 0) return null;
+
+  let test = await Test.findOne({ courseId, pathId: paths[0]._id });
+  if (!test) {
+    test = await Test.create({ courseId, pathId: paths[0]._id });
+  }
+  return test;
+}
+
+async function findOrCreateCollection(testId) {
+  let collection = await TestQuestionCollection.findOne({ testId });
+  if (!collection) {
+    collection = await TestQuestionCollection.create({ testId });
+  }
+  return collection;
+}
+
+const QuestionType = require('../models/MongoDB/QuestionType');
+async function getDefaultQuestionType() {
+  let type = await QuestionType.findOne({ name: 'MC' });
+  if (!type) type = await QuestionType.create({ name: 'MC' });
+  return type;
+}
+
+// GET /api/courses/:courseId/tests/final/questions — mentor xem toàn bộ câu hỏi + đáp án
+const listTestQuestions = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.headers['x-user-id'] || req.query.userId;
+
+    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
+
+    const test = await findOrCreateFinalTest(courseId);
+    if (!test) return res.status(404).json({ success: false, message: 'Khóa học chưa có chương nào, không thể tạo bài kiểm tra.' });
+
+    const collection = await findOrCreateCollection(test._id);
+    const questions = await TestQuestion.find({ collectionId: collection._id }).lean();
+
+    const formatted = [];
+    for (const q of questions) {
+      const choices = await TestQuestionChoice.find({ questionId: q._id }).sort({ order: 1 }).lean();
+      formatted.push({
+        id: q._id.toString(),
+        question: q.title,
+        explanation: q.explanation || '',
+        options: choices.map((c) => ({
+          id: c._id.toString(),
+          label: c.title,
+          correct: c.isTrue,
+        })),
+      });
+    }
+
+    return res.status(200).json({ success: true, data: formatted });
+  } catch (error) {
+    console.error('listTestQuestions error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi lấy danh sách câu hỏi' });
+  }
+};
+
+// POST /api/courses/:courseId/tests/final/questions — tạo câu hỏi mới
+const createTestQuestion = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.headers['x-user-id'] || req.body.userId;
+    const { question, explanation, options } = req.body;
+
+    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
+
+    if (!question || !Array.isArray(options) || options.length < 2 || !options.some((o) => o.correct)) {
+      return res.status(400).json({ success: false, message: 'Cần có nội dung câu hỏi, ít nhất 2 đáp án và 1 đáp án đúng.' });
+    }
+
+    const test = await findOrCreateFinalTest(courseId);
+    if (!test) return res.status(404).json({ success: false, message: 'Khóa học chưa có chương nào, không thể tạo bài kiểm tra.' });
+    const collection = await findOrCreateCollection(test._id);
+    const questionType = await getDefaultQuestionType();
+
+    const newQuestion = await TestQuestion.create({
+      collectionId: collection._id,
+      title: question,
+      typeId: questionType._id,
+      explanation: explanation || '',
+    });
+
+    for (let i = 0; i < options.length; i++) {
+      await TestQuestionChoice.create({
+        questionId: newQuestion._id,
+        title: options[i].label,
+        order: i + 1,
+        isTrue: Boolean(options[i].correct),
+      });
+    }
+
+    return res.status(201).json({ success: true, message: 'Đã thêm câu hỏi.', data: { id: newQuestion._id.toString() } });
+  } catch (error) {
+    console.error('createTestQuestion error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi tạo câu hỏi' });
+  }
+};
+
+// PUT /api/courses/:courseId/tests/final/questions/:questionId — sửa câu hỏi
+const updateTestQuestion = async (req, res) => {
+  try {
+    const { courseId, questionId } = req.params;
+    const userId = req.headers['x-user-id'] || req.body.userId;
+    const { question, explanation, options } = req.body;
+
+    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
+
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+      return res.status(400).json({ success: false, message: 'questionId không hợp lệ.' });
+    }
+    const existing = await TestQuestion.findById(questionId);
+    if (!existing) return res.status(404).json({ success: false, message: 'Không tìm thấy câu hỏi.' });
+
+    if (!question || !Array.isArray(options) || options.length < 2 || !options.some((o) => o.correct)) {
+      return res.status(400).json({ success: false, message: 'Cần có nội dung câu hỏi, ít nhất 2 đáp án và 1 đáp án đúng.' });
+    }
+
+    existing.title = question;
+    existing.explanation = explanation || '';
+    await existing.save();
+
+    await TestQuestionChoice.deleteMany({ questionId: existing._id });
+    for (let i = 0; i < options.length; i++) {
+      await TestQuestionChoice.create({
+        questionId: existing._id,
+        title: options[i].label,
+        order: i + 1,
+        isTrue: Boolean(options[i].correct),
+      });
+    }
+
+    return res.status(200).json({ success: true, message: 'Đã cập nhật câu hỏi.' });
+  } catch (error) {
+    console.error('updateTestQuestion error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật câu hỏi' });
+  }
+};
+
+// DELETE /api/courses/:courseId/tests/final/questions/:questionId
+const deleteTestQuestion = async (req, res) => {
+  try {
+    const { courseId, questionId } = req.params;
+    const userId = req.headers['x-user-id'] || req.query.userId;
+
+    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
+
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+      return res.status(400).json({ success: false, message: 'questionId không hợp lệ.' });
+    }
+
+    await TestQuestionChoice.deleteMany({ questionId });
+    const result = await TestQuestion.findByIdAndDelete(questionId);
+    if (!result) return res.status(404).json({ success: false, message: 'Không tìm thấy câu hỏi.' });
+
+    return res.status(200).json({ success: true, message: 'Đã xóa câu hỏi.' });
+  } catch (error) {
+    console.error('deleteTestQuestion error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi xóa câu hỏi' });
+  }
+};
+
 module.exports = {
   getTestMeta,
   startTestAttempt,
-  submitTestAttempt
+  submitTestAttempt,
+  listTestQuestions,
+  createTestQuestion,
+  updateTestQuestion,
+  deleteTestQuestion,
 };
