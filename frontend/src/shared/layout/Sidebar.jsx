@@ -10,10 +10,10 @@ import { HEADER_HEIGHT } from "./MainLayout";
 
 export const SIDEBAR_WIDTH = 76;
 
-const COLOR_ACTIVE = "#0891B2";
+const COLOR_ACTIVE = "#7c3aed";
 const COLOR_INACTIVE = "#475569";
-const BG_ACTIVE = "rgba(8, 145, 178, 0.1)";
-const BG_HOVER = "rgba(8, 145, 178, 0.06)";
+const BG_ACTIVE = "rgba(124, 58, 237, 0.1)";
+const BG_HOVER = "rgba(124, 58, 237, 0.06)";
 
 function SidebarItemContent({ label, Icon, active, disabled, badgeCount = 0 }) {
   return (
@@ -167,7 +167,8 @@ export default function Sidebar({ variant = "student" }) {
         top: HEADER_HEIGHT,
         bottom: 0,
         width: SIDEBAR_WIDTH,
-        backgroundColor: "rgba(255,255,255,0.88)",
+        backgroundColor: "rgba(251,251,254,0.88)",
+        borderRight: "1px solid rgba(124, 58, 237, 0.08)",
         backdropFilter: "blur(20px) saturate(140%)",
         WebkitBackdropFilter: "blur(20px) saturate(140%)",
         scrollbarWidth: "none",

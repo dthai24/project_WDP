@@ -3,7 +3,7 @@ import { Link as RouterLink } from "react-router-dom";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { getStreakColor } from "@/shared/utils/streakUtils";
 
-const PRIMARY = "#0891B2";
+const PRIMARY = "#7c3aed";
 const INK = "#1E293B";
 const MUTED = "#64748B";
 const PAPER = "#FFF59D";

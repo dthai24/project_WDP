@@ -826,9 +826,70 @@ const DATA_tests = [
 const DATA_usercategories = [
 ];
 
+const DATA_certificates = [
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d090"),
+    "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"),
+    "courseId": new mongoose.Types.ObjectId("18f57470aa4880011688869a"),
+    "certificateCode": "CERT-WDP-TOEIC-450",
+    "grade": 100,
+    "issuedAt": new Date("2026-07-21T09:00:00.000Z"),
+    "createdAt": new Date("2026-07-21T09:00:00.000Z")
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d090"),
+    "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05e"),
+    "courseId": new mongoose.Types.ObjectId("18f57470aa4880011688869a"),
+    "certificateCode": "CERT-WDP-TOEIC-450-STU",
+    "grade": 100,
+    "issuedAt": new Date("2026-07-21T09:00:00.000Z"),
+    "createdAt": new Date("2026-07-21T09:00:00.000Z")
+  }
+];
+
+const DATA_payments = [
+  {
+    "_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d091"),
+    "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"),
+    "courseId": new mongoose.Types.ObjectId("2785efe18a649f6a0454e7d8"),
+    "paymentType": "one-time",
+    "amount": 299000,
+    "discountAmount": 0,
+    "finalAmount": 299000,
+    "vnpayOrderId": "VNP1784620000001",
+    "transactionCode": "VNP14829301",
+    "bankCode": "NCB",
+    "status": "success",
+    "paymentMethod": "VNPay",
+    "paymentDescription": "Thanh toan khoa hoc TOEIC Intermediate: Target 650+",
+    "paidAt": new Date("2026-07-21T09:00:00.000Z"),
+    "createdAt": new Date("2026-07-21T09:00:00.000Z")
+  },
+  {
+    "_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d091"),
+    "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05e"),
+    "courseId": new mongoose.Types.ObjectId("2785efe18a649f6a0454e7d8"),
+    "paymentType": "one-time",
+    "amount": 299000,
+    "discountAmount": 0,
+    "finalAmount": 299000,
+    "vnpayOrderId": "VNP1784620000002",
+    "transactionCode": "VNP14829302",
+    "bankCode": "NCB",
+    "status": "success",
+    "paymentMethod": "VNPay",
+    "paymentDescription": "Thanh toan khoa hoc TOEIC Intermediate: Target 650+",
+    "paidAt": new Date("2026-07-21T09:00:00.000Z"),
+    "createdAt": new Date("2026-07-21T09:00:00.000Z")
+  }
+];
+
 const DATA_usercourses = [
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d083"), "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), "courseId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d072"), "progressPercentage": 100, "enrollmentDate": new Date("2026-06-25T14:17:21.053Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42be20c108c5a4df79ff47"), "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), "courseId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d073"), "progressPercentage": 100, "enrollmentDate": new Date("2026-06-29T18:49:04.333Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d083"), "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), "courseId": new mongoose.Types.ObjectId("18f57470aa4880011688869a"), "progressPercentage": 100, "enrollmentDate": new Date("2026-06-25T14:17:21.053Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42be20c108c5a4df79ff47"), "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), "courseId": new mongoose.Types.ObjectId("2785efe18a649f6a0454e7d8"), "progressPercentage": 45, "enrollmentDate": new Date("2026-06-29T18:49:04.333Z"), "__v": 0},
+
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d083"), "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05e"), "courseId": new mongoose.Types.ObjectId("18f57470aa4880011688869a"), "progressPercentage": 100, "enrollmentDate": new Date("2026-06-25T14:17:21.053Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("7a42be20c108c5a4df79ff47"), "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05e"), "courseId": new mongoose.Types.ObjectId("2785efe18a649f6a0454e7d8"), "progressPercentage": 45, "enrollmentDate": new Date("2026-06-29T18:49:04.333Z"), "__v": 0},
 ];
 
 const DATA_usernodes = [
@@ -845,16 +906,28 @@ const DATA_userroles = [
   {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d06f"), "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d060"), "roleId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051"), "__v": 0},
   {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d070"), "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d061"), "roleId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051"), "__v": 0},
   {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d071"), "userId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d062"), "roleId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051"), "__v": 0},
+
+  // Aliases for admin@gmail.com, mentor@gmail.com, student@gmail.com, student2@gmail.com
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d06b"), "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05c"), "roleId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d06c"), "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05d"), "roleId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d06d"), "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05e"), "roleId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d06e"), "userId": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05f"), "roleId": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051"), "__v": 0},
 ];
 
 const DATA_users = [
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05c"), "fullName": "System Administrator", "email": "admin@wdp.edu.vn", "phone": "0911111111", "password": "$2b$10$hiD.NAoAHtB6RR4ZUY8eaOuOQHKt2eBodPmuPKLJ9aGSHEX2MY9Y6", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d"), "fullName": "Nguyen Thi Minh Anh", "email": "mentor.anh@wdp.edu.vn", "phone": "0922222222", "password": "$2b$10$4B7g4UieGNjIM32InKMBxOZFa3x3gan/9N.vAyqYNPTSDPgRFtGf.", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), "fullName": "Tran Van Minh", "email": "minh.tv@gmail.com", "phone": "0933333333", "password": "$2b$10$vZGsbGdcmXuDesPTUkZYDOYNQKvQOmVklWen8WNSzXZIHd.5gFoV2", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"), "fullName": "Nguyen Thi Hoa", "email": "hoa.nt@gmail.com", "phone": "0944444444", "password": "$2b$10$vZGsbGdcmXuDesPTUkZYDOYNQKvQOmVklWen8WNSzXZIHd.5gFoV2", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.040Z"), "updatedAt": new Date("2026-06-25T00:47:03.040Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d060"), "fullName": "Huynh Van Duc", "email": "duc.hv@gmail.com", "phone": "0955555555", "password": "$2b$10$vZGsbGdcmXuDesPTUkZYDOYNQKvQOmVklWen8WNSzXZIHd.5gFoV2", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.047Z"), "updatedAt": new Date("2026-06-25T00:47:03.047Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d061"), "fullName": "Le Thi Thu", "email": "thu.lt@gmail.com", "phone": "0966666666", "password": "$2b$10$vZGsbGdcmXuDesPTUkZYDOYNQKvQOmVklWen8WNSzXZIHd.5gFoV2", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.050Z"), "updatedAt": new Date("2026-06-25T00:47:03.050Z"), "__v": 0},
-  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d062"), "fullName": "Pham Minh Khoa", "email": "khoa.pm@gmail.com", "phone": "0977777777", "password": "$2b$10$vZGsbGdcmXuDesPTUkZYDOYNQKvQOmVklWen8WNSzXZIHd.5gFoV2", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.053Z"), "updatedAt": new Date("2026-06-25T00:47:03.053Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05c"), "fullName": "System Administrator", "email": "admin@wdp.edu.vn", "phone": "0911111111", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d"), "fullName": "Nguyen Thi Minh Anh", "email": "mentor.anh@wdp.edu.vn", "phone": "0922222222", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), "fullName": "Tran Van Minh", "email": "minh.tv@gmail.com", "phone": "0933333333", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"), "fullName": "Nguyen Thi Hoa", "email": "hoa.nt@gmail.com", "phone": "0944444444", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.040Z"), "updatedAt": new Date("2026-06-25T00:47:03.040Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d060"), "fullName": "Huynh Van Duc", "email": "duc.hv@gmail.com", "phone": "0955555555", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.047Z"), "updatedAt": new Date("2026-06-25T00:47:03.047Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d061"), "fullName": "Le Thi Thu", "email": "thu.lt@gmail.com", "phone": "0966666666", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.050Z"), "updatedAt": new Date("2026-06-25T00:47:03.050Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d062"), "fullName": "Pham Minh Khoa", "email": "khoa.pm@gmail.com", "phone": "0977777777", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.053Z"), "updatedAt": new Date("2026-06-25T00:47:03.053Z"), "__v": 0},
+
+  // Convenient Aliases
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05c"), "fullName": "Admin User", "email": "admin@gmail.com", "phone": "0988888881", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05d"), "fullName": "Mentor User", "email": "mentor@gmail.com", "phone": "0988888882", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05e"), "fullName": "Student One", "email": "student@gmail.com", "phone": "0988888883", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:02.960Z"), "updatedAt": new Date("2026-06-25T00:47:02.960Z"), "__v": 0},
+  {"_id": new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05f"), "fullName": "Student Two", "email": "student2@gmail.com", "phone": "0988888884", "password": "123456", "dateOfBirth": null, "isFirstLogin": false, "resetOtpCode": null, "resetOtpExpires": null, "currentLevelId": null, "learningGoal": null, "avatarUrl": null, "isActive": true, "createdAt": new Date("2026-06-25T00:47:03.040Z"), "updatedAt": new Date("2026-06-25T00:47:03.040Z"), "__v": 0},
 ];
 
 async function main() {
@@ -882,6 +955,8 @@ async function main() {
     { name: "testquestioncollections", data: DATA_testquestioncollections },
     { name: "testquestions", data: DATA_testquestions },
     { name: "tests", data: DATA_tests },
+    { name: "certificates", data: DATA_certificates },
+    { name: "payments", data: DATA_payments },
     { name: "usercategories", data: DATA_usercategories },
     { name: "usercourses", data: DATA_usercourses },
     { name: "usernodes", data: DATA_usernodes },
