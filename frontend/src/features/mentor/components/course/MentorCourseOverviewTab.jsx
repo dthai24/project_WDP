@@ -338,7 +338,7 @@ export default function MentorCourseOverviewTab({ course, onCourseUpdated }) {
             src={course.Thumbnail}
             label={course.CourseName}
             alt={course.CourseName}
-            cacheKey={course.CourseUpdateAt ?? course.UpdatedAt ?? course.CourseCreateAt}
+            cacheKey={course.CourseId ?? course._id ?? course.courseId}
             iconSize={40}
             sx={{
               width: '100%',

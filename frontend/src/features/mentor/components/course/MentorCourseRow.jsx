@@ -145,6 +145,7 @@ export default function MentorCourseRow({ course, onDelete }) {
         src={course.Thumbnail}
         label={course.CourseName}
         alt={course.CourseName}
+        cacheKey={course.CourseId ?? course._id ?? course.courseId}
         iconSize={28}
         sx={{
           width: { xs: '100%', sm: 112 },
