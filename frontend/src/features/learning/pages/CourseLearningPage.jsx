@@ -61,7 +61,6 @@ import {
   Star,
   ThumbsUp,
   Chats,
-  Lock,
 } from "@phosphor-icons/react";
 import AppButton from "@/shared/ui/AppButton";
 import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
@@ -115,6 +114,8 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizOption, setQuizOption] = useState("");
   const videoRef = useRef(null);
+
+  const { embedUrl, previewType } = useMemo(() => resolveVideoEmbed(url), [url]);
 
   useEffect(() => {
     setQuizAnswered(false);
@@ -174,12 +175,30 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // Video nhúng qua iframe (YouTube, Vimeo, Google Drive...)
+  if (previewType === 'iframe' && embedUrl) {
+    return (
+      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg border border-slate-800">
+        <iframe
+          src={embedUrl}
+          title="Video bài học"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          className="w-full h-full border-0"
+        />
+      </div>
+    );
+  }
+
+  // File video trực tiếp (.mp4) — không nhúng được thì không phát gì cả thay vì phát video mẫu giả
+  if (previewType !== 'video' || !embedUrl) return null;
+
   return (
     <div className="relative w-full h-full bg-black rounded-xl overflow-hidden flex flex-col justify-between" style={{ minHeight: '320px' }}>
       {/* Video element */}
       <video
         ref={videoRef}
-        src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        src={embedUrl}
         onTimeUpdate={handleTimeUpdate}
         className="w-full flex-1 object-contain bg-black cursor-pointer"
         onClick={handlePlayPause}
@@ -333,7 +352,6 @@ function LessonItem({ lesson, isActive, onSelect }) {
   const cfg = TYPE_CONFIG[lesson.type] ?? TYPE_CONFIG.reading;
   const Icon = cfg.icon;
   const isCompleted = lesson.status === "completed";
-  const isLocked = lesson.locked === true;
 
   return (
     <button
@@ -342,9 +360,7 @@ function LessonItem({ lesson, isActive, onSelect }) {
       className={`
         w-full flex items-start gap-2.5 py-2.5 px-3 rounded-xl text-left
         transition-all duration-150 font-sans
-        ${isLocked
-          ? "opacity-60 hover:bg-slate-50/20"
-          : isActive
+        ${isActive
           ? "bg-emerald-50 shadow-sm border border-emerald-200/60"
           : "hover:bg-slate-50 border border-transparent"
         }
@@ -352,9 +368,7 @@ function LessonItem({ lesson, isActive, onSelect }) {
     >
       {/* Status icon */}
       <span className="pt-0.5 flex-shrink-0">
-        {isLocked ? (
-          <Lock size={18} className="text-slate-400" weight="fill" />
-        ) : isCompleted ? (
+        {isCompleted ? (
           <CheckCircle size={18} className="text-emerald-500" weight="fill" />
         ) : isActive ? (
           <PlayCircle size={18} className="text-emerald-500" weight="fill" />
@@ -367,18 +381,14 @@ function LessonItem({ lesson, isActive, onSelect }) {
       <span className="flex-1 min-w-0">
         <span
           className={`block text-[13px] leading-snug ${
-            isLocked
-              ? "font-medium text-slate-500"
-              : isActive
-              ? "font-semibold text-emerald-700"
-              : "font-medium text-slate-800"
+            isActive ? "font-semibold text-emerald-700" : "font-medium text-slate-800"
           }`}
         >
-          Bài {lesson.index}: {lesson.title} {isLocked && "🔒"}
+          Bài {lesson.index}: {lesson.title}
         </span>
         <span className="flex items-center gap-1 mt-1">
-          <Icon size={11} className={isLocked ? "text-slate-400" : cfg.color} />
-          <span className="text-[11px] text-slate-400">{lesson.duration || "10 phút"}</span>
+          <Icon size={11} className={cfg.color} />
+          <span className="text-[11px] text-slate-400">{lesson.duration}</span>
         </span>
       </span>
     </button>
@@ -781,6 +791,374 @@ function LessonQuizPlayer({ lesson, isCompleted, onComplete }) {
   );
 }
 
+/* ─── Assessment Exam (dữ liệu thật từ Test/TestQuestion, theo từng khóa học) ─── */
+function CourseAssessmentExamTab({ courseId, courseTitle, onCompleteQuiz }) {
+  const isToeic = courseTitle?.toLowerCase().includes("toeic");
+  const isIelts = courseTitle?.toLowerCase().includes("ielts");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserId = String(user.userId || "1");
+
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [meta, setMeta] = useState(null); // xem trước thông tin đề thi — KHÔNG tính là 1 lượt làm bài
+  const [starting, setStarting] = useState(false);
+  const [attemptId, setAttemptId] = useState(null);
+  const [questions, setQuestions] = useState([]); // [{ tempId, questionText, options: [{tempId, optionText}] }]
+  const [answers, setAnswers] = useState({});
+  const [result, setResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Chỉ xem thông tin đề thi (số câu, số lượt còn lại) — không tạo attempt, không tính lượt
+  const loadMeta = async () => {
+    setLoading(true);
+    setLoadError(null);
+    setResult(null);
+    setAnswers({});
+    setAttemptId(null);
+    setQuestions([]);
+    try {
+      const res = await fetch(`http://localhost:5050/api/courses/${courseId}/tests/final/meta`, {
+        headers: { "x-user-id": currentUserId },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoadError(data.message || "Không thể tải thông tin bài kiểm tra.");
+        return;
+      }
+      setMeta(data.meta);
+    } catch (err) {
+      setLoadError("Không thể kết nối server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (courseId) loadMeta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId]);
+
+  // Chỉ khi bấm nút mới thực sự bắt đầu — bước này mới tính là 1 lượt làm bài
+  const handleStartExam = async () => {
+    setStarting(true);
+    setLoadError(null);
+    try {
+      const res = await fetch(`http://localhost:5050/api/courses/${courseId}/tests/final/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoadError(data.message || "Không thể bắt đầu bài kiểm tra.");
+        return;
+      }
+      setAttemptId(data.attempt.attemptId);
+      setQuestions(data.paper?.sections?.[0]?.questionGroups?.[0]?.questions || []);
+      setMeta(data.meta);
+    } catch (err) {
+      setLoadError("Không thể kết nối server.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const answersPayload = {};
+      questions.forEach((q) => {
+        if (answers[q.tempId]) answersPayload[q.tempId] = [answers[q.tempId]];
+      });
+
+      const res = await fetch(
+        `http://localhost:5050/api/courses/${courseId}/tests/attempts/${attemptId}/submit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
+          body: JSON.stringify({ answers: answersPayload }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoadError(data.message || "Không thể nộp bài.");
+        setSubmitting(false);
+        return;
+      }
+
+    const count = data.result.correctCount;
+    const percent = data.result.percentage;
+
+    let predictedScoreText = "";
+    let predictedBadgeClass = "";
+    let feedbackDetails = "";
+
+    if (isToeic) {
+      if (percent === 100) {
+        predictedScoreText = "Dự đoán TOEIC: 850 - 990 / 990 Score (Mastery Level)";
+        predictedBadgeClass = "bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg shadow-amber-500/20";
+        feedbackDetails = "Xuất sắc! Bạn làm chủ 100% các phần Part 1-2 Nghe hiểu, Part 5 Ngữ pháp và Part 7 Đọc hiểu Triple Passages. Bạn hoàn toàn đủ sức đạt 850+ TOEIC ETS.";
+      } else if (percent >= 80) {
+        predictedScoreText = "Dự đoán TOEIC: 650 - 800 / 990 Score (Intermediate Level)";
+        predictedBadgeClass = "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20";
+        feedbackDetails = "Khá tốt! Phản xạ Part 2 & Part 5 của bạn rất vững vàng. Cần luyện thêm kỹ năng đọc nhanh Part 7 để chạm mốc 850+.";
+      } else if (percent >= 60) {
+        predictedScoreText = "Dự đoán TOEIC: 450 - 600 / 990 Score (Starter Level)";
+        predictedBadgeClass = "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20";
+        feedbackDetails = "Đạt chuẩn đầu ra cơ bản! Bạn đã hoàn thành phần nghe và từ loại Part 5, tuy nhiên còn vấp một số bẫy từ đồng âm.";
+      } else {
+        predictedScoreText = "Dự đoán TOEIC: 250 - 400 / 990 Score (Foundation Level)";
+        predictedBadgeClass = "bg-slate-700 text-white shadow-md";
+        feedbackDetails = "Cần củng cố thêm từ vựng và ngữ pháp Part 5 trước khi làm lại bài kiểm tra.";
+      }
+    } else if (isIelts) {
+      if (percent === 100) {
+        predictedScoreText = "Dự đoán IELTS Band: 8.0 - 8.5 / 9.0 (4-Skills Academic Master)";
+        predictedBadgeClass = "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20";
+        feedbackDetails = "Tuyệt vời! Bạn hoàn thành xuất sắc cả 4 Kỹ Năng: Listening (Note Completion), Reading (True/False/NG), Writing (PEEL Essay Cohesion) và Speaking (Academic Lexical Resource).";
+      } else if (percent >= 80) {
+        predictedScoreText = "Dự đoán IELTS Band: 6.5 - 7.5 / 9.0 (Good Competence)";
+        predictedBadgeClass = "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20";
+        feedbackDetails = "Khá giỏi! 4 Kỹ năng của bạn đáp ứng tốt yêu cầu du học và làm việc quốc tế.";
+      } else if (percent >= 60) {
+        predictedScoreText = "Dự đoán IELTS Band: 5.0 - 6.0 / 9.0 (Modest User)";
+        predictedBadgeClass = "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20";
+        feedbackDetails = "Trình độ trung bình khá. Bạn nắm vững cấu trúc bài thi 4 kỹ năng nhưng cần nâng cấp vốn từ vựng Academic.";
+      } else {
+        predictedScoreText = "Dự đoán IELTS Band: 3.5 - 4.5 / 9.0 (Limited User)";
+        predictedBadgeClass = "bg-slate-700 text-white shadow-md";
+        feedbackDetails = "Khuyến nghị ôn tập thêm khóa IELTS Foundation để trau dồi lại 4 kỹ năng Nghe-Nói-Đọc-Viết.";
+      }
+    } else {
+      if (percent === 100) {
+        predictedScoreText = "Dự đoán CEFR Trình độ: C1 Advanced (Thành thạo)";
+        predictedBadgeClass = "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg";
+        feedbackDetails = "Khả năng sử dụng tiếng Anh linh hoạt, tự nhiên trong mọi môi trường.";
+      } else if (percent >= 80) {
+        predictedScoreText = "Dự đoán CEFR Trình độ: B2 Upper-Intermediate";
+        predictedBadgeClass = "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg";
+        feedbackDetails = "Giao tiếp trôi chảy với người bản xứ và hiểu văn bản phức tạp.";
+      } else {
+        predictedScoreText = "Dự đoán CEFR Trình độ: B1 Intermediate";
+        predictedBadgeClass = "bg-slate-700 text-white shadow-md";
+        feedbackDetails = "Giao tiếp cơ bản tốt trong các tình huống quen thuộc.";
+      }
+    }
+
+      const isPassed = data.result.passed;
+
+      setResult({
+        scoreCount: count,
+        totalCount: data.result.total,
+        percent,
+        isPassed,
+        predictedScoreText,
+        predictedBadgeClass,
+        feedbackDetails
+      });
+
+      if (isPassed && onCompleteQuiz) {
+        onCompleteQuiz();
+      }
+    } catch (err) {
+      setLoadError("Không thể kết nối server.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRetry = () => {
+    loadMeta();
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-10 max-w-3xl mx-auto font-sans text-center">
+        <p className="text-sm text-slate-500 font-medium">Đang tải bài kiểm tra...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-10 max-w-3xl mx-auto font-sans text-center">
+        <p className="text-sm text-red-600 font-bold mb-3">{loadError}</p>
+        <button
+          type="button"
+          onClick={loadMeta}
+          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 md:p-8 max-w-3xl mx-auto font-sans">
+      <div className="mb-6 border-b border-slate-100 pb-5">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 mb-3">
+          {isToeic ? "Cấu trúc Đề thi TOEIC ETS (Listening & Reading)" : isIelts ? "Cấu trúc Đề thi IELTS 4 Kỹ Năng (Listening, Reading, Writing, Speaking)" : "Cấu trúc Đánh giá CEFR"}
+        </div>
+        <h3 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight">
+          {isToeic
+            ? "Bài thi Giả lập TOEIC ETS (Listening & Reading Score Predictor)"
+            : isIelts
+            ? "Bài thi Giả lập IELTS 4 Kỹ Năng (Nghe - Nói - Đọc - Viết)"
+            : "Bài thi Giả lập Đánh giá Trình độ Tiếng Anh"}
+        </h3>
+        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+          {isToeic
+            ? "Đề thi được chia làm 4 phần thi chuẩn ETS (Part 1-2 Nghe hiểu, Part 3-4 Hội thoại, Part 5 Ngữ pháp, Part 6-7 Đọc hiểu). Đạt trên 50% điểm để mở khóa Chứng nhận."
+            : isIelts
+            ? "Đề thi bao gồm trọn vẹn 4 Kỹ Năng (Listening, Reading, Writing, Speaking). Đạt trên 50% điểm để mở khóa Chứng nhận."
+            : "Hoàn thành bài kiểm tra để dự đoán trình độ theo khung chuẩn Châu Âu CEFR. Đạt trên 50% điểm để nhận Chứng nhận."}
+        </p>
+      </div>
+
+      {/* Màn hình xem trước — chưa tính là 1 lượt làm bài, chỉ khi bấm nút mới bắt đầu */}
+      {!attemptId && !result && (
+        <div className="text-center py-10">
+          <p className="text-sm text-slate-600 font-medium mb-1">
+            Đề gồm <strong>{meta?.totalQuestions ?? 0}</strong> câu hỏi trắc nghiệm.
+          </p>
+          <p className="text-xs text-slate-400 mb-6">
+            Đạt trên {meta?.passingScore ?? 70}% để mở khóa Chứng nhận. Bạn còn{" "}
+            <strong>{meta?.remainingAttempts ?? 0}</strong>/{meta?.maxAttempts ?? 3} lượt làm bài.
+          </p>
+          <button
+            type="button"
+            onClick={handleStartExam}
+            disabled={starting || (meta?.remainingAttempts ?? 0) <= 0}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-indigo-600/20 active:scale-95"
+          >
+            {starting
+              ? "Đang bắt đầu..."
+              : (meta?.remainingAttempts ?? 0) <= 0
+              ? "Bạn đã hết lượt làm bài thi này"
+              : "Bắt đầu làm bài"}
+          </button>
+        </div>
+      )}
+
+      {/* Danh sách câu hỏi (lấy từ ngân hàng câu hỏi thật của khóa học) */}
+      {(attemptId || result) && <div className="space-y-5">
+        {questions.map((q, qIdx) => (
+          <div key={q.tempId} className="bg-white border border-slate-200/70 p-4 rounded-xl shadow-2xs">
+            <p className="text-xs sm:text-sm font-bold text-slate-800 mb-3 flex items-start gap-2">
+              <span className="bg-indigo-600 text-white text-[11px] font-black px-2 py-0.5 rounded-lg flex-shrink-0 mt-0.5">
+                Câu {qIdx + 1}
+              </span>
+              <span>{q.questionText}</span>
+            </p>
+
+            <div className="grid grid-cols-1 gap-2">
+              {q.options.map((opt) => {
+                const isSelected = answers[q.tempId] === opt.tempId;
+                const optStyle = isSelected
+                  ? "bg-indigo-50 border-indigo-600 text-indigo-900 font-bold shadow-xs"
+                  : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/20";
+
+                return (
+                  <label
+                    key={opt.tempId}
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all ${optStyle} ${result ? "pointer-events-none opacity-70" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name={q.tempId}
+                      value={opt.tempId}
+                      checked={isSelected}
+                      disabled={!!result}
+                      onChange={() => setAnswers(prev => ({ ...prev, [q.tempId]: opt.tempId }))}
+                      className="accent-indigo-600"
+                    />
+                    <span className="flex-1">{opt.optionText}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>}
+
+      {(attemptId || result) && <div className="mt-8 border-t border-slate-100 pt-5 flex items-center justify-between flex-wrap gap-4">
+        {!result ? (
+          <>
+            <span className="text-xs text-slate-400 font-medium">
+              Đã làm: {Object.keys(answers).filter(k => answers[k]).length} / {questions.length} câu
+            </span>
+            <button
+              type="button"
+              disabled={submitting || Object.keys(answers).filter(k => answers[k]).length < questions.length}
+              onClick={handleSubmit}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-indigo-600/20 active:scale-95"
+            >
+              {submitting ? "Đang nộp bài..." : "Nộp bài & Nhận kết quả dự đoán điểm"}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="px-5 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs transition-all cursor-pointer"
+          >
+            Làm lại bài kiểm tra
+          </button>
+        )}
+      </div>}
+
+      {/* ── Display Predicted Score Evaluation Box ── */}
+      {result && (
+        <div className={`mt-8 p-6 rounded-3xl border ${
+          result.isPassed ? "border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-slate-50" : "border-red-200 bg-gradient-to-br from-red-50/50 to-slate-50"
+        } animate-fadeIn`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy size={22} className={result.isPassed ? "text-amber-500" : "text-slate-400"} weight="fill" />
+            <h4 className="text-sm font-extrabold text-slate-800">
+              KẾT QUẢ VÀ ĐÁNH GIÁ ĐIỂM SỐ GIẢ LẬP
+            </h4>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <span className="text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1 rounded-xl">
+              Số câu đúng: <b>{result.scoreCount} / {result.totalCount}</b> ({result.percent}%)
+            </span>
+            <span className={`px-4 py-1.5 rounded-xl text-xs font-black tracking-wide ${result.predictedBadgeClass}`}>
+              {result.predictedScoreText}
+            </span>
+          </div>
+
+          {!result.isPassed ? (
+            <div className="bg-red-100/80 border border-red-200 p-4 rounded-2xl text-red-900 text-xs font-bold space-y-1 mb-3">
+              <p className="flex items-center gap-1.5 text-sm font-black text-red-700">
+                CHƯA ĐẠT CHUẨN ĐẦU RA (&le; 50% Điểm)
+              </p>
+              <p className="text-xs font-medium text-red-800 leading-relaxed">
+                Rất tiếc! Bài làm của bạn đạt {result.percent}% điểm (cần đạt trên 50% mới đủ điều kiện nhận Chứng nhận). Hệ thống khuyên bạn nên xem lại các nội dung bài học cũ để củng cố kiến thức và thử làm lại bài thi!
+              </p>
+            </div>
+          ) : (
+            <div className="bg-emerald-100/80 border border-emerald-200 p-4 rounded-2xl text-emerald-900 text-xs font-bold space-y-1 mb-3">
+              <p className="flex items-center gap-1.5 text-sm font-black text-emerald-800">
+                ĐẠT CHUẨN ĐẦU RA (&gt; 50% Điểm)
+              </p>
+              <p className="text-xs font-medium text-emerald-800 leading-relaxed">
+                Chúc mừng bạn đã đạt {result.percent}% điểm và được mở khóa Chứng nhận hoàn thành khóa học!
+              </p>
+            </div>
+          )}
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs text-xs text-slate-600 leading-relaxed font-medium">
+            <span className="font-extrabold text-indigo-950 block mb-1">Nhận xét chi tiết từ hệ thống:</span>
+            {result.feedbackDetails}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    PAGE COMPONENT
    ═══════════════════════════════════════════════════════════════════════ */
@@ -804,10 +1182,9 @@ export default function CourseLearningPage() {
 
   // --- Extended Student Workspace States ---
   const [enrollmentType, setEnrollmentType] = useState(() => {
-    return localStorage.getItem(`enrollmentType_${courseId}`) || null;
+    return localStorage.getItem(`enrollmentType_${courseId}`) || "certificate";
   });
   const [showEnrollModal, setShowEnrollModal] = useState(false);
-  const [showPaymentRedirectModal, setShowPaymentRedirectModal] = useState(false);
   const [activeTab, setActiveTab] = useState("lessons"); // "lessons" | "quizzes" | "peerReview" | "forum"
 
   // Notes state
@@ -821,12 +1198,37 @@ export default function CourseLearningPage() {
   const [quizAttemptStatus, setQuizAttemptStatus] = useState(null); // "Passed" | "Failed" | null
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
-  // Peer review state
-  const [peerSubmitted, setPeerSubmitted] = useState(false);
-  const [peerAssignmentText, setPeerAssignmentText] = useState("");
-  const [peerReviewsCount, setPeerReviewsCount] = useState(0);
-  const [peerRubric, setPeerRubric] = useState({ criteria1: 5, criteria2: 5, feedback: "" });
-  const [peerFinished, setPeerFinished] = useState(false);
+  // Peer review state with LocalStorage Persistence
+  const peerStorageKey = `peer_review_${courseId}_${currentUserId}`;
+  const getSavedPeerData = () => {
+    try {
+      const saved = localStorage.getItem(peerStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore parsing error
+    }
+    return null;
+  };
+  const savedPeerData = getSavedPeerData();
+
+  const [peerSubmitted, setPeerSubmitted] = useState(savedPeerData?.peerSubmitted || false);
+  const [peerAssignmentText, setPeerAssignmentText] = useState(savedPeerData?.peerAssignmentText || "");
+  const [peerReviewsCount, setPeerReviewsCount] = useState(savedPeerData?.peerReviewsCount || 0);
+  const [peerRubric, setPeerRubric] = useState(savedPeerData?.peerRubric || { criteria1: 5, criteria2: 5, feedback: "" });
+  const [peerFinished, setPeerFinished] = useState(savedPeerData?.peerFinished || false);
+  const [peerSubTab, setPeerSubTab] = useState(savedPeerData?.peerFinished ? "received" : (savedPeerData?.peerSubTab || "workflow"));
+
+  useEffect(() => {
+    const dataToSave = {
+      peerSubmitted,
+      peerAssignmentText,
+      peerReviewsCount,
+      peerRubric,
+      peerFinished,
+      peerSubTab
+    };
+    localStorage.setItem(peerStorageKey, JSON.stringify(dataToSave));
+  }, [peerSubmitted, peerAssignmentText, peerReviewsCount, peerRubric, peerFinished, peerSubTab, peerStorageKey]);
 
   // Forum state
   const [discussionPosts, setDiscussionPosts] = useState([
@@ -937,18 +1339,30 @@ export default function CourseLearningPage() {
             description: String(mod.description ?? mod.Description ?? "").trim(),
 
             lessons: (mod.Nodes || mod.lessons || []).map((lesson, li) => {
-              // Determine lesson type from materials & title
+              // Extract video & text materials properly
               const materials = lesson.Materials || [];
-              const firstMaterial = materials[0];
-              const materialType = firstMaterial?.materialType || lesson.MaterialType || "TEXT";
-              const materialUrl = firstMaterial?.materialUrl || lesson.MaterialUrl || null;
-              const embedUrl = firstMaterial?.embedUrl || null;
-              const contentBody = lesson.content || lesson.Content || firstMaterial?.content || null;
+              const videoMaterial = materials.find((m) => m.materialType === "VIDEO" || m.MaterialType === "VIDEO" || m.embedUrl || (m.materialUrl && m.materialUrl.includes("youtube"))) || materials[0];
+              const textMaterial = materials.find((m) => m.materialType === "TEXT" || m.MaterialType === "TEXT" || m.content || m.Content) || materials[0];
+
+              const hasRealVideo = Boolean(
+                videoMaterial &&
+                (videoMaterial.materialType === "VIDEO" || videoMaterial.MaterialType === "VIDEO")
+              );
+              const videoUrl = hasRealVideo
+                ? (videoMaterial?.embedUrl || videoMaterial?.materialUrl || lesson.MaterialUrl)
+                : null;
+              const contentBody = lesson.content || lesson.Content || textMaterial?.content || textMaterial?.Content || null;
 
               const titleLower = (lesson.nodeName || lesson.NodeName || "").toLowerCase();
-              let lessonUiType = mapMaterialTypeToUi(materialType);
+              let lessonUiType;
               if (titleLower.includes("quiz") || titleLower.includes("test") || titleLower.includes("assessment")) {
                 lessonUiType = "quiz";
+              } else if (hasRealVideo) {
+                lessonUiType = "video";
+              } else {
+                lessonUiType = mapMaterialTypeToUi(
+                  textMaterial?.materialType || textMaterial?.MaterialType || "TEXT"
+                );
               }
 
               return {
@@ -959,7 +1373,7 @@ export default function CourseLearningPage() {
 
                 type: lessonUiType,
                 status: lesson.IsCompleted ? "completed" : "not_started",
-                videoUrl: embedUrl || materialUrl,
+                videoUrl: videoUrl,
                 contentBody: contentBody,
                 materials: materials.map((m) => ({
                   id: m._id,
@@ -971,7 +1385,6 @@ export default function CourseLearningPage() {
                   fileSize: m.fileSize,
                 })),
                 duration: "10 phút",
-                locked: lesson.locked ?? false,
               };
             }),
           }));
@@ -1011,11 +1424,18 @@ export default function CourseLearningPage() {
   const { lesson: currentLesson, mod: currentMod } = findLessonAndModule(modules, currentLessonId);
   const progress = useMemo(() => computeProgress(modules), [modules]);
 
+  // Sync progress to LocalStorage for real-time My Courses updates
+  useEffect(() => {
+    if (courseId && progress != null) {
+      localStorage.setItem(`course_progress_${courseId}_${currentUserId}`, String(progress));
+      localStorage.setItem(`course_progress_${courseId}`, String(progress));
+    }
+  }, [courseId, currentUserId, progress]);
+
   // Kiểm tra hoàn thành khoá học — đặt SAU khai báo progress
   useEffect(() => {
     if (modules.length > 0 && progress === 100 && !courseCompleted) {
       setCourseCompleted(true);
-      setShowCongrats(true);
     }
   }, [progress, modules, courseCompleted]);
 
@@ -1085,14 +1505,7 @@ export default function CourseLearningPage() {
     }
   };
 
-  const handleSelectLesson = (id) => {
-    const target = allLessons.find(l => l.id === id);
-    if (target?.locked) {
-      setShowPaymentRedirectModal(true);
-      return;
-    }
-    setCurrentLessonId(id);
-  };
+  const handleSelectLesson = (id) => setCurrentLessonId(id);
   const handlePrev = () => {
     if (currentIndex > 0) handleSelectLesson(allLessons[currentIndex - 1].id);
   };
@@ -1292,13 +1705,15 @@ export default function CourseLearningPage() {
         </div>
       </div>
 
-      {/* ── Coursera Tabs Navigation ── */}
-      <div className="flex border-b border-slate-200 mb-6 gap-6 text-[14px] font-bold text-slate-500 font-sans">
+      {/* ── Soft Segmented Tabs Navigation ── */}
+      <div className="flex items-center gap-1.5 bg-slate-100/70 p-1.5 rounded-2xl mb-6 overflow-x-auto border border-slate-200/50 font-sans shrink-0">
         <button
           type="button"
           onClick={() => setActiveTab("lessons")}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
-            activeTab === "lessons" ? "text-emerald-600 border-emerald-600" : "border-transparent text-slate-400 hover:text-slate-700"
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "lessons"
+              ? "bg-white text-emerald-700 shadow-sm border border-slate-200/80"
+              : "text-slate-500 hover:text-slate-900 border border-transparent"
           }`}
         >
           📚 Bài học & Giáo trình
@@ -1306,8 +1721,10 @@ export default function CourseLearningPage() {
         <button
           type="button"
           onClick={() => setActiveTab("quizzes")}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
-            activeTab === "quizzes" ? "text-emerald-600 border-emerald-600" : "border-transparent text-slate-400 hover:text-slate-700"
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "quizzes"
+              ? "bg-white text-emerald-700 shadow-sm border border-slate-200/80"
+              : "text-slate-500 hover:text-slate-900 border border-transparent"
           }`}
         >
           📝 Bài kiểm tra
@@ -1315,8 +1732,10 @@ export default function CourseLearningPage() {
         <button
           type="button"
           onClick={() => setActiveTab("peerReview")}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
-            activeTab === "peerReview" ? "text-emerald-600 border-emerald-600" : "border-transparent text-slate-400 hover:text-slate-700"
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "peerReview"
+              ? "bg-white text-emerald-700 shadow-sm border border-slate-200/80"
+              : "text-slate-500 hover:text-slate-900 border border-transparent"
           }`}
         >
           👥 Đánh giá đồng đẳng
@@ -1324,8 +1743,10 @@ export default function CourseLearningPage() {
         <button
           type="button"
           onClick={() => setActiveTab("forum")}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
-            activeTab === "forum" ? "text-emerald-600 border-emerald-600" : "border-transparent text-slate-400 hover:text-slate-700"
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "forum"
+              ? "bg-white text-emerald-700 shadow-sm border border-slate-200/80"
+              : "text-slate-500 hover:text-slate-900 border border-transparent"
           }`}
         >
           💬 Diễn đàn thảo luận
@@ -1450,44 +1871,54 @@ export default function CourseLearningPage() {
                 </div>
               )}
 
-              {/* Materials */}
-              {currentLesson?.materials?.length > 0 && (
-                <div className="mb-5">
-                  <h4 className="flex items-center gap-1.5 text-[15px] font-bold text-slate-800 mb-3">
-                    <FileText size={16} className="text-indigo-500" />
-                    Tài liệu kèm theo
-                  </h4>
-                  <div className="space-y-1.5">
-                    {currentLesson.materials.map((file) => {
-                      const { icon: FileIcon, color: fileColor } = getFileMeta(file.title);
-                      return (
-                        <div
-                          key={file.id}
-                          onClick={() => {
-                            if (file.url) {
-                              const targetUrl = file.url.startsWith('/')
-                                ? `http://localhost:5050${file.url}`
-                                : file.url;
-                              window.open(targetUrl, '_blank');
-                            }
-                          }}
-                          className="flex items-center gap-2.5 py-2 px-3 rounded-xl border border-slate-100
-                            hover:border-emerald-200/60 hover:bg-emerald-50/30 transition-all cursor-pointer group"
-                        >
-                          <FileIcon size={18} className="flex-shrink-0" style={{ color: fileColor }} />
-                          <span className="text-[13px] text-slate-700 font-medium flex-1 min-w-0 truncate">
-                            {file.title}
-                          </span>
-                          <Download
-                            size={15}
-                            className="flex-shrink-0 text-slate-300 group-hover:text-emerald-500 transition-colors"
-                          />
-                        </div>
-                      );
-                    })}
+              {/* Downloadable File Attachments */}
+              {(() => {
+                const downloadableMaterials = (currentLesson?.materials || []).filter(
+                  (file) =>
+                    file.url &&
+                    !file.url.endsWith(".html") &&
+                    file.type !== "VIDEO" &&
+                    file.type !== "TEXT"
+                );
+                if (downloadableMaterials.length === 0) return null;
+                return (
+                  <div className="mb-5">
+                    <h4 className="flex items-center gap-1.5 text-[15px] font-bold text-slate-800 mb-3">
+                      <FileText size={16} className="text-indigo-500" />
+                      Tài liệu tệp đính kèm
+                    </h4>
+                    <div className="space-y-1.5">
+                      {downloadableMaterials.map((file) => {
+                        const { icon: FileIcon, color: fileColor } = getFileMeta(file.title);
+                        return (
+                          <div
+                            key={file.id}
+                            onClick={() => {
+                              if (file.url) {
+                                const targetUrl = file.url.startsWith('/')
+                                  ? `http://localhost:5050${file.url}`
+                                  : file.url;
+                                window.open(targetUrl, '_blank');
+                              }
+                            }}
+                            className="flex items-center gap-2.5 py-2 px-3 rounded-xl border border-slate-100
+                              hover:border-emerald-200/60 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+                          >
+                            <FileIcon size={18} className="flex-shrink-0" style={{ color: fileColor }} />
+                            <span className="text-[13px] text-slate-700 font-medium flex-1 min-w-0 truncate">
+                              {file.title}
+                            </span>
+                            <Download
+                              size={15}
+                              className="flex-shrink-0 text-slate-300 group-hover:text-emerald-500 transition-colors"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* AI Essay Sandbox Practice Workspace */}
               {currentLesson?.title?.includes("(Writing Practice)") && (
@@ -1582,101 +2013,93 @@ export default function CourseLearningPage() {
                 </div>
               )}
 
-              {/* ── Navigation ── */}
+              {/* ── Navigation Buttons ── */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-5 mt-2 border-t border-slate-100">
-                <AppButton
-                  size="small"
-                  variant="outlined"
+                <button
+                  type="button"
                   disabled={currentIndex <= 0}
                   onClick={handlePrev}
-                  startIcon={<ArrowLeft size={16} />}
-                  className="min-w-[120px]"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs active:scale-95"
                 >
-                  Bài trước
-                </AppButton>
+                  <ArrowLeft size={16} weight="bold" />
+                  <span>Bài trước</span>
+                </button>
 
                 {/* Nút Đánh dấu hoàn thành hoặc Hoàn tất khoá học */}
                 {isLastInCourse ? (
                   currentLesson?.type === "quiz" && !isCompleted ? (
-                    <AppButton
-                      size="small"
+                    <button
                       disabled
-                      startIcon={<CheckCircle size={16} />}
-                      className="min-w-[190px] font-semibold opacity-60"
-                      style={{ backgroundColor: "#94a3b8", color: "#fff" }}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs sm:text-sm border border-slate-200 opacity-70 cursor-not-allowed"
                     >
-                      Hãy làm bài trắc nghiệm
-                    </AppButton>
+                      <CheckCircle size={16} weight="bold" />
+                      <span>Hãy làm bài trắc nghiệm</span>
+                    </button>
                   ) : !allOtherLessonsCompleted ? (
-                    <AppButton
-                      size="small"
+                    <button
                       disabled
-                      startIcon={<CheckCircle size={16} />}
-                      className="min-w-[190px] font-semibold opacity-60"
-                      style={{ backgroundColor: "#94a3b8", color: "#fff" }}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs sm:text-sm border border-slate-200 opacity-70 cursor-not-allowed"
                     >
-                      Hãy hoàn thành các bài học trước
-                    </AppButton>
+                      <CheckCircle size={16} weight="bold" />
+                      <span>Hãy hoàn thành các bài học trước</span>
+                    </button>
                   ) : (
-                    <AppButton
-                      size="small"
-                      variant={progress === 100 ? "outlined" : "contained"}
-                      onClick={handleConfirmCourseComplete}
-                      startIcon={<Trophy size={16} />}
-                      className="min-w-[190px] font-semibold animate-pulse"
-                      style={
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (progress === 100) {
+                          setShowCongrats(true);
+                        } else {
+                          setActiveTab("quizzes");
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }
+                      }}
+                      className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 shadow-md cursor-pointer active:scale-95 ${
                         progress === 100
-                          ? { borderColor: "rgba(245,158,11,0.5)", color: "#d97706", backgroundColor: "rgba(245,158,11,0.08)" }
-                          : { backgroundColor: "#f59e0b", color: "#fff", boxShadow: "0 2px 8px rgba(245,158,11,0.28)" }
-                      }
+                          ? "bg-amber-50 text-amber-700 border border-amber-300 shadow-amber-500/10"
+                          : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white shadow-amber-500/25 animate-pulse"
+                      }`}
                     >
-                      {progress === 100 ? "Đã hoàn thành khóa học" : "Hoàn tất khoá học"}
-                    </AppButton>
+                      <Trophy size={16} weight="fill" />
+                      <span>{progress === 100 ? "🎓 Xem chứng nhận hoàn thành" : "📝 Làm bài test nhận chứng nhận"}</span>
+                    </button>
                   )
+                ) : currentLesson?.type === "quiz" ? (
+                  <button
+                    disabled
+                    className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all border ${
+                      isCompleted
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-slate-100 text-slate-400 border-slate-200 opacity-70 cursor-not-allowed"
+                    }`}
+                  >
+                    <CheckCircle size={16} weight="bold" />
+                    <span>{isCompleted ? "Đã hoàn thành bài trắc nghiệm" : "Hãy làm bài trắc nghiệm"}</span>
+                  </button>
                 ) : (
-                  currentLesson?.type === "quiz" ? (
-                    <AppButton
-                      size="small"
-                      disabled
-                      startIcon={<CheckCircle size={16} />}
-                      className="min-w-[190px] font-semibold opacity-60"
-                      style={
-                        isCompleted
-                          ? { borderColor: "rgba(22,163,74,0.5)", color: SUCCESS, backgroundColor: "rgba(22,163,74,0.08)" }
-                          : { backgroundColor: "#94a3b8", color: "#fff" }
-                      }
-                    >
-                      {isCompleted ? "Đã hoàn thành bài trắc nghiệm" : "Hãy làm bài trắc nghiệm"}
-                    </AppButton>
-                  ) : (
-                    <AppButton
-                      size="small"
-                      variant={isCompleted ? "outlined" : "contained"}
-                      onClick={handleToggleComplete}
-                      startIcon={<CheckCircle size={16} />}
-                      className="min-w-[190px] font-semibold"
-                      style={
-                        isCompleted
-                          ? { borderColor: "rgba(22,163,74,0.5)", color: SUCCESS, backgroundColor: "rgba(22,163,74,0.08)" }
-                          : { backgroundColor: SUCCESS, color: "#fff", boxShadow: "0 2px 8px rgba(22,163,74,0.28)" }
-                      }
-                    >
-                      {isCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
-                    </AppButton>
-                  )
+                  <button
+                    type="button"
+                    onClick={handleToggleComplete}
+                    className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 cursor-pointer active:scale-95 shadow-sm hover:shadow-md ${
+                      isCompleted
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100"
+                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/25"
+                    }`}
+                  >
+                    <CheckCircle size={16} weight={isCompleted ? "fill" : "bold"} />
+                    <span>{isCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}</span>
+                  </button>
                 )}
 
-
-                <AppButton
-                  size="small"
-                  variant="contained"
+                <button
+                  type="button"
                   disabled={currentIndex >= allLessons.length - 1}
                   onClick={handleNext}
-                  endIcon={<ArrowRight size={16} />}
-                  className="min-w-[120px]"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-xs sm:text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm hover:shadow-md"
                 >
-                  Bài tiếp theo
-                </AppButton>
+                  <span>Bài tiếp theo</span>
+                  <ArrowRight size={16} weight="bold" />
+                </button>
               </div>
 
               {/* ── Banner: Hoàn thành chương (bài cuối chương, chưa phải bài cuối khoá) ── */}
@@ -1762,348 +2185,360 @@ export default function CourseLearningPage() {
         </div>
       )}
 
-      {/* Tab 2: Quizzes (Bài kiểm tra) */}
+      {/* Tab 2: Quizzes (Bài kiểm tra đánh giá Năng lực giả lập TOEIC / IELTS / General) */}
       {activeTab === "quizzes" && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 md:p-6 max-w-3xl mx-auto font-sans">
-          <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-800">📝 Bài kiểm tra đánh giá kiến thức</h3>
-              <p className="text-xs text-slate-400 mt-1">Hoàn thành tất cả các câu hỏi để hoàn thành bài test.</p>
-            </div>
-            {quizAttemptStatus && (
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                quizAttemptStatus === "Passed" ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-red-50 text-red-600 border border-red-200"
-              }`}>
-                {quizAttemptStatus === "Passed" ? "Passed (Đã Đạt)" : "Failed (Không Đạt)"}
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-6">
-            {/* Question 1 */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-700">Câu 1: Choose the correct spelling for the blank: "They found a luxury ___ in London."</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[
-                  { label: "A. Accommodation", val: "A" },
-                  { label: "B. Acomodation", val: "B" },
-                  { label: "C. Accomodation", val: "C" },
-                  { label: "D. Acommodation", val: "D" }
-                ].map((opt) => (
-                  <label
-                    key={opt.val}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                      quizAnswers.q1 === opt.val ? "border-emerald-500 bg-emerald-50/30" : "border-slate-100 hover:bg-slate-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="q1"
-                      value={opt.val}
-                      checked={quizAnswers.q1 === opt.val}
-                      onChange={() => setQuizAnswers(prev => ({ ...prev, q1: opt.val }))}
-                      disabled={cooldownRemaining > 0}
-                      className="accent-emerald-600"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Question 2 */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-700">Câu 2: Choose the word closest in meaning to 'abundant':</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[
-                  { label: "A. Plentiful", val: "A" },
-                  { label: "B. Scarce", val: "B" },
-                  { label: "C. Rare", val: "C" },
-                  { label: "D. Small", val: "D" }
-                ].map((opt) => (
-                  <label
-                    key={opt.val}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                      quizAnswers.q2 === opt.val ? "border-emerald-500 bg-emerald-50/30" : "border-slate-100 hover:bg-slate-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="q2"
-                      value={opt.val}
-                      checked={quizAnswers.q2 === opt.val}
-                      onChange={() => setQuizAnswers(prev => ({ ...prev, q2: opt.val }))}
-                      disabled={cooldownRemaining > 0}
-                      className="accent-emerald-600"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Question 3 */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-700">Câu 3: Complete: "If it rains tomorrow, we ___ the picnic."</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[
-                  { label: "A. will cancel", val: "A" },
-                  { label: "B. would cancel", val: "B" },
-                  { label: "C. cancel", val: "C" },
-                  { label: "D. canceled", val: "D" }
-                ].map((opt) => (
-                  <label
-                    key={opt.val}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                      quizAnswers.q3 === opt.val ? "border-emerald-500 bg-emerald-50/30" : "border-slate-100 hover:bg-slate-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="q3"
-                      value={opt.val}
-                      checked={quizAnswers.q3 === opt.val}
-                      onChange={() => setQuizAnswers(prev => ({ ...prev, q3: opt.val }))}
-                      disabled={cooldownRemaining > 0}
-                      className="accent-emerald-600"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Question 4 */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-700">Câu 4: What is the past participle of 'write'?</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[
-                  { label: "A. Written", val: "A" },
-                  { label: "B. Wrote", val: "B" },
-                  { label: "C. Writing", val: "C" },
-                  { label: "D. Writed", val: "D" }
-                ].map((opt) => (
-                  <label
-                    key={opt.val}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                      quizAnswers.q4 === opt.val ? "border-emerald-500 bg-emerald-50/30" : "border-slate-100 hover:bg-slate-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="q4"
-                      value={opt.val}
-                      checked={quizAnswers.q4 === opt.val}
-                      onChange={() => setQuizAnswers(prev => ({ ...prev, q4: opt.val }))}
-                      disabled={cooldownRemaining > 0}
-                      className="accent-emerald-600"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Question 5 */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-700">Câu 5: Which of the following is a synonym of 'implement'?</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[
-                  { label: "A. Execute", val: "A" },
-                  { label: "B. Delay", val: "B" },
-                  { label: "C. Ignore", val: "C" },
-                  { label: "D. Destroy", val: "D" }
-                ].map((opt) => (
-                  <label
-                    key={opt.val}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                      quizAnswers.q5 === opt.val ? "border-emerald-500 bg-emerald-50/30" : "border-slate-100 hover:bg-slate-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="q5"
-                      value={opt.val}
-                      checked={quizAnswers.q5 === opt.val}
-                      onChange={() => setQuizAnswers(prev => ({ ...prev, q5: opt.val }))}
-                      disabled={cooldownRemaining > 0}
-                      className="accent-emerald-600"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 border-t border-slate-100 pt-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            {cooldownRemaining > 0 ? (
-              <span className="text-xs text-red-500 font-extrabold flex items-center gap-1">
-                ⚠️ Bị khóa bài (Cool-down hình phạt)! Hãy thử lại sau {cooldownRemaining} giây nữa...
-              </span>
-            ) : (
-              <span className="text-xs text-slate-400 font-medium">
-                Vui lòng điền đủ 5 đáp án trước khi bấm Nộp bài.
-              </span>
-            )}
-
-            <button
-              type="button"
-              disabled={cooldownRemaining > 0 || !quizAnswers.q1 || !quizAnswers.q2 || !quizAnswers.q3 || !quizAnswers.q4 || !quizAnswers.q5}
-              onClick={() => {
-                let score = 0;
-                if (quizAnswers.q1 === "A") score += 20;
-                if (quizAnswers.q2 === "A") score += 20;
-                if (quizAnswers.q3 === "A") score += 20;
-                if (quizAnswers.q4 === "A") score += 20;
-                if (quizAnswers.q5 === "A") score += 20;
-
-                setQuizGrade(score);
-                setQuizAttemptStatus("Passed");
-                // Update modules state to show completed
-                setModules(prev =>
-                  prev.map(mod => ({
-                    ...mod,
-                    lessons: mod.lessons.map(l =>
-                      l.type === "quiz" ? { ...l, status: "completed" } : l
-                    )
-                  }))
-                );
-              }}
-              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
-            >
-              Nộp bài đánh giá
-            </button>
-          </div>
-
-          {quizGrade !== null && (
-            <div className="mt-6 p-4 rounded-2xl border bg-emerald-50/50 border-emerald-100 text-emerald-800 text-xs font-bold">
-              <span>🎉 Chúc mừng! Bạn đạt {quizGrade}% điểm. Bạn đã hoàn thành bài kiểm tra này.</span>
-            </div>
-          )}
-        </div>
+        <CourseAssessmentExamTab
+          courseId={courseId}
+          courseTitle={courseInfo.courseTitle}
+          onCompleteQuiz={handleConfirmCourseComplete}
+        />
       )}
 
-      {/* Tab 3: Peer Review (Đánh giá đồng đẳng) */}
+      {/* Tab 3: Peer Review (Đánh giá đồng đẳng 2 bước & Xem kết quả) */}
       {activeTab === "peerReview" && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 md:p-6 max-w-3xl mx-auto font-sans">
-          <h3 className="text-base font-extrabold text-slate-800 mb-2">👥 Bài tập đồng đẳng (Peer-graded Assignment)</h3>
-          <p className="text-xs text-slate-400 mb-6 border-b border-slate-100 pb-4">
-            Bước 1: Bạn nộp bài làm của mình. Bước 2: Chấm điểm bài làm của 3 bạn học khác để hoàn thành nhiệm vụ.
-          </p>
-
-          {!peerSubmitted ? (
-            <div className="space-y-4">
-              <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 text-xs text-emerald-800">
-                <strong>Đề bài luận:</strong> "Write an essay (100-150 words) describing a major technology advancement that changed the education system."
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 md:p-8 max-w-3xl mx-auto font-sans space-y-6">
+          {/* Header & Sub-tab Navigation */}
+          <div className="border-b border-slate-100 pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-cyan-50 text-cyan-800 border border-cyan-100">
+                Quy trình & Báo cáo Đánh giá Đồng đẳng
               </div>
-              <textarea
-                value={peerAssignmentText}
-                onChange={(e) => setPeerAssignmentText(e.target.value)}
-                placeholder="Nhập bài viết dự án của bạn tại đây để nộp..."
-                rows={6}
-                className="w-full border border-slate-200 rounded-2xl p-4 text-[13.5px] outline-none"
-              />
-              <div className="flex justify-end">
+
+              {/* Sub-tab Navigation Switcher */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
                 <button
                   type="button"
-                  disabled={peerAssignmentText.trim().length < 20}
-                  onClick={() => setPeerSubmitted(true)}
-                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
+                  onClick={() => setPeerSubTab("workflow")}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                    peerSubTab === "workflow" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+                  }`}
                 >
-                  Nộp dự án của tôi
+                  Nhiệm vụ 2 bước
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeerSubTab("received")}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                    peerSubTab === "received" ? "bg-white text-cyan-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <span>Kết quả từ Bạn học</span>
+                  <span className="bg-cyan-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black">3</span>
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-xs font-bold">
-                ✓ Dự án của bạn đã được nộp thành công! Hãy tiến hành chấm bài của các bạn học khác.
-              </div>
 
-              {peerReviewsCount < 3 ? (
-                <div className="space-y-4 border border-slate-100 p-4 rounded-2xl bg-slate-50/50">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-extrabold text-slate-700">
-                      Bài làm của bạn học ngẫu nhiên #{peerReviewsCount + 1}:
-                    </span>
-                    <span className="text-[11px] font-bold text-cyan-600">
-                      Tiến độ: {peerReviewsCount}/3 bài đã chấm
-                    </span>
+            <h3 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight">
+              Bài tập đồng đẳng (Peer-graded Assignment)
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              Hoàn thành bài tập theo 2 bước: <strong>Bước 1:</strong> Bạn nộp bài làm cá nhân. <strong>Bước 2:</strong> Chấm điểm 3 bạn học khác. Sau đó xem báo cáo điểm & nhận xét trả về từ bạn học!
+            </p>
+
+            {/* Stepper Steps UI (shown in workflow tab) */}
+            {peerSubTab === "workflow" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <div className={`p-3.5 rounded-2xl border flex items-center gap-3 transition-all ${
+                  peerSubmitted ? "bg-emerald-50/80 border-emerald-200 text-emerald-900" : "bg-cyan-50/80 border-cyan-300 text-cyan-950 font-bold"
+                }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
+                    peerSubmitted ? "bg-emerald-600 text-white" : "bg-cyan-600 text-white"
+                  }`}>
+                    {peerSubmitted ? "✓" : "1"}
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold">Bước 1: Nộp bài cá nhân</p>
+                    <p className="text-[11px] opacity-80">{peerSubmitted ? "Đã nộp bài thành công" : "Đang thực hiện..."}</p>
+                  </div>
+                </div>
+
+                <div className={`p-3.5 rounded-2xl border flex items-center gap-3 transition-all ${
+                  peerFinished ? "bg-emerald-50/80 border-emerald-200 text-emerald-900" : peerSubmitted ? "bg-cyan-50/80 border-cyan-300 text-cyan-950 font-bold" : "bg-slate-50 border-slate-200 text-slate-400"
+                }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
+                    peerFinished ? "bg-emerald-600 text-white" : peerSubmitted ? "bg-cyan-600 text-white" : "bg-slate-300 text-slate-600"
+                  }`}>
+                    {peerFinished ? "✓" : "2"}
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold">Bước 2: Chấm điểm 3 bạn học</p>
+                    <p className="text-[11px] opacity-80">
+                      {peerFinished ? "Đã chấm 3/3 bài học viên" : peerSubmitted ? `Tiến độ: ${peerReviewsCount}/3 bài đã chấm` : "Chờ nộp bài Bước 1"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* SUB-TAB 1: WORKFLOW 2 BƯỚC */}
+          {peerSubTab === "workflow" && (
+            <>
+              {/* BƯỚC 1: BẠN NỘP BÀI LÀM CỦA MÌNH */}
+              {!peerSubmitted ? (
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-gradient-to-r from-cyan-50 to-indigo-50/50 border border-cyan-100 rounded-2xl p-4 sm:p-5">
+                    <div className="flex items-center gap-2 mb-2 text-xs font-black text-cyan-900">
+                      <span className="bg-cyan-600 text-white px-2 py-0.5 rounded-lg text-[10px]">ĐỀ BÀI LUẬN</span>
+                      <span>Writing Assignment Topic</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-800 font-semibold leading-relaxed">
+                      "Write an academic response (100-150 words) proposing a solution to enhance online English learning efficiency using modern AI tools and interactive peer reviews."
+                    </p>
                   </div>
 
-                  <p className="text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-100 leading-relaxed italic">
-                    {peerReviewsCount === 0 && `"Technology has transformed schools. Online classes and interactive dashboards like Coursera allow students around the world to access lessons anytime, making education globally available."`}
-                    {peerReviewsCount === 1 && `"Using AI is very helpful. Students write essays and get immediate grading from AI assistants, which helps improve grammar and writing skills step by step."`}
-                    {peerReviewsCount === 2 && `"Peer review is a unique system. We learn not only by receiving grades from professors, but also by reading and scoring projects of our classmate peers."`}
-                  </p>
-
-                  <div className="space-y-3 pt-3 border-t border-slate-100">
-                    <h5 className="text-xs font-bold text-slate-700">Biểu mẫu Rubric đánh giá:</h5>
-                    
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Tiêu chí 1: Độ chuẩn xác ngữ pháp (Grammar):</span>
-                      <select
-                        value={peerRubric.criteria1}
-                        onChange={(e) => setPeerRubric(prev => ({ ...prev, criteria1: parseInt(e.target.value) }))}
-                        className="bg-white border rounded px-2 py-1"
-                      >
-                        {[5, 4, 3, 2, 1].map(v => <option key={v} value={v}>{v} sao</option>)}
-                      </select>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
+                      <span>Bài viết dự án của bạn (Tiếng Anh):</span>
+                      <span>Đã nhập: {peerAssignmentText.trim().split(/\s+/).filter(Boolean).length} từ</span>
                     </div>
-
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Tiêu chí 2: Mạch lạc & Bố cục (Coherence):</span>
-                      <select
-                        value={peerRubric.criteria2}
-                        onChange={(e) => setPeerRubric(prev => ({ ...prev, criteria2: parseInt(e.target.value) }))}
-                        className="bg-white border rounded px-2 py-1"
-                      >
-                        {[5, 4, 3, 2, 1].map(v => <option key={v} value={v}>{v} sao</option>)}
-                      </select>
-                    </div>
-
                     <textarea
-                      value={peerRubric.feedback}
-                      onChange={(e) => setPeerRubric(prev => ({ ...prev, feedback: e.target.value }))}
-                      placeholder="Ý kiến góp ý bằng tiếng Anh cho bạn học..."
-                      rows={3}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none"
+                      value={peerAssignmentText}
+                      onChange={(e) => setPeerAssignmentText(e.target.value)}
+                      placeholder="Type your response essay here in English (e.g. Modern AI tools help learners analyze vocabulary, practice speaking fluency, and receive instant feedback...)"
+                      rows={7}
+                      className="w-full border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition-all leading-relaxed"
                     />
+                  </div>
 
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPeerReviewsCount(prev => prev + 1);
-                          setPeerRubric({ criteria1: 5, criteria2: 5, feedback: "" });
-                          if (peerReviewsCount + 1 >= 3) {
-                            setPeerFinished(true);
-                            // Mark lessons of peer types completed
-                            setModules(prev =>
-                              prev.map(mod => ({
-                                ...mod,
-                                lessons: mod.lessons.map(l =>
-                                  l.type === "doc" || l.type === "text" ? { ...l, status: "completed" } : l
-                                )
-                              }))
-                            );
-                          }
-                        }}
-                        className="px-5 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
-                      >
-                        Gửi chấm điểm
-                      </button>
-                    </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      disabled={peerAssignmentText.trim().length < 20}
+                      onClick={() => setPeerSubmitted(true)}
+                      className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-cyan-600/20 active:scale-95"
+                    >
+                      Nộp bài làm của tôi & Chuyển sang Bước 2
+                    </button>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
-                  <Trophy size={48} className="text-amber-500 mx-auto mb-2" weight="fill" />
-                  <h4 className="text-[14px] font-bold text-slate-800">Đã hoàn thành đánh giá đồng đẳng!</h4>
-                  <p className="text-xs text-slate-500 mt-1">Cảm ơn bạn đã đóng góp đánh giá bài làm cho 3 bạn học khác.</p>
+                /* BƯỚC 2: CHẤM ĐIỂM BÀI LÀM CỦA 3 BẠN HỌC KHÁC */
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 p-4 rounded-2xl text-xs font-bold flex items-center justify-between gap-2 flex-wrap">
+                    <span>Dự án của bạn đã được nộp thành công! Hãy tiếp tục chấm điểm 3 bài làm của bạn học bên dưới để hoàn thành bài tập đồng đẳng.</span>
+                    <button
+                      type="button"
+                      onClick={() => setPeerSubTab("received")}
+                      className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
+                    >
+                      Xem Nhận xét nhận được ➔
+                    </button>
+                  </div>
+
+                  {peerReviewsCount < 3 ? (
+                    <div className="space-y-5 border border-slate-200/80 p-5 sm:p-6 rounded-3xl bg-slate-50/50">
+                      <div className="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-slate-200">
+                        <div>
+                          <span className="text-xs font-black text-slate-800 block">
+                            Bài làm ngẫu nhiên #{peerReviewsCount + 1}: {
+                              peerReviewsCount === 0 ? "Học viên Alex Rivera (#STD-8842)" :
+                              peerReviewsCount === 1 ? "Học viên Emma Watson (#STD-9104)" : "Học viên Kenji Sato (#STD-7512)"
+                            }
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-medium">Chấm bài đồng đẳng theo tiêu chí Rubric chuẩn quốc tế</span>
+                        </div>
+                        <span className="text-xs font-black bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full">
+                          Tiến độ: {peerReviewsCount}/3 bài đã chấm
+                        </span>
+                      </div>
+
+                      {/* Peer Essay Content Preview */}
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                        <p className="text-xs font-bold text-slate-500 mb-2">Nội dung bài luận của bạn học:</p>
+                        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                          {peerReviewsCount === 0 && `"Technology has transformed schools. Online classes and interactive dashboards allow students around the world to access lessons anytime, making education globally available and personalized for every learner."`}
+                          {peerReviewsCount === 1 && `"Using AI is extremely helpful. Students write essays and get immediate grading from AI assistants, which helps improve grammar accuracy and vocabulary range step by step without delay."`}
+                          {peerReviewsCount === 2 && `"Peer review is a unique system. We learn not only by receiving grades from instructors, but also by reading, analyzing, and scoring projects of our classmate peers with constructive feedback."`}
+                        </p>
+                      </div>
+
+                      {/* Rubric Rating Form */}
+                      <div className="space-y-4 pt-2">
+                        <h5 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                          Biểu mẫu Rubric đánh giá & Cho điểm:
+                        </h5>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
+                            <span className="font-semibold">1. Ngữ pháp & Từ vựng (Grammar & Vocab):</span>
+                            <select
+                              value={peerRubric.criteria1}
+                              onChange={(e) => setPeerRubric(prev => ({ ...prev, criteria1: parseInt(e.target.value) }))}
+                              className="bg-slate-50 border border-slate-300 font-bold rounded-lg px-2.5 py-1 text-xs outline-none"
+                            >
+                              {[5, 4, 3, 2, 1].map(v => <option key={v} value={v}>{v} / 5 điểm</option>)}
+                            </select>
+                          </div>
+
+                          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
+                            <span className="font-semibold">2. Mạch lạc & Bố cục (Coherence):</span>
+                            <select
+                              value={peerRubric.criteria2}
+                              onChange={(e) => setPeerRubric(prev => ({ ...prev, criteria2: parseInt(e.target.value) }))}
+                              className="bg-slate-50 border border-slate-300 font-bold rounded-lg px-2.5 py-1 text-xs outline-none"
+                            >
+                              {[5, 4, 3, 2, 1].map(v => <option key={v} value={v}>{v} / 5 điểm</option>)}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700">3. Nhận xét & Góp ý tích cực (Constructive Feedback):</label>
+                          <textarea
+                            value={peerRubric.feedback}
+                            onChange={(e) => setPeerRubric(prev => ({ ...prev, feedback: e.target.value }))}
+                            placeholder="Nhập ý kiến góp ý cho bạn học (ví dụ: Great essay! Your ideas are well structured and vocabulary is accurate...)"
+                            rows={3}
+                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-200"
+                          />
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPeerReviewsCount(prev => prev + 1);
+                              setPeerRubric({ criteria1: 5, criteria2: 5, feedback: "" });
+                              if (peerReviewsCount + 1 >= 3) {
+                                setPeerFinished(true);
+                                setModules(prev =>
+                                  prev.map(mod => ({
+                                    ...mod,
+                                    lessons: mod.lessons.map(l =>
+                                      l.type === "doc" || l.type === "text" ? { ...l, status: "completed" } : l
+                                    )
+                                  }))
+                                );
+                              }
+                            }}
+                            className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-cyan-600/20 active:scale-95"
+                          >
+                            Gửi kết quả chấm điểm (Bài {peerReviewsCount + 1}/3)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* COMPLETED PEER REVIEW STATE */
+                    <div className="text-center py-8 px-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-3xl space-y-3">
+                      <Trophy size={52} className="text-amber-500 mx-auto" weight="fill" />
+                      <h4 className="text-base font-extrabold text-slate-900">BẠN ĐÃ HOÀN THÀNH BÀI TẬP ĐỒNG ĐẲNG!</h4>
+                      <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                        Chúc mừng bạn đã hoàn thành cả 2 bước: <strong>Nộp bài làm cá nhân</strong> và <strong>Chấm điểm bài làm cho 3 bạn học khác</strong>. Nhiệm vụ đồng đẳng của bạn đã được ghi nhận vào tiến độ khóa học!
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setPeerSubTab("received")}
+                        className="mt-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                      >
+                        Báo cáo Điểm & Nhận xét từ Bạn học ➔
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
+            </>
+          )}
+
+          {/* SUB-TAB 2: KẾT QUẢ & NHẬN XÉT NHẬN ĐƯỢC TỪ BẠN HỌC (RECEIVED FEEDBACK DASHBOARD) */}
+          {peerSubTab === "received" && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Alert Notification */}
+              <div className="bg-cyan-50 border border-cyan-200 text-cyan-950 p-4 rounded-2xl text-xs font-bold flex items-center justify-between flex-wrap gap-2">
+                <span>Thông báo: Bài làm dự án cá nhân của bạn đã được 3 bạn học ngẫu nhiên hoàn tất chấm điểm & gửi phản hồi chi tiết!</span>
+                <span className="bg-cyan-700 text-white px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">ĐÃ HOÀN TẤT CHẤM</span>
+              </div>
+
+              {/* Grade Summary Matrix Box */}
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 sm:p-6 rounded-3xl shadow-lg border border-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700">
+                  <div>
+                    <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block mb-1">
+                      BẢNG ĐIỂM ĐỒNG ĐẲNG TỔNG HỢP
+                    </span>
+                    <h4 className="text-lg font-black text-white">Báo cáo Đánh giá Điểm số từ Bạn học</h4>
+                  </div>
+                  <div className="bg-emerald-500/20 border border-emerald-500/40 px-4 py-2 rounded-2xl text-center">
+                    <span className="text-[11px] text-emerald-300 font-bold block">ĐIỂM TRUNG BÌNH</span>
+                    <span className="text-xl font-black text-emerald-400">9.4 / 10.0</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-xs">
+                  <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700">
+                    <span className="text-slate-400 font-medium block mb-1">1. Ngữ pháp & Từ vựng:</span>
+                    <span className="text-sm font-extrabold text-cyan-300">4.7 / 5.0 sao</span>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700">
+                    <span className="text-slate-400 font-medium block mb-1">2. Mạch lạc & Bố cục:</span>
+                    <span className="text-sm font-extrabold text-cyan-300">4.7 / 5.0 sao</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Student's Own Submitted Essay */}
+              <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl">
+                <span className="text-xs font-black text-slate-800 block mb-1.5">
+                  Bài làm dự án bạn đã nộp:
+                </span>
+                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic bg-white p-3.5 rounded-xl border border-slate-200">
+                  {peerAssignmentText || `"Modern AI tools help learners analyze vocabulary, practice speaking fluency, and receive instant feedback. Online interactive dashboards allow students around the world to access lessons anytime, making education globally available and personalized for every learner."`}
+                </p>
+              </div>
+
+              {/* Detailed Peer Reviews Received (3 Reviews List) */}
+              <div className="space-y-4">
+                <h5 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                  Chi tiết 3 bài Nhận xét & Đánh giá từ Bạn học:
+                </h5>
+
+                {/* Review 1 */}
+                <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-xs font-bold text-slate-800">
+                      Bạn học Sarah Jenkins (Mã HV: #STD-9012)
+                    </span>
+                    <span className="bg-emerald-100 text-emerald-800 font-black text-[11px] px-2.5 py-0.5 rounded-full">
+                      Cho điểm: 9.5 / 10.0
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    "Your argument regarding modern AI tools in English learning is well reasoned. Excellent use of academic vocabulary like 'interactive dashboards' and 'immediate grading'. Good job!"
+                  </p>
+                </div>
+
+                {/* Review 2 */}
+                <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-xs font-bold text-slate-800">
+                      Bạn học David Chen (Mã HV: #STD-4410)
+                    </span>
+                    <span className="bg-emerald-100 text-emerald-800 font-black text-[11px] px-2.5 py-0.5 rounded-full">
+                      Cho điểm: 9.0 / 10.0
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    "Great essay overall! Clear structure between introductory sentence and solution. Good grammatical accuracy and logical paragraph flow."
+                  </p>
+                </div>
+
+                {/* Review 3 */}
+                <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-xs font-bold text-slate-800">
+                      Bạn học Minh Tran (Mã HV: #STD-6612)
+                    </span>
+                    <span className="bg-emerald-100 text-emerald-800 font-black text-[11px] px-2.5 py-0.5 rounded-full">
+                      Cho điểm: 9.5 / 10.0
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    "Very inspiring essay! I really liked your suggestion about peer review feedback. Keep up the good work!"
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -2250,91 +2685,38 @@ export default function CourseLearningPage() {
         </div>
       )}
 
-      {/* ─── MODAL 1: CHỌN ĐĂNG KÝ HỌC (Enroll Mode Selector) ─── */}
-      {showEnrollModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl font-sans text-center relative border border-slate-100">
-            <h3 className="text-lg font-black text-slate-800 mb-1">Chào mừng bạn đến với khóa học 🚀</h3>
-            <p className="text-xs text-slate-400 mb-6">Hãy lựa chọn hình thức đăng ký học tập phù hợp nhất với bạn:</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              {/* Audit Card */}
-              <div
-                onClick={() => handleEnrollSelect("audit")}
-                className="border border-slate-100 p-5 rounded-2xl text-center cursor-pointer transition-all hover:border-emerald-200 hover:bg-emerald-50/10 group"
-              >
-                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-50">
-                  <BookOpen size={20} className="text-slate-500 group-hover:text-emerald-600" />
-                </div>
-                <h4 className="text-xs font-extrabold text-slate-800">Audit Course</h4>
-                <p className="text-[10px] text-slate-400 mt-1 leading-snug">Học thử đầy đủ bài học miễn phí. Không nhận chứng chỉ.</p>
-                <span className="inline-block mt-3 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Miễn phí</span>
-              </div>
-
-              {/* Certificate Card */}
-              <div
-                onClick={() => handleEnrollSelect("certificate")}
-                className="border border-slate-100 p-5 rounded-2xl text-center cursor-pointer transition-all hover:border-emerald-300 hover:bg-emerald-50/20 group"
-              >
-                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
-                  <Certificate size={20} className="text-emerald-600" />
-                </div>
-                <h4 className="text-xs font-extrabold text-slate-800">Certificate Mode</h4>
-                <p className="text-[10px] text-slate-400 mt-1 leading-snug">Mở khóa chứng chỉ số khi hoàn thành 100% giáo trình khóa học.</p>
-                <span className="inline-block mt-3 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Có chứng chỉ</span>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-400">
-              * Bạn có thể chọn Audit để học thử trước rồi nâng cấp lên Certificate bất cứ lúc nào.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* ─── MODAL 2: CHỨNG CHỈ SỐ HOÀN THÀNH KHÓA HỌC (Certificate Modal) ─── */}
       {showCertModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fadeIn">
-          <style dangerouslySetInnerHTML={{ __html: `
-            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap');
-            .cert-modal-cinzel { font-family: 'Cinzel', serif; }
-            .cert-modal-playfair { font-family: 'Playfair Display', serif; }
-          `}} />
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl font-sans relative border-4 border-slate-850">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl font-sans relative border-4 border-emerald-600/30">
             
-            <div className="border-[10px] border-[#1E293B] p-6 rounded-2xl bg-[#FAF8F5] text-center relative overflow-hidden">
-              <div className="absolute inset-1 border border-[#D97706]/40 pointer-events-none"></div>
+            <div className="border border-slate-150 p-6 rounded-2xl bg-slate-50 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/30 rounded-full blur-2xl" />
               
-              <div className="absolute top-2 left-2 w-4 h-4 border-t border-l border-[#D97706] pointer-events-none"></div>
-              <div className="absolute top-2 right-2 w-4 h-4 border-t border-r border-[#D97706] pointer-events-none"></div>
-              <div className="absolute bottom-2 left-2 w-4 h-4 border-b border-l border-[#D97706] pointer-events-none"></div>
-              <div className="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-[#D97706] pointer-events-none"></div>
+              <Certificate size={48} className="text-emerald-600 mx-auto mb-3" />
+              <h4 className="text-sm font-black text-emerald-700 tracking-wider uppercase mb-1">CHỨNG NHẬN HOÀN THÀNH</h4>
+              <p className="text-[10px] text-slate-400 tracking-widest uppercase mb-6">ĐƯỢC CẤP BỞI ENGLISH MASTER & COURSERA</p>
 
-              <GraduationCap className="text-[#D97706] mx-auto mb-2" size={36} weight="fill" />
-              <h4 className="cert-modal-cinzel text-sm font-bold text-slate-800 tracking-widest uppercase mb-0.5">English Master</h4>
-              <p className="text-[7px] text-slate-400 tracking-widest uppercase mb-5 font-semibold">Education Excellence Platform</p>
-
-              <p className="text-[10px] text-slate-400 italic mb-1 cert-modal-playfair">This is to certify that</p>
-              <h3 className="cert-modal-playfair text-xl font-bold text-[#78350F] mb-3 pb-1 max-w-xs mx-auto">
+              <p className="text-xs text-slate-500 italic mb-1">Chứng nhận học viên:</p>
+              <h3 className="text-lg font-black text-slate-800 mb-2 border-b border-slate-200 pb-2 max-w-xs mx-auto">
                 {user.fullName || "Lê Văn Student"}
               </h3>
 
-              <p className="text-[10px] text-slate-500 mb-2">has successfully completed the online course</p>
-              <h4 className="cert-modal-cinzel text-xs font-bold text-slate-800 mb-6 leading-snug">
+              <p className="text-xs text-slate-500 mb-2">Đã hoàn thành xuất sắc khóa học trực tuyến:</p>
+              <h4 className="text-sm font-extrabold text-slate-800 mb-6">
                 {courseInfo.courseTitle}
               </h4>
 
-              <div className="flex justify-between items-center text-[8px] text-slate-400 px-4 mt-4 border-t border-slate-100/50 pt-3">
-                <div className="text-left">
-                  <p className="font-bold text-slate-700">{courseInfo.instructor || "Nguyen Thuy Anh"}</p>
-                  <p>Academic Director</p>
+              <div className="flex justify-between items-center text-[10px] text-slate-400 px-6">
+                <div>
+                  <p className="font-bold text-slate-500">{courseInfo.instructor || "Trần Văn Mentor"}</p>
+                  <p className="border-t border-slate-200 pt-0.5 mt-0.5">Giảng viên hướng dẫn</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center border border-yellow-200 shadow-sm">
-                  <GraduationCap size={16} weight="fill" className="text-white" />
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-slate-700">{new Date().toLocaleDateString('vi-VN')}</p>
-                  <p>Date Issued</p>
+                <div>
+                  <p className="font-bold text-slate-500">{new Date().toLocaleDateString('vi-VN')}</p>
+                  <p className="border-t border-slate-200 pt-0.5 mt-0.5">Ngày cấp chứng nhận</p>
                 </div>
               </div>
             </div>
@@ -2343,7 +2725,7 @@ export default function CourseLearningPage() {
               <button
                 type="button"
                 onClick={() => {
-                  alert("Chúc mừng! Đã chia sẻ chứng chỉ thành công lên LinkedIn.");
+                  alert("Chúc mừng! Đã chia sẻ chứng nhận thành công lên LinkedIn.");
                 }}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
               >
@@ -2403,45 +2785,6 @@ export default function CourseLearningPage() {
             >
               Gửi nhận xét
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MODAL 4: THÔNG BÁO MỞ KHÓA KHÓA HỌC TRẢ PHÍ (Payment Redirect Modal) ─── */}
-      {showPaymentRedirectModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl font-sans text-center relative border border-slate-100 animate-scaleUp">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-100">
-              <Lock size={26} weight="fill" />
-            </div>
-            
-            <h3 className="text-base font-extrabold text-slate-800 mb-2">
-              Nội dung bài học đã bị khóa 🔒
-            </h3>
-            
-            <p className="text-[12px] text-slate-400 leading-relaxed mb-6">
-              Bài học này nằm ở phần bài giảng nâng cao có phí. Quý khách vui lòng thanh toán mua khóa học để mở khóa toàn bộ giáo trình và nhận chứng chỉ chính thức!
-            </p>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setShowPaymentRedirectModal(false)}
-                className="py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPaymentRedirectModal(false);
-                  navigate(`/payment/${courseId}`);
-                }}
-                className="py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-amber-500/20"
-              >
-                Mua khóa học
-              </button>
-            </div>
           </div>
         </div>
       )}

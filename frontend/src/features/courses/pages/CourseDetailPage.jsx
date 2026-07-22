@@ -23,6 +23,7 @@ import { enrollCourseApi } from "@/features/auth/services/authService";
 import CourseCard from "@/features/courses/components/CourseCard";
 import CourseCommentsSection from "@/features/courses/components/CourseCommentsSection";
 import { buildCourseDetailPath, buildCourseListPath } from "@/features/courses/utils/courseListParams";
+import { resolveThumbnailUrl } from "@/shared/utils/thumbnailUtils";
 
 const ACCENT = "#059669";
 const ACCENT_DARK = "#047857";
@@ -571,23 +572,10 @@ export default function CourseDetailPage() {
           }
 
           // Process thumbnail
-          let courseImage = dbData.thumbnail || dbData.Thumbnail;
-          if (courseImage === "CHUA FIX LOI ANH" || !courseImage) {
-            const seed = dbData._id || dbData.courseId || dbData.CourseId || "course";
-            courseImage = `https://picsum.photos/seed/${seed}/640/360`;
-          } else {
-            let val = String(courseImage).trim();
-            if (
-              val.startsWith("http://") ||
-              val.startsWith("https://") ||
-              val.startsWith("data:image") ||
-              val.startsWith("blob:")
-            ) {
-              courseImage = val;
-            } else {
-              courseImage = `http://localhost:5050${val.startsWith("/") ? val : "/" + val}`;
-            }
-          }
+          const courseImage = resolveThumbnailUrl(
+            dbData.thumbnail || dbData.Thumbnail,
+            dbData._id || dbData.courseId || dbData.CourseId || "course"
+          );
 
           // Process content data (paths/nodes)
           let paths = dbData.paths || dbData.Paths || [];

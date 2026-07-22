@@ -8,6 +8,7 @@ import {
   ArrowRight,
 } from "@phosphor-icons/react";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
+import { resolveThumbnailUrl } from "@/shared/utils/thumbnailUtils";
 
 function getLevelBadge(level = "") {
   const l = level.toLowerCase();
@@ -71,14 +72,10 @@ export default function CourseCard({ course, onContinueLearning }) {
   const lessonCount = course.TotalLessons || course.lessonCount || 0;
   const stageCount = course.stageCount || 0;
 
-  let thumbnail = course.thumbnail || course.Thumbnail;
-  if (thumbnail === "CHUA FIX LOI ANH" || !thumbnail) {
-    // Use Picsum for placeholder images - deterministic seed based on course ID
-    const seed = courseId || title.replace(/\s+/g, "-").toLowerCase();
-    thumbnail = `https://picsum.photos/seed/${seed}/640/360`;
-  } else if (!thumbnail.startsWith("http://") && !thumbnail.startsWith("https://") && !thumbnail.startsWith("data:")) {
-    thumbnail = `http://localhost:5050${thumbnail.startsWith("/") ? thumbnail : "/" + thumbnail}`;
-  }
+  const thumbnail = resolveThumbnailUrl(
+    course.thumbnail || course.Thumbnail,
+    courseId || title.replace(/\s+/g, "-").toLowerCase()
+  );
 
   const statusBadge = getStatusBadge(isEnrolled, progress);
   const pricing = formatCoursePrice(course);
