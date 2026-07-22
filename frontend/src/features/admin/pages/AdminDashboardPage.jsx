@@ -16,6 +16,7 @@ import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutli
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import BookOutlinedIcon from '@mui/icons-material/BookOutlined';
+import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import { toast } from '@/shared/ui/Toast';
 import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
@@ -53,8 +54,9 @@ export default function AdminDashboardPage() {
     fetchStats();
   }, [fetchStats]);
 
-  const MetricCard = ({ title, value, icon, color }) => (
+  const MetricCard = ({ title, value, icon, color, path }) => (
     <Card
+      onClick={() => path && navigate(path)}
       sx={{
         p: 3,
         borderRadius: '16px',
@@ -62,7 +64,13 @@ export default function AdminDashboardPage() {
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01)',
         position: 'relative',
         overflow: 'hidden',
-        background: '#fff'
+        background: '#fff',
+        cursor: path ? 'pointer' : 'default',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': path ? {
+          transform: 'translateY(-3px)',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.08)'
+        } : {}
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -70,7 +78,7 @@ export default function AdminDashboardPage() {
           <Typography sx={{ fontSize: 13, fontWeight: 650, color: MUTED, mb: 1 }}>
             {title}
           </Typography>
-          <Typography sx={{ fontSize: 28, fontWeight: 800, color: TEXT, lineHeight: 1 }}>
+          <Typography sx={{ fontSize: 24, fontWeight: 800, color: TEXT, lineHeight: 1 }}>
             {value}
           </Typography>
         </Box>
@@ -83,7 +91,8 @@ export default function AdminDashboardPage() {
             color: color,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            flexShrink: 0
           }}
         >
           {icon}
@@ -102,6 +111,8 @@ export default function AdminDashboardPage() {
     </Card>
   );
 
+  const formattedRevenue = (stats?.totalRevenue || 0).toLocaleString('vi-VN') + ' đ';
+
   return (
     <div className="w-full max-w-7xl mx-auto">
       {/* Page Header */}
@@ -118,38 +129,50 @@ export default function AdminDashboardPage() {
         <Typography sx={{ color: MUTED, py: 4, textAlign: 'center' }}>Đang tải số liệu tổng quan...</Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {/* Metrics Grid */}
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+          {/* Metrics Grid — 5 Cards */}
+          <Grid container spacing={2.5}>
+            <Grid item xs={12} sm={6} md={2.4}>
               <MetricCard
                 title="TỔNG THÀNH VIÊN"
                 value={stats?.totalUsers || 0}
                 icon={<PeopleAltOutlinedIcon />}
                 color="#0891B2"
+                path="/admin/accounts"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={2.4}>
               <MetricCard
                 title="TỔNG KHÓA HỌC"
                 value={stats?.totalCourses || 0}
                 icon={<MenuBookOutlinedIcon />}
                 color="#F59E0B"
+                path="/admin/courses"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={2.4}>
               <MetricCard
                 title="HỌC VIÊN ĐĂNG KÝ"
                 value={stats?.totalEnrollments || 0}
                 icon={<CheckCircleOutlineOutlinedIcon />}
                 color="#10B981"
+                path="/admin/accounts?role=Student"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={2.4}>
               <MetricCard
-                title="KHÓA HỌC XUẤT BẢN"
-                value={stats?.publishedCourses || 0}
-                icon={<MenuBookOutlinedIcon />}
+                title="ĐƠN ỨNG TUYỂN"
+                value={stats?.pendingApplications || 0}
+                icon={<AssignmentIndOutlinedIcon />}
                 color="#8B5CF6"
+                path="/admin/applications"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2.4}>
+              <MetricCard
+                title="DOANH THU HỆ THỐNG (VND)"
+                value={formattedRevenue}
+                icon={<AttachMoneyOutlinedIcon />}
+                color="#EC4899"
               />
             </Grid>
           </Grid>

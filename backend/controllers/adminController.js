@@ -14,6 +14,7 @@ const PathNode = require('../models/MongoDB/PathNode');
 const NodeMaterial = require('../models/MongoDB/NodeMaterial');
 const { logAction } = require('../services/auditService');
 const AuditLog = require('../models/MongoDB/AuditLog');
+const Payment = require('../models/MongoDB/Payment');
 const bcrypt = require('bcryptjs');
 
 // ==========================================
@@ -28,6 +29,20 @@ const getDashboard = async (req, res) => {
     const pendingCourses = await Course.countDocuments({ status: 'pending' });
     const pendingApplications = await MentorApplication.countDocuments({ status: 'pending' });
 
+    // Revenue calculation from successful payments
+    let totalRevenue = 0;
+    try {
+      const revenueResult = await Payment.aggregate([
+        { $match: { status: 'success' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      if (revenueResult && revenueResult.length > 0) {
+        totalRevenue = revenueResult[0].total || 0;
+      }
+    } catch (e) {
+      console.warn('[Revenue Calculation Warning]', e.message);
+    }
+
     return res.json({
       success: true,
       data: {
@@ -37,6 +52,7 @@ const getDashboard = async (req, res) => {
         publishedCourses,
         pendingCourses,
         pendingApplications,
+        totalRevenue,
       }
     });
   } catch (err) {
@@ -189,6 +205,46 @@ const getUserDetail = async (req, res) => {
   }
 };
 
+const toggleUserStatus = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: 'userId không hợp lệ' });
+    }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+    }
+
+    // Check roles of targetUser
+    const userRoles = await UserRole.find({ userId }).populate('roleId').lean();
+    const roleNames = userRoles.map(ur => (ur.roleId?.roleName || '').toLowerCase());
+    const isAdmin = roleNames.includes('admin') || targetUser.email?.toLowerCase().includes('admin');
+
+    let targetIsActive = req.body.isActive !== undefined 
+      ? Boolean(req.body.isActive) 
+      : (req.body.IsActive !== undefined ? Boolean(req.body.IsActive) : !targetUser.isActive);
+
+    if (isAdmin && !targetIsActive) {
+      return res.status(400).json({ success: false, message: "Cannot deactivate Admin accounts" });
+    }
+
+    targetUser.isActive = targetIsActive;
+    targetUser.updatedAt = new Date();
+    await targetUser.save();
+
+    return res.json({
+      success: true,
+      message: `Đã ${targetIsActive ? 'kích hoạt' : 'khóa'} tài khoản thành công`,
+      data: targetUser
+    });
+  } catch (err) {
+    console.error('[ToggleUserStatus Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 const updateUser = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -199,6 +255,14 @@ const updateUser = async (req, res) => {
     const { FullName, Email, Phone, DateOfBirth, LearningGoal, CurrentLevelId, IsActive } = req.body;
     if (!FullName || !Email) {
       return res.status(400).json({ success: false, message: 'Thiếu họ tên hoặc email' });
+    }
+
+    if (IsActive === false) {
+      const userRoles = await UserRole.find({ userId }).populate('roleId').lean();
+      const roleNames = userRoles.map(ur => (ur.roleId?.roleName || '').toLowerCase());
+      if (roleNames.includes('admin') || Email.toLowerCase().includes('admin')) {
+        return res.status(400).json({ success: false, message: "Cannot deactivate Admin accounts" });
+      }
     }
 
     const updateData = {
@@ -287,7 +351,7 @@ const getRoles = async (req, res) => {
 // ==========================================
 const getCategories = async (req, res) => {
   try {
-    const data = await Category.find({ isActive: true }).sort({ categoryName: 1 }).lean();
+    const data = await Category.find().sort({ categoryName: 1, displayName: 1 }).lean();
     return res.json({ success: true, data });
   } catch (err) {
     console.error('[Admin GetCategories Error]', err.message);
@@ -370,15 +434,31 @@ const deleteCategory = async (req, res) => {
       return res.status(400).json({ success: false, message: 'categoryId không hợp lệ' });
     }
 
+    // Count courses belonging to this category
+    const courseCount = await Course.countDocuments({
+      $or: [
+        { categoryId: categoryId },
+        { category: categoryId }
+      ]
+    });
+
+    if (courseCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Không thể xóa danh mục này do vẫn còn ${courseCount} khóa học bên trong. Vui lòng di chuyển khóa học trước khi xóa.`,
+        courseCount
+      });
+    }
+
     const category = await Category.findById(categoryId);
-    await Category.findByIdAndUpdate(categoryId, { isActive: false });
+    await Category.findByIdAndDelete(categoryId);
 
     logAction({
       entityType: 'Category',
       entityId: categoryId,
       entityName: category?.displayName,
       action: 'DELETE',
-      userId: req.user.userId,
+      userId: req.user?.userId || 'admin',
       description: `Xóa danh mục "${category?.displayName}"`
     });
 
@@ -394,9 +474,9 @@ const deleteCategory = async (req, res) => {
 // ==========================================
 const getLevels = async (req, res) => {
   try {
-    const data = await Level.find({ isActive: true })
+    const data = await Level.find()
       .populate('categoryId', 'displayName')
-      .sort({ sortOrder: 1 })
+      .sort({ sortOrder: 1, displayName: 1 })
       .lean();
     return res.json({ success: true, data });
   } catch (err) {
@@ -1099,6 +1179,7 @@ module.exports = {
   createUser,
   getUserDetail,
   updateUser,
+  toggleUserStatus,
   deleteUser,
   updateUserRoles,
   getRoles,

@@ -1,28 +1,38 @@
-/**
- * Admin Category Service — calls real backend APIs.
- */
 import { apiGet, apiPost, apiPut, apiDelete } from '@/features/admin/services/adminApiClient';
 import { resolveSeedColorCode } from '@/shared/catalog/catalogColorPalette';
 
+const extractArray = (res) => {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.categories)) return res.categories;
+  if (Array.isArray(res?.users)) return res.users;
+  if (Array.isArray(res?.courses)) return res.courses;
+  if (Array.isArray(res?.levels)) return res.levels;
+  return [];
+};
+
 /**
  * Map a backend category record to the frontend shape.
- * Backend returns: CategoryId, CategoryName, DisplayName, CreatedAt
  */
-function mapCategory(raw) {
+function mapCategory(raw = {}) {
+  const catId = raw._id || raw.CategoryId || raw.id;
+  const dispName = raw.displayName || raw.DisplayName || raw.categoryName || raw.CategoryName || '';
+  const isActive = raw.isActive !== undefined ? raw.isActive : (raw.Status === 'ACTIVE' || raw.status === 'ACTIVE' || raw.status === 'active');
   return {
-    id: raw.CategoryId,
-    categoryName: raw.CategoryName || '',
-    displayName: raw.DisplayName || '',
-    colorCode: raw.ColorCode || resolveSeedColorCode('category', raw.CategoryId) || null,
-    status: raw.Status || 'ACTIVE',
-    createdAt: raw.CreatedAt || null,
+    id: catId,
+    categoryName: raw.categoryName || raw.CategoryName || dispName.toLowerCase().replace(/\s+/g, '-'),
+    displayName: dispName,
+    colorCode: raw.colorCode || raw.ColorCode || resolveSeedColorCode('category', catId) || '#0891B2',
+    status: isActive ? 'ACTIVE' : 'INACTIVE',
+    createdAt: raw.createdAt || raw.CreatedAt || null,
   };
 }
 
 export async function getCategories() {
   const res = await apiGet('/categories');
   if (!res.ok) return { ok: false, categories: [] };
-  const categories = (res.data || []).map(mapCategory);
+  const rawList = extractArray(res);
+  const categories = rawList.map(mapCategory);
   return { ok: true, categories };
 }
 
@@ -45,10 +55,9 @@ export async function updateCategory(id, payload) {
   if (!res.ok) {
     return { ok: false, message: res.message || 'Không thể cập nhật danh mục' };
   }
-  // Re-fetch to get updated data
   const fetchRes = await getCategories();
   const updated = (fetchRes.categories || []).find((c) => String(c.id) === String(id));
-  return { ok: true, category: updated || null };
+  return { ok: true, category: updated || mapCategory(res.data) };
 }
 
 export async function deleteCategory(id) {
