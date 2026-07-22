@@ -129,7 +129,7 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
   const [quizOption, setQuizOption] = useState("");
   const videoRef = useRef(null);
 
-  const ytEmbedUrl = useMemo(() => getYouTubeEmbedUrl(url), [url]);
+  const { embedUrl, previewType } = useMemo(() => resolveVideoEmbed(url), [url]);
 
   useEffect(() => {
     setQuizAnswered(false);
@@ -189,13 +189,13 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // If YouTube Video URL, render iframe player
-  if (ytEmbedUrl) {
+  // Video nhúng qua iframe (YouTube, Vimeo, Google Drive...)
+  if (previewType === 'iframe' && embedUrl) {
     return (
       <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg border border-slate-800">
         <iframe
-          src={ytEmbedUrl}
-          title="YouTube Video Player"
+          src={embedUrl}
+          title="Video bài học"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           className="w-full h-full border-0"
@@ -204,12 +204,15 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
     );
   }
 
+  // File video trực tiếp (.mp4) — không nhúng được thì không phát gì cả thay vì phát video mẫu giả
+  if (previewType !== 'video' || !embedUrl) return null;
+
   return (
     <div className="relative w-full h-full bg-black rounded-xl overflow-hidden flex flex-col justify-between" style={{ minHeight: '320px' }}>
       {/* Video element */}
       <video
         ref={videoRef}
-        src={url || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"}
+        src={embedUrl}
         onTimeUpdate={handleTimeUpdate}
         className="w-full flex-1 object-contain bg-black cursor-pointer"
         onClick={handlePlayPause}
@@ -802,237 +805,103 @@ function LessonQuizPlayer({ lesson, isCompleted, onComplete }) {
   );
 }
 
-/* ─── Simulated Assessment Exam (Authentic IELTS 4-Skills & TOEIC ETS Formats) ─── */
-function CourseAssessmentExamTab({ courseTitle, onCompleteQuiz }) {
+/* ─── Assessment Exam (dữ liệu thật từ Test/TestQuestion, theo từng khóa học) ─── */
+function CourseAssessmentExamTab({ courseId, courseTitle, onCompleteQuiz }) {
   const isToeic = courseTitle?.toLowerCase().includes("toeic");
   const isIelts = courseTitle?.toLowerCase().includes("ielts");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserId = String(user.userId || "1");
 
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [meta, setMeta] = useState(null); // xem trước thông tin đề thi — KHÔNG tính là 1 lượt làm bài
+  const [starting, setStarting] = useState(false);
+  const [attemptId, setAttemptId] = useState(null);
+  const [questions, setQuestions] = useState([]); // [{ tempId, questionText, options: [{tempId, optionText}] }]
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const toeicSections = [
-    {
-      sectionName: "Phần 1: Listening Part 1 & Part 2 (Nghe hiểu Tranh vẽ & Câu hỏi ngắn)",
-      badge: "Listening Part 1-2",
-      questions: [
-        {
-          id: "t_q1",
-          question: "Part 2 Listening: 'Where is the annual financial report?'",
-          options: [
-            { label: "A. It's on Mr. David's desk in Room 302.", val: "A", correct: true },
-            { label: "B. Yes, I finished reading it yesterday.", val: "B" },
-            { label: "C. At 2:30 PM this afternoon.", val: "C" },
-            { label: "D. By train from London.", val: "D" }
-          ]
-        }
-      ]
-    },
-    {
-      sectionName: "Phần 2: Listening Part 3 & Part 4 (Đoạn hội thoại & Bài nói công sở)",
-      badge: "Listening Part 3-4",
-      questions: [
-        {
-          id: "t_q2",
-          question: "Part 3-4 Listening: 'What will the speaker most likely do next?'",
-          options: [
-            { label: "A. Contact the supplier to confirm delivery times.", val: "A", correct: true },
-            { label: "B. Cancel the entire project.", val: "B" },
-            { label: "C. Travel to New York.", val: "C" },
-            { label: "D. Hire a new manager.", val: "D" }
-          ]
-        }
-      ]
-    },
-    {
-      sectionName: "Phần 3: Reading Part 5 (Ngữ pháp & Từ loại Incomplete Sentences)",
-      badge: "Reading Part 5",
-      questions: [
-        {
-          id: "t_q3",
-          question: "Part 5 Grammar: 'The board of directors approved to ___ the new safety regulations.'",
-          options: [
-            { label: "A. implement", val: "A", correct: true },
-            { label: "B. implementation", val: "B" },
-            { label: "C. implementing", val: "C" },
-            { label: "D. implemented", val: "D" }
-          ]
-        },
-        {
-          id: "t_q4",
-          question: "Part 5 Vocabulary: 'All hotel guests are entitled to a ___ continental breakfast.'",
-          options: [
-            { label: "A. complimentary", val: "A", correct: true },
-            { label: "B. complement", val: "B" },
-            { label: "C. complicated", val: "C" },
-            { label: "D. complying", val: "D" }
-          ]
-        }
-      ]
-    },
-    {
-      sectionName: "Phần 4: Reading Part 6 & Part 7 (Đoạn văn đơn & Triple Passages)",
-      badge: "Reading Part 6-7",
-      questions: [
-        {
-          id: "t_q5",
-          question: "Part 7 Triple Passages: 'What is the main purpose of the email memo?'",
-          options: [
-            { label: "A. To announce an upcoming office relocation and schedule.", val: "A", correct: true },
-            { label: "B. To complain about poor customer service.", val: "B" },
-            { label: "C. To invite staff to a birthday party.", val: "C" },
-            { label: "D. To request a price quote from suppliers.", val: "D" }
-          ]
-        }
-      ]
-    }
-  ];
-
-  const ieltsSections = [
-    {
-      sectionName: "Kỹ Năng 1: LISTENING (Bài thi Nghe hiểu Academic)",
-      badge: "IELTS Listening",
-      questions: [
-        {
-          id: "i_q1",
-          question: "Note Completion: If instructions state 'NO MORE THAN TWO WORDS', which answer is valid?",
-          options: [
-            { label: "A. Climate change", val: "A", correct: true },
-            { label: "B. The global climate change", val: "B" },
-            { label: "C. Changes in global weather patterns", val: "C" },
-            { label: "D. A very severe climate change", val: "D" }
-          ]
-        }
-      ]
-    },
-    {
-      sectionName: "Kỹ Năng 2: READING (Bài thi Đọc hiểu Academic)",
-      badge: "IELTS Reading",
-      questions: [
-        {
-          id: "i_q2",
-          question: "True / False / Not Given: Text states 'Solar energy rose by 40% in 2022, but wind farm investment stalled.' Statement: 'Wind farm investment grew rapidly in 2022.'",
-          options: [
-            { label: "A. False", val: "A", correct: true },
-            { label: "B. True", val: "B" },
-            { label: "C. Not Given", val: "C" },
-            { label: "D. Partially True", val: "D" }
-          ]
-        }
-      ]
-    },
-    {
-      sectionName: "Kỹ Năng 3: WRITING (Bài thi Viết Task 1 & Task 2)",
-      badge: "IELTS Writing",
-      questions: [
-        {
-          id: "i_q3",
-          question: "Task 2 Essays: Which cohesive device is best for introducing an opposing viewpoint in Band 7.5+ writing?",
-          options: [
-            { label: "A. Conversely", val: "A", correct: true },
-            { label: "B. Furthermore", val: "B" },
-            { label: "C. In addition", val: "C" },
-            { label: "D. For instance", val: "D" }
-          ]
-        }
-      ]
-    },
-    {
-      sectionName: "Kỹ Năng 4: SPEAKING (Bài thi Nói & Lexical Resource)",
-      badge: "IELTS Speaking",
-      questions: [
-        {
-          id: "i_q4",
-          question: "Speaking Part 2 & 3: Which idiom best expresses 'vô cùng vui mừng và tự hào'?",
-          options: [
-            { label: "A. Over the moon", val: "A", correct: true },
-            { label: "B. Once in a blue moon", val: "B" },
-            { label: "C. Under the weather", val: "C" },
-            { label: "D. Cost an arm and a leg", val: "D" }
-          ]
-        },
-        {
-          id: "i_q5",
-          question: "Academic Lexical Resource: Which verb is a Band 7.5+ synonym for 'make a problem worse'?",
-          options: [
-            { label: "A. Exacerbate", val: "A", correct: true },
-            { label: "B. Alleviate", val: "B" },
-            { label: "C. Mitigate", val: "C" },
-            { label: "D. Consolidate", val: "D" }
-          ]
-        }
-      ]
-    }
-  ];
-
-  const generalSections = [
-    {
-      sectionName: "Phần 1: Ngữ pháp & Cấu trúc câu",
-      badge: "General Grammar",
-      questions: [
-        {
-          id: "g_q1",
-          question: "Choose the correct sentence for past habit:",
-          options: [
-            { label: "A. She used to live in Paris when she was young.", val: "A", correct: true },
-            { label: "B. She is use to live in Paris.", val: "B" },
-            { label: "C. She uses to live in Paris.", val: "C" },
-            { label: "D. She used living in Paris.", val: "D" }
-          ]
-        },
-        {
-          id: "g_q2",
-          question: "Conditionals: 'If I had known about the meeting, I ___ attended.'",
-          options: [
-            { label: "A. would have", val: "A", correct: true },
-            { label: "B. will have", val: "B" },
-            { label: "C. had", val: "C" },
-            { label: "D. will", val: "D" }
-          ]
-        }
-      ]
-    },
-    {
-      sectionName: "Phần 2: Từ vựng & Giao tiếp thực tế",
-      badge: "Vocab & Speaking",
-      questions: [
-        {
-          id: "g_q3",
-          question: "Choose the synonym for 'significant':",
-          options: [
-            { label: "A. Substantial", val: "A", correct: true },
-            { label: "B. Tiny", val: "B" },
-            { label: "C. Minor", val: "C" },
-            { label: "D. Negligible", val: "D" }
-          ]
-        },
-        {
-          id: "g_q4",
-          question: "What is the polite way to decline an invitation?",
-          options: [
-            { label: "A. I'd love to, but I have to take a rain check this time.", val: "A", correct: true },
-            { label: "B. No, I don't want to go.", val: "B" },
-            { label: "C. You are wrong.", val: "C" },
-            { label: "D. Go away.", val: "D" }
-          ]
-        }
-      ]
-    }
-  ];
-
-  const sections = isToeic ? toeicSections : isIelts ? ieltsSections : generalSections;
-  const allQuestions = sections.flatMap(s => s.questions);
-
-  const handleSubmit = () => {
-    let count = 0;
-    allQuestions.forEach((q) => {
-      const selected = answers[q.id];
-      const correctOpt = q.options.find(o => o.correct);
-      if (selected === correctOpt.val) {
-        count++;
+  // Chỉ xem thông tin đề thi (số câu, số lượt còn lại) — không tạo attempt, không tính lượt
+  const loadMeta = async () => {
+    setLoading(true);
+    setLoadError(null);
+    setResult(null);
+    setAnswers({});
+    setAttemptId(null);
+    setQuestions([]);
+    try {
+      const res = await fetch(`http://localhost:5050/api/courses/${courseId}/tests/final/meta`, {
+        headers: { "x-user-id": currentUserId },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoadError(data.message || "Không thể tải thông tin bài kiểm tra.");
+        return;
       }
-    });
+      setMeta(data.meta);
+    } catch (err) {
+      setLoadError("Không thể kết nối server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const percent = Math.round((count / allQuestions.length) * 100);
+  useEffect(() => {
+    if (courseId) loadMeta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId]);
+
+  // Chỉ khi bấm nút mới thực sự bắt đầu — bước này mới tính là 1 lượt làm bài
+  const handleStartExam = async () => {
+    setStarting(true);
+    setLoadError(null);
+    try {
+      const res = await fetch(`http://localhost:5050/api/courses/${courseId}/tests/final/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoadError(data.message || "Không thể bắt đầu bài kiểm tra.");
+        return;
+      }
+      setAttemptId(data.attempt.attemptId);
+      setQuestions(data.paper?.sections?.[0]?.questionGroups?.[0]?.questions || []);
+      setMeta(data.meta);
+    } catch (err) {
+      setLoadError("Không thể kết nối server.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const answersPayload = {};
+      questions.forEach((q) => {
+        if (answers[q.tempId]) answersPayload[q.tempId] = [answers[q.tempId]];
+      });
+
+      const res = await fetch(
+        `http://localhost:5050/api/courses/${courseId}/tests/attempts/${attemptId}/submit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
+          body: JSON.stringify({ answers: answersPayload }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoadError(data.message || "Không thể nộp bài.");
+        setSubmitting(false);
+        return;
+      }
+
+    const count = data.result.correctCount;
+    const percent = data.result.percentage;
 
     let predictedScoreText = "";
     let predictedBadgeClass = "";
@@ -1090,27 +959,54 @@ function CourseAssessmentExamTab({ courseTitle, onCompleteQuiz }) {
       }
     }
 
-    const isPassed = percent > 50;
+      const isPassed = data.result.passed;
 
-    setResult({
-      scoreCount: count,
-      totalCount: allQuestions.length,
-      percent,
-      isPassed,
-      predictedScoreText,
-      predictedBadgeClass,
-      feedbackDetails
-    });
+      setResult({
+        scoreCount: count,
+        totalCount: data.result.total,
+        percent,
+        isPassed,
+        predictedScoreText,
+        predictedBadgeClass,
+        feedbackDetails
+      });
 
-    if (isPassed && onCompleteQuiz) {
-      onCompleteQuiz();
+      if (isPassed && onCompleteQuiz) {
+        onCompleteQuiz();
+      }
+    } catch (err) {
+      setLoadError("Không thể kết nối server.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleRetry = () => {
-    setAnswers({});
-    setResult(null);
+    loadMeta();
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-10 max-w-3xl mx-auto font-sans text-center">
+        <p className="text-sm text-slate-500 font-medium">Đang tải bài kiểm tra...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-10 max-w-3xl mx-auto font-sans text-center">
+        <p className="text-sm text-red-600 font-bold mb-3">{loadError}</p>
+        <button
+          type="button"
+          onClick={loadMeta}
+          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 md:p-8 max-w-3xl mx-auto font-sans">
@@ -1134,87 +1030,85 @@ function CourseAssessmentExamTab({ courseTitle, onCompleteQuiz }) {
         </p>
       </div>
 
-      {/* Render Categorized Skill / Part Sections */}
-      <div className="space-y-8">
-        {sections.map((sec, sIdx) => (
-          <div key={sIdx} className="border border-slate-200/80 rounded-2xl p-5 bg-slate-50/40">
-            <div className="flex items-center justify-between gap-2 mb-4 border-b border-slate-200 pb-2.5">
-              <h4 className="text-xs sm:text-sm font-extrabold text-indigo-950 flex items-center gap-2">
-                {sec.sectionName}
-              </h4>
-              <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                {sec.badge}
+      {/* Màn hình xem trước — chưa tính là 1 lượt làm bài, chỉ khi bấm nút mới bắt đầu */}
+      {!attemptId && !result && (
+        <div className="text-center py-10">
+          <p className="text-sm text-slate-600 font-medium mb-1">
+            Đề gồm <strong>{meta?.totalQuestions ?? 0}</strong> câu hỏi trắc nghiệm.
+          </p>
+          <p className="text-xs text-slate-400 mb-6">
+            Đạt trên {meta?.passingScore ?? 70}% để mở khóa Chứng nhận. Bạn còn{" "}
+            <strong>{meta?.remainingAttempts ?? 0}</strong>/{meta?.maxAttempts ?? 3} lượt làm bài.
+          </p>
+          <button
+            type="button"
+            onClick={handleStartExam}
+            disabled={starting || (meta?.remainingAttempts ?? 0) <= 0}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-indigo-600/20 active:scale-95"
+          >
+            {starting
+              ? "Đang bắt đầu..."
+              : (meta?.remainingAttempts ?? 0) <= 0
+              ? "Bạn đã hết lượt làm bài thi này"
+              : "Bắt đầu làm bài"}
+          </button>
+        </div>
+      )}
+
+      {/* Danh sách câu hỏi (lấy từ ngân hàng câu hỏi thật của khóa học) */}
+      {(attemptId || result) && <div className="space-y-5">
+        {questions.map((q, qIdx) => (
+          <div key={q.tempId} className="bg-white border border-slate-200/70 p-4 rounded-xl shadow-2xs">
+            <p className="text-xs sm:text-sm font-bold text-slate-800 mb-3 flex items-start gap-2">
+              <span className="bg-indigo-600 text-white text-[11px] font-black px-2 py-0.5 rounded-lg flex-shrink-0 mt-0.5">
+                Câu {qIdx + 1}
               </span>
-            </div>
+              <span>{q.questionText}</span>
+            </p>
 
-            <div className="space-y-5">
-              {sec.questions.map((q, qIdx) => (
-                <div key={q.id} className="bg-white border border-slate-200/70 p-4 rounded-xl shadow-2xs">
-                  <p className="text-xs sm:text-sm font-bold text-slate-800 mb-3 flex items-start gap-2">
-                    <span className="bg-indigo-600 text-white text-[11px] font-black px-2 py-0.5 rounded-lg flex-shrink-0 mt-0.5">
-                      Câu {qIdx + 1}
-                    </span>
-                    <span>{q.question}</span>
-                  </p>
+            <div className="grid grid-cols-1 gap-2">
+              {q.options.map((opt) => {
+                const isSelected = answers[q.tempId] === opt.tempId;
+                const optStyle = isSelected
+                  ? "bg-indigo-50 border-indigo-600 text-indigo-900 font-bold shadow-xs"
+                  : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/20";
 
-                  <div className="grid grid-cols-1 gap-2">
-                    {q.options.map((opt) => {
-                      const isSelected = answers[q.id] === opt.val;
-                      let optStyle = "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/20";
-                      
-                      if (isSelected) {
-                        optStyle = "bg-indigo-50 border-indigo-600 text-indigo-900 font-bold shadow-xs";
-                      }
-
-                      if (result) {
-                        if (opt.correct) {
-                          optStyle = "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold";
-                        } else if (isSelected && !opt.correct) {
-                          optStyle = "bg-red-50 border-red-400 text-red-800 font-medium";
-                        } else {
-                          optStyle = "bg-white border-slate-100 text-slate-400 opacity-60";
-                        }
-                      }
-
-                      return (
-                        <label
-                          key={opt.val}
-                          className={`flex items-center gap-3 p-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all ${optStyle}`}
-                        >
-                          <input
-                            type="radio"
-                            name={q.id}
-                            value={opt.val}
-                            checked={isSelected}
-                            disabled={!!result}
-                            onChange={() => setAnswers(prev => ({ ...prev, [q.id]: opt.val }))}
-                            className="accent-indigo-600"
-                          />
-                          <span className="flex-1">{opt.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                return (
+                  <label
+                    key={opt.tempId}
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all ${optStyle} ${result ? "pointer-events-none opacity-70" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name={q.tempId}
+                      value={opt.tempId}
+                      checked={isSelected}
+                      disabled={!!result}
+                      onChange={() => setAnswers(prev => ({ ...prev, [q.tempId]: opt.tempId }))}
+                      className="accent-indigo-600"
+                    />
+                    <span className="flex-1">{opt.optionText}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}
-      </div>
+      </div>}
 
-      <div className="mt-8 border-t border-slate-100 pt-5 flex items-center justify-between flex-wrap gap-4">
+      {(attemptId || result) && <div className="mt-8 border-t border-slate-100 pt-5 flex items-center justify-between flex-wrap gap-4">
         {!result ? (
           <>
             <span className="text-xs text-slate-400 font-medium">
-              Đã làm: {Object.keys(answers).filter(k => answers[k]).length} / {allQuestions.length} câu
+              Đã làm: {Object.keys(answers).filter(k => answers[k]).length} / {questions.length} câu
             </span>
             <button
               type="button"
-              disabled={Object.keys(answers).filter(k => answers[k]).length < allQuestions.length}
+              disabled={submitting || Object.keys(answers).filter(k => answers[k]).length < questions.length}
               onClick={handleSubmit}
               className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-indigo-600/20 active:scale-95"
             >
-              Nộp bài & Nhận kết quả dự đoán điểm
+              {submitting ? "Đang nộp bài..." : "Nộp bài & Nhận kết quả dự đoán điểm"}
             </button>
           </>
         ) : (
@@ -1226,7 +1120,7 @@ function CourseAssessmentExamTab({ courseTitle, onCompleteQuiz }) {
             Làm lại bài kiểm tra
           </button>
         )}
-      </div>
+      </div>}
 
       {/* ── Display Predicted Score Evaluation Box ── */}
       {result && (
@@ -1464,14 +1358,25 @@ export default function CourseLearningPage() {
               const videoMaterial = materials.find((m) => m.materialType === "VIDEO" || m.MaterialType === "VIDEO" || m.embedUrl || (m.materialUrl && m.materialUrl.includes("youtube"))) || materials[0];
               const textMaterial = materials.find((m) => m.materialType === "TEXT" || m.MaterialType === "TEXT" || m.content || m.Content) || materials[0];
 
-              const rawVideoUrl = videoMaterial?.embedUrl || videoMaterial?.materialUrl || lesson.MaterialUrl;
-              const videoUrl = rawVideoUrl || "https://www.youtube.com/embed/lagzA38Pps0";
+              const hasRealVideo = Boolean(
+                videoMaterial &&
+                (videoMaterial.materialType === "VIDEO" || videoMaterial.MaterialType === "VIDEO")
+              );
+              const videoUrl = hasRealVideo
+                ? (videoMaterial?.embedUrl || videoMaterial?.materialUrl || lesson.MaterialUrl)
+                : null;
               const contentBody = lesson.content || lesson.Content || textMaterial?.content || textMaterial?.Content || null;
 
               const titleLower = (lesson.nodeName || lesson.NodeName || "").toLowerCase();
-              let lessonUiType = "video";
+              let lessonUiType;
               if (titleLower.includes("quiz") || titleLower.includes("test") || titleLower.includes("assessment")) {
                 lessonUiType = "quiz";
+              } else if (hasRealVideo) {
+                lessonUiType = "video";
+              } else {
+                lessonUiType = mapMaterialTypeToUi(
+                  textMaterial?.materialType || textMaterial?.MaterialType || "TEXT"
+                );
               }
 
               return {
@@ -2297,6 +2202,7 @@ export default function CourseLearningPage() {
       {/* Tab 2: Quizzes (Bài kiểm tra đánh giá Năng lực giả lập TOEIC / IELTS / General) */}
       {activeTab === "quizzes" && (
         <CourseAssessmentExamTab
+          courseId={courseId}
           courseTitle={courseInfo.courseTitle}
           onCompleteQuiz={handleConfirmCourseComplete}
         />

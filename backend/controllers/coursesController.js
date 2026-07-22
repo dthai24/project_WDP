@@ -179,12 +179,42 @@ const getMyCourses = async (req, res) => {
         .populate('categoryId', 'displayName')
         .populate('levelId', 'displayName')
         .lean();
+
+      // Gắn cây Paths -> Nodes -> Materials để trang "Khóa học của tôi" (mentor)
+      // tính đúng số Chương/Bài/Học liệu (trước đây luôn trả 0 vì thiếu bước này).
+      const courseIds = courses.map(c => c._id);
+      const paths = await Path.find({ courseId: { $in: courseIds } }).sort({ order: 1 }).lean();
+      const pathIds = paths.map(p => p._id);
+      const nodes = await PathNode.find({ pathId: { $in: pathIds } }).sort({ nodeOrder: 1 }).lean();
+      const nodeIds = nodes.map(n => n._id);
+      const materials = await NodeMaterial.find({ nodeId: { $in: nodeIds } }).sort({ materialOrder: 1 }).lean();
+
+      const materialsByNode = new Map();
+      for (const m of materials) {
+        const key = m.nodeId.toString();
+        if (!materialsByNode.has(key)) materialsByNode.set(key, []);
+        materialsByNode.get(key).push(m);
+      }
+      const nodesByPath = new Map();
+      for (const n of nodes) {
+        const key = n.pathId.toString();
+        if (!nodesByPath.has(key)) nodesByPath.set(key, []);
+        nodesByPath.get(key).push({ ...n, materials: materialsByNode.get(n._id.toString()) ?? [] });
+      }
+      const pathsByCourse = new Map();
+      for (const p of paths) {
+        const key = p.courseId.toString();
+        if (!pathsByCourse.has(key)) pathsByCourse.set(key, []);
+        pathsByCourse.get(key).push({ ...p, nodes: nodesByPath.get(p._id.toString()) ?? [] });
+      }
+
       courses = courses.map(c => ({
         ...c,
         courseId: c._id.toString(),
         CourseId: c._id.toString(),
         CategoryDisplayName: c.categoryId?.displayName ?? '',
         LevelDisplayName: c.levelId?.displayName ?? '',
+        paths: pathsByCourse.get(c._id.toString()) ?? [],
       }));
     }
 
