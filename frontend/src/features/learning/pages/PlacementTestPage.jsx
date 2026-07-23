@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkle,
@@ -11,6 +11,7 @@ import {
 } from '@phosphor-icons/react';
 import studentFeatureService from '../../../services/studentFeatureService';
 import AppButton from '../../../shared/ui/AppButton';
+import CourseCard from '../../courses/components/CourseCard';
 
 const QUESTIONS = [
   {
@@ -62,6 +63,56 @@ const QUESTIONS = [
       { text: "Flexible", isCorrect: false },
       { text: "Temporary", isCorrect: false }
     ]
+  },
+  {
+    id: 6,
+    question: "Complete the sentence: The report ___ by the manager yesterday.",
+    options: [
+      { text: "write", isCorrect: false },
+      { text: "writes", isCorrect: false },
+      { text: "was written", isCorrect: true },
+      { text: "has write", isCorrect: false }
+    ]
+  },
+  {
+    id: 7,
+    question: "Which of the following is a synonym of 'abundant'?",
+    options: [
+      { text: "Plentiful", isCorrect: true },
+      { text: "Scarce", isCorrect: false },
+      { text: "Rare", isCorrect: false },
+      { text: "Small", isCorrect: false }
+    ]
+  },
+  {
+    id: 8,
+    question: "Complete the sentence: If she ___ harder, she would have passed the exam.",
+    options: [
+      { text: "studies", isCorrect: false },
+      { text: "studied", isCorrect: false },
+      { text: "had studied", isCorrect: true },
+      { text: "study", isCorrect: false }
+    ]
+  },
+  {
+    id: 9,
+    question: "What is the meaning of the idiom 'break the ice'?",
+    options: [
+      { text: "To destroy something", isCorrect: false },
+      { text: "To start a conversation in a social setting", isCorrect: true },
+      { text: "To cause an argument", isCorrect: false },
+      { text: "To end a friendship", isCorrect: false }
+    ]
+  },
+  {
+    id: 10,
+    question: "Choose the word closest in meaning to 'meticulous'?",
+    options: [
+      { text: "Careless", isCorrect: false },
+      { text: "Careful and precise", isCorrect: true },
+      { text: "Fast", isCorrect: false },
+      { text: "Lazy", isCorrect: false }
+    ]
   }
 ];
 
@@ -73,8 +124,24 @@ export default function PlacementTestPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [assignedLevel, setAssignedLevel] = useState(null);
+  const [recommendedCourses, setRecommendedCourses] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   const currentQuestion = QUESTIONS[currentIdx];
+
+  useEffect(() => {
+    if (!assignedLevel?._id) return;
+    setLoadingRecommendations(true);
+    fetch(`http://localhost:5050/api/courses/student?level=${assignedLevel._id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setRecommendedCourses(data.data.slice(0, 6));
+        }
+      })
+      .catch((err) => console.error('Failed to load recommended courses:', err))
+      .finally(() => setLoadingRecommendations(false));
+  }, [assignedLevel]);
 
   const handleNext = async () => {
     if (selectedOpt === null) return;
@@ -115,7 +182,7 @@ export default function PlacementTestPage() {
   if (isFinished) {
     const levelName = assignedLevel?.displayName || assignedLevel?.levelName || "Intermediate";
     return (
-      <div className="max-w-xl mx-auto py-16 px-4 text-center font-sans">
+      <div className="max-w-4xl mx-auto py-16 px-4 text-center font-sans">
         <div className="w-20 h-20 mx-auto rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-6 shadow-md animate-bounce">
           <Trophy size={40} className="text-emerald-600 animate-pulse" weight="fill" />
         </div>
@@ -127,7 +194,7 @@ export default function PlacementTestPage() {
           Hệ thống AI đã đánh giá và xếp bạn vào cấp độ phù hợp:
         </p>
 
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-8 text-white shadow-xl mb-10 transform hover:scale-[1.02] transition-transform">
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-8 text-white shadow-xl mb-10 transform hover:scale-[1.02] transition-transform max-w-xl mx-auto">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-bold tracking-wide uppercase mb-3">
             <Sparkle size={12} weight="fill" />
             Cấp độ đề xuất
@@ -138,13 +205,37 @@ export default function PlacementTestPage() {
           </p>
         </div>
 
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 mb-12">
           <AppButton variant="outlined" onClick={() => navigate('/my-courses')}>
             Xem Khóa Học
           </AppButton>
           <AppButton variant="filled" onClick={() => navigate('/courses')}>
             Khám phá Lộ Trình
           </AppButton>
+        </div>
+
+        {/* Course recommendations based on assigned level */}
+        <div className="text-left">
+          <h3 className="text-lg font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+            <BookOpen size={20} className="text-emerald-600" />
+            Khóa học gợi ý cho cấp độ {levelName}
+          </h3>
+
+          {loadingRecommendations && (
+            <p className="text-sm text-slate-400">Đang tải gợi ý khóa học...</p>
+          )}
+
+          {!loadingRecommendations && recommendedCourses.length === 0 && (
+            <p className="text-sm text-slate-400">Chưa có khóa học phù hợp với cấp độ này, hãy khám phá thêm ở trang Lộ Trình.</p>
+          )}
+
+          {!loadingRecommendations && recommendedCourses.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recommendedCourses.map((course) => (
+                <CourseCard key={course._id} course={course} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   GraduationCap,
   User,
-  Gear,
   SignOut,
   Bell,
   CaretDown,
@@ -285,14 +284,6 @@ export default function Header({ logoTo, profilePath }) {
                     >
                       <User size={16} className="text-slate-400" />
                       Profile
-                    </Link>
-                    <Link
-                      to="/settings"
-                      onClick={() => setProfileOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <Gear size={16} className="text-slate-400" />
-                      Settings
                     </Link>
                     {isStudent(user) && (
                       <>
