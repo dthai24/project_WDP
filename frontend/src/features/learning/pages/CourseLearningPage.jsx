@@ -105,6 +105,42 @@ function getFileMeta(title = "") {
 }
 
 /* ─── Video Player ─── */
+function getYouTubeEmbedUrl(url) {
+  if (!url) return null;
+  const str = String(url).trim();
+  if (str.includes("youtube.com/embed/")) {
+    return str.includes("?") ? str : `${str}?rel=0`;
+  }
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = str.match(regExp);
+  if (match && match[2] && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}?rel=0`;
+  }
+  return null;
+}
+
+function extractYouTubeId(embedUrl) {
+  const match = String(embedUrl ?? "").match(/\/embed\/([^/?&]+)/);
+  return match?.[1] ?? null;
+}
+
+function loadYouTubeIframeApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  if (!window.__ytApiPromise) {
+    window.__ytApiPromise = new Promise((resolve) => {
+      const prevCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof prevCallback === "function") prevCallback();
+        resolve(window.YT);
+      };
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    });
+  }
+  return window.__ytApiPromise;
+}
+
 function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
   if (!url) return null;
   const [playing, setPlaying] = useState(false);
@@ -114,8 +150,14 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizOption, setQuizOption] = useState("");
   const videoRef = useRef(null);
+  const ytMountRef = useRef(null);
+  const ytPlayerRef = useRef(null);
 
   const { embedUrl, previewType } = useMemo(() => resolveVideoEmbed(url), [url]);
+  const youTubeId = useMemo(
+    () => (previewType === "iframe" ? extractYouTubeId(embedUrl) : null),
+    [embedUrl, previewType]
+  );
 
   useEffect(() => {
     setQuizAnswered(false);
@@ -128,6 +170,45 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
       setPlaying(false);
     }
   }, [currentLessonId]);
+
+  // Theo dõi thời gian phát thực tế của video YouTube để "Ghi chú" gán đúng mốc thời gian
+  useEffect(() => {
+    if (!youTubeId) return;
+    setCurrentTime(0);
+    let cancelled = false;
+    let pollInterval = null;
+
+    loadYouTubeIframeApi().then((YT) => {
+      if (cancelled || !ytMountRef.current) return;
+      ytPlayerRef.current = new YT.Player(ytMountRef.current, {
+        videoId: youTubeId,
+        playerVars: { rel: 0 },
+        events: {
+          onReady: () => {
+            pollInterval = setInterval(() => {
+              try {
+                const t = ytPlayerRef.current?.getCurrentTime?.();
+                if (typeof t === "number") setCurrentTime(t);
+              } catch {
+                // trình phát chưa sẵn sàng
+              }
+            }, 500);
+          },
+        },
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      if (pollInterval) clearInterval(pollInterval);
+      try {
+        ytPlayerRef.current?.destroy?.();
+      } catch {
+        // iframe có thể đã bị gỡ khỏi DOM khi đổi bài học
+      }
+      ytPlayerRef.current = null;
+    };
+  }, [youTubeId]);
 
   const handlePlayPause = () => {
     if (!videoRef.current) return;
@@ -175,7 +256,28 @@ function LessonVideoPlayer({ url, currentLessonId, onTakeNote }) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Video nhúng qua iframe (YouTube, Vimeo, Google Drive...)
+  // Video YouTube nhúng qua IFrame API — theo dõi được thời gian thực để ghi chú đúng mốc
+  if (previewType === 'iframe' && embedUrl && youTubeId) {
+    return (
+      <div key={currentLessonId} className="relative w-full h-full bg-black rounded-xl overflow-hidden flex flex-col justify-between" style={{ minHeight: '320px' }}>
+        <div className="relative w-full flex-1">
+          <div ref={ytMountRef} className="absolute inset-0 w-full h-full" />
+        </div>
+        <div className="bg-slate-900/95 px-4 py-2.5 flex items-center justify-between gap-4 text-white text-xs z-10 font-sans border-t border-slate-800 flex-shrink-0">
+          <span className="font-medium">⏱ {formatTime(currentTime)}</span>
+          <button
+            type="button"
+            onClick={() => onTakeNote(formatTime(currentTime))}
+            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 font-bold transition-all"
+          >
+            Ghi chú
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Video nhúng qua iframe không hỗ trợ IFrame API (Vimeo, Google Drive...)
   if (previewType === 'iframe' && embedUrl) {
     return (
       <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg border border-slate-800">
@@ -1187,10 +1289,23 @@ export default function CourseLearningPage() {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [activeTab, setActiveTab] = useState("lessons"); // "lessons" | "quizzes" | "peerReview" | "forum"
 
-  // Notes state
-  const [notes, setNotes] = useState([]);
+  // Notes state — lưu theo từng bài học trong khóa học, giữ lại khi rời/quay lại khóa học
+  const notesStorageKey = `course_notes_${courseId}_${currentUserId}`;
+  const [notesByLesson, setNotesByLesson] = useState(() => {
+    try {
+      const saved = localStorage.getItem(notesStorageKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [newNoteText, setNewNoteText] = useState("");
   const [noteTime, setNoteTime] = useState("");
+  const notes = notesByLesson[currentLessonId] || [];
+
+  useEffect(() => {
+    localStorage.setItem(notesStorageKey, JSON.stringify(notesByLesson));
+  }, [notesByLesson, notesStorageKey]);
 
   // Quiz state
   const [quizAnswers, setQuizAnswers] = useState({ q1: "", q2: "", q3: "", q4: "", q5: "" });
@@ -1284,8 +1399,11 @@ export default function CourseLearningPage() {
   };
 
   const handleAddNote = () => {
-    if (!newNoteText.trim()) return;
-    setNotes(prev => [...prev, { time: noteTime || "0:00", text: newNoteText }]);
+    if (!newNoteText.trim() || !currentLessonId) return;
+    setNotesByLesson(prev => ({
+      ...prev,
+      [currentLessonId]: [...(prev[currentLessonId] || []), { time: noteTime || "0:00", text: newNoteText }],
+    }));
     setNewNoteText("");
     setNoteTime("");
   };
