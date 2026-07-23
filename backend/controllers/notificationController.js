@@ -56,3 +56,56 @@ exports.markAllAsRead = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error updating notifications', error: error.message });
   }
 };
+
+const User = require('../Models/MongoDB/User');
+const UserCourse = require('../Models/MongoDB/UserCourse');
+const Role = require('../Models/MongoDB/Role');
+const UserRole = require('../Models/MongoDB/UserRole');
+
+// POST /api/notifications/broadcast
+exports.broadcastNotification = async (req, res) => {
+  try {
+    const { type = 'system', title, message, link, courseId } = req.body;
+
+    if (!title || !message) {
+      return res.status(400).json({ success: false, message: 'Missing title or message' });
+    }
+
+    let targetUserIds = [];
+
+    if (courseId) {
+      // 1. Course-related announcement: Notify all students enrolled in this course
+      const enrollments = await UserCourse.find({ courseId }).lean();
+      targetUserIds = enrollments.map(e => e.userId.toString());
+    } else {
+      // 2. Promotion/General announcement: Notify all students
+      const studentRole = await Role.findOne({ roleName: { $regex: /^student$/i } }).lean();
+      if (studentRole) {
+        const studentUserRoles = await UserRole.find({ roleId: studentRole._id }).lean();
+        targetUserIds = studentUserRoles.map(ur => ur.userId.toString());
+      }
+    }
+
+    // De-duplicate user IDs
+    targetUserIds = [...new Set(targetUserIds)];
+
+    // Create notifications in batch
+    const notificationsToCreate = targetUserIds.map(userId => ({
+      userId,
+      type,
+      title,
+      message,
+      link,
+      metadata: { courseId }
+    }));
+
+    if (notificationsToCreate.length > 0) {
+      await Notification.insertMany(notificationsToCreate);
+    }
+
+    res.json({ success: true, message: `Successfully broadcasted to ${targetUserIds.length} students` });
+  } catch (error) {
+    console.error('Error in broadcastNotification:', error);
+    res.status(500).json({ success: false, message: 'Error broadcasting notification', error: error.message });
+  }
+};

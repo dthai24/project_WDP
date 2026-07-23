@@ -13,7 +13,7 @@ const Level = require('../models/MongoDB/Level');
 const Certificate = require('../models/MongoDB/Certificate');
 const streakService = require("../services/streakService");
 const { validateCourseThumbnailDataUrl, saveCourseThumbnailFromDataUrl } = require('../middlewares/courseThumbnailMiddleware');
-
+const { notifyAdminsAndMentor } = require('../services/notificationService');
 async function userHasCourseAccess(userId, courseId) {
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return false;
@@ -978,6 +978,23 @@ const enrollCourse = async (req, res) => {
       progressPercentage: 0,
       enrollmentDate: new Date(),
     });
+
+    // Notify admins and course mentor
+    try {
+      const studentUser = await User.findById(userId).lean();
+      const studentName = studentUser?.fullName || 'Học viên';
+      await notifyAdminsAndMentor({
+        courseId,
+        studentId: userId,
+        type: 'course',
+        title: 'Học viên tham gia khóa học',
+        message: `Học viên ${studentName} đã đăng ký tham gia khóa học "${course.courseName}"`,
+        link: `/mentor/courses/${courseId}`,
+        metadata: { action: 'enroll' }
+      });
+    } catch (err) {
+      console.error('Failed to send enrollment notification:', err);
+    }
 
     return res.status(200).json({ success: true, message: 'Đăng ký khóa học thành công!', data: enrollment });
   } catch (error) {
