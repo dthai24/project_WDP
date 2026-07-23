@@ -6,6 +6,8 @@ const TestQuestionChoice = require('../models/MongoDB/TestQuestionChoice');
 const TestQuestionCollection = require('../models/MongoDB/TestQuestionCollection');
 const Path = require('../models/MongoDB/Path');
 const Course = require('../models/MongoDB/Course');
+const User = require('../models/MongoDB/User');
+const { notifyAdminsAndMentor } = require('../services/notificationService');
 
 // GET /api/courses/:courseId/tests/:scope/meta?chapterId=
 const getTestMeta = async (req, res) => {
@@ -247,6 +249,27 @@ const submitTestAttempt = async (req, res) => {
     // Update score in DB
     attempt.point = scorePoints;
     await attempt.save();
+
+    // Notify admins and course mentor of test submission
+    try {
+      const { courseId } = req.params;
+      const course = await Course.findById(test.courseId || courseId).lean();
+      const studentUser = await User.findById(userId).lean();
+      const studentName = studentUser?.fullName || 'Học viên';
+      if (course) {
+        await notifyAdminsAndMentor({
+          courseId: course._id,
+          studentId: userId,
+          type: 'ai-grading',
+          title: 'Học viên nộp bài kiểm tra',
+          message: `Học viên ${studentName} đã nộp bài kiểm tra trong khóa học "${course.courseName}" (Điểm: ${scorePoints}/100)`,
+          link: `/mentor/courses/${course._id}`,
+          metadata: { action: 'submit_test', score: scorePoints, attemptId: attempt._id }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send test submission notification:', err);
+    }
 
     const attemptsCount = await TestAttempt.countDocuments({ userId, testId: test._id });
     const maxAttempts = 3;

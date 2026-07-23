@@ -3,7 +3,7 @@ const Course = require('../models/MongoDB/Course');
 const User = require('../models/MongoDB/User');
 const UserCourse = require('../models/MongoDB/UserCourse');
 const vnpayService = require('../services/vnpayService');
-const { createNotification } = require('../services/notificationService');
+const { createNotification, notifyAdminsAndMentor } = require('../services/notificationService');
 
 // ==========================================
 // 1. CREATE PAYMENT - TẠO ĐƠN HÀNG
@@ -345,6 +345,26 @@ async function enrollUserInCourse(userId, courseId, payment) {
 
     await userCourse.save();
     console.log(`User ${userId} enrolled in course ${courseId}`);
+
+    // Notify admins and course mentor of paid enrollment
+    try {
+      const course = await Course.findById(courseId).lean();
+      const studentUser = await User.findById(userId).lean();
+      const studentName = studentUser?.fullName || 'Học viên';
+      if (course) {
+        await notifyAdminsAndMentor({
+          courseId,
+          studentId: userId,
+          type: 'payment',
+          title: 'Học viên mua khóa học',
+          message: `Học viên ${studentName} đã thanh toán và tham gia khóa học "${course.courseName}"`,
+          link: `/mentor/courses/${courseId}`,
+          metadata: { action: 'enroll', paymentId: payment._id }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send paid enrollment notification:', err);
+    }
   } catch (error) {
     console.error('Error enrolling user in course:', error);
   }

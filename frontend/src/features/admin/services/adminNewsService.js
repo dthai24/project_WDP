@@ -117,6 +117,10 @@ export async function createNewsArticle(payload = {}) {
 
   MOCK_ADMIN_NEWS.unshift(article);
 
+  if (status === 'PUBLISHED') {
+    sendBroadcastNotification(article);
+  }
+
   return {
     ok: true,
     article: normalizeNews(article),
@@ -142,13 +146,14 @@ export async function updateNewsArticle(id, payload = {}) {
     return { ok: false, message: 'Vui lòng chọn danh mục' };
   }
 
-  const next = {
-    ...existing,
-    ...buildNewsPayload(payload, existing),
-    id: existing.id,
-  };
+  const wasPublished = existing.status === 'PUBLISHED';
+  const isPublished = next.status === 'PUBLISHED';
 
   MOCK_ADMIN_NEWS[index] = next;
+
+  if (isPublished && !wasPublished) {
+    sendBroadcastNotification(next);
+  }
 
   return {
     ok: true,
@@ -181,7 +186,14 @@ export async function updateNewsArticleBasicInfo(id, payload = {}) {
     id: existing.id,
   };
 
+  const wasPublishedBasic = existing.status === 'PUBLISHED';
+  const isPublishedBasic = next.status === 'PUBLISHED';
+
   MOCK_ADMIN_NEWS[index] = next;
+
+  if (isPublishedBasic && !wasPublishedBasic) {
+    sendBroadcastNotification(next);
+  }
 
   return {
     ok: true,
@@ -240,4 +252,38 @@ export async function revertNewsArticle(id, original = {}) {
     ok: true,
     article: normalizeNews(next),
   };
+}
+
+async function sendBroadcastNotification(article) {
+  try {
+    const stored = localStorage.getItem('user');
+    if (!stored) return;
+    const user = JSON.parse(stored);
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-role-name': user.role?.toLowerCase() || 'admin'
+    };
+    if (user.userId) {
+      headers['x-user-id'] = String(user.userId);
+    }
+    if (user.token) {
+      headers['Authorization'] = `Bearer ${user.token}`;
+    }
+
+    const payload = {
+      type: 'course',
+      title: article.category ? `Thông báo chuyên mục ${article.category}` : 'Thông báo mới từ hệ thống',
+      message: article.title,
+      link: `/news/${article.id}`,
+      courseId: null // default to null for general category news, broadcast to all student roles
+    };
+
+    await fetch('http://localhost:5050/api/notifications/broadcast', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    console.error('Failed to send broadcast notification:', err);
+  }
 }
