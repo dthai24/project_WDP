@@ -68,13 +68,6 @@ export function getStudentMenuItems(user) {
       isActiveMatch: (pathname) => pathname.startsWith("/my-courses"),
     },
     {
-      id: "placement-test",
-      label: "Xếp lớp đầu vào",
-      to: "/placement-test",
-      Icon: QuizOutlinedIcon,
-      disabled: !student,
-    },
-    {
       id: 'news',
       label: 'Tin tức',
       to: '/news',

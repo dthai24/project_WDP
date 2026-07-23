@@ -74,8 +74,8 @@ export default function SurveyPage() {
         const updatedUser = { ...user, isFirstLogin: false };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         localStorage.setItem('user_goal', goal.trim());
-        toast.success(result.data.message || 'Đã lưu thông tin thành công!');
-        navigate(getPostLoginPath(updatedUser, { isFirstLogin: false }));
+        toast.success(result.data.message || 'Đã lưu thông tin thành công! Hãy làm bài đánh giá năng lực đầu vào nhé.');
+        navigate('/placement-test');
       } else {
         toast.error(result.data?.message || 'Lưu khảo sát thất bại.');
         submittingRef.current = false;
