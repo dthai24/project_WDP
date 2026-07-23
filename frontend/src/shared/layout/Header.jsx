@@ -304,14 +304,6 @@ export default function Header({ logoTo, profilePath }) {
                           <GraduationCap size={16} className="text-rose-500" />
                           Become a Mentor
                         </Link>
-                        <Link
-                          to="/placement-test"
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors font-semibold"
-                        >
-                          <Sparkle size={16} className="text-emerald-500" />
-                          Làm Placement Test
-                        </Link>
                       </>
                     )}
                     <div className="border-t border-slate-50 mt-1 pt-1">
