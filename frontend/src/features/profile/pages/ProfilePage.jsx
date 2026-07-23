@@ -348,7 +348,8 @@ export default function ProfilePage() {
   });
   const [coursesList, setCoursesList] = useState([]);
   const [certificatesList, setCertificatesList] = useState([]);
-  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | 'certificates' | null
+  const [paymentsList, setPaymentsList] = useState([]);
+  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | 'certificates' | 'payments' | null
 
   useEffect(() => {
     const cUser = getInitialUser();
