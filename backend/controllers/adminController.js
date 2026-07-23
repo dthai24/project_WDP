@@ -15,7 +15,6 @@ const PathNode = require('../models/MongoDB/PathNode');
 const NodeMaterial = require('../models/MongoDB/NodeMaterial');
 const { logAction } = require('../services/auditService');
 const AuditLog = require('../models/MongoDB/AuditLog');
-const Payment = require('../models/MongoDB/Payment');
 const bcrypt = require('bcryptjs');
 
 // ==========================================
@@ -282,35 +281,6 @@ const updateUser = async (req, res) => {
     return res.json({ success: true, message: 'Cập nhật user thành công' });
   } catch (err) {
     console.error('[Admin UpdateUser Error]', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi server' });
-  }
-};
-
-const toggleUserStatus = async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ success: false, message: 'userId không hợp lệ' });
-    }
-    const { IsActive } = req.body;
-    if (IsActive === undefined) {
-      return res.status(400).json({ success: false, message: 'Thiếu trạng thái IsActive' });
-    }
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { isActive: Boolean(IsActive), updatedAt: new Date() },
-      { new: true }
-    );
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
-    }
-    return res.json({
-      success: true,
-      message: IsActive ? 'Đã kích hoạt tài khoản thành công' : 'Đã khóa tài khoản thành công',
-      data: user
-    });
-  } catch (err) {
-    console.error('[Admin ToggleUserStatus Error]', err.message);
     return res.status(500).json({ success: false, message: 'Lỗi server' });
   }
 };
