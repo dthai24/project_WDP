@@ -47,6 +47,7 @@ export default function AdminAccountList({
   isFiltered,
   onEdit,
   onView,
+  onToggleStatus,
   onClearFilters,
 }) {
   if (loading) {
@@ -98,7 +99,7 @@ export default function AdminAccountList({
     >
       <ListHeader />
       {accounts.map((account) => (
-        <AdminAccountRow key={account.id} account={account} onEdit={onEdit} onView={onView} />
+        <AdminAccountRow key={account.id} account={account} onEdit={onEdit} onView={onView} onToggleStatus={onToggleStatus} />
       ))}
     </Box>
   );

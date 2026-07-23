@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/MongoDB/User');
+const Payment = require('../models/MongoDB/Payment');
 const Role = require('../models/MongoDB/Role');
 const UserRole = require('../models/MongoDB/UserRole');
 const Category = require('../models/MongoDB/Category');
@@ -29,16 +30,14 @@ const getDashboard = async (req, res) => {
     const pendingCourses = await Course.countDocuments({ status: 'pending' });
     const pendingApplications = await MentorApplication.countDocuments({ status: 'pending' });
 
-    // Revenue calculation from successful payments
+    // Aggregate system revenue from successful payments
     let totalRevenue = 0;
     try {
       const revenueResult = await Payment.aggregate([
         { $match: { status: 'success' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
+        { $group: { _id: null, totalRevenue: { $sum: '$finalAmount' } } }
       ]);
-      if (revenueResult && revenueResult.length > 0) {
-        totalRevenue = revenueResult[0].total || 0;
-      }
+      totalRevenue = revenueResult.length > 0 ? (revenueResult[0].totalRevenue || 0) : 0;
     } catch (e) {
       console.warn('[Revenue Calculation Warning]', e.message);
     }
@@ -283,6 +282,35 @@ const updateUser = async (req, res) => {
     return res.json({ success: true, message: 'Cập nhật user thành công' });
   } catch (err) {
     console.error('[Admin UpdateUser Error]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+const toggleUserStatus = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: 'userId không hợp lệ' });
+    }
+    const { IsActive } = req.body;
+    if (IsActive === undefined) {
+      return res.status(400).json({ success: false, message: 'Thiếu trạng thái IsActive' });
+    }
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isActive: Boolean(IsActive), updatedAt: new Date() },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    return res.json({
+      success: true,
+      message: IsActive ? 'Đã kích hoạt tài khoản thành công' : 'Đã khóa tài khoản thành công',
+      data: user
+    });
+  } catch (err) {
+    console.error('[Admin ToggleUserStatus Error]', err.message);
     return res.status(500).json({ success: false, message: 'Lỗi server' });
   }
 };
