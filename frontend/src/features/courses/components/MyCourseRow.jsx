@@ -1,18 +1,62 @@
+/**
+ * MyCourseRow  ─  Dòng hiển thị một khóa học trong "Khóa học của tôi"
+ *
+ * Props:
+ *   course : {
+ *     courseId:           number,
+ *     title:              string,
+ *     thumbnail:          string,
+ *     category:           string,
+ *     level:              string,
+ *     instructor:         string,
+ *     progressPercentage: number,    // 0–100
+ *     enrollmentStatus:   string,    // "in_progress" | "completed"
+ *     lastActivity:       string,    // "2 ngày trước"
+ *     currentStage:       string,    // tên chương hiện tại
+ *     currentLesson:      string,    // tên bài học hiện tại
+ *     lessonCount:        number,
+ *     completedLessons:   number,
+ *     modules?:           array      // cấu trúc chương nếu có
+ *   }
+ *   onContinue: (courseId) => void   — navigate đến /my-courses/:courseId/learn
+ *   onClick   : (courseId) => void   — navigate đến /courses/:courseId (detail)
+ */
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  BookOpen,
-  CheckCircle,
-  PlayCircle,
-  Clock,
-  User,
-  CaretDown,
-  ArrowRight,
-  GraduationCap,
-  Sparkle,
-} from "@phosphor-icons/react";
+  Box,
+  Chip,
+  Collapse,
+  IconButton,
+  Tooltip,
+  Typography,
+  alpha,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
+import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
+import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
+import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
+import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import AppButton from "@/shared/ui/AppButton";
+import ThumbnailImage from "@/shared/ui/ThumbnailImage";
+import AppProgressBar, { getProgressColor } from "@/shared/ui/AppProgressBar";
 import MyCourseProgressSummary from "./MyCourseProgressSummary";
 import { buildCourseDetailPath } from "@/features/courses/utils/courseListParams";
+import { resolveCategoryChipSx, resolveLevelChipSx } from "@/shared/catalog/catalogRegistry";
+
+const MUTED = "#64748B";
+const TEXT = "#0F172A";
+const PRIMARY = "#0891B2";
+
+const ghostIconSx = {
+  transition: "all 0.2s ease",
+  "&:hover": { bgcolor: "rgba(15,23,42,0.04)" },
+};
 
 function normalizeCourse(course = {}) {
   const progress = course.progressPercentage ?? course.progress ?? 0;
@@ -34,195 +78,323 @@ function normalizeCourse(course = {}) {
     modules: course.modules ?? [],
     currentLessonDetail: course.currentLessonDetail ?? null,
     recentLessons: course.recentLessons ?? [],
+    certificateCode: course.certificateCode ?? null,
   };
 }
 
-function getStatusBadge(variant) {
-  switch (variant) {
-    case "completed":
-      return {
-        label: "Đã hoàn thành",
-        bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
-        icon: CheckCircle,
-      };
-    case "learning":
-      return {
-        label: "Đang học",
-        bg: "bg-brand-50 text-brand-700 border-brand-200/60",
-        icon: PlayCircle,
-      };
-    case "not_started":
-      return {
-        label: "Chưa bắt đầu",
-        bg: "bg-amber-50 text-amber-700 border-amber-200/60",
-        icon: Clock,
-      };
-    default:
-      return {
-        label: "Chưa tham gia",
-        bg: "bg-slate-100 text-slate-600 border-slate-200/60",
-        icon: BookOpen,
-      };
-  }
+function getCompletedStatusChip() {
+  return {
+    label: "Hoàn thành",
+    sx: {
+      bgcolor: "rgba(4,120,87,0.12)",
+      color: "#047857",
+      border: "1px solid rgba(4,120,87,0.24)",
+    },
+  };
 }
 
-export default function MyCourseRow({ course, variant = "learning", onAction }) {
+function getLearningStatusChip() {
+  return {
+    label: "Đang học",
+    sx: {
+      bgcolor: "rgba(8,145,178,0.12)",
+      color: PRIMARY,
+      border: "1px solid rgba(8,145,178,0.20)",
+    },
+  };
+}
+
+function getNotJoinedStatusChip() {
+  return {
+    label: "Chưa học",
+    sx: {
+      bgcolor: "rgba(100, 116, 139, 0.12)",
+      color: "#64748B",
+      border: "1px solid rgba(100, 116, 139, 0.20)",
+    },
+  };
+}
+
+function getNotStartedStatusChip() {
+  return {
+    label: "Chưa học",
+    sx: {
+      bgcolor: "rgba(245, 158, 11, 0.12)",
+      color: "#D97706",
+      border: "1px solid rgba(245, 158, 11, 0.20)",
+    },
+  };
+}
+
+
+
+function MetaItem({ icon: Icon, label }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Icon sx={{ fontSize: 13, color: "#94A3B8", flexShrink: 0 }} />
+      <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500, lineHeight: 1.2 }}>
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
+function RowTopActions({ showExpand, expanded, onExpandToggle }) {
+  if (!showExpand) return null;
+
+  return (
+    <Box
+      sx={{
+        position: "absolute",
+        top: { xs: 10, md: 12 },
+        right: { xs: 10, md: 12 },
+        display: "flex",
+        alignItems: "center",
+        gap: 0.25,
+        zIndex: 1,
+      }}
+    >
+      <Tooltip title={expanded ? "Thu gọn" : "Xem tiến độ khóa học"}>
+        <IconButton
+          size="small"
+          aria-label={expanded ? "Thu gọn" : "Xem tiến độ khóa học"}
+          onClick={() => onExpandToggle?.()}
+          sx={ghostIconSx}
+        >
+          {expanded ? (
+            <ExpandLessRoundedIcon sx={{ fontSize: 20 }} />
+          ) : (
+            <ExpandMoreRoundedIcon sx={{ fontSize: 20 }} />
+          )}
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
+export default function MyCourseRow({
+  course,
+  variant = "learning",
+  onAction,
+}) {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [expanded, setExpanded] = useState(false);
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const data = normalizeCourse(course);
-  const canExpand = data.modules.length > 0 || Boolean(data.currentLessonDetail);
+  const isCompleted = variant === "completed";
+  const isLearning = variant === "learning";
+  const canExpand = data.modules.length > 0 || data.currentLessonDetail;
   const progressValue = Math.min(Math.max(data.progressPercentage, 0), 100);
   const detailPath = buildCourseDetailPath(data.courseId, searchParams, "/my-courses");
   const learningPath = `/my-courses/${data.courseId}/learn`;
+  const titlePath = detailPath;
+  const progressTextColor = getProgressColor(progressValue);
 
-  const badge = getStatusBadge(variant);
+  let statusChip = getLearningStatusChip();
+  let actionLabel = "Tiếp tục học";
 
-  let actionLabel = "Vào học ngay";
   if (variant === "completed") {
-    actionLabel = "Ôn tập lại";
-  } else if (variant === "learning") {
-    actionLabel = "Tiếp tục học";
-  } else if (variant === "not_joined" || variant === "not_started") {
+    statusChip = getCompletedStatusChip();
+    actionLabel = data.certificateCode ? "Xem chứng chỉ" : "Ôn tập lại";
+  } else if (variant === "not_joined") {
+    statusChip = getNotJoinedStatusChip();
+    actionLabel = "Đăng ký học";
+  } else if (variant === "not_started") {
+    statusChip = getNotStartedStatusChip();
     actionLabel = "Đăng ký học";
   }
 
   const handleAction = () => {
     if (variant === "not_joined") {
       navigate(detailPath);
+    } else if (variant === "completed" && data.certificateCode) {
+      window.open(`/certificate/${data.certificateCode}`, '_blank');
     } else {
       navigate(learningPath);
     }
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-card-hover hover:border-slate-200 transition-all duration-300 overflow-hidden">
-      <div className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
-        {/* Thumbnail */}
-        <div className="relative w-full sm:w-44 aspect-[16/9] sm:aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 shrink-0">
-          {data.thumbnail ? (
-            <img
-              src={data.thumbnail}
-              alt={data.courseName}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={(e) => {
-                e.target.style.display = "none";
-              }}
+    <Box
+      sx={{
+        position: "relative",
+        bgcolor: "#FFFFFF",
+        borderRadius: "18px",
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+        boxShadow: theme.ios18?.shadow?.sm,
+        overflow: "hidden",
+        transition: [
+          `box-shadow 0.25s ${theme.ios18?.transition}`,
+          `border-color 0.25s ${theme.ios18?.transition}`,
+        ].join(", "),
+        "&:hover": {
+          boxShadow: theme.ios18?.shadow?.md,
+          borderColor: alpha(theme.palette.primary.main, 0.18),
+        },
+      }}
+    >
+      <RowTopActions
+        showExpand={canExpand}
+        expanded={expanded}
+        onExpandToggle={() => setExpanded((prev) => !prev)}
+      />
+
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { xs: "stretch", md: "center" },
+          gap: { xs: 2, md: 2.5 },
+          p: { xs: 2, md: 2.25 },
+          pt: { xs: 4.5, md: 2.25 },
+          pr: { xs: 2, md: canExpand ? 7 : 2.25 },
+        }}
+      >
+        <ThumbnailImage
+          src={data.thumbnail}
+          label={data.courseName}
+          alt={data.courseName}
+          iconSize={20}
+          sx={{
+            width: { xs: "100%", md: 160 },
+            flexShrink: 0,
+            aspectRatio: "16 / 9",
+            borderRadius: "12px",
+          }}
+        />
+
+        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1.25 }}>
+          <Typography
+            component={Link}
+            to={titlePath}
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: 16, md: 17 },
+              lineHeight: 1.35,
+              color: TEXT,
+              textDecoration: "none",
+              pr: { xs: 5, md: 0 },
+              transition: `color 0.18s ${theme.ios18?.transition}`,
+              "&:hover": { color: "primary.main" },
+            }}
+          >
+            {data.courseName}
+          </Typography>
+
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+            <Chip
+              label={statusChip.label}
+              size="small"
+              sx={{ height: 22, fontSize: 11, fontWeight: 600, borderRadius: "99px", ...statusChip.sx }}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100">
-              <GraduationCap size={32} className="text-slate-300" />
-            </div>
-          )}
-
-          {/* Status Badge overlay on Thumbnail mobile */}
-          <span
-            className={`absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border shadow-xs backdrop-blur-md ${badge.bg}`}
-          >
-            <badge.icon size={12} weight="bold" />
-            {badge.label}
-          </span>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-2.5 w-full">
-          <div>
-            <Link
-              to={detailPath}
-              className="text-base sm:text-lg font-bold text-slate-900 leading-snug hover:text-brand-600 transition-colors line-clamp-1"
-            >
-              {data.courseName}
-            </Link>
-
-            {/* Badges row */}
-            <div className="flex flex-wrap items-center gap-2 mt-1.5">
-              {data.category && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/50">
-                  {data.category}
-                </span>
-              )}
-              {data.level && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                  {data.level}
-                </span>
-              )}
-              {data.instructor && (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-500 font-medium">
-                  <User size={13} className="text-slate-400" />
-                  {data.instructor}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Meta & Location */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium">
-            <span className="inline-flex items-center gap-1">
-              <BookOpen size={14} className="text-slate-400" />
-              {data.totalLessons} bài học · {data.totalNodes} chương
-            </span>
-            {data.lastActivity && (
-              <span className="inline-flex items-center gap-1 text-slate-400">
-                <Clock size={14} />
-                Hoạt động: {data.lastActivity}
-              </span>
+            {data.level && (
+              <Chip
+                label={data.level}
+                size="small"
+                sx={{
+                  height: 22,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  borderRadius: "99px",
+                  ...resolveLevelChipSx({ displayName: data.level }),
+                }}
+              />
             )}
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-600">Tiến độ khóa học</span>
-              <span className="font-bold text-brand-600">{progressValue}%</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  progressValue >= 100
-                    ? "bg-emerald-500"
-                    : progressValue > 0
-                    ? "bg-gradient-to-r from-brand-500 to-teal-400"
-                    : "bg-slate-300"
-                }`}
-                style={{ width: `${progressValue}%` }}
+            {data.category && (
+              <Chip
+                label={data.category}
+                size="small"
+                sx={{
+                  height: 22,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  borderRadius: "99px",
+                  ...resolveCategoryChipSx({ displayName: data.category }, { withBorder: false }),
+                }}
               />
-            </div>
-          </div>
-        </div>
+            )}
+          </Box>
 
-        {/* Right Action Button & Expand Toggle */}
-        <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto shrink-0 gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-          <button
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+            <MetaItem icon={MenuBookOutlinedIcon} label={`${data.totalLessons} bài`} />
+            <MetaItem icon={RouteOutlinedIcon} label={`${data.totalNodes} chương`} />
+            <MetaItem icon={ArticleOutlinedIcon} label={`${data.totalMaterials} học liệu`} />
+            {data.instructor && (
+              <MetaItem icon={PersonOutlineOutlinedIcon} label={data.instructor} />
+            )}
+          </Box>
+
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+            {isLearning && data.currentStage != null && data.currentLesson != null && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <PlaceOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8" }} />
+                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
+                  Đang ở: Chương {data.currentStage} · Bài {data.currentLesson}
+                </Typography>
+              </Box>
+            )}
+            {data.lastActivity && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <AccessTimeOutlinedIcon sx={{ fontSize: 13, color: "#94A3B8" }} />
+                <Typography sx={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>
+                  Học gần nhất: {data.lastActivity}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 0.25 }}>
+              <AppProgressBar value={progressValue} height={6} sx={{ flex: 1 }} />
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: progressTextColor,
+                  minWidth: 36,
+                  textAlign: "right",
+                }}
+              >
+                {progressValue}%
+              </Typography>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            flexShrink: 0,
+            width: { xs: "100%", md: "auto" },
+            alignSelf: { xs: "stretch", md: "center" },
+          }}
+        >
+          <AppButton
+            fullWidth={isMobile}
+            size="small"
+            variant="contained"
             onClick={handleAction}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-brand-500/25 cursor-pointer w-full sm:w-auto"
+            sx={{ minWidth: { md: 140 }, whiteSpace: "nowrap" }}
           >
-            <span>{actionLabel}</span>
-            <ArrowRight size={14} weight="bold" />
-          </button>
+            {actionLabel}
+          </AppButton>
+        </Box>
+      </Box>
 
-          {canExpand && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer py-1"
-            >
-              <span>{expanded ? "Thu gọn" : "Chi tiết lộ trình"}</span>
-              <CaretDown
-                size={14}
-                weight="bold"
-                className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-              />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Expandable Module Breakdown */}
-      {canExpand && expanded && (
-        <div className="px-5 pb-5 pt-3 border-t border-slate-100 bg-slate-50/40">
-          <MyCourseProgressSummary course={course} />
-        </div>
+      {canExpand && (
+        <Collapse in={expanded} timeout="auto" unmountOnExit>
+          <Box
+            sx={{
+              px: { xs: 2, md: 2.25 },
+              pb: { xs: 2, md: 2.25 },
+              pt: 2,
+              borderTop: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+            }}
+          >
+            <MyCourseProgressSummary course={course} />
+          </Box>
+        </Collapse>
       )}
-    </div>
+    </Box>
   );
 }

@@ -30,10 +30,10 @@ import {
   uploadUserAvatar,
   fetchUserCourses,
   fetchUserCertificates,
-  fetchUserPayments,
 } from "@/features/profile/services/profileService";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
-import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import paymentApi from "@/services/paymentApi";
 import {
   getStoredAvatarUrl,
   persistUserAvatar,
@@ -53,12 +53,12 @@ import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 
 /* --- Constants --- */
-const PRIMARY = "#7c3aed";
-const TEXT = "#1e1b4b";
-const MUTED = "#64748b";
-const SUCCESS = "#16a34a";
-const ACCENT = "#f43f5e";
-const DIVIDER = "rgba(124,58,237,0.08)";
+const PRIMARY = "#0891B2";
+const TEXT = "#0F172A";
+const MUTED = "#64748B";
+const SUCCESS = "#16A34A";
+const ACCENT = "#EA580C";
+const DIVIDER = "rgba(8,145,178,0.08)";
 
 /** Chuyển đổi đường dẫn thumbnail thành URL có thể hiển thị */
 function resolveThumbnail(thumb) {
@@ -419,14 +419,19 @@ export default function ProfilePage() {
           if (certResult.success && Array.isArray(certResult.certificates)) {
             setCertificatesList(certResult.certificates);
           }
-        }
 
-        const payResult = await fetchUserPayments();
-        if (payResult.success && Array.isArray(payResult.payments)) {
-          setPaymentsList(payResult.payments);
+          try {
+            // Tải danh sách thanh toán thành công (success)
+            const payResult = await paymentApi.getUserPayments('success', 50, 0);
+            if (payResult && Array.isArray(payResult.payments)) {
+              setPaymentsList(payResult.payments);
+            }
+          } catch (payErr) {
+            console.error("Lỗi khi tải lịch sử thanh toán:", payErr);
+          }
         }
       } catch (err) {
-        console.error("Lỗi khi tải khóa học, chứng chỉ và lịch sử thanh toán:", err);
+        console.error("Lỗi khi tải khóa học và chứng chỉ:", err);
       }
     };
     fetchCoursesAndCertificates();
@@ -992,161 +997,179 @@ export default function ProfilePage() {
                   icon={MenuBookOutlinedIcon}
                   iconColor={PRIMARY}
                 />
-                <StatRow
-                  icon={MenuBookOutlinedIcon}
-                  iconColor={PRIMARY}
-                  label="Khóa đang học"
-                  value={`${profile?.stats?.learning || 0} khóa`}
-                  expandable={profile?.stats?.learning > 0}
-                  expanded={expandedStat === "learning"}
-                  onClick={() => setExpandedStat(prev => prev === "learning" ? null : "learning")}
-                >
-                  {coursesList.filter(c => !c.isCompleted).length === 0 ? (
-                    <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {coursesList.filter(c => !c.isCompleted).map(course => (
-                        <Link
-                          key={course.courseId}
-                          to={`/my-courses/${course.courseId}/learn`}
-                          className="flex flex-col gap-1 p-2 rounded-xl border border-slate-100 hover:border-cyan-500/30 hover:bg-cyan-50/10 transition-all font-sans text-left decoration-none block"
-                        >
-                          <span className="text-[12px] font-bold text-slate-700 truncate block">
-                            {course.courseName}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-cyan-500" style={{ width: `${course.progress}%` }} />
-                            </div>
-                            <span className="text-[10px] font-bold text-cyan-600">{course.progress}%</span>
+                {(() => {
+                  const learningCourses = coursesList.filter(c => !c.isCompleted);
+                  const completedCourses = coursesList.filter(c => c.isCompleted);
+                  const validCertificates = certificatesList.filter(c => c.courseId);
+
+                  return (
+                    <>
+                      <StatRow
+                        icon={MenuBookOutlinedIcon}
+                        iconColor={PRIMARY}
+                        label="Khóa đang học"
+                        value={`${learningCourses.length} khóa`}
+                        expandable={learningCourses.length > 0}
+                        expanded={expandedStat === "learning"}
+                        onClick={() => setExpandedStat(prev => prev === "learning" ? null : "learning")}
+                      >
+                        {learningCourses.length === 0 ? (
+                          <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {learningCourses.map(course => (
+                              <Link
+                                key={course.courseId}
+                                to={`/my-courses/${course.courseId}/learn`}
+                                className="flex flex-col gap-1 p-2 rounded-xl border border-slate-100 hover:border-cyan-500/30 hover:bg-cyan-50/10 transition-all font-sans text-left decoration-none block"
+                              >
+                                <span className="text-[12px] font-bold text-slate-700 truncate block">
+                                  {course.courseName}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-cyan-500" style={{ width: `${course.progress}%` }} />
+                                  </div>
+                                  <span className="text-[10px] font-bold text-cyan-600">{course.progress}%</span>
+                                </div>
+                              </Link>
+                            ))}
                           </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </StatRow>
-                <StatRow
-                  icon={CheckCircleRoundedIcon}
-                  iconColor={SUCCESS}
-                  label="Khóa hoàn thành"
-                  value={`${profile?.stats?.completed || 0} khóa`}
-                  expandable={profile?.stats?.completed > 0}
-                  expanded={expandedStat === "completed"}
-                  onClick={() => setExpandedStat(prev => prev === "completed" ? null : "completed")}
-                >
-                  {coursesList.filter(c => c.isCompleted).length === 0 ? (
-                    <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {coursesList.filter(c => c.isCompleted).map(course => {
-                        const cert = certificatesList.find(
-                          c => (c.courseId?._id || c.courseId) === course.courseId
-                        );
+                        )}
+                      </StatRow>
 
-                        return (
-                          <div
-                            key={course.courseId}
-                            className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
-                          >
-                            <Link
-                              to={`/my-courses/${course.courseId}/learn`}
-                              className="text-[12px] font-bold text-slate-700 hover:text-emerald-600 transition-colors truncate block decoration-none"
+                      <StatRow
+                        icon={CheckCircleRoundedIcon}
+                        iconColor={SUCCESS}
+                        label="Khóa hoàn thành"
+                        value={`${completedCourses.length} khóa`}
+                        expandable={completedCourses.length > 0}
+                        expanded={expandedStat === "completed"}
+                        onClick={() => setExpandedStat(prev => prev === "completed" ? null : "completed")}
+                      >
+                        {completedCourses.length === 0 ? (
+                          <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {completedCourses.map(course => {
+                              const cert = validCertificates.find(
+                                c => (c.courseId?._id || c.courseId)?.toString() === course.courseId?.toString()
+                              );
+
+                              return (
+                                <div
+                                  key={course.courseId}
+                                  className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
+                                >
+                                  <Link
+                                    to={`/my-courses/${course.courseId}/learn`}
+                                    className="text-[12px] font-bold text-slate-700 hover:text-emerald-600 transition-colors truncate block decoration-none"
+                                  >
+                                    {course.courseName}
+                                  </Link>
+
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                                      ✓ Đã hoàn thành
+                                    </span>
+                                    {cert && (
+                                      <Link
+                                        to={`/certificate/${cert.certificateCode}`}
+                                        target="_blank"
+                                        className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
+                                      >
+                                        <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
+                                        Xem chứng chỉ
+                                      </Link>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </StatRow>
+
+                      <StatRow
+                        icon={WorkspacePremiumIcon}
+                        iconColor="#d97706"
+                        label="Chứng chỉ của tôi"
+                        value={`${validCertificates.length} chứng chỉ`}
+                        expandable={validCertificates.length > 0}
+                        expanded={expandedStat === "certificates"}
+                        onClick={() => setExpandedStat(prev => prev === "certificates" ? null : "certificates")}
+                      >
+                        <div className="space-y-2">
+                          {validCertificates.map(cert => (
+                            <div
+                              key={cert._id}
+                              className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
                             >
-                              {course.courseName}
-                            </Link>
-
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
-                                ✓ Đã hoàn thành
+                              <span className="text-[12px] font-bold text-slate-700 truncate block">
+                                {cert.courseId?.courseName || 'Khóa học của StarLearning'}
                               </span>
-                              {cert && (
+
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-[9px] text-slate-400 font-medium">
+                                  Cấp ngày: {new Date(cert.issuedAt).toLocaleDateString('vi-VN')}
+                                </span>
+
                                 <Link
                                   to={`/certificate/${cert.certificateCode}`}
                                   target="_blank"
-                                  className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
+                                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
                                 >
                                   <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
-                                  Xem chứng nhận
+                                  Xem chứng chỉ
                                 </Link>
-                              )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </StatRow>
-
-                <StatRow
-                  icon={WorkspacePremiumIcon}
-                  iconColor="#d97706"
-                  label="Chứng nhận của tôi"
-                  value={`${certificatesList.length} chứng nhận`}
-                  expandable={certificatesList.length > 0}
-                  expanded={expandedStat === "certificates"}
-                  onClick={() => setExpandedStat(prev => prev === "certificates" ? null : "certificates")}
-                >
-                  <div className="space-y-2">
-                    {certificatesList.map(cert => (
-                      <div
-                        key={cert._id}
-                        className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
-                      >
-                        <span className="text-[12px] font-bold text-slate-700 truncate block">
-                          {cert.courseId?.courseName || 'Khóa học của StarLearning'}
-                        </span>
-
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[9px] text-slate-400 font-medium">
-                            Cấp ngày: {new Date(cert.issuedAt).toLocaleDateString('vi-VN')}
-                          </span>
-
-                          <Link
-                            to={`/certificate/${cert.certificateCode}`}
-                            target="_blank"
-                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-lg text-[9.5px] font-bold transition-all decoration-none flex items-center gap-1"
-                          >
-                            <WorkspacePremiumIcon sx={{ fontSize: 12 }} />
-                            Xem chứng nhận
-                          </Link>
+                          ))}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </StatRow>
+                      </StatRow>
+                    </>
+                  );
+                })()}
 
                 <StatRow
-                  icon={ReceiptLongOutlinedIcon}
-                  iconColor="#2563eb"
+                  icon={ReceiptLongRoundedIcon}
+                  iconColor="#0284c7"
                   label="Lịch sử thanh toán"
                   value={`${paymentsList.length} giao dịch`}
-                  expandable={paymentsList.length > 0}
+                  expandable={true}
                   expanded={expandedStat === "payments"}
                   onClick={() => setExpandedStat(prev => prev === "payments" ? null : "payments")}
                   last
                 >
-                  <div className="space-y-2">
-                    {paymentsList.map(pay => (
-                      <div
-                        key={pay._id}
-                        className="flex flex-col gap-1.5 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
-                      >
-                        <span className="text-[12px] font-bold text-slate-700 truncate block">
-                          {pay.courseId?.courseName || pay.paymentDescription || 'Thanh toán khóa học'}
-                        </span>
-                        <div className="flex items-center justify-between text-[10px] text-slate-500">
-                          <span>Mã GD: <strong className="text-slate-700">{pay.vnpayOrderId || pay.transactionCode || pay._id.slice(-8)}</strong></span>
-                          <span className="font-extrabold text-emerald-600">{(pay.finalAmount || pay.amount || 0).toLocaleString('vi-VN')} ₫</span>
+                  {paymentsList.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic">Không có lịch sử thanh toán nào.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                      {paymentsList.map(payment => (
+                        <div
+                          key={payment._id}
+                          className="flex flex-col gap-1 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="text-[11.5px] font-bold text-slate-700 leading-tight flex-1">
+                              {payment.courseId?.courseName || 'Khóa học tiếng Anh'}
+                            </span>
+                            <span className="text-[11px] font-extrabold text-emerald-600 shrink-0">
+                              +{payment.finalAmount?.toLocaleString('vi-VN')} ₫
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1 text-[9px] text-slate-400">
+                            <span>
+                              Mã HĐ: <span className="font-mono text-slate-600">{payment.vnpayOrderId || payment._id?.substring(0, 8).toUpperCase()}</span>
+                            </span>
+                            <span>
+                              {new Date(payment.paidAt || payment.createdAt).toLocaleDateString('vi-VN')}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-[9px] text-slate-400">
-                          <span>Ngày: {pay.paidAt ? new Date(pay.paidAt).toLocaleDateString('vi-VN') : new Date(pay.createdAt).toLocaleDateString('vi-VN')}</span>
-                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded font-semibold">
-                            ✓ Thành công ({pay.paymentMethod || 'VNPay'})
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </StatRow>
               </SectionCard>
             )}
@@ -1182,7 +1205,30 @@ export default function ProfilePage() {
                   Thay đổi
                 </AppButton>
               </div>
-
+              {(profile.role?.toLowerCase() === "student" || profile.role === "Hoc vien") && (
+                <div className="flex items-center gap-3 py-[6px] border-t border-slate-100 mt-2 pt-2">
+                  <PersonRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
+                  <span
+                    className="flex-1 text-[13px] font-semibold"
+                    style={{ color: TEXT }}
+                  >
+                    Ứng tuyển làm Mentor
+                  </span>
+                  <AppButton
+                    size="small"
+                    variant="contained"
+                    onClick={() => setApplyMentorOpen(true)}
+                    sx={{
+                      fontSize: 11,
+                      height: 28,
+                      px: 1.5,
+                      minWidth: "auto",
+                    }}
+                  >
+                    Đăng ký
+                  </AppButton>
+                </div>
+              )}
             </SectionCard>
           </div>
         </div>

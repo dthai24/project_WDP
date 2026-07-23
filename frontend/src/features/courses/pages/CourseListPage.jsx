@@ -19,11 +19,19 @@ const LEVELS = [
   { value: "3", label: "Advanced" },
 ];
 
+const PRICE_TYPES = [
+  { value: "", label: "All Prices" },
+  { value: "free", label: "Free Courses" },
+  { value: "paid", label: "Paid Courses" }
+];
+
 const SORT_OPTIONS = [
   { value: "popular", label: "Most Popular" },
   { value: "newest", label: "Newest" },
   { value: "name_asc", label: "Name A-Z" },
   { value: "name_desc", label: "Name Z-A" },
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "price_desc", label: "Price: High to Low" },
 ];
 
 export default function CourseListPage() {
@@ -37,6 +45,7 @@ export default function CourseListPage() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
   const [selectedLevel, setSelectedLevel] = useState(searchParams.get("level") || "");
+  const [selectedPriceType, setSelectedPriceType] = useState(searchParams.get("priceType") || "");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "popular");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -75,6 +84,7 @@ export default function CourseListPage() {
       const params = new URLSearchParams();
       if (selectedCategory) params.set("category", selectedCategory);
       if (selectedLevel) params.set("level", selectedLevel);
+      if (selectedPriceType) params.set("priceType", selectedPriceType);
       if (searchTerm) params.set("search", searchTerm);
       if (sortBy) params.set("sort", sortBy);
 
@@ -92,7 +102,7 @@ export default function CourseListPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, selectedLevel, searchTerm, sortBy]);
+  }, [selectedCategory, selectedLevel, selectedPriceType, searchTerm, sortBy]);
 
   useEffect(() => {
     fetchCourses();
@@ -103,19 +113,21 @@ export default function CourseListPage() {
     const params = new URLSearchParams();
     if (selectedCategory) params.set("category", selectedCategory);
     if (selectedLevel) params.set("level", selectedLevel);
+    if (selectedPriceType) params.set("priceType", selectedPriceType);
     if (searchTerm) params.set("search", searchTerm);
     if (sortBy && sortBy !== "popular") params.set("sort", sortBy);
     setSearchParams(params, { replace: true });
-  }, [selectedCategory, selectedLevel, searchTerm, sortBy, setSearchParams]);
+  }, [selectedCategory, selectedLevel, selectedPriceType, searchTerm, sortBy, setSearchParams]);
 
   const clearFilters = () => {
     setSelectedCategory("");
     setSelectedLevel("");
+    setSelectedPriceType("");
     setSearchTerm("");
     setSortBy("popular");
   };
 
-  const hasActiveFilters = selectedCategory || selectedLevel || searchTerm;
+  const hasActiveFilters = selectedCategory || selectedLevel || selectedPriceType || searchTerm;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -214,6 +226,26 @@ export default function CourseListPage() {
             />
           </div>
 
+          {/* Price Filter */}
+          <div className="relative">
+            <select
+              value={selectedPriceType}
+              onChange={(e) => setSelectedPriceType(e.target.value)}
+              className="appearance-none pl-3.5 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all cursor-pointer hover:border-slate-300"
+            >
+              {PRICE_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <CaretDown
+              size={12}
+              weight="bold"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+          </div>
+
           {/* Sort */}
           <div className="relative">
             <select
@@ -281,6 +313,23 @@ export default function CourseListPage() {
               {levelsList.map((level) => (
                 <option key={level.levelId} value={level.levelId}>
                   {level.displayName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Price
+            </label>
+            <select
+              value={selectedPriceType}
+              onChange={(e) => setSelectedPriceType(e.target.value)}
+              className="w-full appearance-none px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              {PRICE_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
                 </option>
               ))}
             </select>

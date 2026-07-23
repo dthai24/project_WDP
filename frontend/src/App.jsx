@@ -10,6 +10,7 @@ import TestPage from '@/features/dev/Test';
 import CourseListPage from '@/features/courses/pages/CourseListPage';
 import CourseDetailPage from '@/features/courses/pages/CourseDetailPage';
 import CourseLearningPage from '@/features/learning/pages/CourseLearningPage';
+import CourseCertificatePage from '@/features/learning/pages/CourseCertificatePage';
 import CourseTestPage from '@/features/learning/pages/CourseTestPage';
 import MyCoursesListPage from '@/features/learning/pages/MyCoursesListPage';
 import PlacementTestPage from '@/features/learning/pages/PlacementTestPage';
@@ -85,6 +86,7 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route path="/test-component" element={<TestPage />} />
+      <Route path="/certificate/:code" element={<CourseCertificatePage />} />
 
       <Route
         path="/survey"
