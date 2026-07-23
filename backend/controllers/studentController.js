@@ -13,11 +13,11 @@ const submitPlacementTest = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Thiếu userId hoặc correctCount' });
     }
 
-    // Determine target level name based on score
+    // Determine target level name based on score (out of 10 questions)
     let targetLevelName = 'Beginner';
-    if (correctCount >= 4) {
+    if (correctCount >= 8) {
       targetLevelName = 'Advanced';
-    } else if (correctCount >= 2) {
+    } else if (correctCount >= 4) {
       targetLevelName = 'Intermediate';
     }
 
