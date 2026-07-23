@@ -4,6 +4,7 @@ import LoginPage from '@/features/auth/pages/LoginPage';
 import RegisterPage from '@/features/auth/pages/RegisterPage';
 import OtpPage from '@/features/auth/pages/OtpPage';
 import ProfilePage from '@/features/profile/pages/ProfilePage';
+import CourseCertificatePage from '@/features/learning/pages/CourseCertificatePage';
 import SurveyPage from '@/features/auth/pages/SurveyPage';
 import TestPage from '@/features/dev/Test';
 import CourseListPage from '@/features/courses/pages/CourseListPage';
@@ -92,6 +93,11 @@ export default function App() {
             <SurveyPage />
           </ProtectedRoute>
         }
+      />
+
+      <Route
+        path="/certificate/:code"
+        element={<CourseCertificatePage />}
       />
 
       {/* Student app shell */}
