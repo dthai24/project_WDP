@@ -149,9 +149,30 @@ const DATA_users = [
 ];
 
 const DATA_userroles = [
+  // System Administrator (admin@wdp.edu.vn) -> Admin
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05c"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050") },
+  // Nguyen Thi Minh Anh (mentor.anh@wdp.edu.vn) -> Mentor
   { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05d"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052") },
+  // Tran Van Minh (minh.tv@gmail.com) -> Student
   { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05e"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
-  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050") },
+  // Nguyen Thi Hoa (hoa.nt@gmail.com) -> Student
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d05f"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+  // Huynh Van Duc (duc.hv@gmail.com) -> Student
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d060"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+  // Le Thi Thu (thu.lt@gmail.com) -> Student
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d061"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+  // Pham Minh Khoa (khoa.pm@gmail.com) -> Student
+  { userId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d062"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+
+  // Convenient Aliases
+  // Admin User (admin@gmail.com) -> Admin
+  { userId: new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05c"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d050") },
+  // Mentor User (mentor@gmail.com) -> Mentor
+  { userId: new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05d"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d052") },
+  // Student One (student@gmail.com) -> Student
+  { userId: new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05e"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
+  // Student Two (student2@gmail.com) -> Student
+  { userId: new mongoose.Types.ObjectId("7a42b0c8e3c24fb9bdb8d05f"), roleId: new mongoose.Types.ObjectId("6a42b0c8e3c24fb9bdb8d051") },
 ];
 
 const DATA_coursecomments = [];
