@@ -3,11 +3,15 @@ const router = express.Router();
 const {
   submitPlacementTest,
   submitEssay,
-  getEssayHistory
+  getEssayHistory,
+  getPlacementTestRecommendations
 } = require('../controllers/studentController');
 
 // POST /api/student/placement-test/submit
 router.post('/placement-test/submit', submitPlacementTest);
+
+// GET /api/student/placement-test/recommendations
+router.get('/placement-test/recommendations', getPlacementTestRecommendations);
 
 // POST /api/student/essay/submit
 router.post('/essay/submit', submitEssay);

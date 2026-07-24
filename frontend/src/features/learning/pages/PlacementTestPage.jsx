@@ -116,6 +116,63 @@ const QUESTIONS = [
   }
 ];
 
+function renderInlineText(text) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
+}
+
+function RoadmapTextRenderer({ text }) {
+  if (!text) return null;
+  const lines = text.split("\n");
+
+  return (
+    <div className="space-y-4 text-slate-700 leading-relaxed text-left max-w-3xl mx-auto">
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          return <div key={index} className="h-2" />;
+        }
+
+        // Heading 2
+        if (trimmed.startsWith("##")) {
+          return (
+            <h2 key={index} className="text-xl font-extrabold text-slate-900 mt-8 mb-4 border-b border-slate-100 pb-3 flex items-center gap-2">
+              {renderInlineText(trimmed.replace(/^##\s*/, ""))}
+            </h2>
+          );
+        }
+
+        // Heading 3
+        if (trimmed.startsWith("###")) {
+          return (
+            <h3 key={index} className="text-lg font-bold text-slate-800 mt-6 mb-3 flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-emerald-500 rounded-full inline-block" />
+              {renderInlineText(trimmed.replace(/^###\s*/, ""))}
+            </h3>
+          );
+        }
+
+        // Bullets
+        if (/^[-*•]\s+/.test(trimmed)) {
+          return (
+            <div key={index} className="flex items-start gap-2.5 pl-4">
+              <span className="text-emerald-500 mt-1.5 select-none text-xs">●</span>
+              <div className="flex-1 text-slate-600">{renderInlineText(trimmed.replace(/^[-*•]\s*/, ""))}</div>
+            </div>
+          );
+        }
+
+        return <p key={index} className="pl-1 text-slate-600">{renderInlineText(line)}</p>;
+      })}
+    </div>
+  );
+}
+
 export default function PlacementTestPage() {
   const navigate = useNavigate();
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -125,21 +182,41 @@ export default function PlacementTestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [assignedLevel, setAssignedLevel] = useState(null);
   const [recommendedCourses, setRecommendedCourses] = useState([]);
+  const [roadmap, setRoadmap] = useState('');
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   const currentQuestion = QUESTIONS[currentIdx];
 
   useEffect(() => {
     if (!assignedLevel?._id) return;
+    
+    const rawUser = localStorage.getItem("user");
+    let userId = "";
+    if (rawUser) {
+      try {
+        const userObj = JSON.parse(rawUser);
+        userId = userObj.userId || userObj.id || "";
+      } catch (e) {
+        console.error("Failed to parse user from localStorage:", e);
+      }
+    }
+
+    if (!userId) return;
+
     setLoadingRecommendations(true);
-    fetch(`http://localhost:5050/api/courses/student?level=${assignedLevel._id}`)
+    fetch(`http://localhost:5050/api/student/placement-test/recommendations?userId=${userId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && Array.isArray(data.data)) {
-          setRecommendedCourses(data.data.slice(0, 6));
+        if (data.success) {
+          if (Array.isArray(data.courses)) {
+            setRecommendedCourses(data.courses);
+          }
+          if (data.roadmap) {
+            setRoadmap(data.roadmap);
+          }
         }
       })
-      .catch((err) => console.error('Failed to load recommended courses:', err))
+      .catch((err) => console.error('Failed to load recommended courses and roadmap:', err))
       .finally(() => setLoadingRecommendations(false));
   }, [assignedLevel]);
 
@@ -204,6 +281,22 @@ export default function PlacementTestPage() {
             Bạn đã trả lời đúng {correctCount}/{QUESTIONS.length} câu hỏi. Lộ trình của bạn đã được tối ưu hóa để hiển thị các khóa học cấp độ {levelName} và tự động mở khóa các chương học cơ bản!
           </p>
         </div>
+
+        {/* Lộ trình học tập đề xuất */}
+        {roadmap && (
+          <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm text-left mb-10 max-w-3xl mx-auto">
+            <div className="flex items-center gap-2.5 mb-6">
+              <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                <Sparkle size={20} weight="fill" />
+              </span>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Lộ trình học tập cá nhân hóa</h3>
+                <p className="text-xs text-slate-400">Được tối ưu riêng dựa trên học lực và mục tiêu học tập của bạn</p>
+              </div>
+            </div>
+            <RoadmapTextRenderer text={roadmap} />
+          </div>
+        )}
 
         <div className="flex justify-center gap-4 mb-12">
           <AppButton variant="outlined" onClick={() => navigate('/my-courses')}>
