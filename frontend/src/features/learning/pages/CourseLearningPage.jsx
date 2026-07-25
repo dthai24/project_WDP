@@ -1287,7 +1287,7 @@ export default function CourseLearningPage() {
     return localStorage.getItem(`enrollmentType_${courseId}`) || "certificate";
   });
   const [showEnrollModal, setShowEnrollModal] = useState(false);
-  const [activeTab, setActiveTab] = useState("lessons"); // "lessons" | "quizzes" | "peerReview" | "forum"
+  const [activeTab, setActiveTab] = useState("lessons"); // "lessons" | "quizzes" | "writing" | "forum"
 
   // Notes state — lưu theo từng bài học trong khóa học, giữ lại khi rời/quay lại khóa học
   const notesStorageKey = `course_notes_${courseId}_${currentUserId}`;
@@ -1313,37 +1313,42 @@ export default function CourseLearningPage() {
   const [quizAttemptStatus, setQuizAttemptStatus] = useState(null); // "Passed" | "Failed" | null
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
-  // Peer review state with LocalStorage Persistence
-  const peerStorageKey = `peer_review_${courseId}_${currentUserId}`;
-  const getSavedPeerData = () => {
+  // Bài viết cuối khóa (mở khóa sau khi vượt qua Bài kiểm tra, nộp xong mới nhận chứng nhận)
+  const writingStorageKey = `final_writing_${courseId}_${currentUserId}`;
+  const getSavedWritingData = () => {
     try {
-      const saved = localStorage.getItem(peerStorageKey);
+      const saved = localStorage.getItem(writingStorageKey);
       if (saved) return JSON.parse(saved);
     } catch {
       // ignore parsing error
     }
     return null;
   };
-  const savedPeerData = getSavedPeerData();
+  const savedWritingData = getSavedWritingData();
 
-  const [peerSubmitted, setPeerSubmitted] = useState(savedPeerData?.peerSubmitted || false);
-  const [peerAssignmentText, setPeerAssignmentText] = useState(savedPeerData?.peerAssignmentText || "");
-  const [peerReviewsCount, setPeerReviewsCount] = useState(savedPeerData?.peerReviewsCount || 0);
-  const [peerRubric, setPeerRubric] = useState(savedPeerData?.peerRubric || { criteria1: 5, criteria2: 5, feedback: "" });
-  const [peerFinished, setPeerFinished] = useState(savedPeerData?.peerFinished || false);
-  const [peerSubTab, setPeerSubTab] = useState(savedPeerData?.peerFinished ? "received" : (savedPeerData?.peerSubTab || "workflow"));
+  const [quizPassed, setQuizPassed] = useState(savedWritingData?.quizPassed || false);
+  const [finalWritingText, setFinalWritingText] = useState("");
+  const [finalWritingResult, setFinalWritingResult] = useState(savedWritingData?.finalWritingResult || null);
+  const [finalWritingSubmitting, setFinalWritingSubmitting] = useState(false);
+  const [finalWritingDone, setFinalWritingDone] = useState(savedWritingData?.finalWritingDone || false);
+  const [writingPrompt, setWritingPrompt] = useState(savedWritingData?.writingPrompt || "");
+  const [loadingWritingPrompt, setLoadingWritingPrompt] = useState(false);
 
   useEffect(() => {
-    const dataToSave = {
-      peerSubmitted,
-      peerAssignmentText,
-      peerReviewsCount,
-      peerRubric,
-      peerFinished,
-      peerSubTab
-    };
-    localStorage.setItem(peerStorageKey, JSON.stringify(dataToSave));
-  }, [peerSubmitted, peerAssignmentText, peerReviewsCount, peerRubric, peerFinished, peerSubTab, peerStorageKey]);
+    const dataToSave = { quizPassed, finalWritingResult, finalWritingDone, writingPrompt };
+    localStorage.setItem(writingStorageKey, JSON.stringify(dataToSave));
+  }, [quizPassed, finalWritingResult, finalWritingDone, writingPrompt, writingStorageKey]);
+
+  // Sinh đề bài Writing dựa theo chủ đề khóa học, ngay khi mở khóa (qua bài kiểm tra) và chưa có đề
+  useEffect(() => {
+    if (!quizPassed || writingPrompt || !courseId) return;
+    setLoadingWritingPrompt(true);
+    studentFeatureService.getWritingPrompt(courseId)
+      .then((res) => {
+        if (res.success && res.prompt) setWritingPrompt(res.prompt);
+      })
+      .finally(() => setLoadingWritingPrompt(false));
+  }, [quizPassed, writingPrompt, courseId]);
 
   // Forum state
   const [discussionPosts, setDiscussionPosts] = useState([
@@ -1582,6 +1587,13 @@ export default function CourseLearningPage() {
     }
   };
 
+  // Bài kiểm tra đã đạt — mở khóa tab Bài viết, chưa hoàn thành khóa học ngay
+  const handleQuizPassed = () => {
+    setQuizPassed(true);
+    setActiveTab("writing");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Xác nhận hoàn thành toàn bộ khoá học — set progressPercentage = 100
   const handleConfirmCourseComplete = async () => {
     try {
@@ -1621,6 +1633,27 @@ export default function CourseLearningPage() {
       setEssayHistory(prev => [res.data, ...prev]);
       setEssayText("");
     }
+  };
+
+  const handleGradeFinalWriting = async () => {
+    const lastLessonId = allLessons[allLessons.length - 1]?.id;
+    if (!finalWritingText.trim() || !currentUserId || !lastLessonId) return;
+    setFinalWritingSubmitting(true);
+    const res = await studentFeatureService.submitEssay(
+      currentUserId,
+      courseId,
+      lastLessonId,
+      finalWritingText
+    );
+    setFinalWritingSubmitting(false);
+    if (res.success) {
+      setFinalWritingResult(res.data);
+    }
+  };
+
+  const handleSubmitFinalWriting = async () => {
+    setFinalWritingDone(true);
+    await handleConfirmCourseComplete();
   };
 
   const handleSelectLesson = (id) => setCurrentLessonId(id);
@@ -1849,14 +1882,14 @@ export default function CourseLearningPage() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("peerReview")}
+          onClick={() => setActiveTab("writing")}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === "peerReview"
+            activeTab === "writing"
               ? "bg-white text-emerald-700 shadow-sm border border-slate-200/80"
               : "text-slate-500 hover:text-slate-900 border border-transparent"
           }`}
         >
-          👥 Đánh giá đồng đẳng
+          ✍️ Bài viết
         </button>
         <button
           type="button"
@@ -2075,7 +2108,7 @@ export default function CourseLearningPage() {
                     <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 mb-8 animate-fadeIn">
                       <h5 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-1.5">
                         <Trophy size={16} className="text-amber-500" weight="fill" />
-                        Kết quả chấm điểm AI:
+                        Kết quả chấm điểm:
                       </h5>
                       
                       {/* Scores grid */}
@@ -2167,6 +2200,9 @@ export default function CourseLearningPage() {
                       onClick={() => {
                         if (progress === 100) {
                           setShowCongrats(true);
+                        } else if (quizPassed && !finalWritingDone) {
+                          setActiveTab("writing");
+                          window.scrollTo({ top: 0, behavior: "smooth" });
                         } else {
                           setActiveTab("quizzes");
                           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2179,7 +2215,7 @@ export default function CourseLearningPage() {
                       }`}
                     >
                       <Trophy size={16} weight="fill" />
-                      <span>{progress === 100 ? "🎓 Xem chứng nhận hoàn thành" : "📝 Làm bài test nhận chứng nhận"}</span>
+                      <span>{progress === 100 ? "🎓 Xem chứng nhận hoàn thành" : quizPassed && !finalWritingDone ? "✍️ Làm bài viết nhận chứng nhận" : "📝 Làm bài test nhận chứng nhận"}</span>
                     </button>
                   )
                 ) : currentLesson?.type === "quiz" ? (
@@ -2308,355 +2344,157 @@ export default function CourseLearningPage() {
         <CourseAssessmentExamTab
           courseId={courseId}
           courseTitle={courseInfo.courseTitle}
-          onCompleteQuiz={handleConfirmCourseComplete}
+          onCompleteQuiz={handleQuizPassed}
         />
       )}
 
-      {/* Tab 3: Peer Review (Đánh giá đồng đẳng 2 bước & Xem kết quả) */}
-      {activeTab === "peerReview" && (
+      {/* Tab 3: Bài viết (Writing) — mở khóa sau khi vượt qua Bài kiểm tra, nộp xong mới nhận chứng nhận */}
+      {activeTab === "writing" && (
         <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 md:p-8 max-w-3xl mx-auto font-sans space-y-6">
-          {/* Header & Sub-tab Navigation */}
           <div className="border-b border-slate-100 pb-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-cyan-50 text-cyan-800 border border-cyan-100">
-                Quy trình & Báo cáo Đánh giá Đồng đẳng
-              </div>
-
-              {/* Sub-tab Navigation Switcher */}
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setPeerSubTab("workflow")}
-                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    peerSubTab === "workflow" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  Nhiệm vụ 2 bước
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeerSubTab("received")}
-                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-                    peerSubTab === "received" ? "bg-white text-cyan-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  <span>Kết quả từ Bạn học</span>
-                  <span className="bg-cyan-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black">3</span>
-                </button>
-              </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100 mb-3">
+              Bài thi cuối khóa
             </div>
-
-            <h3 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight">
-              Bài tập đồng đẳng (Peer-graded Assignment)
+            <h3 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              ✍️ Bài viết (Writing)
             </h3>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Hoàn thành bài tập theo 2 bước: <strong>Bước 1:</strong> Bạn nộp bài làm cá nhân. <strong>Bước 2:</strong> Chấm điểm 3 bạn học khác. Sau đó xem báo cáo điểm & nhận xét trả về từ bạn học!
+              Sau khi hoàn thành Bài kiểm tra, đây là phần thi cuối cùng: viết một bài luận tiếng Anh theo chủ đề khóa học. Bài viết sẽ được AI chấm điểm tự động. Nộp bài để hoàn tất khóa học và nhận chứng nhận.
             </p>
-
-            {/* Stepper Steps UI (shown in workflow tab) */}
-            {peerSubTab === "workflow" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                <div className={`p-3.5 rounded-2xl border flex items-center gap-3 transition-all ${
-                  peerSubmitted ? "bg-emerald-50/80 border-emerald-200 text-emerald-900" : "bg-cyan-50/80 border-cyan-300 text-cyan-950 font-bold"
-                }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
-                    peerSubmitted ? "bg-emerald-600 text-white" : "bg-cyan-600 text-white"
-                  }`}>
-                    {peerSubmitted ? "✓" : "1"}
-                  </div>
-                  <div>
-                    <p className="text-xs font-extrabold">Bước 1: Nộp bài cá nhân</p>
-                    <p className="text-[11px] opacity-80">{peerSubmitted ? "Đã nộp bài thành công" : "Đang thực hiện..."}</p>
-                  </div>
-                </div>
-
-                <div className={`p-3.5 rounded-2xl border flex items-center gap-3 transition-all ${
-                  peerFinished ? "bg-emerald-50/80 border-emerald-200 text-emerald-900" : peerSubmitted ? "bg-cyan-50/80 border-cyan-300 text-cyan-950 font-bold" : "bg-slate-50 border-slate-200 text-slate-400"
-                }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
-                    peerFinished ? "bg-emerald-600 text-white" : peerSubmitted ? "bg-cyan-600 text-white" : "bg-slate-300 text-slate-600"
-                  }`}>
-                    {peerFinished ? "✓" : "2"}
-                  </div>
-                  <div>
-                    <p className="text-xs font-extrabold">Bước 2: Chấm điểm 3 bạn học</p>
-                    <p className="text-[11px] opacity-80">
-                      {peerFinished ? "Đã chấm 3/3 bài học viên" : peerSubmitted ? `Tiến độ: ${peerReviewsCount}/3 bài đã chấm` : "Chờ nộp bài Bước 1"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* SUB-TAB 1: WORKFLOW 2 BƯỚC */}
-          {peerSubTab === "workflow" && (
-            <>
-              {/* BƯỚC 1: BẠN NỘP BÀI LÀM CỦA MÌNH */}
-              {!peerSubmitted ? (
-                <div className="space-y-5 animate-fadeIn">
-                  <div className="bg-gradient-to-r from-cyan-50 to-indigo-50/50 border border-cyan-100 rounded-2xl p-4 sm:p-5">
-                    <div className="flex items-center gap-2 mb-2 text-xs font-black text-cyan-900">
-                      <span className="bg-cyan-600 text-white px-2 py-0.5 rounded-lg text-[10px]">ĐỀ BÀI LUẬN</span>
-                      <span>Writing Assignment Topic</span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-800 font-semibold leading-relaxed">
-                      "Write an academic response (100-150 words) proposing a solution to enhance online English learning efficiency using modern AI tools and interactive peer reviews."
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
-                      <span>Bài viết dự án của bạn (Tiếng Anh):</span>
-                      <span>Đã nhập: {peerAssignmentText.trim().split(/\s+/).filter(Boolean).length} từ</span>
-                    </div>
-                    <textarea
-                      value={peerAssignmentText}
-                      onChange={(e) => setPeerAssignmentText(e.target.value)}
-                      placeholder="Type your response essay here in English (e.g. Modern AI tools help learners analyze vocabulary, practice speaking fluency, and receive instant feedback...)"
-                      rows={7}
-                      className="w-full border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition-all leading-relaxed"
-                    />
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="button"
-                      disabled={peerAssignmentText.trim().length < 20}
-                      onClick={() => setPeerSubmitted(true)}
-                      className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-cyan-600/20 active:scale-95"
-                    >
-                      Nộp bài làm của tôi & Chuyển sang Bước 2
-                    </button>
-                  </div>
+          {!quizPassed ? (
+            <div className="text-center py-12">
+              <ClipboardText size={40} className="mx-auto text-slate-300 mb-3" />
+              <p className="text-sm font-bold text-slate-600 mb-1">Bạn cần hoàn thành Bài kiểm tra trước</p>
+              <p className="text-xs text-slate-400 mb-5">Hãy vượt qua Bài kiểm tra để mở khóa phần thi Viết.</p>
+              <AppButton variant="contained" onClick={() => setActiveTab("quizzes")}>
+                Đến Bài kiểm tra
+              </AppButton>
+            </div>
+          ) : finalWritingDone ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+                <CheckCircle size={24} className="text-emerald-600 flex-shrink-0" weight="fill" />
+                <div>
+                  <p className="text-sm font-extrabold text-emerald-800">Bạn đã nộp bài viết cuối khóa</p>
+                  <p className="text-xs text-emerald-600/80">Khóa học đã hoàn thành. Xem chứng nhận ở khung thông báo phía trên hoặc trong trang Hồ sơ.</p>
                 </div>
-              ) : (
-                /* BƯỚC 2: CHẤM ĐIỂM BÀI LÀM CỦA 3 BẠN HỌC KHÁC */
-                <div className="space-y-6 animate-fadeIn">
-                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 p-4 rounded-2xl text-xs font-bold flex items-center justify-between gap-2 flex-wrap">
-                    <span>Dự án của bạn đã được nộp thành công! Hãy tiếp tục chấm điểm 3 bài làm của bạn học bên dưới để hoàn thành bài tập đồng đẳng.</span>
-                    <button
-                      type="button"
-                      onClick={() => setPeerSubTab("received")}
-                      className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
-                    >
-                      Xem Nhận xét nhận được ➔
-                    </button>
-                  </div>
+              </div>
 
-                  {peerReviewsCount < 3 ? (
-                    <div className="space-y-5 border border-slate-200/80 p-5 sm:p-6 rounded-3xl bg-slate-50/50">
-                      <div className="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-slate-200">
-                        <div>
-                          <span className="text-xs font-black text-slate-800 block">
-                            Bài làm ngẫu nhiên #{peerReviewsCount + 1}: {
-                              peerReviewsCount === 0 ? "Học viên Alex Rivera (#STD-8842)" :
-                              peerReviewsCount === 1 ? "Học viên Emma Watson (#STD-9104)" : "Học viên Kenji Sato (#STD-7512)"
-                            }
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-medium">Chấm bài đồng đẳng theo tiêu chí Rubric chuẩn quốc tế</span>
-                        </div>
-                        <span className="text-xs font-black bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full">
-                          Tiến độ: {peerReviewsCount}/3 bài đã chấm
-                        </span>
-                      </div>
-
-                      {/* Peer Essay Content Preview */}
-                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <p className="text-xs font-bold text-slate-500 mb-2">Nội dung bài luận của bạn học:</p>
-                        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                          {peerReviewsCount === 0 && `"Technology has transformed schools. Online classes and interactive dashboards allow students around the world to access lessons anytime, making education globally available and personalized for every learner."`}
-                          {peerReviewsCount === 1 && `"Using AI is extremely helpful. Students write essays and get immediate grading from AI assistants, which helps improve grammar accuracy and vocabulary range step by step without delay."`}
-                          {peerReviewsCount === 2 && `"Peer review is a unique system. We learn not only by receiving grades from instructors, but also by reading, analyzing, and scoring projects of our classmate peers with constructive feedback."`}
-                        </p>
-                      </div>
-
-                      {/* Rubric Rating Form */}
-                      <div className="space-y-4 pt-2">
-                        <h5 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                          Biểu mẫu Rubric đánh giá & Cho điểm:
-                        </h5>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
-                            <span className="font-semibold">1. Ngữ pháp & Từ vựng (Grammar & Vocab):</span>
-                            <select
-                              value={peerRubric.criteria1}
-                              onChange={(e) => setPeerRubric(prev => ({ ...prev, criteria1: parseInt(e.target.value) }))}
-                              className="bg-slate-50 border border-slate-300 font-bold rounded-lg px-2.5 py-1 text-xs outline-none"
-                            >
-                              {[5, 4, 3, 2, 1].map(v => <option key={v} value={v}>{v} / 5 điểm</option>)}
-                            </select>
-                          </div>
-
-                          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
-                            <span className="font-semibold">2. Mạch lạc & Bố cục (Coherence):</span>
-                            <select
-                              value={peerRubric.criteria2}
-                              onChange={(e) => setPeerRubric(prev => ({ ...prev, criteria2: parseInt(e.target.value) }))}
-                              className="bg-slate-50 border border-slate-300 font-bold rounded-lg px-2.5 py-1 text-xs outline-none"
-                            >
-                              {[5, 4, 3, 2, 1].map(v => <option key={v} value={v}>{v} / 5 điểm</option>)}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-700">3. Nhận xét & Góp ý tích cực (Constructive Feedback):</label>
-                          <textarea
-                            value={peerRubric.feedback}
-                            onChange={(e) => setPeerRubric(prev => ({ ...prev, feedback: e.target.value }))}
-                            placeholder="Nhập ý kiến góp ý cho bạn học (ví dụ: Great essay! Your ideas are well structured and vocabulary is accurate...)"
-                            rows={3}
-                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-200"
-                          />
-                        </div>
-
-                        <div className="flex justify-end pt-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPeerReviewsCount(prev => prev + 1);
-                              setPeerRubric({ criteria1: 5, criteria2: 5, feedback: "" });
-                              if (peerReviewsCount + 1 >= 3) {
-                                setPeerFinished(true);
-                                setModules(prev =>
-                                  prev.map(mod => ({
-                                    ...mod,
-                                    lessons: mod.lessons.map(l =>
-                                      l.type === "doc" || l.type === "text" ? { ...l, status: "completed" } : l
-                                    )
-                                  }))
-                                );
-                              }
-                            }}
-                            className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-cyan-600/20 active:scale-95"
-                          >
-                            Gửi kết quả chấm điểm (Bài {peerReviewsCount + 1}/3)
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* COMPLETED PEER REVIEW STATE */
-                    <div className="text-center py-8 px-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-3xl space-y-3">
-                      <Trophy size={52} className="text-amber-500 mx-auto" weight="fill" />
-                      <h4 className="text-base font-extrabold text-slate-900">BẠN ĐÃ HOÀN THÀNH BÀI TẬP ĐỒNG ĐẲNG!</h4>
-                      <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-                        Chúc mừng bạn đã hoàn thành cả 2 bước: <strong>Nộp bài làm cá nhân</strong> và <strong>Chấm điểm bài làm cho 3 bạn học khác</strong>. Nhiệm vụ đồng đẳng của bạn đã được ghi nhận vào tiến độ khóa học!
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setPeerSubTab("received")}
-                        className="mt-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-md shadow-emerald-600/20"
-                      >
-                        Báo cáo Điểm & Nhận xét từ Bạn học ➔
-                      </button>
-                    </div>
-                  )}
+              {writingPrompt && (
+                <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                  <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-wide mb-1.5">Đề bài</p>
+                  <p className="text-sm text-indigo-900 leading-relaxed font-medium">{writingPrompt}</p>
                 </div>
               )}
-            </>
-          )}
 
-          {/* SUB-TAB 2: KẾT QUẢ & NHẬN XÉT NHẬN ĐƯỢC TỪ BẠN HỌC (RECEIVED FEEDBACK DASHBOARD) */}
-          {peerSubTab === "received" && (
-            <div className="space-y-6 animate-fadeIn">
-              {/* Alert Notification */}
-              <div className="bg-cyan-50 border border-cyan-200 text-cyan-950 p-4 rounded-2xl text-xs font-bold flex items-center justify-between flex-wrap gap-2">
-                <span>Thông báo: Bài làm dự án cá nhân của bạn đã được 3 bạn học ngẫu nhiên hoàn tất chấm điểm & gửi phản hồi chi tiết!</span>
-                <span className="bg-cyan-700 text-white px-2.5 py-0.5 rounded-md text-[11px] font-extrabold">ĐÃ HOÀN TẤT CHẤM</span>
+              {finalWritingResult && (
+                <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6">
+                  <h5 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-1.5">
+                    <Trophy size={16} className="text-amber-500" weight="fill" />
+                    Kết quả chấm điểm:
+                  </h5>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-emerald-600">{finalWritingResult.score}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Tổng điểm</p>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-indigo-500">{finalWritingResult.grammarScore}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Ngữ pháp</p>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-purple-500">{finalWritingResult.vocabularyScore}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Từ vựng</p>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                      <p className="text-2xl font-black text-pink-500">{finalWritingResult.coherenceScore}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Mạch lạc</p>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                    <p className="text-xs font-bold text-slate-700 mb-2">Nhận xét chi tiết:</p>
+                    <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{finalWritingResult.feedback}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {loadingWritingPrompt ? (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <p className="text-xs text-slate-400">Đang tạo đề bài phù hợp với chủ đề khóa học...</p>
+                </div>
+              ) : writingPrompt ? (
+                <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                  <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-wide mb-1.5">Đề bài</p>
+                  <p className="text-sm text-indigo-900 leading-relaxed font-medium">{writingPrompt}</p>
+                </div>
+              ) : null}
+
+              <textarea
+                value={finalWritingText}
+                onChange={(e) => setFinalWritingText(e.target.value)}
+                placeholder="Nhập bài viết bằng tiếng Anh của bạn tại đây (tối thiểu 30 từ)..."
+                disabled={finalWritingSubmitting}
+                rows={8}
+                className="w-full border border-slate-200/80 rounded-2xl p-4 text-[13.5px] outline-none resize-y transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              />
+              <div className="flex justify-end">
+                <AppButton
+                  size="small"
+                  variant="contained"
+                  onClick={handleGradeFinalWriting}
+                  disabled={finalWritingSubmitting || finalWritingText.trim().length < 15}
+                  style={{ backgroundColor: '#10b981', color: '#fff' }}
+                >
+                  {finalWritingSubmitting ? 'Đang chấm điểm bằng AI...' : 'Nộp bài & Chấm điểm AI'}
+                </AppButton>
               </div>
 
-              {/* Grade Summary Matrix Box */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 sm:p-6 rounded-3xl shadow-lg border border-slate-700">
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700">
-                  <div>
-                    <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block mb-1">
-                      BẢNG ĐIỂM ĐỒNG ĐẲNG TỔNG HỢP
-                    </span>
-                    <h4 className="text-lg font-black text-white">Báo cáo Đánh giá Điểm số từ Bạn học</h4>
+              {finalWritingResult && (
+                <>
+                  <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 animate-fadeIn">
+                    <h5 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-1.5">
+                      <Trophy size={16} className="text-amber-500" weight="fill" />
+                      Kết quả chấm điểm:
+                    </h5>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                        <p className="text-2xl font-black text-emerald-600">{finalWritingResult.score}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Tổng điểm</p>
+                      </div>
+                      <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                        <p className="text-2xl font-black text-indigo-500">{finalWritingResult.grammarScore}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Ngữ pháp</p>
+                      </div>
+                      <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                        <p className="text-2xl font-black text-purple-500">{finalWritingResult.vocabularyScore}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Từ vựng</p>
+                      </div>
+                      <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                        <p className="text-2xl font-black text-pink-500">{finalWritingResult.coherenceScore}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Mạch lạc</p>
+                      </div>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                      <p className="text-xs font-bold text-slate-700 mb-2">Nhận xét chi tiết:</p>
+                      <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{finalWritingResult.feedback}</p>
+                    </div>
                   </div>
-                  <div className="bg-emerald-500/20 border border-emerald-500/40 px-4 py-2 rounded-2xl text-center">
-                    <span className="text-[11px] text-emerald-300 font-bold block">ĐIỂM TRUNG BÌNH</span>
-                    <span className="text-xl font-black text-emerald-400">9.4 / 10.0</span>
+
+                  <div className="flex justify-end">
+                    <AppButton
+                      variant="contained"
+                      onClick={handleSubmitFinalWriting}
+                      style={{ background: "linear-gradient(90deg, #f59e0b, #ef4444)", color: '#fff' }}
+                    >
+                      🎓 Nộp bài cuối khóa & Nhận chứng nhận
+                    </AppButton>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-xs">
-                  <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700">
-                    <span className="text-slate-400 font-medium block mb-1">1. Ngữ pháp & Từ vựng:</span>
-                    <span className="text-sm font-extrabold text-cyan-300">4.7 / 5.0 sao</span>
-                  </div>
-
-                  <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700">
-                    <span className="text-slate-400 font-medium block mb-1">2. Mạch lạc & Bố cục:</span>
-                    <span className="text-sm font-extrabold text-cyan-300">4.7 / 5.0 sao</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Student's Own Submitted Essay */}
-              <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl">
-                <span className="text-xs font-black text-slate-800 block mb-1.5">
-                  Bài làm dự án bạn đã nộp:
-                </span>
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic bg-white p-3.5 rounded-xl border border-slate-200">
-                  {peerAssignmentText || `"Modern AI tools help learners analyze vocabulary, practice speaking fluency, and receive instant feedback. Online interactive dashboards allow students around the world to access lessons anytime, making education globally available and personalized for every learner."`}
-                </p>
-              </div>
-
-              {/* Detailed Peer Reviews Received (3 Reviews List) */}
-              <div className="space-y-4">
-                <h5 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Chi tiết 3 bài Nhận xét & Đánh giá từ Bạn học:
-                </h5>
-
-                {/* Review 1 */}
-                <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-bold text-slate-800">
-                      Bạn học Sarah Jenkins (Mã HV: #STD-9012)
-                    </span>
-                    <span className="bg-emerald-100 text-emerald-800 font-black text-[11px] px-2.5 py-0.5 rounded-full">
-                      Cho điểm: 9.5 / 10.0
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    "Your argument regarding modern AI tools in English learning is well reasoned. Excellent use of academic vocabulary like 'interactive dashboards' and 'immediate grading'. Good job!"
-                  </p>
-                </div>
-
-                {/* Review 2 */}
-                <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-bold text-slate-800">
-                      Bạn học David Chen (Mã HV: #STD-4410)
-                    </span>
-                    <span className="bg-emerald-100 text-emerald-800 font-black text-[11px] px-2.5 py-0.5 rounded-full">
-                      Cho điểm: 9.0 / 10.0
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    "Great essay overall! Clear structure between introductory sentence and solution. Good grammatical accuracy and logical paragraph flow."
-                  </p>
-                </div>
-
-                {/* Review 3 */}
-                <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-bold text-slate-800">
-                      Bạn học Minh Tran (Mã HV: #STD-6612)
-                    </span>
-                    <span className="bg-emerald-100 text-emerald-800 font-black text-[11px] px-2.5 py-0.5 rounded-full">
-                      Cho điểm: 9.5 / 10.0
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    "Very inspiring essay! I really liked your suggestion about peer review feedback. Keep up the good work!"
-                  </p>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           )}
         </div>

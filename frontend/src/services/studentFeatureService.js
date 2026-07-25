@@ -35,6 +35,17 @@ const studentFeatureService = {
     }
   },
 
+  async getWritingPrompt(courseId) {
+    try {
+      const response = await fetch(`${API_BASE}/essay/writing-prompt?courseId=${courseId}`);
+      const data = await response.json();
+      return { ok: response.ok, ...data };
+    } catch (error) {
+      console.error('getWritingPrompt failed:', error);
+      return { ok: false, message: 'Không thể kết nối đến máy chủ.' };
+    }
+  },
+
   async getEssayHistory(userId) {
     try {
       const response = await fetch(`${API_BASE}/essay/history?userId=${userId}`);
