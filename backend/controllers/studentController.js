@@ -47,7 +47,7 @@ const submitPlacementTest = async (req, res) => {
       userId,
       { currentLevelId: levelDoc._id, isFirstLogin: false },
       { new: true }
-    ).populate('currentLevelId');
+    ).select('-password').populate('currentLevelId');
 
     return res.status(200).json({
       success: true,
