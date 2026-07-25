@@ -145,6 +145,86 @@ Essay to grade:
   }
 };
 
+// Đề bài dự phòng khi không gọi được Gemini — vẫn bám sát chủ đề khóa học thay vì chung chung
+function buildFallbackWritingPrompt(courseName, categoryName) {
+  const text = `${courseName} ${categoryName}`.toLowerCase();
+
+  if (text.includes('toeic')) {
+    return 'Write a short essay (150-200 words) describing a challenging situation you faced at work or school, and explain how you resolved it. Use business and workplace vocabulary you have learned in this course.';
+  }
+  if (text.includes('ielts')) {
+    return 'Some people believe that technology has made it easier for people to learn a foreign language, while others think traditional classroom learning is still more effective. Discuss both views and give your own opinion. Write at least 150-200 words.';
+  }
+  if (text.includes('business')) {
+    return 'Write a short essay (150-200 words) about the most important skill for success in a modern workplace (e.g. communication, negotiation, teamwork). Explain why it matters and give an example from your own experience or observation.';
+  }
+  if (text.includes('công sở')) {
+    return 'Write a short essay (150-200 words) describing a typical day at your workplace, including how you communicate with colleagues, attend meetings, and handle emails. Use vocabulary related to professional office communication.';
+  }
+  if (text.includes('ngữ pháp') || text.includes('grammar')) {
+    return 'Write a short essay (150-200 words) about your daily routine or a memorable event, paying close attention to using correct verb tenses, sentence structures, and grammar rules you have studied in this course.';
+  }
+  if (text.includes('phát âm') || text.includes('pronunciation')) {
+    return 'Write a short paragraph (150-200 words) introducing yourself and your hobbies. As you write, think about words that would be tricky to pronounce, and mention which English sounds or word-stress patterns you personally find most difficult and why.';
+  }
+  if (text.includes('từ vựng') || text.includes('vocabulary') || text.includes('origami')) {
+    return `Write a short essay (150-200 words) using as many vocabulary words as you can that you have learned from "${courseName}". Describe what you learned and how you might use these words in everyday life.`;
+  }
+  if (text.includes('giao tiếp') || text.includes('everyday') || text.includes('communication')) {
+    return 'Write a short essay (150-200 words) describing a recent conversation you had in English (real or imagined) — for example, meeting someone new, asking for directions, or ordering food. Describe what was said and how you felt.';
+  }
+
+  return `Write a short essay (150-200 words) about a topic related to "${courseName}". Share your thoughts, experience, or opinion, using vocabulary and structures you have learned in this course.`;
+}
+
+// GET /api/student/essay/writing-prompt?courseId=...
+const getWritingPrompt = async (req, res) => {
+  try {
+    const { courseId } = req.query;
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'Thiếu courseId' });
+    }
+
+    const course = await Course.findById(courseId).populate('categoryId', 'displayName categoryName').lean();
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy khóa học' });
+    }
+
+    const courseName = course.courseName || 'English';
+    const categoryName = course.categoryId?.displayName || course.categoryId?.categoryName || '';
+    const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+
+    let prompt = '';
+    if (geminiApiKey) {
+      try {
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+        const genPrompt = `You are an English course instructor designing the final writing exam for a course.
+Course name: "${courseName}"
+Course category: "${categoryName}"
+Course description: "${course.description || ''}"
+
+Write ONE single, clear essay/writing prompt (in English) for students to respond to, closely related to this course's topic and appropriate to its level. The prompt should ask the student to write a short essay or paragraph (150-200 words). Output ONLY the prompt text itself, in English, with no extra commentary, no quotes, no markdown formatting, no numbering.`;
+
+        const aiResponse = await model.generateContent(genPrompt);
+        prompt = aiResponse.response.text().trim().replace(/^["']|["']$/g, '');
+      } catch (aiErr) {
+        console.warn('[AI Writing Prompt Error]', aiErr.message);
+      }
+    }
+
+    if (!prompt) {
+      prompt = buildFallbackWritingPrompt(courseName, categoryName);
+    }
+
+    return res.status(200).json({ success: true, prompt, courseName });
+  } catch (error) {
+    console.error('getWritingPrompt error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi tạo đề bài viết' });
+  }
+};
+
 // GET /api/student/essay/history
 const getEssayHistory = async (req, res) => {
   try {
@@ -303,6 +383,7 @@ Dựa trên kết quả bài đánh giá năng lực đầu vào (**${levelName}
 module.exports = {
   submitPlacementTest,
   submitEssay,
+  getWritingPrompt,
   getEssayHistory,
   getPlacementTestRecommendations
 };
