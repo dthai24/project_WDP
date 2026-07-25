@@ -242,9 +242,15 @@ export default function PlacementTestPage() {
           const res = await studentFeatureService.submitPlacementTest(userId, nextCorrectCount);
           if (res.success) {
             setAssignedLevel(res.level);
-            // Update local storage user level
+            // Chỉ cập nhật các trường liên quan đến cấp độ, giữ nguyên userId/role...
+            // để tránh mất quyền truy cập (redirect sai trang) và làm treo các phần phụ thuộc vào user.userId
             if (res.user) {
-              localStorage.setItem("user", JSON.stringify(res.user));
+              const mergedUser = {
+                ...user,
+                currentLevelId: res.user.currentLevelId,
+                isFirstLogin: res.user.isFirstLogin,
+              };
+              localStorage.setItem("user", JSON.stringify(mergedUser));
             }
           }
         } catch (err) {
@@ -299,10 +305,10 @@ export default function PlacementTestPage() {
         )}
 
         <div className="flex justify-center gap-4 mb-12">
-          <AppButton variant="outlined" onClick={() => navigate('/my-courses')}>
+          <AppButton variant="outlined" onClick={() => navigate('/courses')}>
             Xem Khóa Học
           </AppButton>
-          <AppButton variant="filled" onClick={() => navigate('/courses')}>
+          <AppButton variant="contained" onClick={() => navigate('/courses')}>
             Khám phá Lộ Trình
           </AppButton>
         </div>

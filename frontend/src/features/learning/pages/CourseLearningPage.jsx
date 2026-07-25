@@ -1239,6 +1239,21 @@ function CourseAssessmentExamTab({ courseId, courseTitle, onCompleteQuiz }) {
               <p className="text-xs font-medium text-red-800 leading-relaxed">
                 Rất tiếc! Bài làm của bạn đạt {result.percent}% điểm (cần đạt trên 50% mới đủ điều kiện nhận Chứng nhận). Hệ thống khuyên bạn nên xem lại các nội dung bài học cũ để củng cố kiến thức và thử làm lại bài thi!
               </p>
+              <div className="pt-2">
+                {(meta?.remainingAttempts ?? 0) > 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-md shadow-red-600/20 active:scale-95"
+                  >
+                    Làm lại bài kiểm tra ({meta?.remainingAttempts} lượt còn lại)
+                  </button>
+                ) : (
+                  <p className="text-[11px] font-semibold text-red-700/80">
+                    Bạn đã hết lượt làm bài thi này.
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="bg-emerald-100/80 border border-emerald-200 p-4 rounded-2xl text-emerald-900 text-xs font-bold space-y-1 mb-3">

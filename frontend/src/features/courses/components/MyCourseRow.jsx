@@ -41,6 +41,10 @@ import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
+import PlayCircleRoundedIcon from "@mui/icons-material/PlayCircleRounded";
+import RocketLaunchRoundedIcon from "@mui/icons-material/RocketLaunchRounded";
+import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
+import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRounded";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppButton from "@/shared/ui/AppButton";
 import ThumbnailImage from "@/shared/ui/ThumbnailImage";
@@ -128,6 +132,69 @@ function getNotStartedStatusChip() {
 
 
 
+// Cấu hình nút hành động chính theo từng trạng thái khóa học — mỗi trạng thái
+// một icon + gradient màu riêng để dễ phân biệt và bắt mắt hơn nút mặc định.
+const ACTION_BUTTON_CONFIG = {
+  continue: {
+    label: "Tiếp tục học",
+    icon: PlayCircleRoundedIcon,
+    sx: {
+      background: "linear-gradient(135deg, #0891B2 0%, #2563EB 100%)",
+      boxShadow: "0 4px 14px rgba(8,145,178,0.35)",
+      "&:hover": {
+        background: "linear-gradient(135deg, #0E7490 0%, #1D4ED8 100%)",
+        boxShadow: "0 6px 20px rgba(8,145,178,0.45)",
+        transform: "translateY(-1px)",
+      },
+    },
+  },
+  enroll: {
+    label: "Đăng ký học",
+    icon: RocketLaunchRoundedIcon,
+    sx: {
+      background: "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+      boxShadow: "0 4px 14px rgba(234,88,12,0.35)",
+      "&:hover": {
+        background: "linear-gradient(135deg, #D97706 0%, #C2410C 100%)",
+        boxShadow: "0 6px 20px rgba(234,88,12,0.45)",
+        transform: "translateY(-1px)",
+      },
+    },
+  },
+  review: {
+    label: "Ôn tập lại",
+    icon: ReplayRoundedIcon,
+    sx: {
+      background: "linear-gradient(135deg, #059669 0%, #10B981 100%)",
+      boxShadow: "0 4px 14px rgba(5,150,105,0.35)",
+      "&:hover": {
+        background: "linear-gradient(135deg, #047857 0%, #059669 100%)",
+        boxShadow: "0 6px 20px rgba(5,150,105,0.45)",
+        transform: "translateY(-1px)",
+      },
+    },
+  },
+  certificate: {
+    label: "Xem chứng chỉ",
+    icon: WorkspacePremiumRoundedIcon,
+    sx: {
+      background: "linear-gradient(135deg, #B45309 0%, #F59E0B 55%, #FBBF24 100%)",
+      boxShadow: "0 4px 14px rgba(245,158,11,0.4)",
+      "&:hover": {
+        background: "linear-gradient(135deg, #92400E 0%, #D97706 55%, #F59E0B 100%)",
+        boxShadow: "0 6px 20px rgba(245,158,11,0.55)",
+        transform: "translateY(-1px)",
+      },
+    },
+  },
+};
+
+function getActionButtonKey(variant, hasCertificate) {
+  if (variant === "completed") return hasCertificate ? "certificate" : "review";
+  if (variant === "not_joined" || variant === "not_started") return "enroll";
+  return "continue";
+}
+
 function MetaItem({ icon: Icon, label }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -194,18 +261,18 @@ export default function MyCourseRow({
   const progressTextColor = getProgressColor(progressValue);
 
   let statusChip = getLearningStatusChip();
-  let actionLabel = "Tiếp tục học";
 
   if (variant === "completed") {
     statusChip = getCompletedStatusChip();
-    actionLabel = data.certificateCode ? "Xem chứng chỉ" : "Ôn tập lại";
   } else if (variant === "not_joined") {
     statusChip = getNotJoinedStatusChip();
-    actionLabel = "Đăng ký học";
   } else if (variant === "not_started") {
     statusChip = getNotStartedStatusChip();
-    actionLabel = "Đăng ký học";
   }
+
+  const actionKey = getActionButtonKey(variant, Boolean(data.certificateCode));
+  const actionConfig = ACTION_BUTTON_CONFIG[actionKey];
+  const ActionIcon = actionConfig.icon;
 
   const handleAction = () => {
     if (variant === "not_joined") {
@@ -374,9 +441,19 @@ export default function MyCourseRow({
             size="small"
             variant="contained"
             onClick={handleAction}
-            sx={{ minWidth: { md: 140 }, whiteSpace: "nowrap" }}
+            sx={{
+              minWidth: { md: 140 },
+              whiteSpace: "nowrap",
+              color: "#fff",
+              fontWeight: 700,
+              borderRadius: "12px",
+              gap: 0.75,
+              transition: "all 0.2s ease",
+              ...actionConfig.sx,
+            }}
           >
-            {actionLabel}
+            <ActionIcon sx={{ fontSize: 18 }} />
+            {actionConfig.label}
           </AppButton>
         </Box>
       </Box>
