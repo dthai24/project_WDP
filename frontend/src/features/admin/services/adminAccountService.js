@@ -21,7 +21,7 @@ function mapUserToAccount(user) {
   if (roles.includes('Admin')) role = 'Admin';
   else if (roles.includes('Mentor')) role = 'Mentor';
 
-  const isActiveVal = user.isActive !== undefined ? user.isActive : true;
+  const isActiveVal = user.isActive !== undefined ? user.isActive : (user.IsActive !== undefined ? user.IsActive : true);
 
   return {
     id: user.UserId || user._id,
@@ -31,7 +31,7 @@ function mapUserToAccount(user) {
     phone: user.Phone || user.phone || '',
     dateOfBirth: user.DateOfBirth || user.dateOfBirth || '',
     role,
-    status: isActiveVal ? 'ACTIVE' : 'BLOCKED',
+    status: isActiveVal ? 'ACTIVE' : 'LOCKED',
     createdAt: user.CreatedAt || user.createdAt || null,
     lastLoginAt: user.UpdatedAt || user.updatedAt || null,
     streak: user.streak || 0,

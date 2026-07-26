@@ -137,10 +137,10 @@ export default function AdminLevelManagementPage() {
     try {
       const res = await createLevel(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Khong the tao trinh do');
+        toast.error(res.message ?? 'Không thể tạo trình độ');
         return;
       }
-      toast.success('Da tao trinh do moi');
+      toast.success('Đã tạo trình độ mới');
       setCreateOpen(false);
       await loadLevels();
     } finally {
@@ -155,10 +155,10 @@ export default function AdminLevelManagementPage() {
     try {
       const res = await updateLevel(editingLevel.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Khong the cap nhat trinh do');
+        toast.error(res.message ?? 'Không thể cập nhật trình độ');
         return;
       }
-      toast.success('Da cap nhat trinh do');
+      toast.success('Đã cập nhật trình độ thành công');
       setEditOpen(false);
       setEditingLevel(null);
       await loadLevels();
@@ -172,10 +172,10 @@ export default function AdminLevelManagementPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
-            Quan ly trinh do
+            Quản lý trình độ
           </h1>
           <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
-            Them, chinh sua va sap xep trinh do khoa hoc (Co ban, Trung cap, Nang cao...).
+            Thêm, chỉnh sửa và sắp xếp trình độ khóa học (Cơ bản, Trung cấp, Nâng cao...).
           </p>
         </div>
 
@@ -191,12 +191,11 @@ export default function AdminLevelManagementPage() {
             bgcolor: '#0891B2',
             color: '#fff',
             flexShrink: 0,
-            width: { xs: '100%', sm: 'auto' },
             boxShadow: 'none',
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}
         >
-          Tao trinh do
+          Tạo trình độ
         </AppButton>
       </div>
 

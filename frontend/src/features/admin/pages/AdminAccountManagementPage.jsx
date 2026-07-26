@@ -145,11 +145,11 @@ export default function AdminAccountManagementPage() {
       const res = await updateAccount(editingAccount.id, values);
 
       if (!res.ok) {
-        toast.error(res.message ?? 'Khong the cap nhat tai khoan');
+        toast.error(res.message ?? 'Không thể cập nhật tài khoản');
         return;
       }
 
-      toast.success('Da cap nhat vai tro va trang thai tai khoan');
+      toast.success('Đã cập nhật vai trò và trạng thái tài khoản thành công');
       setFormOpen(false);
       setEditingAccount(null);
       await loadAccounts();
@@ -209,10 +209,10 @@ export default function AdminAccountManagementPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
-            Quan ly tai khoan
+            Quản lý tài khoản
           </h1>
           <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
-            Theo doi va quan ly tai khoan Admin, Mentor va Hoc vien trong he thong.
+            Theo dõi và quản lý tài khoản Admin, Mentor và Học viên trong hệ thống.
           </p>
         </div>
 
@@ -232,7 +232,6 @@ export default function AdminAccountManagementPage() {
         onRemoveFilterChip={handleRemoveChip}
         keyword={queryState.q || ''}
         onKeywordChange={(val) => updateQuery({ q: val, page: 1 })}
-        onCreateClick={() => setCreateOpen(true)}
       />
 
       <AdminAccountList

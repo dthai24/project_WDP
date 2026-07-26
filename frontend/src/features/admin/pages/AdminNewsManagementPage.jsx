@@ -151,10 +151,10 @@ export default function AdminNewsManagementPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
-            Quan ly tin tuc
+            Quản lý tin tức
           </h1>
           <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
-            Quan ly tin tuc hien thi tren trang chu.
+            Quản lý bài viết và tin tức hiển thị trên trang chủ.
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export default function AdminNewsManagementPage() {
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}
         >
-          Them tin
+          Thêm tin tức
         </AppButton>
       </div>
 

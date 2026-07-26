@@ -141,10 +141,10 @@ export default function AdminCategoryManagementPage() {
     try {
       const res = await createCategory(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Khong the tao danh muc');
+        toast.error(res.message ?? 'Không thể tạo danh mục');
         return;
       }
-      toast.success('Da tao danh muc moi');
+      toast.success('Đã tạo danh mục mới');
       setCreateOpen(false);
       await loadCategories();
     } finally {
@@ -159,10 +159,10 @@ export default function AdminCategoryManagementPage() {
     try {
       const res = await updateCategory(editingCategory.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Khong the cap nhat danh muc');
+        toast.error(res.message ?? 'Không thể cập nhật danh mục');
         return;
       }
-      toast.success('Da cap nhat danh muc');
+      toast.success('Đã cập nhật danh mục thành công');
       setEditOpen(false);
       setEditingCategory(null);
       await loadCategories();
@@ -176,10 +176,10 @@ export default function AdminCategoryManagementPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-[22px] sm:text-[24px] font-bold leading-[1.3]" style={{ color: TEXT }}>
-            Quan ly danh muc
+            Quản lý danh mục
           </h1>
           <p className="text-[14px] mt-1 leading-[1.55] max-w-[560px]" style={{ color: MUTED }}>
-            Them, chinh sua va sap xep danh muc khoa hoc (IELTS, Giao tiep, Phat am...).
+            Thêm, chỉnh sửa và sắp xếp danh mục khóa học (IELTS, Giao tiếp, Phát âm...).
           </p>
         </div>
 
@@ -227,7 +227,7 @@ export default function AdminCategoryManagementPage() {
               '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
             }}
           >
-            Tao danh muc
+            Tạo danh mục
           </AppButton>
         </Box>
       </div>
@@ -240,7 +240,7 @@ export default function AdminCategoryManagementPage() {
         showReset={showReset}
         onReset={handleReset}
         totalCount={filteredCategories.length}
-        countLabel="danh muc"
+        countLabel="danh mục"
         CountIcon={CategoryOutlinedIcon}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}

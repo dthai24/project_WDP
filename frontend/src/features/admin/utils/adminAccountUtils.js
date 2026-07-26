@@ -1,5 +1,5 @@
 export const ADMIN_ACCOUNT_TABLE_GRID_COLUMNS =
-  'minmax(200px, 1.5fr) minmax(180px, 1.2fr) minmax(92px, auto) minmax(128px, auto) minmax(108px, auto) 72px';
+  'minmax(180px, 1.4fr) minmax(160px, 1.2fr) 110px 165px 110px 80px';
 
 export const ADMIN_ACCOUNT_TABLE_HEADERS = [
   'Người dùng',
@@ -36,6 +36,7 @@ export const ADMIN_ACCOUNT_ROLE_LABELS = {
 export const ADMIN_ACCOUNT_STATUS_LABELS = {
   ACTIVE: 'Đang hoạt động',
   LOCKED: 'Đã khóa',
+  BLOCKED: 'Đã khóa',
 };
 
 export const ADMIN_ACCOUNT_ROLE_CHIP_SX = {
@@ -58,14 +59,19 @@ export const ADMIN_ACCOUNT_ROLE_CHIP_SX = {
 
 export const ADMIN_ACCOUNT_STATUS_CHIP_SX = {
   ACTIVE: {
-    bgcolor: 'rgba(4,120,87,0.12)',
-    color: '#047857',
-    border: '1px solid rgba(4,120,87,0.24)',
+    bgcolor: 'rgba(16, 185, 129, 0.12)',
+    color: '#059669',
+    border: '1px solid rgba(16, 185, 129, 0.24)',
   },
   LOCKED: {
-    bgcolor: 'rgba(220,38,38,0.08)',
+    bgcolor: 'rgba(239, 68, 68, 0.12)',
     color: '#DC2626',
-    border: '1px solid rgba(220,38,38,0.22)',
+    border: '1px solid rgba(239, 68, 68, 0.24)',
+  },
+  BLOCKED: {
+    bgcolor: 'rgba(239, 68, 68, 0.12)',
+    color: '#DC2626',
+    border: '1px solid rgba(239, 68, 68, 0.24)',
   },
 };
 
@@ -138,7 +144,11 @@ export function filterAndSortAccounts(accounts = [], query = {}) {
 
   let result = accounts.filter((account) => {
     if (role !== 'all' && account.role !== role) return false;
-    if (status !== 'all' && account.status !== status) return false;
+    if (status !== 'all') {
+      const accStatus = (account.status === 'BLOCKED' ? 'LOCKED' : account.status);
+      const targetStatus = (status === 'BLOCKED' ? 'LOCKED' : status);
+      if (accStatus !== targetStatus) return false;
+    }
 
     if (keyword) {
       const haystack = [account.fullName, account.email, account.username, account.phone]

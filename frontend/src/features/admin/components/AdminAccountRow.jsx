@@ -143,15 +143,19 @@ export default function AdminAccountRow({ account, onEdit, onView, onToggleStatu
             display: { xs: 'none', md: 'inline-flex' },
           }}
         />
-        <Switch
-          size="small"
-          checked={account.status === 'ACTIVE'}
-          onChange={() => onToggleStatus?.(account)}
-          sx={{
-            '& .MuiSwitch-switchBase.Mui-checked': { color: '#047857' },
-            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#047857' }
-          }}
-        />
+        {account.role !== 'Admin' ? (
+          <Switch
+            size="small"
+            checked={account.status === 'ACTIVE'}
+            onChange={() => onToggleStatus?.(account)}
+            sx={{
+              '& .MuiSwitch-switchBase.Mui-checked': { color: '#059669' },
+              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#059669' }
+            }}
+          />
+        ) : (
+          <Box sx={{ width: 38, height: 24, display: { xs: 'none', md: 'block' } }} />
+        )}
       </Box>
 
       <Box sx={{ minWidth: 0, justifySelf: 'start' }}>
