@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/shared/ui/Toast';
 import MentorCourseReviewHeader from '@/features/mentor/components/course/MentorCourseReviewHeader';
@@ -10,6 +10,7 @@ import MentorCourseReviewStatusPanel from '@/features/mentor/components/course/M
 import MentorCourseCreateSuccessDialog from '@/features/mentor/components/course/MentorCourseCreateSuccessDialog';
 import {
   createCourseWithContent,
+  createFinalTestQuestions,
   fetchCourseCategories,
   fetchCourseLevels,
 } from '@/features/mentor/services/mentorCourseService';
@@ -105,6 +106,14 @@ export default function MentorCreateCourseReviewPage() {
       throw new Error(result.message ?? 'Không thể lưu khóa học.');
     }
 
+    // Tạo bài kiểm tra cuối khóa (nếu mentor đã soạn câu hỏi ở bước 3) — cần courseId thật vừa tạo xong
+    if (draft.test?.length > 0) {
+      const testResult = await createFinalTestQuestions(result.courseId, draft.test);
+      if (!testResult.success) {
+        toast.error(`Đã tạo khóa học nhưng chỉ lưu được ${testResult.successCount}/${testResult.total} câu hỏi kiểm tra. Bạn có thể bổ sung lại trong trang quản lý khóa học.`);
+      }
+    }
+
     clearCreateCourseDraft();
     return { courseId: result.courseId };
   };
@@ -160,6 +169,28 @@ export default function MentorCreateCourseReviewPage() {
             levelLabel={levelLabel}
           />
           <MentorCourseContentReview paths={draft.paths ?? []} />
+
+          <Box sx={{ bgcolor: '#fff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: '20px', p: 2.5 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#0F172A', mb: 1 }}>
+              📝 Bài kiểm tra cuối khóa
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: '#64748B' }}>
+              {(draft.test?.length ?? 0) > 0
+                ? `Đã soạn ${draft.test.length} câu hỏi trắc nghiệm.`
+                : 'Chưa có câu hỏi nào — bạn có thể bổ sung sau trong trang quản lý khóa học.'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ bgcolor: '#fff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: '20px', p: 2.5 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#0F172A', mb: 1 }}>
+              ✍️ Bài viết (Writing) cuối khóa
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: '#64748B', whiteSpace: 'pre-wrap' }}>
+              {draft.course?.FinalWritingPrompt?.trim()
+                ? draft.course.FinalWritingPrompt
+                : 'Chưa có đề bài tùy chỉnh — hệ thống sẽ tự sinh đề bài theo chủ đề khóa học.'}
+            </Typography>
+          </Box>
         </Box>
 
         <MentorCourseReviewStatusPanel

@@ -14,12 +14,14 @@ export function normalizeCreateCourseDraft(data) {
     return {
       course: data,
       paths: [],
+      test: [],
     };
   }
 
   return {
     course: data.course ?? null,
     paths: stripNonLearningMaterials(data.paths ?? []),
+    test: Array.isArray(data.test) ? data.test : [],
     meta: {
       contentDraftSaved: Boolean(data.meta?.contentDraftSaved),
     },
@@ -47,9 +49,14 @@ export function saveCreateCourseStep1ToStorage(form, instructorId) {
   course.CourseId = form.CourseId ?? form.courseId ?? null;
   course.courseId = course.CourseId;
   const existing = loadCreateCourseDraft();
+  if (existing?.course?.FinalWritingPrompt) {
+    course.FinalWritingPrompt = existing.course.FinalWritingPrompt;
+  }
   return saveCreateCourseDraft({
     course,
     paths: existing?.paths ?? [],
+    test: existing?.test ?? [],
+    meta: existing?.meta ?? {},
   });
 }
 
@@ -63,12 +70,43 @@ export function saveCreateCourseContentToStorage(course, paths, meta = {}) {
   return saveCreateCourseDraft({
     course,
     paths: sanitizePathsForStorage(paths),
+    test: existing?.test ?? [],
     meta: {
       ...(existing?.meta ?? {}),
       ...meta,
       contentDraftSaved: true,
     },
   });
+}
+
+// Câu hỏi bài kiểm tra cuối khóa (bước 3) — lưu vào draft, chỉ thực sự tạo trên server sau khi khóa học được tạo xong
+export function saveCreateCourseTestToStorage(test) {
+  const existing = loadCreateCourseDraft();
+  if (!existing?.course) return null;
+  return saveCreateCourseDraft({
+    ...existing,
+    test: Array.isArray(test) ? test : [],
+  });
+}
+
+export function loadCreateCourseTestFromStorage() {
+  const draft = loadCreateCourseDraft();
+  return draft?.test ?? [];
+}
+
+// Đề bài Viết (Writing) cuối khóa (bước 4) — lưu trực tiếp vào course, gửi lên server cùng lúc tạo khóa học
+export function saveCreateCourseWritingPromptToStorage(writingPrompt) {
+  const existing = loadCreateCourseDraft();
+  if (!existing?.course) return null;
+  return saveCreateCourseDraft({
+    ...existing,
+    course: { ...existing.course, FinalWritingPrompt: writingPrompt || '' },
+  });
+}
+
+export function loadCreateCourseWritingPromptFromStorage() {
+  const draft = loadCreateCourseDraft();
+  return draft?.course?.FinalWritingPrompt ?? '';
 }
 
 export function clearCreateCourseDraft() {

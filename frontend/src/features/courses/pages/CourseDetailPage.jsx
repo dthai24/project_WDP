@@ -654,6 +654,7 @@ export default function CourseDetailPage() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (!user.userId) {
       toast.error("Please log in to enroll in this course.");
+      navigate("/login");
       return;
     }
 
@@ -683,6 +684,7 @@ export default function CourseDetailPage() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (!user.userId) {
       toast.error("Please log in to purchase this course.");
+      navigate("/login");
       return;
     }
     navigate(`/payment/${course.id}`);

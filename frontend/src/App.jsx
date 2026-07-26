@@ -21,9 +21,13 @@ import MentorNewsPage from '@/features/mentor/pages/MentorNewsPage';
 import MentorStudentProgressPage from '@/features/mentor/pages/MentorStudentProgressPage';
 import MentorCreateCoursePage from '@/features/mentor/pages/MentorCreateCoursePage';
 import MentorCreateCourseContentPage from '@/features/mentor/pages/MentorCreateCourseContentPage';
+import MentorCreateCourseTestPage from '@/features/mentor/pages/MentorCreateCourseTestPage';
+import MentorCreateCourseWritingPage from '@/features/mentor/pages/MentorCreateCourseWritingPage';
 import MentorCreateCourseReviewPage from '@/features/mentor/pages/MentorCreateCourseReviewPage';
 import MentorEditCoursePage from '@/features/mentor/pages/MentorEditCoursePage';
 import MentorEditCourseContentPage from '@/features/mentor/pages/MentorEditCourseContentPage';
+import MentorEditCourseTestPage from '@/features/mentor/pages/MentorEditCourseTestPage';
+import MentorEditCourseWritingPage from '@/features/mentor/pages/MentorEditCourseWritingPage';
 import MentorEditCourseReviewPage from '@/features/mentor/pages/MentorEditCourseReviewPage';
 import MentorCourseDetailPage from '@/features/mentor/pages/MentorCourseDetailPage';
 import MentorQuestionBankListPage from '@/features/mentor/pages/MentorQuestionBankListPage';
@@ -116,6 +120,7 @@ export default function App() {
             <ProtectedRoute
               allowedRoles={['Student', 'Admin']}
               roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+              allowGuest
             >
               <CourseListPage />
             </ProtectedRoute>
@@ -127,6 +132,7 @@ export default function App() {
             <ProtectedRoute
               allowedRoles={['Student', 'Admin']}
               roleRedirects={STUDENT_SHARED_ROUTE_REDIRECTS}
+              allowGuest
             >
               <CourseDetailPage />
             </ProtectedRoute>
@@ -295,9 +301,13 @@ export default function App() {
       >
         <Route index element={<MentorShellIndexRedirect />} />
         <Route path="courses/create/review" element={<MentorCreateCourseReviewPage />} />
+        <Route path="courses/create/writing" element={<MentorCreateCourseWritingPage />} />
+        <Route path="courses/create/test" element={<MentorCreateCourseTestPage />} />
         <Route path="courses/create/content" element={<MentorCreateCourseContentPage />} />
         <Route path="courses/create" element={<MentorCreateCoursePage />} />
         <Route path="courses/:courseId/review" element={<MentorEditCourseReviewPage />} />
+        <Route path="courses/:courseId/writing" element={<MentorEditCourseWritingPage />} />
+        <Route path="courses/:courseId/test" element={<MentorEditCourseTestPage />} />
         <Route path="courses/:courseId/content/edit" element={<MentorEditCourseContentPage />} />
         <Route path="courses/:courseId/content" element={<MentorEditCourseContentPage />} />
         <Route path="courses/:courseId/edit" element={<MentorEditCoursePage />} />

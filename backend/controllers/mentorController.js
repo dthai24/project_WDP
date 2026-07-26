@@ -187,6 +187,7 @@ const updateCourse = async (req, res) => {
             CategoryId,
             LevelId,
             IsPublished,
+            FinalWritingPrompt,
         } = req.body ?? {};
 
         if (!CourseName || String(CourseName).trim() === '') {
@@ -232,6 +233,10 @@ const updateCourse = async (req, res) => {
             isPublished: Boolean(IsPublished),
             updatedAt: new Date(),
         };
+
+        if (FinalWritingPrompt !== undefined) {
+            courseData.finalWritingPrompt = String(FinalWritingPrompt).trim() || null;
+        }
 
         await Course.findByIdAndUpdate(courseId, courseData);
 

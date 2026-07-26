@@ -88,7 +88,7 @@ export default function MentorCourseDetailPage() {
 
   useEffect(() => {
     loadCourse();
-  }, [loadCourse, publishing, location.state?.refreshedAt]);
+  }, [loadCourse, location.state?.refreshedAt]);
 
   const handleTabChange = (tab) => {
     setSearchParams(
@@ -139,12 +139,10 @@ export default function MentorCourseDetailPage() {
     const nextPublished = publishDialog === 'publish';
     setPublishing(true);
 
-    // TODO: wire real API — updateCoursePublishStatus(courseId, isPublished)
     const result = await updateCoursePublishStatus(course._id || course.CourseId, nextPublished);
 
     if (result.ok && result.courseIdUpdate) {
-      // setCourse(result.course);
-      setPublishing(true);
+      await loadCourse();
       toast.success(
         nextPublished ? 'Đã xuất bản khóa học.' : 'Đã hủy xuất bản khóa học.',
       );

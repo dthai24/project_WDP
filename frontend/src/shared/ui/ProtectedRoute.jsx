@@ -10,14 +10,15 @@ import {
 /**
  * ProtectedRoute — RBAC wrapper
  *
- * 1. Guest → /login
+ * 1. Guest → /login (trừ khi allowGuest=true, ví dụ trang xem khóa học công khai)
  * 2. Sai role → roleRedirects (case-insensitive) hoặc trang mặc định của role
  * 3. Không xác định được redirect → /unauthorized
  */
-export default function ProtectedRoute({ allowedRoles, roleRedirects, children }) {
+export default function ProtectedRoute({ allowedRoles, roleRedirects, allowGuest = false, children }) {
   const user = getUser();
 
   if (!isAuthenticatedUser(user)) {
+    if (allowGuest) return children;
     return <Navigate to="/login" replace />;
   }
 

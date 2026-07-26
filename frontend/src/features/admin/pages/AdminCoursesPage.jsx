@@ -28,11 +28,17 @@ import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
+import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
 import AppButton from '@/shared/ui/AppButton';
 import ConfirmDialog from '@/shared/ui/ConfirmDialog';
 import { toast } from '@/shared/ui/Toast';
 import { formatAccountDate, getAccountInitials } from '@/features/admin/utils/adminAccountUtils';
 import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
+import { resolveThumbnailUrl } from '@/shared/utils/thumbnailUtils';
 
 const COURSE_REJECTION_TAG_OPTIONS = [
   'nội dung chưa đầy đủ',
@@ -49,6 +55,8 @@ export default function AdminCoursesPage() {
   const [courseDetails, setCourseDetails] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [testQuestions, setTestQuestions] = useState([]);
+  const [testQuestionsLoading, setTestQuestionsLoading] = useState(false);
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [rejectFormOpen, setRejectFormOpen] = useState(false);
   
@@ -108,6 +116,8 @@ export default function AdminCoursesPage() {
     setDetailsTab('current');
     setDetailsLoading(true);
     setCourseDetails(null);
+    setTestQuestions([]);
+    setTestQuestionsLoading(true);
     try {
       const res = await fetch(`http://localhost:5050/api/courses/${course._id}/learning`, {
         headers: getHeaders()
@@ -123,6 +133,20 @@ export default function AdminCoursesPage() {
       toast.error('Lỗi tải thông tin chi tiết');
     } finally {
       setDetailsLoading(false);
+    }
+
+    try {
+      const resTests = await fetch(`http://localhost:5050/api/courses/${course._id}/tests/final/questions`, {
+        headers: getHeaders()
+      });
+      const dataTests = await resTests.json();
+      if (dataTests.success) {
+        setTestQuestions(dataTests.data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTestQuestionsLoading(false);
     }
   };
 
@@ -480,8 +504,22 @@ export default function AdminCoursesPage() {
         <DialogContent dividers sx={{ pt: 2, bgcolor: 'rgba(15,23,42,0.01)' }}>
           {selectedCourse && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Thumbnail */}
+              <Box
+                component="img"
+                src={resolveThumbnailUrl(selectedCourse.thumbnail, selectedCourse._id)}
+                alt={selectedCourse.courseName}
+                sx={{
+                  width: '100%',
+                  maxHeight: 220,
+                  objectFit: 'cover',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(15,23,42,0.06)',
+                }}
+              />
+
               {/* Basic Info */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, bgcolor: '#fff', p: 2, borderRadius: '12px', border: '1px solid rgba(15,23,42,0.06)' }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 2, bgcolor: '#fff', p: 2, borderRadius: '12px', border: '1px solid rgba(15,23,42,0.06)' }}>
                 <Box>
                   <Typography sx={{ fontSize: 11, fontWeight: 650, color: MUTED, mb: 0.5 }}>TÊN KHÓA HỌC</Typography>
                   <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{selectedCourse.courseName}</Typography>
@@ -493,6 +531,25 @@ export default function AdminCoursesPage() {
                 <Box>
                   <Typography sx={{ fontSize: 11, fontWeight: 650, color: MUTED, mb: 0.5 }}>TRẠNG THÁI</Typography>
                   <Chip label={getStatusLabel(selectedCourse.status)} size="small" sx={{ ...getStatusChipStyles(selectedCourse.status), height: 22, fontSize: 11, fontWeight: 700 }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: 11, fontWeight: 650, color: MUTED, mb: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <PaidOutlinedIcon sx={{ fontSize: 13 }} /> GIÁ MENTOR SET
+                  </Typography>
+                  {selectedCourse.isPaid && selectedCourse.price > 0 ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#16A34A' }}>
+                        {Math.round(selectedCourse.price * (1 - (selectedCourse.discountPercentage || 0) / 100)).toLocaleString('vi-VN')} ₫
+                      </Typography>
+                      {selectedCourse.discountPercentage > 0 && (
+                        <Typography sx={{ fontSize: 11.5, color: MUTED, textDecoration: 'line-through' }}>
+                          {selectedCourse.price.toLocaleString('vi-VN')} ₫
+                        </Typography>
+                      )}
+                    </Box>
+                  ) : (
+                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#16A34A' }}>Miễn phí</Typography>
+                  )}
                 </Box>
               </Box>
 
@@ -585,15 +642,30 @@ export default function AdminCoursesPage() {
                                             <Chip
                                               key={m._id || matIdx}
                                               icon={getMaterialIcon(m.materialType)}
-                                              label={m.title}
+                                              label={
+                                                m.materialUrl ? (
+                                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    {m.title}
+                                                    <OpenInNewRoundedIcon sx={{ fontSize: 12, color: PRIMARY }} />
+                                                  </Box>
+                                                ) : m.title
+                                              }
                                               size="small"
+                                              component={m.materialUrl ? 'a' : 'div'}
+                                              href={m.materialUrl || undefined}
+                                              target={m.materialUrl ? '_blank' : undefined}
+                                              rel={m.materialUrl ? 'noopener noreferrer' : undefined}
+                                              clickable={Boolean(m.materialUrl)}
                                               sx={{
                                                 height: 22,
                                                 fontSize: 11,
                                                 fontWeight: 500,
                                                 bgcolor: '#fff',
                                                 border: '1px solid rgba(15,23,42,0.05)',
-                                                color: TEXT
+                                                color: TEXT,
+                                                textDecoration: 'none',
+                                                cursor: m.materialUrl ? 'pointer' : 'default',
+                                                '&:hover': m.materialUrl ? { borderColor: PRIMARY, bgcolor: 'rgba(8,145,178,0.04)' } : undefined,
                                               }}
                                             />
                                           ))}
@@ -610,6 +682,68 @@ export default function AdminCoursesPage() {
                     )}
                   </Box>
                 )}
+              </Box>
+
+              {/* Final Quiz (multiple choice) */}
+              <Box sx={{ bgcolor: '#fff', p: 2, borderRadius: '12px', border: '1px solid rgba(15,23,42,0.06)' }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <QuizOutlinedIcon sx={{ fontSize: 18, color: PRIMARY }} /> Bài kiểm tra cuối khóa (trắc nghiệm)
+                </Typography>
+
+                {testQuestionsLoading ? (
+                  <Typography sx={{ fontSize: 13, color: MUTED, fontStyle: 'italic', py: 1 }}>Đang tải câu hỏi kiểm tra...</Typography>
+                ) : testQuestions.length === 0 ? (
+                  <Typography sx={{ fontSize: 13, color: MUTED, fontStyle: 'italic', py: 1 }}>Mentor chưa soạn câu hỏi nào cho bài kiểm tra cuối khóa.</Typography>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {testQuestions.map((q, idx) => (
+                      <Box key={q.id || idx} sx={{ p: 1.5, borderRadius: '8px', border: '1px dashed rgba(15,23,42,0.08)', bgcolor: 'rgba(15,23,42,0.005)' }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1 }}>
+                          Câu {idx + 1}: {q.question}
+                        </Typography>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+                          {(q.options || []).map((opt, oIdx) => (
+                            <Box
+                              key={opt.id || oIdx}
+                              sx={{
+                                p: 1,
+                                borderRadius: '8px',
+                                fontSize: 12.5,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                border: opt.correct ? '1px solid #10B981' : '1px solid rgba(15,23,42,0.08)',
+                                bgcolor: opt.correct ? 'rgba(16,185,129,0.06)' : '#fff',
+                                color: opt.correct ? '#065F46' : TEXT,
+                                fontWeight: opt.correct ? 700 : 500
+                              }}
+                            >
+                              <span>{opt.label}</span>
+                              {opt.correct && <CheckCircleRoundedIcon sx={{ fontSize: 15, color: '#10B981' }} />}
+                            </Box>
+                          ))}
+                        </Box>
+                        {q.explanation && (
+                          <Typography sx={{ fontSize: 12, color: MUTED, mt: 1, pl: 1, borderLeft: '2px solid rgba(15,23,42,0.1)' }}>
+                            Giải thích: {q.explanation}
+                          </Typography>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+
+              {/* Final Writing Exam prompt */}
+              <Box sx={{ bgcolor: '#fff', p: 2, borderRadius: '12px', border: '1px solid rgba(15,23,42,0.06)' }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <EditNoteRoundedIcon sx={{ fontSize: 18, color: PRIMARY }} /> Bài kiểm tra viết (Writing) cuối khóa
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: TEXT, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                  {selectedCourse.finalWritingPrompt?.trim()
+                    ? selectedCourse.finalWritingPrompt
+                    : 'Mentor chưa soạn đề bài Viết tùy chỉnh — hệ thống sẽ tự sinh đề bài bằng AI theo chủ đề khóa học.'}
+                </Typography>
               </Box>
 
               {/* Previous Rejection Reasons if inactive */}

@@ -311,7 +311,7 @@ const submitTestAttempt = async (req, res) => {
 // Mentor CRUD — quản lý câu hỏi bài kiểm tra cuối khóa (scope='final')
 // ============================================================
 
-async function assertMentorOwnsCourse(courseId, userId) {
+async function assertMentorOwnsCourse(courseId, userId, roleName) {
   if (!mongoose.Types.ObjectId.isValid(courseId)) {
     return { ok: false, status: 400, message: 'courseId không hợp lệ.' };
   }
@@ -319,7 +319,8 @@ async function assertMentorOwnsCourse(courseId, userId) {
   if (!course) {
     return { ok: false, status: 404, message: 'Không tìm thấy khóa học.' };
   }
-  if (userId && String(course.instructorId) !== String(userId)) {
+  const isAdmin = String(roleName || '').toLowerCase() === 'admin';
+  if (!isAdmin && userId && String(course.instructorId) !== String(userId)) {
     return { ok: false, status: 403, message: 'Bạn không có quyền quản lý bài kiểm tra của khóa học này.' };
   }
   return { ok: true, course };
@@ -357,8 +358,9 @@ const listTestQuestions = async (req, res) => {
   try {
     const { courseId } = req.params;
     const userId = req.headers['x-user-id'] || req.query.userId;
+    const roleName = req.headers['x-role-name'];
 
-    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    const ownership = await assertMentorOwnsCourse(courseId, userId, roleName);
     if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
 
     const test = await findOrCreateFinalTest(courseId);
@@ -394,9 +396,10 @@ const createTestQuestion = async (req, res) => {
   try {
     const { courseId } = req.params;
     const userId = req.headers['x-user-id'] || req.body.userId;
+    const roleName = req.headers['x-role-name'];
     const { question, explanation, options } = req.body;
 
-    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    const ownership = await assertMentorOwnsCourse(courseId, userId, roleName);
     if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
 
     if (!question || !Array.isArray(options) || options.length < 2 || !options.some((o) => o.correct)) {
@@ -436,9 +439,10 @@ const updateTestQuestion = async (req, res) => {
   try {
     const { courseId, questionId } = req.params;
     const userId = req.headers['x-user-id'] || req.body.userId;
+    const roleName = req.headers['x-role-name'];
     const { question, explanation, options } = req.body;
 
-    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    const ownership = await assertMentorOwnsCourse(courseId, userId, roleName);
     if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
 
     if (!mongoose.Types.ObjectId.isValid(questionId)) {
@@ -477,8 +481,9 @@ const deleteTestQuestion = async (req, res) => {
   try {
     const { courseId, questionId } = req.params;
     const userId = req.headers['x-user-id'] || req.query.userId;
+    const roleName = req.headers['x-role-name'];
 
-    const ownership = await assertMentorOwnsCourse(courseId, userId);
+    const ownership = await assertMentorOwnsCourse(courseId, userId, roleName);
     if (!ownership.ok) return res.status(ownership.status).json({ success: false, message: ownership.message });
 
     if (!mongoose.Types.ObjectId.isValid(questionId)) {

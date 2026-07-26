@@ -499,7 +499,7 @@ export default function MentorCreateCourseContentPage() {
         toast.error('Không thể lưu nội dung. Vui lòng thử lại.');
         return;
       }
-      navigate('/mentor/courses/create/review');
+      navigate('/mentor/courses/create/test');
     } catch (error) {
       toast.error(error?.message || 'Không thể tải học liệu lên. Vui lòng thử lại.');
     } finally {

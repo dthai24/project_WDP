@@ -18,7 +18,7 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import AppButton from "@/shared/ui/AppButton";
 import { toast } from "@/shared/ui/Toast";
@@ -317,12 +317,16 @@ const getInitialAvatar = () => getStoredAvatarUrl();
 /* --- Page --- */
 export default function ProfilePage() {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const paramUserId = searchParams.get("userId");
+
   const isAdminShell = location.pathname.startsWith("/admin");
   const breadcrumbHome = isAdminShell
     ? { to: "/admin/accounts", label: "Quản trị" }
     : { to: "/home", label: "Trang chủ" };
 
   const currentUser = useMemo(() => getInitialUser(), []);
+  const isReadOnly = Boolean(paramUserId && String(paramUserId) !== String(currentUser?.userId));
 
   const [profile, setProfile] = useState(INITIAL_PROFILE);
   const [editMode, setEditMode] = useState(false);
@@ -349,7 +353,44 @@ export default function ProfilePage() {
   const [coursesList, setCoursesList] = useState([]);
   const [certificatesList, setCertificatesList] = useState([]);
   const [paymentsList, setPaymentsList] = useState([]);
-  const [expandedStat, setExpandedStat] = useState(null); // 'learning' | 'completed' | 'certificates' | 'payments' | null
+  const [expandedStat, setExpandedStat] = useState(null);
+
+  const maxDateOfBirth = useMemo(() => {
+    const yesterday = new Date(Date.now() - 86400000);
+    return yesterday.toISOString().split("T")[0];
+  }, []);
+
+  const userRoleStr = useMemo(() => {
+    const roleVal = profile.role || currentUser?.roles?.[0] || currentUser?.role || currentUser?.Roles || 'Student';
+    if (Array.isArray(roleVal)) return roleVal.join(' ');
+    return String(roleVal);
+  }, [profile.role, currentUser]);
+
+  const isAdmin = useMemo(() => /admin/i.test(userRoleStr), [userRoleStr]);
+  const isMentor = useMemo(() => /mentor/i.test(userRoleStr), [userRoleStr]);
+  const isStudent = useMemo(() => !isAdmin && !isMentor, [isAdmin, isMentor]);
+
+  const roleBadgeSx = useMemo(() => {
+    if (isAdmin) {
+      return {
+        bgcolor: 'rgba(220, 38, 38, 0.1)',
+        color: '#DC2626',
+        border: '1px solid rgba(220, 38, 38, 0.22)',
+      };
+    }
+    if (isMentor) {
+      return {
+        bgcolor: 'rgba(37, 99, 235, 0.1)',
+        color: '#2563EB',
+        border: '1px solid rgba(37, 99, 235, 0.22)',
+      };
+    }
+    return {
+      bgcolor: 'rgba(22, 163, 74, 0.1)',
+      color: '#16A34A',
+      border: '1px solid rgba(22, 163, 74, 0.22)',
+    };
+  }, [isAdmin, isMentor]);
 
   useEffect(() => {
     const cUser = getInitialUser();
@@ -372,6 +413,7 @@ export default function ProfilePage() {
             phone: data.profile.phone || "",
             dateOfBirth: data.profile.dateOfBirth?.split("T")[0] || "",
             currentLevel: data.profile.currentLevel || "",
+            role: data.profile.role || prev.role,
             joinedAt: data.profile.joinedAt
               ? new Date(data.profile.joinedAt).toLocaleDateString("vi-VN", {
                   timeZone: "UTC",
@@ -382,7 +424,7 @@ export default function ProfilePage() {
             rawCategories: data.profile.categories || [],
             goals: [
               ...(data.profile.learningGoal
-                ? [`Muc tieu: ${data.profile.learningGoal}`]
+                ? [`Mục tiêu: ${data.profile.learningGoal}`]
                 : []),
               ...(data.profile.categories
                 ? data.profile.categories.map((c) => c.displayName)
@@ -400,7 +442,7 @@ export default function ProfilePage() {
           }));
         }
       } catch (err) {
-        console.error("Loi khi tai ho so:", err);
+        console.error("Lỗi khi tải hồ sơ:", err);
       }
     };
     fetchProfile();
@@ -421,7 +463,6 @@ export default function ProfilePage() {
           }
 
           try {
-            // Tải danh sách thanh toán thành công (success)
             const payResult = await paymentApi.getUserPayments('success', 50, 0);
             if (payResult && Array.isArray(payResult.payments)) {
               setPaymentsList(payResult.payments);
@@ -437,7 +478,7 @@ export default function ProfilePage() {
     fetchCoursesAndCertificates();
   }, [currentUser]);
 
-  const initials = (profile?.name || "Nguoi dung")
+  const initials = (profile?.name || "Người dùng")
     .split(" ")
     .filter(Boolean)
     .slice(-2)
@@ -449,7 +490,15 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!currentUser?.userId) return;
+    if (!currentUser?.userId || isReadOnly) return;
+
+    if (formData.dateOfBirth) {
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (formData.dateOfBirth >= todayStr) {
+        toast.error("Ngày sinh không hợp lệ. Ngày sinh phải nhỏ hơn ngày hiện tại (tối đa là ngày hôm qua).");
+        return;
+      }
+    }
 
     try {
       const response = await fetch(
@@ -481,7 +530,7 @@ export default function ProfilePage() {
         toast.error("Cập nhật thất bại: " + data.message);
       }
     } catch (err) {
-      console.error("Loi cap nhat ho so:", err);
+      console.error("Lỗi cập nhật hồ sơ:", err);
       toast.error("Đã xảy ra lỗi khi cập nhật hồ sơ.");
     }
   };
@@ -496,22 +545,21 @@ export default function ProfilePage() {
     setEditMode(false);
   };
 
-  // ==========================================
-  // LOGIC XU LY ANH DAI DIEN
-  // ==========================================
   const fileInputRef = useRef(null);
   const [tempImageSrc, setTempImageSrc] = useState(null);
   const handleAvatarClick = () => {
+    if (isReadOnly) return;
     setCropperOpen(true);
   };
 
   const handleAvatarSelected = (e) => {
+    if (isReadOnly) return;
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui long chon file anh hop le.");
+      toast.error("Vui lòng chọn tệp ảnh hợp lệ.");
       return;
     }
 
@@ -555,15 +603,15 @@ export default function ProfilePage() {
           ctx.drawImage(frameImg, 0, 0, FRAME_SIZE, FRAME_SIZE);
           resolve(canvas.toDataURL("image/png"));
         };
-        frameImg.onerror = () => reject("Loi tai Khung");
+        frameImg.onerror = () => reject("Lỗi tải khung ảnh");
       };
-      faceImg.onerror = () => reject("Loi tai Mat");
+      faceImg.onerror = () => reject("Lỗi tải ảnh đại diện");
     });
   };
 
   const handleAvatarUpload = async ({ faceBase64, frameUrl }) => {
-    if (!currentUser?.userId) {
-      toast.error("Vui long dang nhap lai de cap nhat anh dai dien.");
+    if (!currentUser?.userId || isReadOnly) {
+      toast.error("Vui lòng đăng nhập lại để cập nhật ảnh đại diện.");
       return;
     }
 
@@ -579,14 +627,14 @@ export default function ProfilePage() {
       const data = await uploadUserAvatar(blob);
 
       if (!data.success) {
-        toast.error(data.message ?? "Khong the cap nhat anh dai dien");
+        toast.error(data.message ?? "Không thể cập nhật ảnh đại diện");
         return;
       }
 
       const finalUrl = persistUserAvatar(data.avatarUrl);
       setAvatarUrl(finalUrl);
       setProfile((prev) => ({ ...prev, avatarUrl: finalUrl }));
-      toast.success("Da cap nhat anh dai dien");
+      toast.success("Đã cập nhật ảnh đại diện thành công");
 
       setCropperOpen(false);
       if (tempImageSrc?.startsWith("blob:")) {
@@ -595,19 +643,17 @@ export default function ProfilePage() {
       setTempImageSrc(null);
     } catch (err) {
       console.error("Upload error:", err);
-      toast.error("Tai anh that bai");
+      toast.error("Tải ảnh thất bại");
     }
   };
 
-  // ==========================================
-  // STATE: CAP NHAT MUC TIEU VA LINH VUC
-  // ==========================================
   const [openGoals, setOpenGoals] = useState(false);
   const [allCats, setAllCats] = useState([]);
   const [goalInput, setGoalInput] = useState("");
   const [selectedCats, setSelectedCats] = useState([]);
 
   const handleOpenPopup = async () => {
+    if (isReadOnly) return;
     const res = await fetch("http://localhost:5050/api/categories");
     const data = await res.json();
     setAllCats(data.data);
@@ -621,18 +667,44 @@ export default function ProfilePage() {
   };
 
   const saveGoals = async () => {
-    await fetch("http://localhost:5050/api/users/goals", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": currentUser.userId,
-      },
-      body: JSON.stringify({
-        learningGoal: goalInput,
-        categoryIds: selectedCats,
-      }),
-    });
-    window.location.reload();
+    if (isReadOnly) return;
+    try {
+      const res = await fetch("http://localhost:5050/api/users/goals", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": currentUser.userId,
+        },
+        body: JSON.stringify({
+          learningGoal: goalInput,
+          categoryIds: selectedCats,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Không thể cập nhật mục tiêu học tập.");
+        return;
+      }
+
+      const nextCategories = allCats.filter((cat) =>
+        selectedCats.includes(cat.categoryId)
+      );
+
+      setProfile((prev) => ({
+        ...prev,
+        rawLearningGoal: goalInput,
+        rawCategories: nextCategories,
+        goals: [
+          ...(goalInput ? [`Mục tiêu: ${goalInput}`] : []),
+          ...nextCategories.map((c) => c.displayName),
+        ],
+      }));
+
+      toast.success("Đã cập nhật mục tiêu học tập!");
+      setOpenGoals(false);
+    } catch {
+      toast.error("Không thể kết nối server.");
+    }
   };
 
   useEffect(() => {
@@ -654,7 +726,7 @@ export default function ProfilePage() {
           setLevelsList(data.data || []);
         }
       } catch (err) {
-        console.error("Loi tai levels:", err);
+        console.error("Lỗi tải levels:", err);
       }
     };
     fetchLevels();
@@ -732,10 +804,10 @@ export default function ProfilePage() {
           {breadcrumbHome.label}
         </MuiLink>
         <Typography sx={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>
-          Hồ sơ cá nhân
+          Hồ sơ cá nhân {isReadOnly && "(Chế độ xem)"}
         </Typography>
       </Breadcrumbs>
- 
+
       {/* --- Profile Header --- */}
       <div
         className="rounded-[20px] p-3 md:p-4 mb-4 flex flex-wrap items-center gap-3 md:gap-4"
@@ -745,10 +817,12 @@ export default function ProfilePage() {
         }}
       >
         {/* Avatar */}
-        <Tooltip title="Đổi ảnh đại diện" placement="bottom">
+        <Tooltip title={isReadOnly ? "Ảnh đại diện" : "Đổi ảnh đại diện"} placement="bottom">
           <div
             onClick={handleAvatarClick}
-            className="relative w-[72px] h-[72px] md:w-[88px] md:h-[88px] flex-shrink-0 cursor-pointer rounded-full overflow-hidden group"
+            className={`relative w-[72px] h-[72px] md:w-[88px] md:h-[88px] flex-shrink-0 ${
+              isReadOnly ? "cursor-default" : "cursor-pointer"
+            } rounded-full overflow-hidden group`}
           >
             {avatarUrl ? (
               <img
@@ -771,20 +845,21 @@ export default function ProfilePage() {
                 {initials}
               </Avatar>
             )}
-            {/* Camera hover overlay */}
-            <div className="absolute inset-0 rounded-full bg-cyan-600/55 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="white"
-              >
-                <path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-12H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V6.2A3 3 0 0 0 19 3.2z" />
-              </svg>
-            </div>
+            {!isReadOnly && (
+              <div className="absolute inset-0 rounded-full bg-cyan-600/55 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="white"
+                >
+                  <path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-12H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V6.2A3 3 0 0 0 19 3.2z" />
+                </svg>
+              </div>
+            )}
           </div>
         </Tooltip>
- 
+
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -800,10 +875,9 @@ export default function ProfilePage() {
               sx={{
                 height: 22,
                 fontSize: 11,
-                fontWeight: 600,
-                bgcolor: alpha(PRIMARY, 0.1),
-                color: PRIMARY,
+                fontWeight: 700,
                 borderRadius: "99px",
+                ...roleBadgeSx,
               }}
             />
           </div>
@@ -815,7 +889,7 @@ export default function ProfilePage() {
               sx={{ fontSize: 13, color: MUTED }}
             />
             <span className="text-[12px]" style={{ color: MUTED }}>
-              Tham gia từ {profile.joinedAt}
+              Tham gia từ {profile.joinedAt || "vừa mới đây"}
             </span>
           </div>
         </div>
@@ -832,45 +906,47 @@ export default function ProfilePage() {
               icon={PersonRoundedIcon}
               iconColor="#2563EB"
               action={
-                editMode ? (
-                  <div className="flex gap-2">
+                !isReadOnly && (
+                  editMode ? (
+                    <div className="flex gap-2">
+                      <AppButton
+                        size="small"
+                        variant="contained"
+                        startIcon={<CheckRoundedIcon />}
+                        onClick={handleSave}
+                        sx={{
+                          fontSize: 12,
+                          height: 28,
+                          px: 1.25,
+                          minWidth: "auto",
+                        }}
+                      >
+                        Lưu
+                      </AppButton>
+                      <AppButton
+                        size="small"
+                        variant="outlined"
+                        onClick={handleCancel}
+                        sx={{
+                          fontSize: 12,
+                          height: 28,
+                          px: 1.25,
+                          minWidth: "auto",
+                        }}
+                      >
+                        Hủy
+                      </AppButton>
+                    </div>
+                  ) : (
                     <AppButton
                       size="small"
-                      variant="contained"
-                      startIcon={<CheckRoundedIcon />}
-                      onClick={handleSave}
-                      sx={{
-                        fontSize: 12,
-                        height: 28,
-                        px: 1.25,
-                        minWidth: "auto",
-                      }}
+                      variant="text"
+                      onClick={() => setEditMode(true)}
+                      sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
                     >
-                      Lưu
+                      Chỉnh sửa
                     </AppButton>
-                    <AppButton
-                      size="small"
-                      variant="outlined"
-                      onClick={handleCancel}
-                      sx={{
-                        fontSize: 12,
-                        height: 28,
-                        px: 1.25,
-                        minWidth: "auto",
-                      }}
-                    >
-                      Hủy
-                    </AppButton>
-                  </div>
-                ) : (
-                  <AppButton
-                    size="small"
-                    variant="text"
-                    onClick={() => setEditMode(true)}
-                    sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
-                  >
-                    Chỉnh sửa
-                  </AppButton>
+                  )
                 )
               }
             />
@@ -884,6 +960,7 @@ export default function ProfilePage() {
                 editing={editMode}
                 name="name"
                 onChange={handleFormChange}
+                readOnly={isReadOnly}
               />
               <InfoRow
                 icon={EmailOutlinedIcon}
@@ -901,6 +978,7 @@ export default function ProfilePage() {
                 editing={editMode}
                 name="phone"
                 onChange={handleFormChange}
+                readOnly={isReadOnly}
               />
               <InfoRow
                 icon={CakeOutlinedIcon}
@@ -913,26 +991,30 @@ export default function ProfilePage() {
                 name="dateOfBirth"
                 onChange={handleFormChange}
                 inputType="date"
+                maxDate={maxDateOfBirth}
+                readOnly={isReadOnly}
               />
             </div>
           </SectionCard>
 
-          {/* Mục tiêu học tập */}
-          {profile.role?.toLowerCase() !== 'admin' && (
+          {/* Mục tiêu học tập - Chỉ hiển thị cho Học viên */}
+          {isStudent && (
             <SectionCard>
               <SectionHead
                 title="Mục tiêu học tập"
                 icon={RocketLaunchIcon}
                 iconColor={ACCENT}
                 action={
-                  <AppButton
-                    size="small"
-                    variant="text"
-                    onClick={handleOpenPopup}
-                    sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
-                  >
-                    Cập nhật
-                  </AppButton>
+                  !isReadOnly && (
+                    <AppButton
+                      size="small"
+                      variant="text"
+                      onClick={handleOpenPopup}
+                      sx={{ fontSize: 12, px: 1, minWidth: "auto", height: 28 }}
+                    >
+                      Cập nhật
+                    </AppButton>
+                  )
                 }
               />
               <div className="flex flex-wrap gap-[10px]">
@@ -960,37 +1042,36 @@ export default function ProfilePage() {
                     }}
                   />
                 ))}
-                <Chip
-                  label="+ Thêm mục tiêu"
-                  onClick={handleOpenPopup}
-                  size="small"
-                  sx={{
-                    height: 28,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    borderRadius: "99px",
-                    bgcolor: "transparent",
-                    border: `1px dashed ${alpha(MUTED, 0.4)}`,
-                    color: MUTED,
-                    cursor: "pointer",
-                    "&:hover": { borderColor: PRIMARY, color: PRIMARY },
-                    transition: "border-color 0.2s, color 0.2s",
-                  }}
-                />
+                {!isReadOnly && (
+                  <Chip
+                    label="+ Thêm mục tiêu"
+                    onClick={handleOpenPopup}
+                    size="small"
+                    sx={{
+                      height: 28,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      borderRadius: "99px",
+                      bgcolor: "transparent",
+                      border: `1px dashed ${alpha(MUTED, 0.4)}`,
+                      color: MUTED,
+                      cursor: "pointer",
+                      "&:hover": { borderColor: PRIMARY, color: PRIMARY },
+                      transition: "border-color 0.2s, color 0.2s",
+                    }}
+                  />
+                )}
               </div>
             </SectionCard>
           )}
 
-
         </div>
 
         {/* --- Right column --- */}
-        <div
-          className="flex-[0_0_35%] w-full lg:max-w-[420px]"
-        >
+        <div className="flex-[0_0_35%] w-full lg:max-w-[420px]">
           <div className="lg:sticky" style={{ top: 84 }}>
-            {/* Tổng quan học tập */}
-            {profile.role?.toLowerCase() !== 'admin' && (
+            {/* Tổng quan học tập - Hiển thị nếu không phải Admin */}
+            {!isAdmin && (
               <SectionCard>
                 <SectionHead
                   title="Tổng quan học tập"
@@ -1014,7 +1095,7 @@ export default function ProfilePage() {
                         onClick={() => setExpandedStat(prev => prev === "learning" ? null : "learning")}
                       >
                         {learningCourses.length === 0 ? (
-                          <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                          <p className="text-[11px] text-slate-400 italic">Không tìm thấy khóa học nào.</p>
                         ) : (
                           <div className="space-y-2">
                             {learningCourses.map(course => (
@@ -1048,7 +1129,7 @@ export default function ProfilePage() {
                         onClick={() => setExpandedStat(prev => prev === "completed" ? null : "completed")}
                       >
                         {completedCourses.length === 0 ? (
-                          <p className="text-[11px] text-slate-400 italic">Không tìm thấy khoá học nào.</p>
+                          <p className="text-[11px] text-slate-400 italic">Không tìm thấy khóa học nào.</p>
                         ) : (
                           <div className="space-y-2">
                             {completedCourses.map(course => {
@@ -1106,7 +1187,7 @@ export default function ProfilePage() {
                               className="flex flex-col gap-2 p-2.5 rounded-xl border border-slate-100 font-sans text-left bg-white"
                             >
                               <span className="text-[12px] font-bold text-slate-700 truncate block">
-                                {cert.courseId?.courseName || 'Khóa học của StarLearning'}
+                                {cert.courseId?.courseName || 'Khóa học tiếng Anh'}
                               </span>
 
                               <div className="flex items-center justify-between mt-1">
@@ -1181,31 +1262,33 @@ export default function ProfilePage() {
                 icon={LockOutlinedIcon}
                 iconColor={MUTED}
               />
-              <div className="flex items-center gap-3 py-[6px]">
-                <LockOutlinedIcon
-                  sx={{ fontSize: 17, color: MUTED }}
-                />
-                <span
-                  className="flex-1 text-[13px] font-semibold"
-                  style={{ color: TEXT }}
-                >
-                  Đổi mật khẩu
-                </span>
-                <AppButton
-                  size="small"
-                  variant="outlined"
-                  onClick={() => setPasswordDialogOpen(true)}
-                  sx={{
-                    fontSize: 11,
-                    height: 28,
-                    px: 1.5,
-                    minWidth: "auto",
-                  }}
-                >
-                  Thay đổi
-                </AppButton>
-              </div>
-              {(profile.role?.toLowerCase() === "student" || profile.role === "Hoc vien") && (
+              {!isReadOnly && (
+                <div className="flex items-center gap-3 py-[6px]">
+                  <LockOutlinedIcon
+                    sx={{ fontSize: 17, color: MUTED }}
+                  />
+                  <span
+                    className="flex-1 text-[13px] font-semibold"
+                    style={{ color: TEXT }}
+                  >
+                    Đổi mật khẩu
+                  </span>
+                  <AppButton
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setPasswordDialogOpen(true)}
+                    sx={{
+                      fontSize: 11,
+                      height: 28,
+                      px: 1.5,
+                      minWidth: "auto",
+                    }}
+                  >
+                    Thay đổi
+                  </AppButton>
+                </div>
+              )}
+              {isStudent && !isReadOnly && (
                 <div className="flex items-center gap-3 py-[6px] border-t border-slate-100 mt-2 pt-2">
                   <PersonRoundedIcon sx={{ fontSize: 17, color: MUTED }} />
                   <span
@@ -1247,17 +1330,17 @@ export default function ProfilePage() {
         fullWidth
       >
         <DialogTitle sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
-          Ung tuyen lam Mentor
+          Ứng tuyển làm Mentor
         </DialogTitle>
 
         <DialogContent dividers>
           <Typography sx={{ fontSize: 13, color: MUTED, mb: 3 }}>
-            Vui long cung cap day du thong tin nang luc va chung chi cua ban de tro thanh giang vien/mentor tren he thong.
+            Vui lòng cung cấp đầy đủ thông tin năng lực và chứng chỉ của bạn để trở thành giảng viên/mentor trên hệ thống.
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <TextField
-              label="Ho va ten"
+              label="Họ và tên"
               size="small"
               fullWidth
               value={applyForm.name}
@@ -1273,7 +1356,7 @@ export default function ProfilePage() {
             />
 
             <TextField
-              label="Tuoi"
+              label="Tuổi"
               size="small"
               fullWidth
               type="number"
@@ -1283,7 +1366,7 @@ export default function ProfilePage() {
 
             <Box>
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: TEXT, mb: 1 }}>
-                Trinh do giang day ung tuyen
+                Trình độ giảng dạy ứng tuyển
               </Typography>
               <FormGroup sx={{ flexDirection: 'row', gap: 1 }}>
                 {levelsList.map((lv) => (
@@ -1309,13 +1392,13 @@ export default function ProfilePage() {
             </Box>
 
             <TextField
-              label="Tai lieu minh chuong (Link anh/url chung chi...)"
+              label="Tài liệu minh chứng (Đường dẫn ảnh/chứng chỉ...)"
               size="small"
               fullWidth
               required
               multiline
               rows={3}
-              placeholder="Nhap duong dan den chung chi Google Drive, Dropbox hoac noi dung mo ta nang luc cua ban..."
+              placeholder="Nhập đường dẫn đến chứng chỉ Google Drive, Dropbox hoặc nội dung mô tả năng lực của bạn..."
               value={applyForm.evidence}
               onChange={(e) => setApplyForm({ ...applyForm, evidence: e.target.value })}
             />
@@ -1328,14 +1411,14 @@ export default function ProfilePage() {
             onClick={() => setApplyMentorOpen(false)}
             disabled={submittingApply}
           >
-            Huy
+            Hủy
           </AppButton>
           <AppButton
             variant="contained"
             onClick={handleApplySubmit}
             loading={submittingApply}
           >
-            Gui don ung tuyen
+            Gửi đơn ứng tuyển
           </AppButton>
         </DialogActions>
       </Dialog>
@@ -1368,19 +1451,19 @@ export default function ProfilePage() {
         fullWidth
       >
         <DialogTitle sx={{ fontSize: 16, fontWeight: 700, color: TEXT }}>
-          Cap nhat Muc tieu & Linh vuc
+          Cập nhật Mục tiêu & Lĩnh vực
         </DialogTitle>
 
         <DialogContent dividers>
           <Typography
             sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}
           >
-            Muc tieu hoc tap
+            Mục tiêu học tập
           </Typography>
           <TextField
             fullWidth
             size="small"
-            placeholder="Vi du: Lay bang gioi, Tim viec lam..."
+            placeholder="Ví dụ: Lấy bằng giỏi, Tìm việc làm..."
             value={goalInput}
             onChange={(e) => setGoalInput(e.target.value)}
             sx={{ mb: 3 }}
@@ -1388,7 +1471,7 @@ export default function ProfilePage() {
           <Typography
             sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: TEXT }}
           >
-            Linh vuc quan tam
+            Lĩnh vực quan tâm
           </Typography>
           <FormGroup sx={{ flexDirection: "row", gap: 1 }}>
             {allCats.map((cat) => (
@@ -1430,10 +1513,10 @@ export default function ProfilePage() {
             variant="outlined"
             onClick={() => setOpenGoals(false)}
           >
-            Huy
+            Hủy
           </AppButton>
           <AppButton variant="contained" onClick={saveGoals}>
-            Luu
+            Lưu
           </AppButton>
         </DialogActions>
       </Dialog>

@@ -27,6 +27,11 @@ import { toast } from '@/shared/ui/Toast';
 import { formatAccountDate, getAccountInitials } from '@/features/admin/utils/adminAccountUtils';
 import { PRIMARY, TEXT, MUTED } from '@/features/mentor/components/course/mentorCourseCreateStyles';
 
+function resolveEvidenceUrl(evidence) {
+  if (!evidence) return '';
+  return evidence.startsWith('http') ? evidence : `http://localhost:5050${evidence.startsWith('/') ? '' : '/'}${evidence}`;
+}
+
 const REJECTION_TAG_OPTIONS = [
   'sai chứng chỉ',
   'thiếu chứng chỉ',
@@ -296,12 +301,12 @@ export default function AdminApplicationsPage() {
 
               <Box>
                 <Typography sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mb: 1 }}>Tài liệu minh chứng / Chứng chỉ</Typography>
-                {selectedApp.evidence?.startsWith('http') ? (
+                {selectedApp.evidence ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'flex-start' }}>
                     {/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(selectedApp.evidence) && (
                       <Box
                         component="img"
-                        src={selectedApp.evidence}
+                        src={resolveEvidenceUrl(selectedApp.evidence)}
                         onClick={() => setLightboxOpen(true)}
                         sx={{
                           maxHeight: 140,
@@ -317,7 +322,7 @@ export default function AdminApplicationsPage() {
                     )}
                     <AppButton
                       component="a"
-                      href={selectedApp.evidence}
+                      href={resolveEvidenceUrl(selectedApp.evidence)}
                       target="_blank"
                       rel="noopener noreferrer"
                       variant="outlined"
@@ -329,7 +334,7 @@ export default function AdminApplicationsPage() {
                   </Box>
                 ) : (
                   <Typography sx={{ fontSize: 13, color: TEXT, bgcolor: 'rgba(15,23,42,0.02)', p: 1.5, borderRadius: '8px', border: '1px solid rgba(15,23,42,0.06)', whiteSpace: 'pre-wrap' }}>
-                    {selectedApp.evidence || 'Không có chứng chỉ đính kèm.'}
+                    Không có chứng chỉ đính kèm.
                   </Typography>
                 )}
               </Box>
@@ -494,7 +499,7 @@ export default function AdminApplicationsPage() {
           </IconButton>
           <Box
             component="img"
-            src={selectedApp?.evidence}
+            src={resolveEvidenceUrl(selectedApp?.evidence)}
             sx={{
               maxWidth: '100%',
               maxHeight: '85vh',

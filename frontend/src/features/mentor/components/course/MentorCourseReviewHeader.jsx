@@ -50,7 +50,7 @@ export default function MentorCourseReviewHeader() {
         </Typography>
       </Breadcrumbs>
 
-      <MentorCourseCreateStepIndicator currentStep={3} />
+      <MentorCourseCreateStepIndicator currentStep={5} />
     </>
   );
 }

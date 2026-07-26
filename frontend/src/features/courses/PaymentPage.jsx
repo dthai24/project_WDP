@@ -184,15 +184,6 @@ const PaymentPage = () => {
                 </div>
               )}
 
-              {/* Payment Method Info */}
-              <div className="payment-method-info">
-                <h4>Payment Method</h4>
-                <div className="vnpay-info">
-                  <img src="https://vnpay.vn/images/logo-vnpay.svg" alt="VNPay" className="vnpay-logo" />
-                  <p>You will be redirected to VNPay to complete your payment securely.</p>
-                </div>
-              </div>
-
               {/* Order Summary */}
               <div className="order-summary">
                 <h4>Order Summary</h4>
