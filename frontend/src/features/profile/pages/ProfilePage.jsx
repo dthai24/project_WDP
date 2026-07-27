@@ -668,18 +668,43 @@ export default function ProfilePage() {
 
   const saveGoals = async () => {
     if (isReadOnly) return;
-    await fetch("http://localhost:5050/api/users/goals", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": currentUser.userId,
-      },
-      body: JSON.stringify({
-        learningGoal: goalInput,
-        categoryIds: selectedCats,
-      }),
-    });
-    window.location.reload();
+    try {
+      const res = await fetch("http://localhost:5050/api/users/goals", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": currentUser.userId,
+        },
+        body: JSON.stringify({
+          learningGoal: goalInput,
+          categoryIds: selectedCats,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Không thể cập nhật mục tiêu học tập.");
+        return;
+      }
+
+      const nextCategories = allCats.filter((cat) =>
+        selectedCats.includes(cat.categoryId)
+      );
+
+      setProfile((prev) => ({
+        ...prev,
+        rawLearningGoal: goalInput,
+        rawCategories: nextCategories,
+        goals: [
+          ...(goalInput ? [`Mục tiêu: ${goalInput}`] : []),
+          ...nextCategories.map((c) => c.displayName),
+        ],
+      }));
+
+      toast.success("Đã cập nhật mục tiêu học tập!");
+      setOpenGoals(false);
+    } catch {
+      toast.error("Không thể kết nối server.");
+    }
   };
 
   useEffect(() => {

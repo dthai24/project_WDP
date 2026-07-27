@@ -31,7 +31,7 @@ function mapUserToAccount(user) {
     phone: user.Phone || user.phone || '',
     dateOfBirth: user.DateOfBirth || user.dateOfBirth || '',
     role,
-    status: isActiveVal ? 'ACTIVE' : 'LOCKED',
+    status: isActiveVal ? 'ACTIVE' : 'BLOCKED',
     createdAt: user.CreatedAt || user.createdAt || null,
     lastLoginAt: user.UpdatedAt || user.updatedAt || null,
     streak: user.streak || 0,

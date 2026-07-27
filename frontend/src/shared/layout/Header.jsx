@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   GraduationCap,
   User,
+  Lock,
   SignOut,
   Bell,
   CaretDown,
@@ -11,6 +12,7 @@ import {
 import { isAdmin, isStudent } from "@/features/auth/utils/authUtils";
 import StreakBadge from "@/shared/ui/StreakBadge";
 import notificationApi from "@/services/notificationApi";
+import ChangePasswordDialog from "@/features/auth/components/ChangePasswordDialog";
 
 function formatRelativeTime(dateString) {
   const diffMs = Date.now() - new Date(dateString).getTime();
@@ -33,6 +35,7 @@ export default function Header({ logoTo, profilePath }) {
   const [notifications, setNotifications] = useState([]);
   const [notiTab, setNotiTab] = useState("all");
   const [scrolled, setScrolled] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const profileRef = useRef(null);
   const notiRef = useRef(null);
 
@@ -119,6 +122,7 @@ export default function Header({ logoTo, profilePath }) {
   };
 
   return (
+    <>
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
@@ -277,14 +281,27 @@ export default function Header({ logoTo, profilePath }) {
                       </p>
                     </div>
 
-                    <Link
-                      to={profilePath || "/profile"}
-                      onClick={() => setProfileOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    {isStudent(user) && (
+                      <Link
+                        to={profilePath || "/profile"}
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <User size={16} className="text-slate-400" />
+                        Profile
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setShowChangePassword(true);
+                      }}
+                      className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                     >
-                      <User size={16} className="text-slate-400" />
-                      Profile
-                    </Link>
+                      <Lock size={16} className="text-slate-400" />
+                      Đổi mật khẩu
+                    </button>
                     {isStudent(user) && (
                       <>
                         <Link
@@ -330,5 +347,10 @@ export default function Header({ logoTo, profilePath }) {
         </div>
       </div>
     </header>
+    <ChangePasswordDialog
+      open={showChangePassword}
+      onClose={() => setShowChangePassword(false)}
+    />
+    </>
   );
 }

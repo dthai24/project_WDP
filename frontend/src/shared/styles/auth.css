@@ -69,6 +69,31 @@
   right: -60px;
 }
 
+/* ---- Back to Home Link ---- */
+.auth-back-link {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-btn);
+  background: var(--clr-bg-paper);
+  border: 1px solid var(--clr-card-br);
+  color: var(--clr-text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.auth-back-link:hover {
+  color: var(--clr-primary);
+  border-color: var(--clr-primary);
+  background: rgba(8, 145, 178, 0.06);
+}
+
 /* ---- Auth Card ---- */
 .auth-card {
   position: relative;

@@ -37,6 +37,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import CircularProgress from '@mui/material/CircularProgress';
 import { loginApi } from '@/features/auth/services/authService';
 import { getPostLoginPath, isAuthenticatedUser } from '@/features/auth/utils/authUtils';
@@ -128,6 +129,11 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <Link to="/" className="auth-back-link">
+        <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
+        Về trang chủ
+      </Link>
+
       <div className="auth-card">
         <div className="auth-brand">
           <Logo height={56} link={false} className="brand-logo" />

@@ -194,6 +194,11 @@ const getWritingPrompt = async (req, res) => {
     const categoryName = course.categoryId?.displayName || course.categoryId?.categoryName || '';
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
 
+    // Ưu tiên đề bài mentor tự soạn khi tạo/chỉnh sửa khóa học
+    if (course.finalWritingPrompt && course.finalWritingPrompt.trim()) {
+      return res.status(200).json({ success: true, prompt: course.finalWritingPrompt.trim(), courseName, custom: true });
+    }
+
     let prompt = '';
     if (geminiApiKey) {
       try {

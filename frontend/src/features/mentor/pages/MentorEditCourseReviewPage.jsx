@@ -294,7 +294,7 @@ export default function MentorEditCourseReviewPage() {
         </Typography>
       </Breadcrumbs>
 
-      <MentorCourseCreateStepIndicator currentStep={3} />
+      <MentorCourseCreateStepIndicator currentStep={5} />
 
       <Typography component="h1" sx={{ ...PAGE_TITLE_SX, mb: 0.5 }}>
         Xem lại thay đổi

@@ -137,10 +137,10 @@ export default function AdminLevelManagementPage() {
     try {
       const res = await createLevel(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể tạo trình độ');
+        toast.error(res.message ?? 'Khong the tao trinh do');
         return;
       }
-      toast.success('Đã tạo trình độ mới');
+      toast.success('Da tao trinh do moi');
       setCreateOpen(false);
       await loadLevels();
     } finally {
@@ -155,7 +155,7 @@ export default function AdminLevelManagementPage() {
     try {
       const res = await updateLevel(editingLevel.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật trình độ');
+        toast.error(res.message ?? 'Khong the cap nhat trinh do');
         return;
       }
       toast.success('Đã cập nhật trình độ thành công');
@@ -191,6 +191,7 @@ export default function AdminLevelManagementPage() {
             bgcolor: '#0891B2',
             color: '#fff',
             flexShrink: 0,
+            width: { xs: '100%', sm: 'auto' },
             boxShadow: 'none',
             '&:hover': { bgcolor: '#0E7490', boxShadow: 'none' },
           }}

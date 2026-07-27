@@ -232,6 +232,7 @@ export default function AdminAccountManagementPage() {
         onRemoveFilterChip={handleRemoveChip}
         keyword={queryState.q || ''}
         onKeywordChange={(val) => updateQuery({ q: val, page: 1 })}
+        onCreateClick={() => setCreateOpen(true)}
       />
 
       <AdminAccountList

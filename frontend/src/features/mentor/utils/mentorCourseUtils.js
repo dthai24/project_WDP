@@ -94,6 +94,8 @@ export function normalizeMentorCourse(raw = {}) {
     CourseUpdateAt: raw.updatedAt ?? raw.UpdatedAt ?? raw.createdAt ?? raw.CreatedAt ?? null,
     paths: raw.paths ?? raw.Paths ?? [],
     Paths: raw.paths ?? raw.Paths ?? [],
+    finalWritingPrompt: raw.finalWritingPrompt ?? raw.FinalWritingPrompt ?? '',
+    FinalWritingPrompt: raw.finalWritingPrompt ?? raw.FinalWritingPrompt ?? '',
   };
 }
 

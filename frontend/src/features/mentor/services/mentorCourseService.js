@@ -45,6 +45,7 @@ function buildUpdateCourseBasicPayload(course = {}) {
     LevelId: course.LevelId ?? course.levelId ?? null,
     IsPublished: Boolean(course.IsPublished ?? course.isPublished),
     InstructorId: course.InstructorId ?? course.instructorId ?? getUser()?.userId ?? null,
+    FinalWritingPrompt: course.FinalWritingPrompt ?? course.finalWritingPrompt ?? '',
   };
 }
 
@@ -235,6 +236,29 @@ export async function createCourseWithContent(course, paths) {
     console.error('[createCourseWithContent]', error);
     return { success: false, message: error.message ?? 'Không thể tạo khóa học.' };
   }
+}
+
+/**
+ * POST /api/courses/:courseId/tests/final/questions  (tạo từng câu hỏi bài kiểm tra cuối khóa
+ * — chỉ gọi được sau khi khóa học đã tồn tại trên server, vì cần ít nhất 1 chương)
+ */
+export async function createFinalTestQuestions(courseId, questions = []) {
+  const userId = String(getUser()?.userId || '');
+  let successCount = 0;
+  for (const q of questions) {
+    try {
+      const response = await fetch(`${API_BASE}/courses/${courseId}/tests/final/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ question: q.question, explanation: q.explanation, options: q.options }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) successCount += 1;
+    } catch (error) {
+      console.error('[createFinalTestQuestions]', error);
+    }
+  }
+  return { success: successCount === questions.length, successCount, total: questions.length };
 }
 
 /**

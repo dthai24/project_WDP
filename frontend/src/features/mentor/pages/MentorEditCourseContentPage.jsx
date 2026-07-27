@@ -410,7 +410,7 @@ export default function MentorEditCourseContentPage() {
     try {
       const uploadedPaths = await uploadPendingMaterialsInPaths(paths);
       persistEditContent(courseId, coursePascal, uploadedPaths);
-      navigate(`/mentor/courses/${courseId}/review`);
+      navigate(`/mentor/courses/${courseId}/test`);
     } catch (error) {
       toast.error(error?.message || 'Không thể tải học liệu lên. Vui lòng thử lại.');
     } finally {

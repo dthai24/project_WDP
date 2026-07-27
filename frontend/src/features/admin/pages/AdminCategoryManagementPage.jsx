@@ -141,10 +141,10 @@ export default function AdminCategoryManagementPage() {
     try {
       const res = await createCategory(values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể tạo danh mục');
+        toast.error(res.message ?? 'Khong the tao danh muc');
         return;
       }
-      toast.success('Đã tạo danh mục mới');
+      toast.success('Da tao danh muc moi');
       setCreateOpen(false);
       await loadCategories();
     } finally {
@@ -159,7 +159,7 @@ export default function AdminCategoryManagementPage() {
     try {
       const res = await updateCategory(editingCategory.id, values);
       if (!res.ok) {
-        toast.error(res.message ?? 'Không thể cập nhật danh mục');
+        toast.error(res.message ?? 'Khong the cap nhat danh muc');
         return;
       }
       toast.success('Đã cập nhật danh mục thành công');
@@ -240,7 +240,7 @@ export default function AdminCategoryManagementPage() {
         showReset={showReset}
         onReset={handleReset}
         totalCount={filteredCategories.length}
-        countLabel="danh mục"
+        countLabel="danh muc"
         CountIcon={CategoryOutlinedIcon}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveChip}

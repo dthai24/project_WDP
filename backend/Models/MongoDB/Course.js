@@ -19,6 +19,8 @@ const courseSchema = new mongoose.Schema({
   rejectionComment: { type: String },
   hasPendingUpdates: { type: Boolean, default: false },
   tempContent: { type: mongoose.Schema.Types.Mixed, default: null },
+  // Đề bài Viết (Writing) cuối khóa do mentor tự soạn — nếu để trống, hệ thống sẽ tự sinh đề bằng AI theo chủ đề khóa học
+  finalWritingPrompt: { type: String, default: null },
   // Payment fields
   price: { type: Number, default: 0 }, // Giá khóa học (VNĐ)
   isPaid: { type: Boolean, default: false }, // true = khóa học trả phí, false = miễn phí

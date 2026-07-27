@@ -929,7 +929,6 @@ const createFinalCourse = async (req, res) => {
     const courseData = {
       courseName: String(newCourse.CourseName).trim(),
       description: String(newCourse.Description).trim(),
-      thumbnail: null,
       categoryId: newCourse.CategoryId,
       levelId: newCourse.LevelId,
       instructorId: newCourse.InstructorId,
@@ -939,6 +938,7 @@ const createFinalCourse = async (req, res) => {
       discountPercentage,
       rating: 0,
       totalLessons: 0,
+      finalWritingPrompt: newCourse.FinalWritingPrompt ? String(newCourse.FinalWritingPrompt).trim() : null,
     };
 
     const existingId = newCourse.courseId || newCourse._id || newCourse.CourseId;
@@ -948,14 +948,28 @@ const createFinalCourse = async (req, res) => {
       course = await Course.findById(existingId);
     }
 
-    if (course) {
-      // Update existing course metadata
-      const updateData = { ...courseData };
-      if (!newCourse.Thumbnail) {
-        delete updateData.thumbnail;
+    // Resolve the thumbnail up-front and fold it into the same create/update write below.
+    // (Previously this re-fetched a stale in-memory doc and called .save() afterwards, which
+    // Mongoose silently no-ops when the reassigned value matches what's already in memory —
+    // leaving the DB thumbnail null even though a file was saved to disk.)
+    if (newCourse?.Thumbnail) {
+      const targetId = course ? course._id : new mongoose.Types.ObjectId();
+      const thumbnailPath = String(newCourse.Thumbnail).startsWith('data:')
+        ? saveCourseThumbnailFromDataUrl(newCourse.Thumbnail, targetId)
+        : newCourse.Thumbnail;
+      if (thumbnailPath) {
+        courseData.thumbnail = thumbnailPath;
       }
-      await Course.findByIdAndUpdate(course._id, updateData);
-      
+      if (!course) {
+        courseData._id = targetId;
+      }
+    }
+
+    if (course) {
+      // Update existing course metadata (thumbnail key only present if a new one was resolved above,
+      // so omitting it here preserves whatever thumbnail the course already had)
+      await Course.findByIdAndUpdate(course._id, courseData);
+
       // Clean up old paths, nodes, materials to prevent duplication
       const existingPaths = await Path.find({ courseId: course._id }).select('_id').lean();
       const pathIds = existingPaths.map(p => p._id);
@@ -968,19 +982,6 @@ const createFinalCourse = async (req, res) => {
     } else {
       // Create new course
       course = await Course.create(courseData);
-    }
-
-    if (newCourse?.Thumbnail) {
-      if (String(newCourse.Thumbnail).startsWith('data:')) {
-        const thumbnailPath = saveCourseThumbnailFromDataUrl(newCourse.Thumbnail, course._id);
-        if (thumbnailPath) {
-          course.thumbnail = thumbnailPath;
-          await course.save();
-        }
-      } else {
-        course.thumbnail = newCourse.Thumbnail;
-        await course.save();
-      }
     }
 
     let totalLessons = 0;
